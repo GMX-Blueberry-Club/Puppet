@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig",
+  "compilerOptions": {
+    "outDir": ".dist/esm",
+    "rootDir": "src",
+    "lib": [
+      "es2022",
+      "DOM"
+    ],
+    "types": [],
+    "declarationDir": ".dist/types",
+  },
+  "references": [
+    {
+    }
+  ]
+}

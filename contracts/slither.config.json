@@ -1,0 +1,14 @@
+{
+    "detectors_to_exclude": "unused-return,incorrect-equality",
+    "exclude_informational": false,
+    "exclude_low": false,
+    "exclude_medium": false,
+    "exclude_high": false,
+    "solc_remaps": [
+        "ds-test/=lib/ds-test/src/",
+        "forge-std/=lib/forge-std/src/",
+        "@openzeppelin/=lib/openzeppelin-contracts/",
+        "@solmate/=lib/solmate/src/",
+        "@chainlink/=lib/chainlink-brownie-contracts/contracts/"
+    ]
+}
