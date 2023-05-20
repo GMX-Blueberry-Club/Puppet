@@ -5,7 +5,6 @@ import { $column, $icon, $row, layoutSheet, screenUtils } from '@aelea/ui-compon
 import { pallete } from "@aelea/ui-components-theme"
 import { CHAIN } from "@gambitdao/const"
 import { $Link, $anchor, $discord, $gitbook, $github, $instagram, $moreDots, $twitter } from "@gambitdao/ui-components"
-import { IWalletName } from "@gambitdao/wallet-link"
 import { awaitPromises, constant, empty, map, multicast, switchLatest } from '@most/core'
 import { Stream } from "@most/types"
 import { $bagOfCoinsCircle, $fileCheckCircle, $gmxLogo, $puppetLogo } from "../common/$icons"

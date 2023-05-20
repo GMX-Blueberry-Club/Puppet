@@ -31,7 +31,6 @@ import {
   $alert, $alertTooltip, $anchor, $bear, $bull, $hintNumChange, $infoLabel, $infoLabeledValue, $infoTooltipLabel, $IntermediatePromise,
   $openPositionPnlBreakdown, $PnlValue, $riskLiquidator, $spinner, $tokenIconMap, $tokenLabelFromSummary
 } from "@gambitdao/ui-components"
-import { parseError } from "@gambitdao/wallet-link"
 import {
   awaitPromises,
   constant,
@@ -274,7 +273,7 @@ export const $TradeBox = (config: ITradeBox) => component((
       await req.ctxQuery
       return null
     } catch (err) {
-      return parseError(err).message
+      return String(err)
     }
   }, clickRequestTrade)))
 

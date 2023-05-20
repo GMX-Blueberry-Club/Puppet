@@ -3,7 +3,6 @@ import { $node, component, nodeEvent, style } from "@aelea/dom"
 import { $row } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, map, mergeArray, now, snapshot, switchLatest } from "@most/core"
-import { IWalletLink, IWalletName } from "@gambitdao/wallet-link"
 import { $anchor } from "@gambitdao/ui-components"
 import { $seperator2 } from "../pages/common"
 import { $disconnectedWalletDisplay, $discoverIdentityDisplay } from "./$AccountProfile"
@@ -37,7 +36,7 @@ export const $WalletDisplay = (config: IWalletDisplay) => component((
             nodeEvent('click'),
             map(async () => {
               await web3Modal.openModal()
-              return IWalletName.walletConnect
+              return `walletConnect`
             }),
             awaitPromises
           )(

@@ -10,10 +10,8 @@
     ],
     "types": ".dist/types/index.d.ts",
     "scripts": {
-        "clean": "yarn g:tsc:clean",
-        "build:project": "yarn g:tsc:project",
-        "build:cjs": "yarn g:tsc:cjs",
-        "build": "yarn g:parallel 'yarn build:cjs' 'yarn build:project'"
+        "clean": "rm -fr .dist/*",
+        "build": "tsc && tsc --outDir .dist/cjs --module CommonJS --declarationMap false --composite false --declaration false --declarationDir null"
     },
     "devDependencies": {
         "typechain": "^8.1.1",

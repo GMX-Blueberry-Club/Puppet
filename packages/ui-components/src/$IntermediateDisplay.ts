@@ -3,7 +3,6 @@ import { $Node, $node, $text, component, style } from "@aelea/dom"
 import { $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { CHAIN } from "@gambitdao/const"
-import { parseError } from "@gambitdao/wallet-link"
 import { constant, empty, fromPromise, map, merge, mergeArray, multicast, now, recoverWith, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { $alert, $alertTooltip, $txHashRef, } from "./$common.js"
@@ -140,9 +139,9 @@ export const $IntermediateTx = <
       )
     }, multicastQuery)),
     $$fail: map(res => {
-      const error = parseError(res)
+      const error = String(res)
 
-      return showTooltip ? $alertTooltip($text(error.message)) : $alert($text(error.message))
+      return showTooltip ? $alertTooltip($text(error)) : $alert($text(error))
     }),
   })
 }

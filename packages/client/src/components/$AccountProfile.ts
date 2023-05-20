@@ -2,12 +2,11 @@ import { $Node, $node, $text, NodeComposeFn, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { IEnsRegistration } from "@gambitdao/gmx-middleware"
-import { IWalletLink } from "@gambitdao/wallet-link"
 import { $jazzicon } from "../common/$avatar"
 import { blueberrySubgraph, IOwner } from "@gambitdao/gbc-middleware"
 import { $berryByToken } from "../logic/common"
 import { awaitPromises, empty, map, now, switchLatest } from "@most/core"
-import { Account, Address } from "viem"
+import { Address } from "viem"
 
 
 export interface IAccountPreview {
