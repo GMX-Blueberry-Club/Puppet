@@ -2,3 +2,6 @@
 	path = contracts-submodule
 	url = https://github.com/johnnyonline/puppet-finance.git
 	branch = main
+[submodule "contracts-sm"]
+	path = contracts-sm
+	url = https://github.com/johnnyonline/puppet-finance.git

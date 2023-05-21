@@ -9,12 +9,12 @@ import {
 } from "@gambitdao/gmx-middleware"
 import { empty, fromPromise, map, mergeArray, multicast, now, scan, skip, snapshot, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
+import { fetchBalance, readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
 import { Address, Chain } from "viem"
+import { network } from "../../wallet/walletLink"
 import { connectMappedContract, getMappedContractAddress } from "../common"
 import { resolveAddress } from "../utils"
-import { fetchBalance, readContract } from "@wagmi/core"
-import { network } from "../../wallet/walletLink"
 
 
 
@@ -171,7 +171,6 @@ export const executeDecreasePosition = positionRouter.listen('ExecuteDecreasePos
 export const cancelDecreasePosition = positionRouter.listen('CancelDecreasePosition')
 
 
-
 export const getIsPluginEnabled = (address: Address) => router.read(
   'approvedPlugins',
   now(address),
@@ -251,7 +250,6 @@ export const positionLiquidateEvent = vault.listen('LiquidatePosition')
 
 
 
-
 export const positionUpdateEvent = vault.listen('UpdatePosition')
 // const positionUpdateEvent = switchLatest(vaultReader.read(map(async vault => {
 //   const chain = vault.chainId
@@ -323,7 +321,7 @@ export const getVaultPrimaryPrice = (token: Stream<ITokenTrade>) => {
 
 
 
-export function getLatestPrice( token: Stream<ITokenTrade>) {
+export function getLatestPrice(token: Stream<ITokenTrade>) {
   const wsPrice = switchLatest(map(params => {
     const chainId = params.network!.id
     const resolvedToken = resolveAddress(chainId, params.token)

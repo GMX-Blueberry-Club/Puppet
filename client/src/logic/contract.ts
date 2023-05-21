@@ -18,11 +18,11 @@ const SECONDS_PER_YEAR = BigInt(intervalTimeMap.YEAR)
 
 export const connectGmxEarn = (client: Stream<PublicClient>, accountAddress: Address, gmxPrice: Stream<bigint>, environmentContract: ArbitrumAddress | AvalancheAddress) => {
 
-  const gmxReader = contractReader(connectMappedContractConfig(TRADE_CONTRACT_MAPPING, 'GMX', erc20Abi, client))
-  const vaultReader = contractReader(connectMappedContractConfig(TRADE_CONTRACT_MAPPING, 'Vault', abi.vault, client))
-  const glpManagerReader = contractReader(connectMappedContractConfig(TRADE_CONTRACT_MAPPING, 'GlpManager', abi.glpManager, client))
-  const readerReader = contractReader(connectMappedContractConfig(TRADE_CONTRACT_MAPPING, 'Reader', abi.gmxReader, client))
-  const rewardReader = contractReader(connectMappedContractConfig(TRADE_CONTRACT_MAPPING, 'RewardReader', abi.rewardReader, client))
+  const gmxReader = contractReader(connectMappedContractConfig(TRADE_CONTRACT_MAPPING, 'GMX', erc20Abi))
+  const vaultReader = contractReader(connectMappedContractConfig(TRADE_CONTRACT_MAPPING, 'Vault', abi.vault))
+  const glpManagerReader = contractReader(connectMappedContractConfig(TRADE_CONTRACT_MAPPING, 'GlpManager', abi.glpManager))
+  const readerReader = contractReader(connectMappedContractConfig(TRADE_CONTRACT_MAPPING, 'Reader', abi.gmxReader))
+  const rewardReader = contractReader(connectMappedContractConfig(TRADE_CONTRACT_MAPPING, 'RewardReader', abi.rewardReader))
 
   const gmxSupply = gmxReader('totalSupply')
   const stakedGmxSupply = gmxReader('balanceOf', environmentContract.StakedGmxTracker)

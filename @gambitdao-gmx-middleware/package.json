@@ -29,6 +29,6 @@
         "graphql": "^16.6.0",
         "isomorphic-fetch": "^3.0.0",
         "isomorphic-ws": "^5.0.0",
-        "viem": "^0.3.31"
+        "viem": "^0.3.19"
     }
 }

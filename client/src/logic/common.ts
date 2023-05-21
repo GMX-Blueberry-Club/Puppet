@@ -5,11 +5,11 @@ import {
   IAttributeBackground, IAttributeBadge, IAttributeExpression, IAttributeHat, IAttributeMappings,
   IBerryDisplayTupleMap, IToken, getLabItemTupleIndex, labAttributeTuple, svgParts, tokenIdAttributeTuple
 } from "@gambitdao/gbc-middleware"
-import { ContractFunctionConfig, StreamInput, StreamInputArray } from "@gambitdao/gmx-middleware"
+import { ContractFunctionConfig, StreamInput, StreamInputArray, abi } from "@gambitdao/gmx-middleware"
 import { awaitPromises, map, now, switchLatest, tap } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
-import type { Abi, AbiParametersToPrimitiveTypes, Address, ExtractAbiEvent, ExtractAbiFunction, } from 'abitype'
+import type { Abi, AbiEvent, AbiParametersToPrimitiveTypes, Address, ExtractAbiEvent, ExtractAbiFunction, } from 'abitype'
 import {
   Chain, GetEventArgs, Hash, InferEventName, InferFunctionName, Log, PublicClient, ReadContractReturnType, SimulateContractParameters,
   SimulateContractReturnType, TransactionReceipt, Transport
@@ -95,15 +95,11 @@ export const connectMappedContract = <
 
 export const connectContract = <
   TAddress extends Address,
-  TTransport extends Transport,
-  TChain extends Chain,
-  TIncludeActions extends true,
-  TPublicClient extends PublicClient<TTransport, TChain, TIncludeActions>,
   TAbi extends Abi,
->(address_: TAddress | Stream<TAddress>, abi: TAbi) => (client_: Stream<TPublicClient> | TPublicClient): IContractConnect<TAbi> => {
-  const config: Stream<ContractFunctionConfig<TAddress, TAbi, TTransport, TChain, TIncludeActions, TPublicClient>> = combineArray((client, address) => {
+>(address_: TAddress | Stream<TAddress>, abi: TAbi): IContractConnect<TAbi> => {
+  const config = combineArray((client, address) => {
     return { client, address, abi }
-  }, fromStream(client_), fromStream(address_))
+  }, publicClient, fromStream(address_))
   return {
     read: contractReader(config),
     listen: listenContract(config),

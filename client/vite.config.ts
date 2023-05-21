@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import dotenv from 'dotenv'
 import path from 'path'
 
-const parentDotenvPath = path.join(__dirname, '../..', '.env')
+const parentDotenvPath = path.join(__dirname, '../', '.env')
 const parentDotenvConfig = dotenv.config({ path: parentDotenvPath })
 
 if (parentDotenvConfig.parsed === undefined) {

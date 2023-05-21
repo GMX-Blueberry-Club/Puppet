@@ -28,7 +28,7 @@ import {
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { $ButtonToggle, $IntermediatePromise, $infoLabel, $infoTooltip, $spinner, $txHashRef } from "@gambitdao/ui-components"
-import { awaitPromises, combine, constant, debounce, empty, filter, fromPromise, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, switchLatest, take, zip } from "@most/core"
+import { awaitPromises, combine, constant, debounce, empty, filter, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, switchLatest, take, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
@@ -42,16 +42,14 @@ import { $Dropdown } from "../components/form/$Dropdown"
 import { $TradeBox, ITradeBoxParams, ITradeFocusMode, ITradeState, RequestTradeQuery } from "../components/trade/$TradeBox"
 import { $card } from "../elements/$common"
 import { $caretDown } from "../elements/$icons"
-import { combineState, connectMappedContractConfig, contractReader, listenContract } from "../logic/common"
+import { connectMappedContractConfig, contractReader, listenContract } from "../logic/common"
 import * as tradeReader from "../logic/contract/trade"
 import { resolveAddress } from "../logic/utils"
 import { walletLink } from "../wallet"
 import { account, wallet } from "../wallet/walletLink"
 
 
-export interface ITradeComponent extends ITradeBoxParams {
-
-}
+export type ITradeComponent = ITradeBoxParams
 
 
 
@@ -913,6 +911,7 @@ export const $Trade = (config: ITradeComponent) => component((
                       }
 
                       const activePositionAdjustment = take(1, filter(ev => {
+                        ev.args.account
                         const key = getPositionKey(ev.args.account, pos.state.isIncrease ? ev.args.path.slice(-1)[0] : ev.args.path[0], ev.args.indexToken, ev.args.isLong)
 
                         return key === pos.state.position.key
