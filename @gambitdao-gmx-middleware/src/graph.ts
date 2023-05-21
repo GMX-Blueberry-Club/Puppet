@@ -31,9 +31,6 @@ import {
   switchFailedSources, unixTimestampNow
 } from "./utils.js"
 
-import { WebSocket } from 'isomorphic-ws';
-
-console.log(WebSocket)
 
 export const ensGraph = createSubgraphClient({
   fetch: fetch as any,

@@ -13,7 +13,7 @@ import {
   TRADE_CONTRACT_MAPPING,
   unixTimestampNow,
 } from "@gambitdao/gmx-middleware"
-import { $infoTooltipLabel, $openPositionPnlBreakdown, $PnlValue, $riskLiquidator, $sizeDisplay, $TradePnl } from "@gambitdao/ui-components"
+import { $infoTooltipLabel, $openPositionPnlBreakdown, $PnlValue, $riskLiquidator, $sizeDisplay, $Table, $TradePnl } from "@gambitdao/ui-components"
 import { $ButtonToggle, $defaulButtonToggleContainer } from "@gambitdao/ui-components/src/$ButtonToggle"
 import { awaitPromises, combine, map, mergeArray, multicast, now, switchLatest } from "@most/core"
 import { Address } from "viem"
@@ -23,6 +23,7 @@ import * as tradeReader from "../logic/contract/trade"
 import { fadeIn } from "../transitions/enter"
 import { walletLink } from "../wallet"
 import { $Index } from "./competition/$Leaderboard"
+import { $card } from "../elements/$common"
 
 
 
@@ -41,7 +42,7 @@ export interface IProfile {
   $accountDisplay: $Node
 }
 
-const $title = $text(style({ fontWeight: 'bold', fontSize: '1.55em' }))
+const $title = $text(style({ fontWeight: 'bold', fontSize: '1.35em' }))
 
 export const $Profile = (config: IProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
@@ -96,9 +97,9 @@ export const $Profile = (config: IProfile) => component((
 
       $column(layoutSheet.spacingBig, style({ width: '100%' }))(
         fadeIn(
-          $column(layoutSheet.spacingBig, style({ flex: 1 }))(
+          $card(layoutSheet.spacingBig, style({ flex: 1 }))(
             $title('Open Positions'),
-            $CardTable({
+            $Table({
               dataSource: awaitPromises(accountOpenTradeList),
               columns: [
                 {

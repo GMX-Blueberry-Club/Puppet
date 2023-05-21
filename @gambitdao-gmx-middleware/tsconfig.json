@@ -2,6 +2,8 @@
   "extends": "../tsconfig",
   "compilerOptions": {
     "outDir": ".dist/esm",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "rootDir": "src",
     "lib": [
       "es2022",

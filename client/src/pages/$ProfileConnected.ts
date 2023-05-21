@@ -55,7 +55,7 @@ export const $ProfileConnected = (config: IAccount) => component((
                 )
               })({}),
             ),
-            url: '/p/wardrobe', route: config.parentRoute
+            url: '/app/wardrobe', route: config.parentRoute
           })({
             click: changeRouteTether()
           })
@@ -252,7 +252,7 @@ export const $ProfileConnected = (config: IAccount) => component((
       changeRoute: mergeArray([
         changeRoute,
         map(mode => {
-          const pathName = `/p/wallet/` + mode.toLowerCase()
+          const pathName = `/app/wallet/` + mode.toLowerCase()
           if (location.pathname !== pathName) {
             history.pushState(null, '', pathName)
           }

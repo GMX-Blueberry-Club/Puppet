@@ -19,6 +19,9 @@ importers:
       eslint:
         specifier: 8.29.0
         version: 8.29.0
+      typescript:
+        specifier: ^5.0.3
+        version: 5.0.4
 
   '@gambitdao-gmx-middleware':
     dependencies:

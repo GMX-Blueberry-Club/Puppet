@@ -51,11 +51,11 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
 
 
   const $menuItemList = [
-    $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/p/trade', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
-      // $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/p/trade', disabled: now(false), route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+    $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+      // $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', disabled: now(false), route: parentRoute.create({ fragment: 'feefwefwe' }) })({
       click: routeChangeTether()
     }),
-    $Link({ $content: $pageLink($stackedCoins, 'Leaderboard'), url: '/p/leaderboard', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+    $Link({ $content: $pageLink($stackedCoins, 'Leaderboard'), url: '/app/leaderboard', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
       click: routeChangeTether()
     }),
   ]
@@ -63,7 +63,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
 
 
   const $treasuryLinks = [
-    $Link({ $content: $govItem('Treasury', $bagOfCoinsCircle, 'GBC Community-Led Portfolio'), url: '/p/treasury', route: parentRoute })({
+    $Link({ $content: $govItem('Treasury', $bagOfCoinsCircle, 'GBC Community-Led Portfolio'), url: '/app/treasury', route: parentRoute })({
       click: routeChangeTether()
     }),
     $anchor(style({ textDecoration: 'none' }), attr({ href: 'https://snapshot.org/#/gbc-nft.eth' }))(
@@ -161,7 +161,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
 
   return [
 
-    $row(layoutSheet.spacingBig, style({ padding: '14px', height: '100px', alignItems: 'center', placeContent: 'space-between' }))(
+    $row(layoutSheet.spacingBig, style({ padding: '14px', height: '100px', flexShrink: 0, alignItems: 'center', placeContent: 'space-between' }))(
       $row(layoutSheet.spacingBig, style({ alignItems: 'center', flex: 1 }))(
         $RouterAnchor({ url: '/', route: parentRoute, $anchor: $element('a')($icon({ $content: $puppetLogo, width: '45px', viewBox: '0 0 32 32' })) })({
           click: routeChangeTether()

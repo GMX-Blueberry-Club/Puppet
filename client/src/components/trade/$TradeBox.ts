@@ -1166,7 +1166,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                             $text(style({ color: pallete.positive }))('Trading Competition'),
                             $node(
                               $text('Monthly trading competition to top traders in the end '),
-                              $anchor(attr({ href: '/p/leaderboard' }))($text(' Leaderboard'))
+                              $anchor(attr({ href: '/app/leaderboard' }))($text(' Leaderboard'))
                             ),
                             $row(layoutSheet.spacingTiny)(
                               $text(style({ color: pallete.foreground }))('Your added contribution'),
@@ -1242,7 +1242,7 @@ export const $TradeBox = (config: ITradeBox) => component((
 
                             $node(
                               $text(style({ whiteSpace: 'pre-wrap' }))(`By clicking Agree you accept the `),
-                              $anchor(attr({ href: '/p/trading-terms-and-conditions' }))($text('Terms & Conditions'))
+                              $anchor(attr({ href: '/app/trading-terms-and-conditions' }))($text('Terms & Conditions'))
                             ),
 
                             !isPluginEnabled

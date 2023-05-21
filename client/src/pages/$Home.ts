@@ -90,7 +90,13 @@ export const $Home = (config: ITreasury) => component((
   const bodyPointerMove = eventElementTarget('pointermove', document.body)
 
   return [
-    $column(style(screenUtils.isDesktopScreen ? {} : {}))(
+    $column(
+      layoutSheet.spacingBig,
+      style({
+        // scrollSnapType: 'y proximity',
+
+      })
+    )(
 
       $snapSection(layoutSheet.spacingBig,
         style({
@@ -109,6 +115,7 @@ export const $Home = (config: ITreasury) => component((
           $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.75em' }))('Matching top Traders with Investors'),
         ),
         $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Traders earn more, investors minimize their risks by mirroring multiple performant traders on a single deposit.`),
+        $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Traders earn more, investors minimize their risks by mirroring multiple performant traders on a single deposit.`),
 
         $column(layoutSheet.spacing)(
           screenUtils.isMobileScreen ? $text(style({ textAlign: 'center' }))('< which are you? >') : empty(),
@@ -125,8 +132,6 @@ export const $Home = (config: ITreasury) => component((
                       styleInline(map(move => {
                         const shalf = document.body.clientWidth / 2
                         const alpha = (shalf - move.clientX) / shalf
-
-                        console.log(alpha)
 
                         return { opacity: alpha }
                       }, bodyPointerMove)),
@@ -191,14 +196,14 @@ export const $Home = (config: ITreasury) => component((
                   )
                 })({})
               ),
-              url: '/p/treasury', route: config.parentRoute.create({ fragment: 'fefe' })
+              url: '/app/trade', route: config.parentRoute.create({ fragment: 'fefe' })
             })({
               click: linkClickTether()
             }),
 
           ),
         ),
-
+        $text(style({ color: pallete.foreground, position: 'absolute', bottom: '50px', left: '50%', transform: 'translateX(-50%)' }))('Learn More'),
 
         $wheelWrapper(style({
           right: 'calc(100% + 15px)',
@@ -230,78 +235,36 @@ export const $Home = (config: ITreasury) => component((
             ),
 
           )
-        )
+        ),
+
       ),
 
 
       $snapSection(
-        // $icon({ $content: $logo, width: '100px', viewBox: '0 0 32 32' }),
 
-        $column(layoutSheet.spacingBig, style({ alignItems: 'center' }))(
-          $text(style({ fontWeight: 'bold', fontSize: '2.5em' }))('Treasury'),
-          $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Yield is used to support GBC's underlaying value through our products`),
+        $column(style({ textAlign: 'center' }))(
+          $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.75em' }))('Matching top Traders with Investors'),
         ),
+        $text(style({ whiteSpace: 'pre-wrap', maxWidth: '878px' }))(` A Mirror Trading Platform for Simplified and Reduced-Risk-Managed Portfolio
 
-        style({ alignSelf: 'center' })(
-          $alert($text(`Treasury graph is out of sync due to new upcomming changes, stay tuned for a whole new overhaul`))
-        ),
+Puppet, developed by the GBC Foundation (blueberry.club), is a mirror trading platform built on top of the GMX leveraging trading platform. It offers investors, known as Puppets, the opportunity to actively manage their portfolios by mirroring the trades of multiple high-performing traders, all with a single deposit. This reduces risk and streamlines the investment process. Puppet is a key component of the GBC ecosystem and can be accessed at https://blueberry.club/ until perfected and released fully with it's own tokenomics and revenue flywheel on https://puppet.finance/.
 
-        $node(),
-      ),
+Puppet is designed for two types of participants: Traders and Puppets.
 
-      $snapSection(
-        // $icon({ $content: $logo, width: '100px', viewBox: '0 0 32 32' }),
+Traders execute trades using their own collateral, inheriting the same risks as trading on GMX to have seamless experience. They are not responsible for managing Puppets' funds directly and may be unaware of the funds mirroring their trades. When traders generate profits, they receive a fraction of the Puppets profits. Each trader has a public profile page displaying their historical performance and social circle.
 
-        $column(layoutSheet.spacingBig, style({ alignItems: 'center' }))(
-          $text(style({ fontWeight: 'bold', fontSize: '2.5em' }))('Treasury'),
-          $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Yield is used to support GBC's underlaying value through our products`),
-        ),
+Puppets actively manage their portfolios by:
 
-        style({ alignSelf: 'center' })(
-          $alert($text(`Treasury graph is out of sync due to new upcomming changes, stay tuned for a whole new overhaul`))
-        ),
+Utilizing the leaderboard to find traders. Puppets have access to a platform-wide trading activity overview, complete with historical and track record screenings. This allows them to choose traders whose strategies are likely to yield profits.
+Depositing funds into routed pools based on intent (e.g., [ETH => ETH-long], [USDC => ETH-short]) and assigning traders to use these funds. When a trader opens a trade, a configurable tiny percentage is used to maintain a mirrored position pool. The goal is to have multiple traders utilizing the same intended pools.
+Maintaining a high-performance portfolio. Puppets can view each trader's historical performance graph in their portfolio, which helps them avoid underperforming traders over time.
+Projects like https://gmx.house/ and https://blueberry.club/app/trade are integral parts of Puppet. To make it work, an active community of traders is essential. The GBC Foundation plans to roll out GBC Trading soon to maintain an active trader community, offering a better user experience and higher trading discounts to incentivize traders to switch from gmx.io to the new interface.`),
 
         $node(),
 
-
-        $Link({
-          $content: $anchor(
-            $ButtonSecondary({
-              $content: $text('Treasury Page')
-            })({})
-          ),
-          url: '/p/treasury', route: config.parentRoute.create({ fragment: 'fefe' })
-        })({
-          click: linkClickTether()
-        }),
       ),
 
-      $snapSection(
-        // $icon({ $content: $logo, width: '100px', viewBox: '0 0 32 32' }),
 
-        $column(layoutSheet.spacingBig, style({ alignItems: 'center' }))(
-          $text(style({ fontWeight: 'bold', fontSize: '2.5em' }))('Treasury'),
-          $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Yield is used to support GBC's underlaying value through our products`),
-        ),
-
-        style({ alignSelf: 'center' })(
-          $alert($text(`Treasury graph is out of sync due to new upcomming changes, stay tuned for a whole new overhaul`))
-        ),
-
-        $node(),
-
-
-        $Link({
-          $content: $anchor(
-            $ButtonSecondary({
-              $content: $text('Treasury Page')
-            })({})
-          ),
-          url: '/p/treasury', route: config.parentRoute.create({ fragment: 'fefe' })
-        })({
-          click: linkClickTether()
-        }),
-      ),
 
     ),
 

@@ -1,4 +1,4 @@
-import { Behavior } from "@aelea/core"
+import { Behavior, O } from "@aelea/core"
 import { $element, $node, $text, component, eventElementTarget, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
@@ -10,7 +10,7 @@ import {
   ETH_ADDRESS_REGEXP,
   intervalTimeMap
 } from '@gambitdao/gmx-middleware'
-import { map, merge, multicast, now } from '@most/core'
+import { map, merge, mergeArray, multicast, now } from '@most/core'
 import { Address } from "viem"
 import { $discoverIdentityDisplay } from "../components/$AccountProfile"
 import { $MainMenu } from '../components/$MainMenu'
@@ -23,6 +23,8 @@ import { $ProfileConnected } from "./$ProfileConnected"
 import { $Trade } from "./$Trade"
 import { $Leaderboard } from "./competition/$Leaderboard"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
+
+
 
 
 const popStateEvent = eventElementTarget('popstate', window)
@@ -51,13 +53,13 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
 
   const rootRoute = router.create({ fragment: baseRoute, title: 'GMX Blueberry Club', fragmentsChange })
-  const pagesRoute = rootRoute.create({ fragment: 'app', title: '' })
-  const profileRoute = pagesRoute.create({ fragment: 'profile', title: 'Berry Account' }).create({ fragment: ETH_ADDRESS_REGEXP })
-  const profileWalletRoute = pagesRoute.create({ fragment: 'wallet', title: 'Wallet Account' })
-  const leaderboardRoute = pagesRoute.create({ fragment: 'leaderboard', title: 'Leaderboard' })
+  const appRoute = rootRoute.create({ fragment: 'app', title: '' })
+  const profileRoute = appRoute.create({ fragment: 'profile', title: 'Berry Account' }).create({ fragment: ETH_ADDRESS_REGEXP })
+  const profileWalletRoute = appRoute.create({ fragment: 'wallet', title: 'Wallet Account' })
+  const leaderboardRoute = appRoute.create({ fragment: 'leaderboard', title: 'Leaderboard' })
   const TRADEURL = 'trade'
-  const tradeRoute = pagesRoute.create({ fragment: TRADEURL })
-  const tradeTermsAndConditions = pagesRoute.create({ fragment: 'trading-terms-and-conditions' })
+  const tradeRoute = appRoute.create({ fragment: TRADEURL })
+  const tradeTermsAndConditions = appRoute.create({ fragment: 'trading-terms-and-conditions' })
 
 
 
@@ -81,45 +83,48 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   const $liItem = $element('li')(style({ marginBottom: '14px' }))
 
 
+  const $rootContainer = $column(
+    designSheet.main,
+    style({
+      color: pallete.message,
+      fill: pallete.message,
+      position: 'relative',
+      // backgroundImage: `radial-gradient(570% 71% at 50% 15vh, ${pallete.background} 0px, ${pallete.horizon} 100%)`,
+      backgroundColor: pallete.horizon,
+      fontSize: '1.25em',
+      minHeight: '100vh',
+      fontWeight: 400,
+      overflowX: 'hidden',
+      padding: '0 15px'
+    })
+  )
   return [
 
-    $column(
-      designSheet.main,
-      style({
-        scrollSnapType: 'y proximity',
-        color: pallete.message,
-        fill: pallete.message,
-        position: 'relative',
-        // backgroundImage: `radial-gradient(570% 71% at 50% 15vh, ${pallete.background} 0px, ${pallete.horizon} 100%)`,
-        backgroundColor: pallete.horizon,
-        fontSize: '1.25em',
-        minHeight: '100vh',
-        fontWeight: 400,
-        gap: screenUtils.isDesktopScreen ? '85px' : '55px',
-        overflowX: 'hidden',
-        padding: '0 15px'
-      })
-    )(
+    mergeArray([
+      router.match(rootRoute)(
+        $rootContainer(
+          style({
+            scrollSnapType: 'y mandatory',
+            margin: '0 auto', width: '100%'
+          })
+        )(
+          $Home({
+            parentRoute: rootRoute,
+            treasuryStore,
+          })({ routeChanges: linkClickTether() })
 
-      $column(style({ gap: '36px' }))(
+        )
+      ),
+      router.contains(appRoute)(
+        $rootContainer(style({
+          display: 'flex',
+          gap: screenUtils.isDesktopScreen ? '35px' : '35px',
+        }))(
+          $MainMenu({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+            routeChange: linkClickTether(),
+          }),
 
-        // $MainMenu({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
-        //   routeChange: linkClickTether(),
-        // }),
-
-        router.match(rootRoute)(
-          $column(layoutSheet.spacingBig, style({ margin: '0 auto', maxWidth: '1080px', gap: screenUtils.isDesktopScreen ? '85px' : '55px', width: '100%' }))(
-            $Home({
-              parentRoute: pagesRoute,
-              treasuryStore,
-            })({ routeChanges: linkClickTether() })
-          )
-        ),
-
-        router.contains(pagesRoute)(
           $column(layoutSheet.spacingBig, style({ margin: '0 auto', maxWidth: '1440px', gap: screenUtils.isDesktopScreen ? '85px' : '55px', width: '100%' }))(
-
-
             router.contains(profileRoute)(
               {
                 run(sink, scheduler) {
@@ -134,7 +139,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                       }),
                     ),
                     account: account,
-                    parentUrl: `/p/profile/${account}/`,
+                    parentUrl: `/app/profile/${account}/`,
                     parentRoute: profileRoute
                   })({
                     changeRoute: linkClickTether(),
@@ -153,12 +158,11 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
             ),
             router.match(leaderboardRoute)(
               fadeIn($Leaderboard({
-                parentRoute: pagesRoute
+                parentRoute: appRoute
               })({
                 routeChange: linkClickTether()
               }))
             ),
-
             router.match(tradeRoute)(
               $IntermediateConnectButton({
                 $$display: map(wallet => {
@@ -207,7 +211,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
                 $node(),
                 $text(style({ fontSize: '1.5em', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
-                $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host + '/p/' + TRADEURL} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
+                $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host + '/app/' + TRADEURL} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
                 $element('ul')(layoutSheet.spacing, style({ lineHeight: '1.5em' }))(
                   $liItem(
                     $text(`I am not a United States person or entity;`),
@@ -229,16 +233,12 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
             ),
 
-
             $node(),
           )
-        ),
+        )
+      ),
+    ])
 
-
-
-      )
-
-    )
   ]
 })
 

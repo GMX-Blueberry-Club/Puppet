@@ -306,7 +306,7 @@ He knew that this journey, was just the beginning it seems.`,
     id: IAttributeMappings["Marine Shirt"],
     externalLinks: [
       {
-        link: 'https://blueberry.club/p/leaderboard',
+        link: 'https://blueberry.club/app/leaderboard',
         name: 'Leaderboard Whitelist'
       },
     ],

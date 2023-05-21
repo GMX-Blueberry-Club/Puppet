@@ -256,7 +256,7 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
                     $Link({
                       $content: $accountPreview({ address: pos.account, $container: $defaultProfileContainer(style({ minWidth: '50px' })) }),
                       route: config.parentRoute.create({ fragment: 'fefwef' }),
-                      url: `/p/profile/${pos.account}/${IProfileActiveTab.TRADING.toLowerCase()}`
+                      url: `/app/profile/${pos.account}/${IProfileActiveTab.TRADING.toLowerCase()}`
                     })({ click: routeChangeTether() }),
                     // $anchor(clickAccountBehaviour)(
                     //   $accountPreview({ address: pos.account })
@@ -305,7 +305,7 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
                   $Link({
                     $content: $profilePreview({ profile: pos.profile, $container }),
                     route: config.parentRoute.create({ fragment: 'fefwef' }),
-                    url: `/p/profile/${pos.account}/${IProfileActiveTab.TRADING.toLowerCase()}`
+                    url: `/app/profile/${pos.account}/${IProfileActiveTab.TRADING.toLowerCase()}`
                   })({ click: routeChangeTether() }),
                 )
               }, walletLink.wallet)
@@ -394,7 +394,7 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
         //     // ),
 
         //     // $anchor(attr({
-        //     //   href: '/p/feb-roi-old'
+        //     //   href: '/app/feb-roi-old'
         //     // }))(
         //     //   $text('Previous competition results')
         //     // )

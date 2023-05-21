@@ -49,7 +49,7 @@ export const $WalletDisplay = (config: IWalletDisplay) => component((
             nodeEvent('click'),
             map(path => {
               const lastFragment = location.pathname.split('/').slice(-1)[0]
-              const newPath = `/p/wallet/${lastFragment === 'trade' ? IProfileActiveTab.TRADING.toLowerCase() : IProfileActiveTab.BERRIES.toLowerCase()}`
+              const newPath = `/app/wallet/${lastFragment === 'trade' ? IProfileActiveTab.TRADING.toLowerCase() : IProfileActiveTab.BERRIES.toLowerCase()}`
 
               if (location.pathname !== newPath) {
                 history.pushState(null, '', newPath)
