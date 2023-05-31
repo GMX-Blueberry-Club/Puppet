@@ -58,7 +58,7 @@ export const $Profile = (config: IProfile) => component((
         account: config.account,
         chain: chain.id,
       }
-    }, walletLink.network)
+    }, walletLink.chain)
   )
 
   const clientNativeTokenPrice = getClientNativeTokenUsd(walletLink.publicClient)
@@ -73,7 +73,7 @@ export const $Profile = (config: IProfile) => component((
     }
 
     return connectGmxEarn(now(provider), config.account, clientGmxPrice, contractMapping).stakingRewards
-  }, walletLink.publicClient, walletLink.network))
+  }, walletLink.publicClient, walletLink.chain))
 
 
   return [
@@ -204,7 +204,7 @@ export const $Profile = (config: IProfile) => component((
                     offset: pageIndex * 20,
                     pageSize: 20,
                   }
-                }, walletLink.network)
+                }, walletLink.chain)
               )
             }),
           ),

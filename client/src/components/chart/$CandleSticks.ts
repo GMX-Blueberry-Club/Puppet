@@ -1,19 +1,22 @@
-import { Behavior, combineArray, fromCallback, O, Op } from "@aelea/core"
-import { $wrapNativeElement, component, INode, style } from "@aelea/dom"
-import { observer } from '@aelea/ui-components'
+import { Behavior, combineArray, combineObject, fromCallback, O, Op } from "@aelea/core"
+import { $Node, $wrapNativeElement, component, INode, style, styleInline } from "@aelea/dom"
+import { $row, observer } from '@aelea/ui-components'
 import { colorAlpha, pallete } from '@aelea/ui-components-theme'
-import { debounce, delay, empty, filter, mergeArray, multicast, scan, tap } from '@most/core'
+import { filterNull } from "@gambitdao/gmx-middleware"
+import { empty, filter, map, mergeArray, multicast, never, now, scan, skipRepeats, snapshot, tap } from '@most/core'
 import { disposeWith } from '@most/disposable'
 import { Stream } from '@most/types'
 import {
-  CandlestickSeriesPartialOptions, ChartOptions, createChart, CrosshairMode, DeepPartial,
-  IPriceLine, LineStyle, MouseEventParams, PriceLineOptions, SeriesDataItemTypeMap, SeriesMarker,
+  CandlestickSeriesPartialOptions, ChartOptions, Coordinate, createChart, CrosshairMode, DeepPartial,
+  IChartApi,
+  IPriceLine, ISeriesApi, LineStyle, LogicalRange, MouseEventParams, PriceLineOptions, SeriesDataItemTypeMap, SeriesMarker,
   Time, TimeRange
 } from 'lightweight-charts'
 
 export interface IMarker extends SeriesMarker<Time> {
 
 }
+
 
 export interface ISeries {
 
@@ -26,134 +29,184 @@ export interface ISeries {
   drawMarkers?: Stream<IMarker[]>
 }
 
+interface ICHartAxisChange {
+  coords: Stream<Coordinate | null>
+  isFocused: Stream<boolean>
+  price: Stream<number | null>
+}
+
 export interface ICandlesticksChart {
   chartConfig?: DeepPartial<ChartOptions>
   containerOp?: Op<INode, INode>
-  series: ISeries[]
+  series: ISeries
+
+  $content?: $Node
+
+  yAxisState?: ICHartAxisChange
+
+}
+
+export interface IInitCandlesticksChart {
+  chartApi: IChartApi
+  seriesApi: ISeriesApi<"Candlestick">
 }
 
 
-export const $CandleSticks = ({ chartConfig, series, containerOp = O() }: ICandlesticksChart) => component((
-  [containerDimension, sampleContainerDimension]: Behavior<INode, ResizeObserverEntry[]>
-) => {
-
+export const $CandleSticks = ({ chartConfig, series, containerOp = O(), $content = empty(),
+  yAxisState,
+}: ICandlesticksChart) => {
   const containerEl = document.createElement('chart')
 
 
-  const chartApi = createChart(containerEl, {
-    rightPriceScale: {
-      visible: false,
-    },
-    grid: {
-      horzLines: {
-        color: '#eee',
-        visible: false,
-      },
-      vertLines: {
-        color: 'transparent',
-        visible: false
-      },
-    },
-    overlayPriceScales: {
-      borderVisible: false,
-    },
-    layout: {
-      background: {
-        color: 'transparent'
-      },
-      textColor: pallete.message,
-      fontFamily: 'Moderat',
-      fontSize: 12
-    },
-    timeScale: {
-      rightOffset: 0,
-      secondsVisible: true,
-      timeVisible: true,
-      lockVisibleTimeRangeOnResize: true,
 
-    },
-    crosshair: {
-      mode: CrosshairMode.Normal,
-      horzLine: {
-        labelBackgroundColor: pallete.foreground,
-        color: colorAlpha(pallete.foreground, .20),
-        width: 1,
-        style: LineStyle.Solid
+  return component((
+    [containerDimension, sampleContainerDimension]: Behavior<INode, ResizeObserverEntry[]>,
+
+    // [sampleChartCrosshair, sampleChartCrosshairTether]: Behavior<MouseEventParams, MouseEventParams>,
+    // [focusAxis, focusAxisTether]: Behavior<Coordinate | null, Coordinate | null>,
+  ) => {
+
+
+    const chartApi = createChart(containerEl, {
+      grid: {
+        horzLines: {
+          color: '#eee',
+          visible: false,
+        },
+        vertLines: {
+          color: 'transparent',
+          visible: false
+        },
       },
-      vertLine: {
-        labelBackgroundColor: pallete.foreground,
-        color: colorAlpha(pallete.foreground, .20),
-        width: 1,
-        style: LineStyle.Solid,
+      overlayPriceScales: {
+        borderColor: pallete.indeterminate,
+        borderVisible: false,
+      },
+      layout: {
+        background: {
+          color: 'transparent'
+        },
+        textColor: pallete.message,
+        fontFamily: 'Moderat',
+        fontSize: 12
+      },
+      timeScale: {
+        rightOffset: 0,
+        secondsVisible: true,
+        timeVisible: true,
+        lockVisibleTimeRangeOnResize: true,
+      },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        horzLine: {
+          visible: false,
+          labelVisible: false,
+          labelBackgroundColor: pallete.foreground,
+          color: colorAlpha(pallete.foreground, .20),
+          width: 1,
+          style: LineStyle.Solid
+        },
+        vertLine: {
+          // visible: false,
+          // labelVisible: false,
+          labelBackgroundColor: pallete.indeterminate,
+          color: colorAlpha(pallete.indeterminate, .20),
+          width: 1,
+          style: LineStyle.Solid,
+        }
+      },
+
+      ...chartConfig
+    })
+
+    const seriesApi: ISeriesApi<"Candlestick"> = chartApi.addCandlestickSeries(series.seriesConfig)
+
+    seriesApi.setData(series.data)
+
+    const crosshairMove = fromCallback<MouseEventParams>(
+      cb => {
+        chartApi.subscribeCrosshairMove(cb)
+        return disposeWith(handler => chartApi.unsubscribeCrosshairMove(handler), cb)
       }
-    },
-    ...chartConfig
-  })
-
-  const crosshairMove = fromCallback<MouseEventParams>(
-    cb => {
-      chartApi.subscribeCrosshairMove(cb)
-      disposeWith(handler => chartApi.unsubscribeCrosshairMove(handler), cb)
-    }
-  )
-  const click = multicast(
-    fromCallback<MouseEventParams>(cb => {
-      chartApi.subscribeClick(cb)
-      disposeWith(handler => chartApi.unsubscribeClick(handler), cb)
-    })
-  )
-
-  const timeScale = chartApi.timeScale()
+    )
 
 
-  const visibleLogicalRangeChange = multicast(
-    fromCallback(cb => {
-      timeScale.subscribeVisibleLogicalRangeChange(cb)
-      disposeWith(handler => timeScale.subscribeVisibleLogicalRangeChange(handler), cb)
-    })
-  )
+    const click = multicast(
+      fromCallback<MouseEventParams>(cb => {
+        chartApi.subscribeClick(cb)
+        return disposeWith(handler => chartApi.unsubscribeClick(handler), cb)
+      })
+    )
 
-  const visibleTimeRangeChange = multicast(
-    fromCallback<TimeRange | null>(cb => {
-      timeScale.subscribeVisibleTimeRangeChange(cb)
-      disposeWith(handler => timeScale.unsubscribeVisibleTimeRangeChange(handler), cb)
-    })
-  )
+    const timeScale = chartApi.timeScale()
 
 
-  const ignoreAll = filter(() => false)
+    const visibleLogicalRangeChange: Stream<LogicalRange | null> = multicast(
+      fromCallback(cb => {
+        timeScale.subscribeVisibleLogicalRangeChange(cb)
+        return disposeWith(handler => timeScale.subscribeVisibleLogicalRangeChange(handler), cb)
+      })
+    )
 
-  return [
-    $wrapNativeElement(containerEl)(
-      style({ position: 'relative', minHeight: '30px', flex: 1, width: '100%' }),
-      sampleContainerDimension(observer.resize()),
-      containerOp,
-    )(
-      ignoreAll(mergeArray([
-        ...series.map(params => {
-          const priceLineConfigList = params.priceLines || []
-          const api = chartApi.addCandlestickSeries(params.seriesConfig)
+    const visibleTimeRangeChange = multicast(
+      fromCallback<TimeRange | null>(cb => {
+        timeScale.subscribeVisibleTimeRangeChange(cb)
+        return disposeWith(handler => timeScale.unsubscribeVisibleTimeRangeChange(handler), cb)
+      })
+    )
 
 
-          api.setData(params.data)
 
-          setTimeout(() => {
-            timeScale.resetTimeScale()
-          }, 25)
 
-          return mergeArray([
-            params.appendData
-              ? tap(next => {
-                if (next && next.time) {
-                  api.update(next)
+    const ignoreAll = filter(() => false)
+
+    const priceLineConfigList = series.priceLines || []
+
+
+
+
+    return [
+      $wrapNativeElement(containerEl)(
+        style({ position: 'relative', minHeight: '30px', flex: 1, width: '100%' }),
+        sampleContainerDimension(observer.resize()),
+        containerOp,
+      )(
+        yAxisState
+          ? $row(
+            style({
+              placeContent: 'flex-end', alignItems: 'center', height: '1px',
+              zIndex: 10, pointerEvents: 'none', width: '100%', position: 'absolute'
+            }),
+            styleInline(
+              map(params => {
+                if (params.coords === null) {
+                  return { display: 'none' }
                 }
 
-              }, params.appendData)
+                return {
+                  background: colorAlpha(params.isFocused ? pallete.primary : pallete.indeterminate, .5),
+                  top: params.coords + 'px',
+                  display: 'flex'
+                }
+              }, combineObject(yAxisState))
+            )
+          )(
+            $content
+          ) : empty(),
+        ignoreAll(mergeArray([
+          mergeArray([
+            series.appendData
+              ? tap(next => {
+                if (next && next.time) {
+                  seriesApi.update(next)
+                }
+
+              }, series.appendData)
               : empty(),
             ...priceLineConfigList.map(lineStreamConfig => {
               return scan((prev, params) => {
                 if (prev && params === null) {
-                  api.removePriceLine(prev)
+                  seriesApi.removePriceLine(prev)
                 }
 
                 if (params) {
@@ -161,7 +214,7 @@ export const $CandleSticks = ({ chartConfig, series, containerOp = O() }: ICandl
                     prev.applyOptions(params)
                     return prev
                   } else {
-                    return api.createPriceLine(params)
+                    return seriesApi.createPriceLine(params)
                   }
                 }
 
@@ -169,27 +222,68 @@ export const $CandleSticks = ({ chartConfig, series, containerOp = O() }: ICandl
               }, null as IPriceLine | null, lineStreamConfig)
             }),
             tap(next => {
-              api.setMarkers(next)
-            }, params.drawMarkers || empty()),
-          ])
-        }),
-        combineArray(([containerDimension]) => {
-          const { width, height } = containerDimension.contentRect
-          chartApi.resize(width, height)
+              seriesApi.setMarkers(next)
+            }, series.drawMarkers || empty()),
+          ]),
+          combineArray(([containerDimension]) => {
+            // debugger
 
-          return empty()
-        }, containerDimension),
-      ]))
-    ),
+            const { width, height } = containerDimension.contentRect
+            chartApi.resize(width, height)
+            timeScale.resetTimeScale()
 
-    {
-      crosshairMove,
-      click,
-      visibleLogicalRangeChange,
-      visibleTimeRangeChange,
-      containerDimension
-    }
-  ]
-})
+
+            return empty()
+          }, containerDimension),
+        ]))
+      ),
+
+      {
+        yAxisCoords: yAxisState
+          ? mergeArray([
+            filterNull(map(coords => {
+              if (coords.isFocused) {
+                return null
+              }
+
+              return coords.crosshairMove?.point?.y || null
+            }, combineObject({ crosshairMove, isFocused: yAxisState.isFocused }))),
+            snapshot((params, range) => {
+              if (!params.isFocused || params.coords === null || !params.price) {
+                return null
+              }
+
+              return seriesApi.priceToCoordinate(params.price)
+            }, combineObject(yAxisState), visibleLogicalRangeChange),
+
+          ]) : empty(),
+        focusPrice: yAxisState
+          ? filterNull(mergeArray([
+            snapshot((params, ev) => {
+              if (params.isFocused) {
+                return null
+              }
+
+              return ev.point ? seriesApi.coordinateToPrice(ev.point.y) : null
+            }, combineObject(yAxisState), click),
+            snapshot((params, coords) => {
+              if (params.isFocused) {
+                return null
+              }
+
+              return coords ? seriesApi.coordinateToPrice(coords) : null
+            }, combineObject(yAxisState), yAxisState.coords)
+          ])) : empty(),
+        isFocused: yAxisState ? snapshot((focused) => !focused, yAxisState.isFocused, click) : empty(),
+        initChart: now({ chartApi, seriesApi } as IInitCandlesticksChart),
+        crosshairMove,
+        click,
+        visibleLogicalRangeChange,
+        visibleTimeRangeChange,
+        containerDimension
+      }
+    ]
+  })
+}
 
 

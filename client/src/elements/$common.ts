@@ -5,8 +5,8 @@ import { getAccountExplorerUrl, getTxExplorerUrl, shortenAddress } from "@gambit
 import { $trash } from "./$icons"
 import { IToken, LAB_CHAIN } from "@gambitdao/gbc-middleware"
 import { $anchor, $calendar, $caretDblDown, $ethScan } from "@gambitdao/ui-components"
-import { $berryByToken } from "../logic/common"
 import { Address, Transaction } from "viem"
+import { $berryByToken } from "../components/$common"
 
 export const $TrashBtn = $ButtonIcon($trash)
 

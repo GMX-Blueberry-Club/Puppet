@@ -216,8 +216,6 @@ export const competitionLeaderboard = O(
       const summaryList = toAccountSummaryList(tradeList, priceMap, queryParams.maxCollateral, queryParams.to)
 
       const { size, activeWinnerCount, totalMaxCollateral } = summaryList.reduce((s, n) => {
-
-
         if (isWinner(n)) {
           s.activeWinnerCount++
           s.totalMaxCollateral += n.maxCollateral
@@ -228,10 +226,7 @@ export const competitionLeaderboard = O(
           s.highestMaxCollateralBasedOnPnl = n.maxCollateral
         }
 
-
-
         s.size += n.cumSize
-
 
         return s
       }, { highestMaxCollateralBasedOnPnl: 0n, pnl: 0n, size: 0n, totalMaxCollateral: 0n, activeWinnerCount: 0n })
@@ -240,7 +235,7 @@ export const competitionLeaderboard = O(
       const averageMaxCollateral = totalMaxCollateral / activeWinnerCount
       const estSize = size * BigInt(TOURNAMENT_DURATION) / BigInt(TOURNAMENT_TIME_ELAPSED)
 
-      const prizePool = getMarginFees(size) * 1500n / BASIS_POINTS_DIVISOR
+      const prizePool = getMarginFees(size) * 2500n / BASIS_POINTS_DIVISOR
       const estPrizePool = prizePool * BigInt(TOURNAMENT_DURATION) / BigInt(TOURNAMENT_TIME_ELAPSED)
 
       const totalScore = summaryList.reduce((s, n) => {

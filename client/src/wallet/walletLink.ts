@@ -1,12 +1,13 @@
-import { combineObject, fromCallback } from "@aelea/core"
+import { combineObject, fromCallback, replayLatest } from "@aelea/core"
 import { pallete } from "@aelea/ui-components-theme"
-import { map, mergeArray, now } from "@most/core"
+import { awaitPromises, map, mergeArray, multicast, now } from "@most/core"
 import { Stream } from "@most/types"
-import { Address, GetAccountResult, GetNetworkResult, InjectedConnector, configureChains, createConfig, createStorage, getAccount, getNetwork, getPublicClient, getWebSocketPublicClient, watchAccount, watchNetwork } from '@wagmi/core'
+import { Address, GetAccountResult, GetNetworkResult, InjectedConnector, WalletClient, configureChains, createConfig, createStorage, getAccount, getNetwork, getPublicClient, getWalletClient, getWebSocketPublicClient, watchAccount, watchNetwork } from '@wagmi/core'
 import { WalletConnectConnector } from '@wagmi/core/connectors/walletConnect'
 import { jsonRpcProvider } from '@wagmi/core/providers/jsonRpc'
 import { EthereumClient } from '@web3modal/ethereum'
 import { Web3Modal } from '@web3modal/html'
+import { Transport } from "viem"
 import { arbitrum, avalanche } from "viem/chains"
 
 const chains = [arbitrum, avalanche]
@@ -16,6 +17,7 @@ export interface IWalletConnected {
   network: typeof arbitrum | typeof avalanche
 }
 
+export type IWalletClient = WalletClient<Transport, typeof arbitrum | typeof avalanche>
 
 
 const projectId = 'c7cea9637dde679f833971689e9a3119'
@@ -92,7 +94,7 @@ const ethereumClient = new EthereumClient(walletConfig, chains)
 export const networkChange = fromCallback<GetNetworkResult>(watchNetwork)
 export const accountChange = fromCallback<GetAccountResult>(watchAccount)
 
-export const network: Stream<IWalletConnected['network']> = map(getNetworkResult => {
+export const chain: Stream<IWalletConnected['network']> = map(getNetworkResult => {
   const chain = chains.find(chain => chain.id == getNetworkResult.chain?.id)
 
   return chain || null
@@ -116,20 +118,35 @@ export const account = mergeArray([
   accountChange
 ])
 
-
-export const wallet = map(params => {
-  return params
-}, combineObject({ account, network }))
-
 export const publicClient = map(params => {
-  if (params.network == null) {
+  if (params.chain == null) {
     throw new Error('network is null')
   }
 
-  const clientAvaialble = getWebSocketPublicClient({ chainId: params.network.id }) || getPublicClient({ chainId: params.network.id })
+  const clientAvaialble = getWebSocketPublicClient({ chainId: params.chain.id }) || getPublicClient({ chainId: params.chain.id })
 
   return clientAvaialble
-}, combineObject({ network }))
+}, combineObject({ chain }))
+
+// export const walletClient = awaitPromises(map(async params => {
+//   if (params.network == null) {
+//     throw new Error('network is null')
+//   }
+
+//   const clientAvaialble = await getWalletClient({ chainId: params.network.id })
+
+//   return clientAvaialble
+// }, combineObject({ network })))
+
+export const wallet = replayLatest(multicast(awaitPromises(map(async params => {
+  if (params.chain == null) {
+    throw new Error('network is null')
+  }
+
+  const clientAvaialble = await getWalletClient({ chainId: params.chain.id })
+
+  return clientAvaialble
+}, combineObject({ chain, accountChange })))))
 
 
 

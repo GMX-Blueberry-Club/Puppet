@@ -12,9 +12,10 @@ import { Stream } from "@most/types"
 import { fetchBalance, readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
 import { Address, Chain } from "viem"
-import { network } from "../../wallet/walletLink"
+import { chain } from "../../wallet/walletLink"
 import { connectMappedContract, getMappedContractAddress } from "../common"
 import { resolveAddress } from "../utils"
+import { arbitrum, avalanche } from "viem/chains"
 
 
 
@@ -55,14 +56,19 @@ const derievedSymbolMapping: { [k: string]: TOKEN_SYMBOL } = {
 }
 
 
+const GMX_URL_CHAIN = {
+  [CHAIN.ARBITRUM]: 'https://gmx-server-mainnet.uw.r.appspot.com',
+  [CHAIN.AVALANCHE]: 'https://gmx-avax-server.uc.r.appspot.com',
+}
+
 const gmxIOPriceMapSource = {
   [CHAIN.ARBITRUM]: replayLatest(multicast(observer.duringWindowActivity(periodicRun({
     interval: 2000,
-    actionOp: map(async time => getGmxIOPriceMap('https://gmx-server-mainnet.uw.r.appspot.com/prices'))
+    actionOp: map(async time => getGmxIOPriceMap(GMX_URL_CHAIN[CHAIN.ARBITRUM] + '/prices'))
   })))),
   [CHAIN.AVALANCHE]: replayLatest(multicast(observer.duringWindowActivity(periodicRun({
     interval: 2000,
-    actionOp: map(async time => getGmxIOPriceMap('https://gmx-avax-server.uc.r.appspot.com/prices'))
+    actionOp: map(async time => getGmxIOPriceMap(GMX_URL_CHAIN[CHAIN.AVALANCHE] + '/prices'))
   })))),
 }
 
@@ -327,7 +333,7 @@ export function getLatestPrice(token: Stream<ITokenTrade>) {
     const resolvedToken = resolveAddress(chainId, params.token)
 
     return exchangesWebsocketPriceSource(chainId, resolvedToken)
-  }, combineObject({ network, token })))
+  }, combineObject({ network: chain, token })))
 
   return switchFailedSources([
     wsPrice,
@@ -339,6 +345,18 @@ export function getLatestPrice(token: Stream<ITokenTrade>) {
 
 export async function getGmxIOPriceMap(url: string): Promise<{ [key in ITokenIndex]: bigint }> {
   const res = await fetch(url)
+  const json = await res.json()
+
+  // @ts-ignore
+  return Object.keys(json).reduce((seed, key) => {
+    // @ts-ignore
+    seed[key.toLowerCase()] = json[key]
+    return seed
+  }, {})
+}
+
+export async function getGmxIoOrders(network: typeof arbitrum | typeof avalanche, account: string): Promise<{ [key in ITokenIndex]: bigint }> {
+  const res = await fetch(GMX_URL_CHAIN[network.id] + `/orders_indices?account=${account}`)
   const json = await res.json()
 
   // @ts-ignore

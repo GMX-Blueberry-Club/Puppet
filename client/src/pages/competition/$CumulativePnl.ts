@@ -54,7 +54,7 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
     sortBy,
     pageIndex,
     w3p: walletLink.wallet,
-    network: walletLink.network
+    chain: walletLink.chain
   })
 
 
@@ -64,7 +64,7 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
 
     const reqParams: IRequestCompetitionLadderApi = {
       ...params.sortBy,
-      chain: params.network.id,
+      chain: params.chain.id,
       account: params.w3p?.account.address || null,
       referralCode: BLUEBERRY_REFFERAL_CODE,
       maxCollateral: MAX_COLLATERAL,

@@ -8,7 +8,7 @@ import { awaitPromises, empty, map, mergeArray, now, snapshot, switchLatest, tap
 import { Stream } from "@most/types"
 import { getNetwork } from "@wagmi/core"
 import { $caretDown } from "../elements/$icons"
-import { IWalletConnected, network, wallet, web3Modal } from "../wallet/walletLink"
+import { IWalletClient, chain, wallet, web3Modal } from "../wallet/walletLink"
 import { $ButtonPrimary, $ButtonSecondary } from "./form/$Button"
 import { IButtonCore } from "./form/$ButtonCore"
 
@@ -17,7 +17,7 @@ import { IButtonCore } from "./form/$ButtonCore"
 
 
 export interface IConnectWalletPopover {
-  $$display: Op<IWalletConnected, $Node>
+  $$display: Op<IWalletClient, $Node>
   primaryButtonConfig?: Partial<IButtonCore>
 }
 
@@ -30,9 +30,8 @@ export const $IntermediateConnectButton = (config: IConnectWalletPopover) => com
 
   return [
     switchLatest(map(w3p => {
-      const address = w3p.account.address
       // no wallet connected, show connection flow
-      if (!address) {
+      if (!w3p) {
         return $ConnectDropdown(
           $ButtonPrimary({
             $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
@@ -49,11 +48,11 @@ export const $IntermediateConnectButton = (config: IConnectWalletPopover) => com
       }
 
 
-      if (w3p.network === null) {
+      if (w3p.chain.id === null) {
         return $SwitchNetworkDropdown(true)({})
       }
 
-      return switchLatest(config.$$display(now({ address, network: w3p.network })))
+      return switchLatest(config.$$display(now(w3p)))
 
 
     }, wallet)),
@@ -103,7 +102,7 @@ export const $SwitchNetworkDropdown = (showLabel = false) => component((
 
       // return style({ zoom: 1.1 })($alertTooltip($text('www')))
 
-    }, mergeArray([now(null), changeNetwork]), network)),
+    }, mergeArray([now(null), changeNetwork]), chain)),
 
     {
     }

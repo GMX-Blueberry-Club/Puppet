@@ -1,10 +1,11 @@
 import { style, $text, stylePseudo, NodeComposeFn, $Node } from "@aelea/dom"
 import { $column, layoutSheet, $row } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { IAttributeMappings, IToken, LAB_CHAIN } from "@gambitdao/gbc-middleware"
+import { IAttributeBackground, IAttributeBadge, IAttributeMappings, IBerryDisplayTupleMap, IToken, LAB_CHAIN, getBerryFromItems, getLabItemTupleIndex, tokenIdAttributeTuple } from "@gambitdao/gbc-middleware"
 import { $defaultTableRowContainer, $defaultVScrollContainer, $infoLabeledValue, $spinner, $Table, $txHashRef, TableOption } from "@gambitdao/ui-components"
 import { $card } from "../elements/$common"
-import { $berryByToken, $labItem } from "../logic/common"
+import { $labItem } from "../logic/common"
+import { $berry } from "./$DisplayBerry"
 
 export const $berryTileId = (token: IToken, $container?: NodeComposeFn<$Node>) => $column(style({ position: 'relative' }))(
   $berryByToken(token, $container),
@@ -57,5 +58,39 @@ export function $mintDet1ails(txHash: string, berriesAmount: number, ids: number
       })
     })),
   )
+}
+
+
+export const $berryByToken = (token: IToken, $container?: NodeComposeFn<$Node>) => {
+  const display = getBerryFromItems(token.labItems.map(li => Number(li.id)))
+  const tuple: Partial<IBerryDisplayTupleMap> = [...tokenIdAttributeTuple[token.id - 1]]
+
+  return $berryByLabItems(token.id, display.background, display.custom, display.badge, $container, tuple)
+}
+
+export const $berryByLabItems = (
+  berryId: number,
+  backgroundId: IAttributeBackground,
+  labItemId: IAttributeMappings,
+  badgeId: IAttributeBadge,
+  $container?: NodeComposeFn<$Node>,
+  tuple: Partial<IBerryDisplayTupleMap> = [...tokenIdAttributeTuple[berryId - 1]]
+) => {
+
+  if (labItemId) {
+    const customIdx = getLabItemTupleIndex(labItemId)
+
+    tuple.splice(customIdx, 1, labItemId as any)
+  }
+
+  if (badgeId) {
+    tuple.splice(6, 1, badgeId)
+  }
+
+  if (backgroundId) {
+    tuple.splice(0, 1, backgroundId)
+  }
+
+  return $berry(tuple, $container)
 }
 

@@ -66,7 +66,7 @@ export const $Home = (config: ITreasury) => component((
     width: `100vw`,
     height: `100vw`,
     top: '50%',
-    transform: 'translateY(-50%)',
+    transform: 'translateY(-50%) rotateX(17deg)',
   }))
   const $wheel = $node(style({
     border: '1px solid #4d4d4d',

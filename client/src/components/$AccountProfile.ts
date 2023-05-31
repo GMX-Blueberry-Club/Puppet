@@ -4,9 +4,9 @@ import { pallete } from "@aelea/ui-components-theme"
 import { IEnsRegistration } from "@gambitdao/gmx-middleware"
 import { $jazzicon } from "../common/$avatar"
 import { blueberrySubgraph, IOwner } from "@gambitdao/gbc-middleware"
-import { $berryByToken } from "../logic/common"
 import { awaitPromises, empty, map, now, switchLatest } from "@most/core"
 import { Address } from "viem"
+import { $berryByToken } from "./$common"
 
 
 export interface IAccountPreview {

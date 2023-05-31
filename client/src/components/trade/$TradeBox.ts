@@ -52,7 +52,7 @@ import {
 } from "@most/core"
 import { Stream } from "@most/types"
 import { writeContract } from "@wagmi/core"
-import { erc20Abi } from "abitype/test"
+import { erc20Abi, writingEditionsFactoryAbi } from "abitype/test"
 import { MouseEventParams } from "lightweight-charts"
 import { Hex, SimulateContractReturnType, TransactionReceipt } from "viem"
 import { arbitrum, avalanche } from "viem/chains"
@@ -136,7 +136,7 @@ export interface ITradeBoxParams {
   tokenStableMap: Partial<Record<number, ITokenStable[]>>
   store: BrowserStore<"ROOT.v1.trade", string>
   parentRoute: Route
-  network: typeof arbitrum | typeof avalanche
+  chain: typeof arbitrum | typeof avalanche
 }
 
 interface ITradeBox extends ITradeBoxParams {
@@ -163,7 +163,7 @@ export const $TradeBox = (config: ITradeBox) => component((
   [openEnableTradingPopover, openEnableTradingPopoverTether]: Behavior<any, any>,
   [enableTrading, enableTradingTether]: Behavior<any, boolean>,
   [approveInputToken, approveInputTokenTether]: Behavior<PointerEvent, boolean>,
-  [clickEnablePlugin, clickEnablePluginTether]: Behavior<PointerEvent, SimulateContractReturnType>,
+  [clickEnablePlugin, clickEnablePluginTether]: Behavior<PointerEvent>,
 
   [dismissEnableTradingOverlay, dismissEnableTradingOverlayTether]: Behavior<false, false>,
 
@@ -194,6 +194,20 @@ export const $TradeBox = (config: ITradeBox) => component((
 
 
 ) => {
+
+  const contractMap = getMappedValue(TRADE_CONTRACT_MAPPING, config.chain.id)
+  const routerContractAddress = contractMap.Router
+  const positionRouterAddress = contractMap.PositionRouter
+
+  const requestEnablePlugin = switchMap(ev => {
+    const simReq = tradeReader.router.write({
+      functionName: 'approvePlugin',
+      args: [positionRouterAddress],
+      value: undefined
+    })
+
+    return simReq
+  }, clickEnablePlugin)
 
 
   const { collateralDeltaUsd, collateralToken, focusMode, indexToken, inputToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage } = config.tradeConfig
@@ -598,11 +612,11 @@ export const $TradeBox = (config: ITradeBox) => component((
             switchLatest(map(params => {
 
               const address = params.account.address
-              if (!config.network.id || !address) {
+              if (!config.chain.id || !address) {
                 return empty()
               }
 
-              const chainId = config.network.id
+              const chainId = config.chain.id
 
               return $Dropdown<ITokenInput>({
                 $container: $row(style({ position: 'relative', alignSelf: 'center' })),
@@ -622,7 +636,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                   $container: $defaultSelectContainer(style({ minWidth: '290px', left: 0 })),
                   $$option: map(option => {
                     const token = resolveAddress(chainId, option)
-                    const balanceAmount = tradeReader.getErc20Balance(config.network, option, address)
+                    const balanceAmount = tradeReader.getErc20Balance(config.chain, option, address)
                     const price = tradeReader.pricefeed.read('getPrimaryPrice', token, false)
                     const tokenDesc = option === AddressZero ? getNativeTokenDescription(chainId) : getTokenDescription(option)
 
@@ -911,7 +925,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                     )
                   )
                 }),
-                list: config.tokenIndexMap[config.network.id] || [],
+                list: config.tokenIndexMap[config.chain.id] || [],
               }
             })({
               select: changeIndexTokenTether()
@@ -1022,7 +1036,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                           )
                         )
                       }),
-                      list: config.tokenStableMap[config.network.id] || [],
+                      list: config.tokenStableMap[config.chain.id] || [],
                     }
                   })({
                     select: changeCollateralTokenTether()
@@ -1090,9 +1104,7 @@ export const $TradeBox = (config: ITradeBox) => component((
           //   )
           // })({})),
           $$display: map(w3p => {
-            const contractMap = getMappedValue(TRADE_CONTRACT_MAPPING, config.network.id)
-            const routerContractAddress = contractMap.Router
-            const positionRouterAddress = contractMap.PositionRouter
+
 
             return $column(style({ minHeight: '140px', flexDirection: screenUtils.isDesktopScreen ? 'column' : 'column-reverse' }))(
               $column(style({ padding: '16px', margin: 'auto 0', placeContent: 'space-between' }), styleInline(map(mode => ({ height: '140px', display: mode ? 'flex' : 'none' }), inTradeMode)))(
@@ -1125,7 +1137,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                         $text('Collateral deducted upon your deposit including Borrow fee at the start of every hour. the rate changes based on utilization, it is calculated as (assets borrowed) / (total assets in pool) * 0.01%'),
 
                         switchLatest(map(params => {
-                          const depositTokenNorm = resolveAddress(config.network.id, params.inputToken)
+                          const depositTokenNorm = resolveAddress(config.chain.id, params.inputToken)
                           const outputToken = params.isLong ? params.indexToken : params.collateralToken
                           const totalSizeUsd = params.position.size + params.sizeDeltaUsd
                           const nextSize = totalSizeUsd * params.collateralTokenPoolInfo.rate / BASIS_POINTS_DIVISOR / 100n
@@ -1170,7 +1182,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                             ),
                             $row(layoutSheet.spacingTiny)(
                               $text(style({ color: pallete.foreground }))('Your added contribution'),
-                              $text(style({ color: pallete.positive }))(map(params => formatReadableUSD(params.marginFee * 1500n / BASIS_POINTS_DIVISOR), combineObject({ marginFee })))
+                              $text(style({ color: pallete.positive }))(map(params => formatReadableUSD(params.marginFee * 2500n / BASIS_POINTS_DIVISOR), combineObject({ marginFee })))
                             ),
                           ),
                           'Payback'
@@ -1247,17 +1259,10 @@ export const $TradeBox = (config: ITradeBox) => component((
 
                             !isPluginEnabled
                               ? $ButtonPrimaryCtx({
-                                ctx: clickEnablePlugin,
+                                request: requestEnablePlugin,
                                 $content: $text(!isPluginEnabled ? 'Enable GMX & Agree' : 'Agree')
                               })({
-                                click: clickEnablePluginTether(
-                                  switchMap(_ => tradeReader.router.simulate({
-                                    functionName: 'approvePlugin',
-                                    args: [positionRouterAddress],
-                                    value: undefined
-                                  })),
-                                  // multicast
-                                )
+                                click: clickEnablePluginTether()
                               })
                               : $ButtonPrimary({
                                 $content: $text('Agree')
@@ -1347,7 +1352,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                         click: clickRequestTradeTether(
                           snapshot((state) => {
 
-                            const resolvedInputAddress = resolveAddress(config.network.id, inputToken)
+                            const resolvedInputAddress = resolveAddress(config.chain.id, inputToken)
                             const from = state.isIncrease ? resolvedInputAddress : state.isLong ? state.indexToken : state.collateralToken
                             const to = state.isIncrease ? state.isLong ? state.indexToken : state.collateralToken : resolvedInputAddress
 
@@ -1361,7 +1366,6 @@ export const $TradeBox = (config: ITradeBox) => component((
                             const priceBasisPoints = BASIS_POINTS_DIVISOR + allowedSlippage
 
                             const acceptablePrice = refPrice * priceBasisPoints / BASIS_POINTS_DIVISOR
-                            console.log(formatReadableUSD(acceptablePrice))
 
                             const isNative = inputToken === AddressZero
 
@@ -1387,51 +1391,6 @@ export const $TradeBox = (config: ITradeBox) => component((
                                 })
                               } else {
 
-                                // const gasLimit = (state.positionRouter.interface.estimateGas.createIncreasePosition(
-                                //   swapRoute,
-                                //   state.indexToken,
-                                //   0,
-                                //   0,
-                                //   state.sizeDeltaUsd,
-                                //   state.isLong,
-                                //   acceptablePrice,
-                                //   state.executionFee,
-                                //   config.referralCode,
-                                //   AddressZero,
-                                //   {
-                                //     value: state.executionFee,
-                                //   }
-                                // )).then(est => {
-                                //   // add 10% buffer
-                                //   return est * 12000n / BASIS_POINTS_DIVISOR
-                                // })
-
-
-
-
-                                // const gasPrice = state.positionRouter.getGasPrice()
-
-                                // gasPrice.then(xx => {
-                                //   const usdAmount = getTokenUsd(xx.toBigInt(), state.nativeTokenPrice, 18)
-                                // })
-
-                                // const gasLimit = positionRouter.estimateGas.createIncreasePosition(
-                                //   path,
-                                //   state.indexToken,
-                                //   state.collateralDelta,
-                                //   0,
-                                //   state.sizeDeltaUsd,
-                                //   state.isLong,
-                                //   acceptablePrice,
-                                //   state.executionFee,
-                                //   config.referralCode,
-                                //   AddressZero,
-                                //   {
-                                //     value: state.executionFee,
-                                //     gasPrice,
-                                //     gasLimit: 2542725n
-                                //   }
-                                // )
 
                                 ctxQuery = tradeReader.positionRouter.simulate({
                                   value: state.executionFee,
@@ -1462,7 +1421,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                                   -state.collateralDeltaUsd,
                                   -state.sizeDeltaUsd,
                                   state.isLong,
-                                  w3p.address,
+                                  w3p.account.address,
                                   acceptablePrice,
                                   0n,
                                   state.executionFee,
@@ -1483,7 +1442,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                         )
                       })
                     )
-                  }, tradeReader.getIsPluginEnabled(w3p.address), config.tradeState.isTradingEnabled, config.tradeState.isInputTokenApproved, config.tradeConfig.inputToken, config.tradeState.inputTokenDescription))
+                  }, tradeReader.getIsPluginEnabled(w3p.account.address), config.tradeState.isTradingEnabled, config.tradeState.isInputTokenApproved, config.tradeConfig.inputToken, config.tradeState.inputTokenDescription))
                 ),
               ),
 
@@ -1562,7 +1521,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                       $TradePnlHistory({
                         $container: $column(style({ flex: 1, overflow: 'hidden', borderRadius: '20px' })),
                         trade: trade,
-                        chain: config.network.id,
+                        chain: config.chain.id,
                         pricefeed,
                         chartConfig: {
                           leftPriceScale: {

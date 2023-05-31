@@ -4,6 +4,7 @@
     "forceConsistentCasingInFileNames": true,
     "declarationMap": true,
     "allowSyntheticDefaultImports": true,
+    "disableSourceOfProjectReferenceRedirect": true,
     "importHelpers": true,
     "esModuleInterop": true,
     "target": "ES2020",

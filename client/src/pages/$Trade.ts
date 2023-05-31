@@ -1,5 +1,5 @@
 import { Behavior, O, combineArray, combineObject, replayLatest } from "@aelea/core"
-import { $node, $text, component, style } from "@aelea/dom"
+import { $node, $text, component, style, styleBehavior, styleInline } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, observer, screenUtils } from "@aelea/ui-components"
 import {
   ARBITRUM_ADDRESS_STABLE, AVALANCHE_ADDRESS_STABLE,
@@ -20,6 +20,7 @@ import {
   formatReadableUSD, formatToBasis, getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getLiquidationPrice, getMappedValue, getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getPnL, getPositionKey,
   getTokenAmount, getTokenDescription, gmxSubgraph,
   intervalTimeMap,
+  readableAccountingNumber,
   readableDate, readableNumber,
   switchMap,
   timeSince,
@@ -27,16 +28,16 @@ import {
 } from "@gambitdao/gmx-middleware"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { $ButtonToggle, $IntermediatePromise, $infoLabel, $infoTooltip, $spinner, $txHashRef } from "@gambitdao/ui-components"
+import { $ButtonToggle, $IntermediatePromise, $infoLabel, $infoLabeledValue, $infoTooltip, $spinner, $target, $txHashRef } from "@gambitdao/ui-components"
 import { awaitPromises, combine, constant, debounce, empty, filter, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, switchLatest, take, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
-import { CandlestickData, LineStyle, Time } from "lightweight-charts"
+import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
 import { TransactionReceipt } from "viem"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $CardTable } from "../components/$common"
-import { $CandleSticks } from "../components/chart/$CandleSticks"
+import { $CandleSticks, IInitCandlesticksChart } from "../components/chart/$CandleSticks"
 import { $ButtonSecondary } from "../components/form/$Button"
 import { $Dropdown } from "../components/form/$Dropdown"
 import { $TradeBox, ITradeBoxParams, ITradeFocusMode, ITradeState, RequestTradeQuery } from "../components/trade/$TradeBox"
@@ -62,13 +63,22 @@ type RequestTrade = {
 
 
 const timeFrameLablMap = {
+  [intervalTimeMap.SEC]: '1s',
+  [intervalTimeMap.MIN]: '1m',
   [intervalTimeMap.MIN5]: '5m',
   [intervalTimeMap.MIN15]: '15m',
+  [intervalTimeMap.MIN30]: '30m',
   [intervalTimeMap.MIN60]: '1h',
+  [intervalTimeMap.HR2]: '2h',
   [intervalTimeMap.HR4]: '4h',
+  [intervalTimeMap.HR8]: '8h',
   [intervalTimeMap.HR24]: '1d',
   [intervalTimeMap.DAY7]: '1w',
-}
+  [intervalTimeMap.MONTH]: '1mo',
+  [intervalTimeMap.MONTH2]: '2mo',
+  [intervalTimeMap.YEAR]: '2yr',
+} as const
+
 
 
 export const $Trade = (config: ITradeComponent) => component((
@@ -96,6 +106,19 @@ export const $Trade = (config: ITradeComponent) => component((
 
   [switchTrade, switchTradeTether]: Behavior<ITrade, ITrade>,
   [requestTrade, requestTradeTether]: Behavior<RequestTradeQuery, RequestTradeQuery>,
+
+
+  // [focusPriceAxisPoint, focusPriceAxisPointTether]: Behavior<Coordinate | null>,
+  [IInitCandlesticksChart, IInitCandlesticksChartTether]: Behavior<IInitCandlesticksChart>,
+  [chartClick, chartClickTether]: Behavior<MouseEventParams, MouseEventParams>,
+  // [chartCrosshairMove, chartCrosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
+
+  [changeYAxisCoords, changeYAxisCoordsTether]: Behavior<Coordinate>,
+  [changefocusPrice, changefocusPriceTether]: Behavior<number | null>,
+  [changeIsFocused, changeIsFocusedTether]: Behavior<boolean>,
+
+  [chartVisibleLogicalRangeChange, chartVisibleLogicalRangeChangeTether]: Behavior<LogicalRange | null, LogicalRange | null>,
+
 
 ) => {
 
@@ -135,7 +158,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const slippage = slippageStore.storeReplay(changeSlippage)
 
-  const chainId = config.network.id
+  const chainId = config.chain.id
 
   const nativeToken = CHAIN_ADDRESS_MAP[chainId].NATIVE_TOKEN
 
@@ -182,7 +205,7 @@ export const $Trade = (config: ITradeComponent) => component((
       return now(0n)
     }
 
-    return tradeReader.getErc20Balance(config.network, params.inputToken, params.wallet.account.address)
+    return tradeReader.getErc20Balance(config.chain, params.inputToken, params.wallet.account.address)
   }, combineObject({ inputToken, wallet }))))
 
 
@@ -301,7 +324,7 @@ export const $Trade = (config: ITradeComponent) => component((
     }
 
     return getTokenDescription(token)
-  }, walletLink.network, inputToken)
+  }, walletLink.chain, inputToken)
   const indexTokenDescription = map((address) => getTokenDescription(address), indexToken)
   const collateralTokenDescription = map((address) => getTokenDescription(address), collateralToken)
 
@@ -369,7 +392,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
     return addedSwapFee
   }, combineObject({
-    collateralToken, inputToken, isIncrease, sizeDeltaUsd, isLong, collateralDeltaUsd, network: walletLink.network,
+    collateralToken, inputToken, isIncrease, sizeDeltaUsd, isLong, collateralDeltaUsd, network: walletLink.chain,
     collateralTokenPoolInfo, usdgSupply: tradeReader.usdg.read('totalSupply'), totalTokenWeight: tradeReader.vault.read('totalTokenWeights'),
     position, inputTokenDescription, inputTokenWeight, inputTokenDebtUsd, indexTokenDescription, indexTokenPrice
   })))))
@@ -478,13 +501,13 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const accountOpenTradeList = gmxSubgraph.accountOpenTradeList(
     map(w3p => {
-      if (!w3p.account.address) {
+      if (!w3p) {
         throw new Error('No wallet connected')
       }
 
       return {
         account: w3p.account.address,
-        chain: w3p.network.id,
+        chain: w3p.chain.id,
       }
     }, wallet)
   )
@@ -531,10 +554,16 @@ export const $Trade = (config: ITradeComponent) => component((
     const to = unixTimestampNow()
     const from = to - range
 
-    return { chain: config.network.id, interval: params.timeframe, tokenAddress: params.indexToken, from, to }
+    return { chain: config.chain.id, interval: params.timeframe, tokenAddress: params.indexToken, from, to }
   }, combineObject({ timeframe, indexToken })))
 
- 
+
+  const focusPrice = replayLatest(multicast(changefocusPrice), null)
+  const yAxisCoords = replayLatest(multicast(changeYAxisCoords), null)
+  const isFocused = replayLatest(multicast(changeIsFocused), false)
+
+
+
 
   return [
     $node(
@@ -645,22 +674,19 @@ export const $Trade = (config: ITradeComponent) => component((
                     // intervalTimeMap.DAY7,
                   ],
                   $$option: map(option => {
-                    // @ts-ignore
-                    const newLocal: string = timeFrameLablMap[option]
+                    const timeframeLabel = timeFrameLablMap[option]
 
-                    return $text(newLocal)
+                    return $text(timeframeLabel)
                   })
                 })({ select: selectTimeFrameTether() })
                 : $Dropdown({
-                  // $container: $row(style({ position: 'relative', alignSelf: 'center',  })),
                   $selection: switchLatest(map((option) => {
-                    // @ts-ignore
-                    const newLocal: string = timeFrameLablMap[option]
+                    const timeframeLabel = timeFrameLablMap[option]
 
                     return style({ padding: '8px', alignSelf: 'center' })(
                       $ButtonSecondary({
                         $content: $row(
-                          $text(newLocal),
+                          $text(timeframeLabel),
                           $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
                         )
                       })({})
@@ -668,12 +694,10 @@ export const $Trade = (config: ITradeComponent) => component((
                   }, timeframe)),
                   value: {
                     value: timeframe,
-                    // $container: $defaultSelectContainer(style({ minWidth: '100px', right: 0 })),
                     $$option: map((option) => {
-                      // @ts-ignore
-                      const label: string = timeFrameLablMap[option]
+                      const timeframeLabel = timeFrameLablMap[option]
 
-                      return $text(style({ fontSize: '0.85em' }))(label)
+                      return $text(style({ fontSize: '0.85em' }))(timeframeLabel)
                     }),
                     list: [
                       intervalTimeMap.MIN5,
@@ -715,103 +739,142 @@ export const $Trade = (config: ITradeComponent) => component((
                 }
 
                 return $CandleSticks({
-                  series: [
-                    {
-                      data: data.map(({ o, h, l, c, timestamp }) => {
-                        const open = formatFixed(o, 30)
-                        const high = formatFixed(h, 30)
-                        const low = formatFixed(l, 30)
-                        const close = formatFixed(c, 30)
+                  $content: $row(
+                    $row(
+                      styleBehavior(map(state => {
+                        return { border: `1px solid ${state ? pallete.primary : pallete.horizon}` }
+                      }, isFocused)),
+                      style({
+                        backgroundColor: pallete.background,
+                        transition: 'border-color .15s ease-in-out',
+                        fontSize: '.75em',
+                        fontWeight: 'bold',
+                        padding: '6px 8px',
+                        borderRadius: '30px',
+                      })
+                    )(
 
-                        return { open, high, low, close, time: timestamp as Time }
-                      }),
-                      seriesConfig: {
-                        // priceFormat: {
-                        //   type: 'custom',
-                        //   formatter: (priceValue: BarPrice) => readableNumber(priceValue.valueOf())
-                        // },
-                        // lastValueVisible: false,
+                      switchMap(state => {
+                        if (!state) {
+                          return empty()
+                        }
 
-                        priceLineColor: pallete.foreground,
-                        baseLineStyle: LineStyle.SparseDotted,
+                        return $row(layoutSheet.spacingSmall)(
+                          $infoLabeledValue('Size', $text(map(value => `${formatReadableUSD(value)}`, sizeDeltaUsd))),
+                          $infoLabeledValue('Collateral', $text(map(value => `${formatReadableUSD(value)}`, collateralDeltaUsd))),
+                        )
+                      }, isFocused),
+                      $icon({ $content: $target, width: '16px', svgOps: style({ margin: '0 6px' }), viewBox: '0 0 32 32' }),
 
-                        upColor: pallete.middleground,
-                        borderUpColor: pallete.middleground,
-                        wickUpColor: pallete.middleground,
+                      $text(map(ev => {
+                        return readableAccountingNumber.format(ev)
+                      }, filterNull(focusPrice)))
+                    )
+                  ),
+                  series: {
+                    data: data.map(({ o, h, l, c, timestamp }) => {
+                      const open = formatFixed(o, 30)
+                      const high = formatFixed(h, 30)
+                      const low = formatFixed(l, 30)
+                      const close = formatFixed(c, 30)
 
-                        downColor: 'transparent',
-                        borderDownColor: colorAlpha(pallete.middleground, .5),
-                        wickDownColor: colorAlpha(pallete.middleground, .5),
-                      },
-                      priceLines: [
-                        map(val => {
-                          if (val === 0n) {
-                            return null
-                          }
+                      return { open, high, low, close, time: timestamp as Time }
+                    }),
+                    seriesConfig: {
+                      // priceFormat: {
+                      //   type: 'custom',
+                      //   formatter: (priceValue: BarPrice) => readableNumber(priceValue.valueOf())
+                      // },
+                      // lastValueVisible: false,
+                      // autoscaleInfoProvider: original => {
+                      //   debugger
+                      //   const res = original();
+                      //   if (res !== null) {
+                      //     res.priceRange.minValue -= 10;
+                      //     res.priceRange.maxValue += 10;
+                      //   }
+                      //   return res;
+                      // },
 
-                          return {
-                            price: formatFixed(val, 30),
-                            color: pallete.middleground,
-                            lineVisible: true,
-                            // axisLabelColor: '#fff',
-                            // axisLabelTextColor: 'red',
-                            // axisLabelVisible: true,
-                            lineWidth: 1,
-                            title: `Entry`,
-                            lineStyle: LineStyle.SparseDotted,
-                          }
-                        }, averagePrice),
-                        map(val => {
-                          if (val === 0n) {
-                            return null
-                          }
+                      priceLineColor: pallete.foreground,
+                      baseLineStyle: LineStyle.SparseDotted,
 
-                          return {
-                            price: formatFixed(val, 30),
-                            color: pallete.indeterminate,
-                            lineVisible: true,
-                            // axisLabelColor: 'red',
-                            // axisLabelVisible: true,
-                            // axisLabelTextColor: 'red',
-                            lineWidth: 1,
-                            title: `Liquidation`,
-                            lineStyle: LineStyle.SparseDotted,
-                          }
-                        }, liquidationPrice)
+                      upColor: pallete.middleground,
+                      borderUpColor: pallete.middleground,
+                      wickUpColor: pallete.middleground,
 
-                      ],
-                      appendData: scan((prev: CandlestickData, next): CandlestickData => {
-                        const marketPrice = formatFixed(next.indexTokenPrice, 30)
-                        const timeNow = unixTimestampNow()
-
-                        const prevTimeSlot = Math.floor(prev.time as number / tf)
-                        const nextTimeSlot = Math.floor(timeNow / tf)
-                        const time = nextTimeSlot * tf as Time
-
-                        const isNext = nextTimeSlot > prevTimeSlot
-
-                        document.title = `${next.indexTokenDescription.symbol} ${readableNumber(marketPrice)}`
-
-                        if (isNext) {
-                          return {
-                            open: marketPrice,
-                            high: marketPrice,
-                            low: marketPrice,
-                            close: marketPrice,
-                            time
-                          }
+                      downColor: 'transparent',
+                      borderDownColor: colorAlpha(pallete.middleground, .5),
+                      wickDownColor: colorAlpha(pallete.middleground, .5),
+                    },
+                    priceLines: [
+                      map(val => {
+                        if (val === 0n) {
+                          return null
                         }
 
                         return {
-                          open: prev.open,
-                          high: marketPrice > prev.high ? marketPrice : prev.high,
-                          low: marketPrice < prev.low ? marketPrice : prev.low,
+                          price: formatFixed(val, 30),
+                          color: pallete.middleground,
+                          lineVisible: true,
+                          // axisLabelColor: '#fff',
+                          // axisLabelTextColor: 'red',
+                          // axisLabelVisible: true,
+                          lineWidth: 1,
+                          title: `Entry`,
+                          lineStyle: LineStyle.SparseDotted,
+                        }
+                      }, averagePrice),
+                      map(val => {
+                        if (val === 0n) {
+                          return null
+                        }
+
+                        return {
+                          price: formatFixed(val, 30),
+                          color: pallete.negative,
+                          lineVisible: true,
+                          // axisLabelColor: 'red',
+                          // axisLabelVisible: true,
+                          // axisLabelTextColor: 'red',
+                          lineWidth: 1,
+                          title: `Liquidation`,
+                          lineStyle: LineStyle.SparseDotted,
+                        }
+                      }, liquidationPrice)
+
+                    ],
+                    appendData: scan((prev: CandlestickData, next): CandlestickData => {
+                      const marketPrice = formatFixed(next.indexTokenPrice, 30)
+                      const timeNow = unixTimestampNow()
+
+                      const prevTimeSlot = Math.floor(prev.time as number / tf)
+                      const nextTimeSlot = Math.floor(timeNow / tf)
+                      const time = nextTimeSlot * tf as Time
+
+                      const isNext = nextTimeSlot > prevTimeSlot
+
+                      document.title = `${next.indexTokenDescription.symbol} ${readableNumber(marketPrice)}`
+
+                      if (isNext) {
+                        return {
+                          open: marketPrice,
+                          high: marketPrice,
+                          low: marketPrice,
                           close: marketPrice,
                           time
                         }
-                      }, initialTick, combineObject({ indexTokenPrice, indexTokenDescription })),
-                    }
-                  ],
+                      }
+
+                      return {
+                        open: prev.open,
+                        high: marketPrice > prev.high ? marketPrice : prev.high,
+                        low: marketPrice < prev.low ? marketPrice : prev.low,
+                        close: marketPrice,
+                        time
+                      }
+                    }, initialTick, combineObject({ indexTokenPrice, indexTokenDescription })),
+                  },
                   containerOp: style({ position: 'absolute', inset: 0, borderRadius: '20px', overflow: 'hidden' }),
                   chartConfig: {
                     rightPriceScale: {
@@ -832,9 +895,19 @@ export const $Trade = (config: ITradeComponent) => component((
                       shiftVisibleRangeOnNewBar: true,
                     }
                   },
+                  yAxisState: {
+                    price: focusPrice,
+                    isFocused: isFocused,
+                    coords: yAxisCoords
+                  }
                 })({
-                  // crosshairMove: sampleChartCrosshair(),
-                  // click: sampleClick()
+                  yAxisCoords: changeYAxisCoordsTether(),
+                  focusPrice: changefocusPriceTether(),
+                  isFocused: changeIsFocusedTether(),
+                  // crosshairMove: chartCrosshairMoveTether(),
+                  initChart: IInitCandlesticksChartTether(),
+                  click: chartClickTether(),
+                  visibleLogicalRangeChange: chartVisibleLogicalRangeChangeTether(),
                 })
 
               }, combineObject({ timeframe, indexToken })),
@@ -906,12 +979,11 @@ export const $Trade = (config: ITradeComponent) => component((
                         const direction = pos.__typename === 'IncreasePosition' ? '↑' : '↓'
                         const txHash = pos.id.split(':').slice(-1)[0]
                         return $row(layoutSheet.spacingSmall)(
-                          $txHashRef(txHash, w3p.network.id, $text(`${direction} ${formatReadableUSD(pos.price)}`))
+                          $txHashRef(txHash, w3p.chain.id, $text(`${direction} ${formatReadableUSD(pos.price)}`))
                         )
                       }
 
                       const activePositionAdjustment = take(1, filter(ev => {
-                        ev.args.account
                         const key = getPositionKey(ev.args.account, pos.state.isIncrease ? ev.args.path.slice(-1)[0] : ev.args.path[0], ev.args.indexToken, ev.args.isLong)
 
                         return key === pos.state.position.key
@@ -919,7 +991,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
                       return $row(layoutSheet.spacingSmall)(
                         $txHashRef(
-                          pos.ctx.transactionHash, w3p.network.id,
+                          pos.ctx.transactionHash, w3p.chain.id,
                           $text(`${isIncrease ? '↑' : '↓'} ${formatReadableUSD(pos.acceptablePrice)} ${isIncrease ? '<' : '>'}`)
                         ),
 
@@ -931,7 +1003,7 @@ export const $Trade = (config: ITradeComponent) => component((
                             const message = $text(`${isRejected ? `✖ ${formatReadableUSD(req.args.acceptablePrice)}` : `✔ ${formatReadableUSD(req.args.acceptablePrice)}`}`)
 
                             return $requestRow(
-                              $txHashRef(req.transactionHash!, w3p.network.id, message),
+                              $txHashRef(req.transactionHash!, w3p.chain.id, message),
                               $infoTooltip('transaction was sent, keeper will execute the request, the request will either be executed or rejected'),
                             )
                           }, activePositionAdjustment),

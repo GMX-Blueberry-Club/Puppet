@@ -168,7 +168,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 $$display: map(wallet => {
 
                   return $Trade({
-                    network: wallet.network,
+                    chain: wallet.chain,
                     referralCode: BLUEBERRY_REFFERAL_CODE,
                     tokenIndexMap: {
                       [CHAIN.ARBITRUM]: [

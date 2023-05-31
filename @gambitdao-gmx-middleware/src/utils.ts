@@ -46,9 +46,10 @@ export function parseReadableNumber(stringNumber: string, locale?: Intl.NumberFo
   return parsed
 }
 
-const readableLargeNumber = Intl.NumberFormat("en-US", { maximumFractionDigits: 0 })
-const readableSmallNumber = Intl.NumberFormat("en-US", { maximumFractionDigits: 2, minimumFractionDigits: 2 })
-const readableTinyNumber = Intl.NumberFormat("en-US", { maximumSignificantDigits: 2, minimumSignificantDigits: 2 })
+export const readableAccountingNumber = Intl.NumberFormat("en-US", { maximumFractionDigits: 2, minimumFractionDigits: 2 })
+
+export const readableLargeNumber = Intl.NumberFormat("en-US", { maximumFractionDigits: 0 })
+export const readableTinyNumber = Intl.NumberFormat("en-US", { maximumSignificantDigits: 2, minimumSignificantDigits: 2 })
 
 export function readableNumber(ammount: number | bigint) {
   const absAmount = typeof ammount === 'bigint' ? ammount > 0n ? ammount : -ammount : Math.abs(ammount)
@@ -58,7 +59,7 @@ export function readableNumber(ammount: number | bigint) {
   }
 
   if (absAmount >= 1) {
-    return readableSmallNumber.format(ammount)
+    return readableAccountingNumber.format(ammount)
   }
 
 

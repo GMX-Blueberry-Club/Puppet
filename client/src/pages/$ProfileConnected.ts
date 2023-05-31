@@ -185,14 +185,14 @@ export const $ProfileConnected = (config: IAccount) => component((
             })({
               scrollIndex: requestAccountTradeListTether(
                 zip((wallet, pageIndex) => {
-                  if (!wallet.account.address || wallet.network === null) {
+                  if (!wallet || wallet.chain === null) {
                     return null
                   }
 
                   return {
                     status: TradeStatus.CLOSED,
                     account: wallet.account.address,
-                    chain: wallet.network.id,
+                    chain: wallet.chain.id,
                     offset: pageIndex * 20,
                     pageSize: 20,
                   }

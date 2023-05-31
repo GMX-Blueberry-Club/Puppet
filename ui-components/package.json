@@ -14,21 +14,21 @@
     },
     "sideEffects": false,
     "dependencies": {
-        "@aelea/core": "1.3.0",
-        "@aelea/dom": "0.2.0",
-        "@aelea/router": "0.20.0",
-        "@aelea/ui-components": "0.28.0",
-        "@aelea/ui-components-theme": "0.10.0",
+        "@aelea/core": "^1.3.2",
+        "@aelea/dom": "^0.2.1",
+        "@aelea/router": "^0.20.1",
+        "@aelea/ui-components": "^0.28.1",
+        "@aelea/ui-components-theme": "^0.10.0",
         "@gambitdao/const": "workspace:*",
         "@gambitdao/gmx-middleware": "workspace:*",
-        "@most/core": "1.6.1",
-        "@most/disposable": "1.3.0",
-        "@most/prelude": "1.8.0",
-        "@most/scheduler": "1.3.0",
-        "@most/types": "1.1.0",
-        "abitype": "^0.8.2",
+        "@most/core": "^1.6.1",
+        "@most/disposable": "^1.3.0",
+        "@most/prelude": "^1.8.0",
+        "@most/scheduler": "^1.3.0",
+        "@most/types": "^1.1.0",
+        "abitype": "^0.8.5",
         "jazzicon": "^1.5.0",
-        "viem": "^0.3.19"
+        "viem": "^0.3.40"
     },
     "devDependencies": {
         "@types/node": "18.16.3"

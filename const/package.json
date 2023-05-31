@@ -12,9 +12,5 @@
     "scripts": {
         "clean": "rm -fr .dist/*",
         "build": "tsc && tsc --outDir .dist/cjs --module CommonJS --declarationMap false --composite false --declaration false --declarationDir null"
-    },
-    "devDependencies": {
-        "typechain": "^8.1.1",
-        "typescript": "5.0.4"
     }
 }

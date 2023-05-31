@@ -1,6 +1,8 @@
 import { unixTimestampNow } from "@gambitdao/gmx-middleware"
-import { IAttributeBackground, IAttributeClothes, IAttributeBody, IAttributeExpression, IAttributeFaceAccessory, IAttributeHat, LabItemSale, MintRule, SvgPartsMap, IBerryDisplayTupleMap, IAttributeBadge } from "./types.js"
+import { IAttributeBackground, IAttributeClothes, IAttributeBody, IAttributeExpression, IAttributeFaceAccessory, IAttributeHat, LabItemSale, MintRule, SvgPartsMap, IBerryDisplayTupleMap, IAttributeBadge, IToken } from "./types.js"
 import { svgParts } from "./mappings/svgParts.js"
+
+
 export const labAttributeTuple = [IAttributeBackground, IAttributeClothes, IAttributeBody, IAttributeExpression, IAttributeFaceAccessory, IAttributeHat, IAttributeBadge] as const
 
 export const getLabItemTupleIndex = (itemId: number) => {
@@ -67,3 +69,27 @@ export const berryPartsToSvg = ([background, clothes, body, expression, faceAcce
     ${badge ? svgParts[6][badge] : ''}
   `
 }
+
+export function getBerryFromItems(items: number[]) {
+  const seedObj = { background: 0, badge: 0, custom: 0, }
+
+  return items.reduce((seed, next) => {
+    const ndx = getLabItemTupleIndex(next)
+
+    if (ndx === 0) {
+      seed.background = next
+    } else if (ndx === 6) {
+      seed.badge = next
+    } else {
+      seed.custom = next
+    }
+
+    return seed
+  }, seedObj)
+}
+
+export function getBerryFromToken(token: IToken) {
+  return getBerryFromItems(token.labItems.map(it => Number(it.id)))
+}
+
+

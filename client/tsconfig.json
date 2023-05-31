@@ -24,19 +24,5 @@
   },
   "include": [
     "src"
-  ],
-  "references": [
-    {
-      "path": "../ui-components"
-    },
-    {
-      "path": "../middleware"
-    },
-    {
-      "path": "../@gambitdao-gmx-middleware"
-    },
-    {
-      "path": "./tsconfig.node.json"
-    }
   ]
 }

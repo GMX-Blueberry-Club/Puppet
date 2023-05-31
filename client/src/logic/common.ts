@@ -1,27 +1,27 @@
 import { O, combineArray, fromCallback, isStream } from "@aelea/core"
-import { $Node, $svg, NodeComposeFn, attr, style } from "@aelea/dom"
+import { $Node, NodeComposeFn, style } from "@aelea/dom"
 import { colorAlpha, pallete, theme } from "@aelea/ui-components-theme"
 import {
-  IAttributeBackground, IAttributeBadge, IAttributeExpression, IAttributeHat, IAttributeMappings,
-  IBerryDisplayTupleMap, IToken, getLabItemTupleIndex, labAttributeTuple, svgParts, tokenIdAttributeTuple
+  IAttributeExpression, IAttributeHat,
+  IBerryDisplayTupleMap,
+  getLabItemTupleIndex, labAttributeTuple
 } from "@gambitdao/gbc-middleware"
-import { ContractFunctionConfig, StreamInput, StreamInputArray, abi } from "@gambitdao/gmx-middleware"
-import { awaitPromises, map, now, switchLatest, tap } from "@most/core"
+import { ContractFunctionConfig, StreamInput, StreamInputArray } from "@gambitdao/gmx-middleware"
+import { awaitPromises, map, now, snapshot, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { readContract } from "@wagmi/core"
-import type { Abi, AbiEvent, AbiParametersToPrimitiveTypes, Address, ExtractAbiEvent, ExtractAbiFunction, } from 'abitype'
-import {
-  Chain, GetEventArgs, Hash, InferEventName, InferFunctionName, Log, PublicClient, ReadContractReturnType, SimulateContractParameters,
-  SimulateContractReturnType, TransactionReceipt, Transport
-} from "viem"
+import * as wagmi from "@wagmi/core"
+import type { Abi, AbiParametersToPrimitiveTypes, Address, ExtractAbiEvent, ExtractAbiFunction } from 'abitype'
+import * as viem from "viem"
 import { $berry, $defaultBerry } from "../components/$DisplayBerry"
-import { publicClient } from "../wallet/walletLink"
+import { publicClient, wallet } from "../wallet/walletLink"
+import { WalletClient } from "viem"
 
 
-interface IContractConnect<TAbi extends Abi, TChain extends Chain = Chain> {
-  read<TFunctionName extends string, TArgs extends AbiParametersToPrimitiveTypes<ExtractAbiFunction<TAbi, TFunctionName>['inputs']>>(functionName: InferFunctionName<TAbi, TFunctionName, 'view' | 'pure'>, ...args_: onlyArray<TArgs> | onlyArray<StreamInputArray<onlyArray<TArgs>>>): Stream<ReadContractReturnType<TAbi, TFunctionName>>
-  listen<TEventName extends string, TLogs = Log<bigint, number, ExtractAbiEvent<TAbi, TEventName>>>(eventName: InferEventName<TAbi, TEventName>, args?: GetEventArgs<TAbi, TEventName>): Stream<TLogs>
-  simulate<TFunctionName extends string, TChainOverride extends Chain | undefined = undefined>(simParams: Omit<SimulateContractParameters<TAbi, TFunctionName, TChain, TChainOverride>, 'address' | 'abi'>): Stream<SimulateContractReturnType<TAbi, TFunctionName, TChain, TChainOverride>>
+interface IContractConnect<TAbi extends Abi, TChain extends viem.Chain = viem.Chain> {
+  read<TFunctionName extends string, TArgs extends AbiParametersToPrimitiveTypes<ExtractAbiFunction<TAbi, TFunctionName>['inputs']>>(functionName: viem.InferFunctionName<TAbi, TFunctionName, 'view' | 'pure'>, ...args_: onlyArray<TArgs> | onlyArray<StreamInputArray<onlyArray<TArgs>>>): Stream<viem.ReadContractReturnType<TAbi, TFunctionName>>
+  listen<TEventName extends string, TLogs = viem.Log<bigint, number, ExtractAbiEvent<TAbi, TEventName>>>(eventName: viem.InferEventName<TAbi, TEventName>, args?: viem.GetEventArgs<TAbi, TEventName>): Stream<TLogs>
+  simulate<TFunctionName extends string, TChainOverride extends viem.Chain | undefined = undefined>(simParams: Omit<viem.SimulateContractParameters<TAbi, TFunctionName, TChain, TChainOverride>, 'address' | 'abi'>): Stream<viem.SimulateContractReturnType<TAbi, TFunctionName, TChain, TChainOverride>>
+  write<TFunctionName extends string>(simParams: Stream<Omit<wagmi.PrepareWriteContractConfig<TAbi, TFunctionName, TChain['id'], WalletClient>, 'address' | 'abi'>>): Stream<wagmi.PrepareWriteContractConfig<TAbi, TFunctionName, TChain['id']>>
 }
 
 
@@ -89,7 +89,7 @@ export const connectMappedContract = <
     read: contractReader(config),
     listen: listenContract(config),
     simulate: simulateContract(config),
-    // write: simulateContract(config),
+    write: writeContract(config),
   }
 }
 
@@ -104,6 +104,7 @@ export const connectContract = <
     read: contractReader(config),
     listen: listenContract(config),
     simulate: simulateContract(config),
+    write: writeContract(config),
   }
 }
 
@@ -136,18 +137,18 @@ type onlyArray<T> = T extends readonly any[] ? T : never
 
 export const contractReader = <
   TAddress extends Address,
-  TTransport extends Transport,
-  TChain extends Chain,
+  TTransport extends viem.Transport,
+  TChain extends viem.Chain,
   TIncludeActions extends true,
-  TPublicClient extends PublicClient<TTransport, TChain, TIncludeActions>,
+  TPublicClient extends viem.PublicClient<TTransport, TChain, TIncludeActions>,
   TAbi extends Abi,
 >(params_: Stream<ContractFunctionConfig<TAddress, TAbi, TTransport, TChain, TIncludeActions, TPublicClient>>) =>
-  <TFunctionName extends string, TArgs extends AbiParametersToPrimitiveTypes<ExtractAbiFunction<TAbi, TFunctionName>['inputs']>>(functionName: InferFunctionName<TAbi, TFunctionName, 'view' | 'pure'>, ...args_: onlyArray<TArgs> | onlyArray<StreamInputArray<onlyArray<TArgs>>>): Stream<ReadContractReturnType<TAbi, TFunctionName>> => {
+  <TFunctionName extends string, TArgs extends AbiParametersToPrimitiveTypes<ExtractAbiFunction<TAbi, TFunctionName>['inputs']>>(functionName: viem.InferFunctionName<TAbi, TFunctionName, 'view' | 'pure'>, ...args_: onlyArray<TArgs> | onlyArray<StreamInputArray<onlyArray<TArgs>>>): Stream<viem.ReadContractReturnType<TAbi, TFunctionName>> => {
 
     const mapState = switchLatest(map(({ abi, address, client }) => {
       const resolveArgs: Stream<onlyArray<TArgs>> = isStream(args_[0]) ? combineArray((..._args) => _args, ...args_ as any) : now(args_ as any) as any
       return awaitPromises(map(args => {
-        return readContract({ abi, address, functionName, args } as any)
+        return wagmi.readContract({ abi, address, functionName, args } as any)
       }, resolveArgs))
     }, params_))
 
@@ -158,12 +159,12 @@ export const contractReader = <
 export const listenContract = <
   TAddress extends Address,
   TAbi extends Abi,
-  TTransport extends Transport,
-  TChain extends Chain,
+  TTransport extends viem.Transport,
+  TChain extends viem.Chain,
   TIncludeActions extends true,
-  TPublicClient extends PublicClient<TTransport, TChain, TIncludeActions>,
+  TPublicClient extends viem.PublicClient<TTransport, TChain, TIncludeActions>,
 >(params_: Stream<ContractFunctionConfig<TAddress, TAbi, TTransport, TChain, TIncludeActions, TPublicClient>>) =>
-  <TEventName extends string, TLogs = Log<bigint, number, ExtractAbiEvent<TAbi, TEventName>>>(eventName: InferEventName<TAbi, TEventName>, args?: GetEventArgs<TAbi, TEventName>): Stream<TLogs> => {
+  <TEventName extends string, TLogs = viem.Log<bigint, number, ExtractAbiEvent<TAbi, TEventName>>>(eventName: viem.InferEventName<TAbi, TEventName>, args?: viem.GetEventArgs<TAbi, TEventName>): Stream<TLogs> => {
 
     const mapState = switchLatest(map(({ abi, address, client }) => {
       const eventStream = fromCallback(emitCb => {
@@ -193,87 +194,59 @@ export const listenContract = <
 export const simulateContract = <
   TAddress extends Address,
   TAbi extends Abi,
-  TTransport extends Transport,
-  TChain extends Chain,
+  TTransport extends viem.Transport,
+  TChain extends viem.Chain,
   TIncludeActions extends true,
-  TPublicClient extends PublicClient<TTransport, TChain, TIncludeActions>,
+  TPublicClient extends viem.PublicClient<TTransport, TChain, TIncludeActions>,
 >(params_: Stream<ContractFunctionConfig<TAddress, TAbi, TTransport, TChain, TIncludeActions, TPublicClient>>) =>
-  <TFunctionName extends string, TChainOverride extends Chain | undefined = undefined>(simParams: Omit<SimulateContractParameters<TAbi, TFunctionName, TChain, TChainOverride>, 'address' | 'abi'>): Stream<SimulateContractReturnType<TAbi, TFunctionName, TChain, TChainOverride>> => {
+  <TFunctionName extends string, TChainOverride extends viem.Chain | undefined = undefined>(simParams: Omit<viem.SimulateContractParameters<TAbi, TFunctionName, TChain, TChainOverride>, 'address' | 'abi'>): Stream<viem.SimulateContractReturnType<TAbi, TFunctionName, TChain, TChainOverride>> => {
 
     const mapState = awaitPromises(map(({ abi, address, client }) => {
-      const sim = client.simulateContract<TAbi, TFunctionName, TChainOverride>({ address, abi, ...simParams } as any)
+
+      const sim = client.simulateContract({ address, abi, ...simParams } as any)
       return sim
     }, params_))
 
-    return mapState
+    return mapState as any
+  }
+
+export const writeContract = <
+  TAddress extends Address,
+  TAbi extends Abi,
+  TTransport extends viem.Transport,
+  TChain extends viem.Chain,
+  TIncludeActions extends true,
+  TPublicClient extends viem.PublicClient<TTransport, TChain, TIncludeActions>,
+  TWalletClient extends wagmi.WalletClient = wagmi.WalletClient
+>(params_: Stream<ContractFunctionConfig<TAddress, TAbi, TTransport, TChain, TIncludeActions, TPublicClient>>) =>
+  <TFunctionName extends string>(simParams: Omit<wagmi.PrepareWriteContractConfig<TAbi, TFunctionName, TChain['id'], TWalletClient>, 'address' | 'abi'>): Stream<wagmi.PrepareWriteContractConfig<TAbi, TFunctionName, TChain['id']>> => {
+
+    const mapState = awaitPromises(snapshot(async (walletClient, params) => {
+      if (!walletClient) {
+        throw new Error('Wallet client is not defined')
+      }
+
+      const simReq = await params.client.simulateContract({ address: params.address, abi: params.abi, ...simParams } as any)
+
+      const request = walletClient.writeContract(simReq.request)
+      return request
+    }, wallet, params_))
+
+    return mapState as any
   }
 
 
 
-// export const writeContract = <
-//   TAbi extends Abi,
-//   TTransport extends Transport,
-//   TChain extends Chain,
-//   TWalletClient extends WalletClient<TTransport, TChain, TAccount, TIncludeActions>,
-//   TAccount extends Account = Account,
-
-//   TIncludeActions extends true = true,
-// >(params_: Stream<TWalletClient>) =>
-//   <TFunctionName extends string, TChainOverride extends Chain | undefined = undefined>(simParams: Omit<SimulateContractParameters<TAbi, TFunctionName, TChain, TChainOverride>, 'address' | 'abi'>): Stream<SimulateContractReturnType<TAbi, TFunctionName, TChain, TChainOverride>> => {
-
-//     const mapState = awaitPromises(map(({ abi, address, client }) => {
-//       const sim = client.simulateContract<TAbi, TFunctionName, TChainOverride>({ address, abi, ...simParams } as any)
-//       return sim
-//     }, params_))
-
-//     return mapState
-//   }
-
-
 export const waitForTransactionReceipt = async<
-  TTransport extends Transport,
-  TChain extends Chain,
->(client: PublicClient<TTransport, TChain>, hash_: Promise<Hash> | Hash): Promise<TransactionReceipt> => {
+  TTransport extends viem.Transport,
+  TChain extends viem.Chain,
+>(client: viem.PublicClient<TTransport, TChain>, hash_: Promise<viem.Hash> | viem.Hash): Promise<viem.TransactionReceipt> => {
   const hash = await hash_
   const req = client.waitForTransactionReceipt({ hash })
   return req
 }
 
 
-
-export const $berryByToken = (token: IToken, $container?: NodeComposeFn<$Node>) => {
-  const display = getBerryFromItems(token.labItems.map(li => Number(li.id)))
-  const tuple: Partial<IBerryDisplayTupleMap> = [...tokenIdAttributeTuple[token.id - 1]]
-
-  return $berryByLabItems(token.id, display.background, display.custom, display.badge, $container, tuple)
-}
-
-export const $berryByLabItems = (
-  berryId: number,
-  backgroundId: IAttributeBackground,
-  labItemId: IAttributeMappings,
-  badgeId: IAttributeBadge,
-  $container?: NodeComposeFn<$Node>,
-  tuple: Partial<IBerryDisplayTupleMap> = [...tokenIdAttributeTuple[berryId - 1]]
-) => {
-
-  if (labItemId) {
-    const customIdx = getLabItemTupleIndex(labItemId)
-
-    // @ts-ignore
-    tuple.splice(customIdx, 1, labItemId)
-  }
-
-  if (badgeId) {
-    tuple.splice(6, 1, badgeId)
-  }
-
-  if (backgroundId) {
-    tuple.splice(0, 1, backgroundId)
-  }
-
-  return $berry(tuple, $container)
-}
 
 export const $defaultLabItem = $defaultBerry(
   style({ placeContent: 'center', overflow: 'hidden' })
@@ -322,44 +295,4 @@ export const $labItem = ({ id, $container = $defaultLabItem, background = true, 
   return $berry(localTuple, $csContainer)
 }
 
-export const $labItemAlone = (id: number, size = 80) => {
-  const state = getLabItemTupleIndex(id)
-
-  return $svg('svg')(
-    attr({ width: `${size}px`, height: `${size}px`, xmlns: 'http://www.w3.org/2000/svg', preserveAspectRatio: 'none', fill: 'none', viewBox: `0 0 1500 1500` }),
-    style({})
-  )(
-    tap(async ({ element }) => {
-      // @ts-ignore
-      element.innerHTML = svgParts[state][id]
-    })
-  )()
-}
-
-// export async function getTokenSlots(token: bigint, closet: Closet): Promise<IBerryLabItems> {
-//   const items = await closet.get(token, 0, 2)
-//   return getBerryFromItems(items.map(it => Number(it)))
-// }
-
-export function getBerryFromItems(items: number[]) {
-  const seedObj = { background: 0, badge: 0, custom: 0, }
-
-  return items.reduce((seed, next) => {
-    const ndx = getLabItemTupleIndex(next)
-
-    if (ndx === 0) {
-      seed.background = next
-    } else if (ndx === 6) {
-      seed.badge = next
-    } else {
-      seed.custom = next
-    }
-
-    return seed
-  }, seedObj)
-}
-
-export function getBerryFromToken(token: IToken) {
-  return getBerryFromItems(token.labItems.map(it => Number(it.id)))
-}
 
