@@ -1,8 +1,7 @@
 import { Behavior, O, combineArray, combineObject, replayLatest } from "@aelea/core"
-import { $node, $text, component, style, styleBehavior, styleInline } from "@aelea/dom"
+import { $node, $text, component, style, styleBehavior } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, observer, screenUtils } from "@aelea/ui-components"
 import {
-  ARBITRUM_ADDRESS_STABLE, AVALANCHE_ADDRESS_STABLE,
   AddressZero,
   BASIS_POINTS_DIVISOR, CHAIN_ADDRESS_MAP,
   IPositionDecrease, IPositionIncrease,
@@ -34,16 +33,16 @@ import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
-import { TransactionReceipt } from "viem"
+import * as viem from "viem"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $CardTable } from "../components/$common"
 import { $CandleSticks, IInitCandlesticksChart } from "../components/chart/$CandleSticks"
 import { $ButtonSecondary } from "../components/form/$Button"
 import { $Dropdown } from "../components/form/$Dropdown"
-import { $TradeBox, ITradeBoxParams, ITradeFocusMode, ITradeState, RequestTradeQuery } from "../components/trade/$TradeBox"
+import { $TradeBox, IRequestTrade, IRequestTradeParams, ITradeBoxParams, ITradeFocusMode } from "../components/trade/$TradeBox"
 import { $card } from "../elements/$common"
 import { $caretDown } from "../elements/$icons"
-import { connectMappedContractConfig, contractReader, listenContract } from "../logic/common"
+import { connectMappedContractConfig, contractReader, getMappedValue2, listenContract, wagmiWriteContract } from "../logic/common"
 import * as tradeReader from "../logic/contract/trade"
 import { resolveAddress } from "../logic/utils"
 import { walletLink } from "../wallet"
@@ -54,11 +53,11 @@ export type ITradeComponent = ITradeBoxParams
 
 
 
-type RequestTrade = {
-  ctx: TransactionReceipt
-  state: ITradeState
-  acceptablePrice: bigint
-}
+// type RequestTrade = {
+//   ctx: TransactionReceipt
+//   state: ITradeState
+//   acceptablePrice: bigint
+// }
 
 
 
@@ -82,42 +81,42 @@ const timeFrameLablMap = {
 
 
 export const $Trade = (config: ITradeComponent) => component((
-  [selectTimeFrame, selectTimeFrameTether]: Behavior<IntervalTime, IntervalTime>,
-  [changeRoute, changeRouteTether]: Behavior<string, string>,
+  [selectTimeFrame, selectTimeFrameTether]: Behavior<IntervalTime>,
+  [changeRoute, changeRouteTether]: Behavior<string>,
 
-  [changeInputToken, changeInputTokenTether]: Behavior<ITokenInput, ITokenInput>,
-  [changeIndexToken, changeIndexTokenTether]: Behavior<ITokenIndex, ITokenIndex>,
-  [changeCollateralToken, changeCollateralTokenTether]: Behavior<ARBITRUM_ADDRESS_STABLE | AVALANCHE_ADDRESS_STABLE, ARBITRUM_ADDRESS_STABLE | AVALANCHE_ADDRESS_STABLE>,
+  [changeInputToken, changeInputTokenTether]: Behavior<ITokenInput>,
+  [changeIndexToken, changeIndexTokenTether]: Behavior<ITokenIndex>,
+  [changeCollateralToken, changeCollateralTokenTether]: Behavior<ITokenStable>,
 
-  [switchFocusMode, switchFocusModeTether]: Behavior<ITradeFocusMode, ITradeFocusMode>,
-  [switchIsLong, switchIsLongTether]: Behavior<boolean, boolean>,
-  [switchIsIncrease, switchIsIncreaseTether]: Behavior<boolean, boolean>,
+  [switchFocusMode, switchFocusModeTether]: Behavior<ITradeFocusMode>,
+  [switchIsLong, switchIsLongTether]: Behavior<boolean>,
+  [switchIsIncrease, switchIsIncreaseTether]: Behavior<boolean>,
 
-  [changeCollateralDeltaUsd, changeCollateralDeltaUsdTether]: Behavior<bigint, bigint>,
-  [changeSizeDeltaUsd, changeSizeDeltaUsdTether]: Behavior<bigint, bigint>,
+  [changeCollateralDeltaUsd, changeCollateralDeltaUsdTether]: Behavior<bigint>,
+  [changeSizeDeltaUsd, changeSizeDeltaUsdTether]: Behavior<bigint>,
 
   // [requestAccountTradeList, requestAccountTradeListTether]: Behavior<IAccountTradeListParamApi, IAccountTradeListParamApi>,
-  [changeLeverage, changeLeverageTether]: Behavior<bigint, bigint>,
-  [changeSlippage, changeSlippageTether]: Behavior<string, string>,
+  [changeLeverage, changeLeverageTether]: Behavior<bigint>,
+  [changeSlippage, changeSlippageTether]: Behavior<string>,
 
-  [changeInputTokenApproved, changeInputTokenApprovedTether]: Behavior<boolean, boolean>,
+  [changeInputTokenApproved, changeInputTokenApprovedTether]: Behavior<boolean>,
 
-  [enableTrading, enableTradingTether]: Behavior<boolean, boolean>,
+  [enableTrading, enableTradingTether]: Behavior<boolean>,
 
-  [switchTrade, switchTradeTether]: Behavior<ITrade, ITrade>,
-  [requestTrade, requestTradeTether]: Behavior<RequestTradeQuery, RequestTradeQuery>,
+  [switchTrade, switchTradeTether]: Behavior<ITrade>,
+  [requestTrade, requestTradeTether]: Behavior<IRequestTrade>,
 
 
   // [focusPriceAxisPoint, focusPriceAxisPointTether]: Behavior<Coordinate | null>,
   [IInitCandlesticksChart, IInitCandlesticksChartTether]: Behavior<IInitCandlesticksChart>,
-  [chartClick, chartClickTether]: Behavior<MouseEventParams, MouseEventParams>,
+  [chartClick, chartClickTether]: Behavior<MouseEventParams>,
   // [chartCrosshairMove, chartCrosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
 
   [changeYAxisCoords, changeYAxisCoordsTether]: Behavior<Coordinate>,
   [changefocusPrice, changefocusPriceTether]: Behavior<number | null>,
   [changeIsFocused, changeIsFocusedTether]: Behavior<boolean>,
 
-  [chartVisibleLogicalRangeChange, chartVisibleLogicalRangeChangeTether]: Behavior<LogicalRange | null, LogicalRange | null>,
+  [chartVisibleLogicalRangeChange, chartVisibleLogicalRangeChangeTether]: Behavior<LogicalRange | null>,
 
 
 ) => {
@@ -201,7 +200,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   const walletBalance = replayLatest(multicast(switchMap(params => {
-    if (!params.wallet.account.address) {
+    if (!params.wallet) {
       return now(0n)
     }
 
@@ -416,7 +415,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
 
-  const tradeConfig = { focusMode, slippage, isLong, isIncrease, inputToken, collateralToken, indexToken, leverage, collateralDeltaUsd, sizeDeltaUsd }
+  const tradeConfig = { focusMode, slippage, isLong, isIncrease, inputToken, collateralToken, indexToken, leverage, collateralDelta, sizeDelta, collateralDeltaUsd, sizeDeltaUsd }
 
 
   const averagePrice = map(params => {
@@ -451,19 +450,17 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ position, isIncrease, collateralDeltaUsd, collateralTokenPoolInfo, sizeDeltaUsd, averagePrice, indexTokenPrice, indexTokenDescription, isLong })))
 
 
-  const requestTradeRow: Stream<RequestTrade[]> = switchLatest(awaitPromises(map(res => {
-    return res.ctxQuery
-      .then(ctx => {
-        return now([{ ctx, state: res.state, acceptablePrice: res.acceptablePrice }])
-      })
-      .catch(err => empty())
-  }, requestTrade)))
+
+
+  const requestTradeRow = map(res => {
+    return [res]
+  }, requestTrade)
 
 
   const isInputTokenApproved = replayLatest(multicast(mergeArray([
     changeInputTokenApproved,
     awaitPromises(snapshot(async (collateralDeltaUsd, params) => {
-      if (!params.wallet.account.address) {
+      if (!params.wallet) {
         console.warn(new Error('No wallet connected'))
         return false
       }
@@ -475,7 +472,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
       const contractAddress = getMappedValue(TRADE_CONTRACT_MAPPING, chainId).Router
 
-      if (contractAddress === null || !params.wallet.account.address) {
+      if (contractAddress === null || !params.wallet) {
         return false
       }
 
@@ -611,8 +608,6 @@ export const $Trade = (config: ITradeComponent) => component((
               isTradingEnabled,
               availableIndexLiquidityUsd,
               isInputTokenApproved,
-              collateralDelta,
-              sizeDelta,
 
               inputTokenPrice,
               indexTokenPrice,
@@ -944,7 +939,7 @@ export const $Trade = (config: ITradeComponent) => component((
                 // headerCellOp: style({ padding: screenUtils.isDesktopScreen ? '15px 15px' : '6px 4px' }),
                 // cellOp: style({ padding: screenUtils.isDesktopScreen ? '4px 15px' : '6px 4px' }),
                 dataSource: mergeArray([
-                  now(initalList) as Stream<(RequestTrade | IPositionIncrease | IPositionDecrease)[]>,
+                  now(initalList) as Stream<(IRequestTradeParams | IPositionIncrease | IPositionDecrease)[]>,
                   // constant(initalList, periodic(3000)),
                   requestTradeRow
                 ]),
@@ -1017,7 +1012,7 @@ export const $Trade = (config: ITradeComponent) => component((
                       {
                         $head: $text('PnL Realised'),
                         columnOp: O(style({ flex: .5, placeContent: 'flex-end', textAlign: 'right', alignItems: 'center' })),
-                        $$body: map((req: RequestTrade | IPositionIncrease | IPositionDecrease) => {
+                        $$body: map((req: IRequestTradeParams | IPositionIncrease | IPositionDecrease) => {
                           const fee = -getMarginFees('ctx' in req ? req.state.sizeDeltaUsd : req.fee)
 
                           if ('ctx' in req) {

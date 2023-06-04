@@ -3,7 +3,7 @@ import { $Node, $wrapNativeElement, component, INode, style, styleInline } from 
 import { $row, observer } from '@aelea/ui-components'
 import { colorAlpha, pallete } from '@aelea/ui-components-theme'
 import { filterNull } from "@gambitdao/gmx-middleware"
-import { empty, filter, map, mergeArray, multicast, never, now, scan, skipRepeats, snapshot, tap } from '@most/core'
+import { empty, filter, map, mergeArray, multicast, now, scan, snapshot, tap } from '@most/core'
 import { disposeWith } from '@most/disposable'
 import { Stream } from '@most/types'
 import {

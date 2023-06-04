@@ -4,6 +4,7 @@ import { Route } from "@aelea/router"
 import { $column, $icon, $NumberTicker, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import {
+  abi,
   abs,
   AddressZero,
   ARBITRUM_ADDRESS_STABLE, AVALANCHE_ADDRESS_STABLE,
@@ -28,20 +29,20 @@ import {
   ITokenIndex, ITokenInput, ITokenStable, ITrade, ITradeOpen, LIMIT_LEVERAGE, MARGIN_FEE_BASIS_POINTS, MIN_LEVERAGE, parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, TRADE_CONTRACT_MAPPING, USD_PERCISION, USDG_DECIMALS, zipState
 } from "@gambitdao/gmx-middleware"
 import {
-  $alert, $alertTooltip, $anchor, $bear, $bull, $hintNumChange, $infoLabel, $infoLabeledValue, $infoTooltipLabel, $IntermediatePromise,
+  $alert, $alertTooltip, $anchor, $bear, $bull,
+  $hintNumChange, $infoLabel, $infoLabeledValue, $infoTooltipLabel, $IntermediatePromise,
   $openPositionPnlBreakdown, $PnlValue, $riskLiquidator, $spinner, $tokenIconMap, $tokenLabelFromSummary
 } from "@gambitdao/ui-components"
 import {
   awaitPromises,
   constant,
   delay,
-  empty, fromPromise,
+  empty,
   map,
   merge,
   mergeArray,
   multicast,
   now,
-  recoverWith,
   sample,
   skipRepeats,
   skipRepeatsWith,
@@ -52,23 +53,26 @@ import {
 } from "@most/core"
 import { Stream } from "@most/types"
 import { writeContract } from "@wagmi/core"
-import { erc20Abi, writingEditionsFactoryAbi } from "abitype/test"
+import { erc20Abi } from "abitype/test"
 import { MouseEventParams } from "lightweight-charts"
-import { Hex, SimulateContractReturnType, TransactionReceipt } from "viem"
+import * as viem from "viem"
 import { arbitrum, avalanche } from "viem/chains"
+import { $IntermediateConnectButton } from "../$ConnectAccount"
 import { $Popover } from "../$Popover"
 import { $Slider } from "../$Slider"
-import { $IntermediateConnectButton } from "../$ConnectAccount"
 import { $card } from "../../elements/$common"
 import { $caretDown } from "../../elements/$icons"
 import * as tradeReader from "../../logic/contract/trade"
 import { BrowserStore } from "../../logic/store"
 import { resolveAddress } from "../../logic/utils"
 import { $Index } from "../../pages/competition/$Leaderboard"
-import { account } from "../../wallet/walletLink"
+import { account, IWalletClient } from "../../wallet/walletLink"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultButtonPrimary, $defaultMiniButtonSecondary } from "../form/$Button"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown"
 import { $TradePnlHistory } from "./$TradePnlHistory"
+import { getMappedValue2, wagmiWriteContract } from "../../logic/common"
+
+
 
 export enum ITradeFocusMode {
   collateral,
@@ -90,10 +94,6 @@ export interface ITradeParams {
   swapFee: bigint
   marginFee: bigint
   fundingFee: bigint
-
-  collateralDelta: bigint
-  sizeDelta: bigint
-
 
   inputTokenDescription: ITokenDescription
   indexTokenDescription: ITokenDescription
@@ -117,10 +117,11 @@ export interface ITradeConfig {
 
   leverage: bigint
 
+  collateralDelta: bigint
+  sizeDelta: bigint
+
   sizeDeltaUsd: bigint
   collateralDeltaUsd: bigint
-
-
 
   slippage: string
 }
@@ -131,7 +132,7 @@ export interface ITradeState extends ITradeConfig, ITradeParams {
 }
 
 export interface ITradeBoxParams {
-  referralCode: Hex
+  referralCode: viem.Hex
   tokenIndexMap: Partial<Record<number, ITokenIndex[]>>
   tokenStableMap: Partial<Record<number, ITokenStable[]>>
   store: BrowserStore<"ROOT.v1.trade", string>
@@ -149,10 +150,13 @@ interface ITradeBox extends ITradeBoxParams {
   trade: Stream<Promise<ITradeOpen | null>>
 }
 
-export type RequestTradeQuery = {
-  ctxQuery: Promise<TransactionReceipt>
-  state: any // ITradeState
-  acceptablePrice: bigint
+export type IRequestTradeParams = ITradeConfig & { wallet: IWalletClient }
+export type IRequestTrade = IRequestTradeParams & {
+  executionFee: bigint,
+  indexTokenPrice: bigint,
+  acceptablePrice: bigint,
+  swapRoute: string[],
+  request: Promise<viem.TransactionReceipt>,
 }
 
 const BOX_SPACING = 20
@@ -182,7 +186,7 @@ export const $TradeBox = (config: ITradeBox) => component((
   [slideLeverage, slideLeverageTether]: Behavior<number, bigint>,
   [changeSlippage, changeSlippageTether]: Behavior<string, string>,
 
-  [clickRequestTrade, clickRequestTradeTether]: Behavior<PointerEvent, RequestTradeQuery>,
+  [clickProposeTrade, clickProposeTradeTether]: Behavior<PointerEvent, IWalletClient>,
 
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
   [clickResetTradeMode, clickResetTradeModeTether]: Behavior<any, any>,
@@ -210,13 +214,13 @@ export const $TradeBox = (config: ITradeBox) => component((
   }, clickEnablePlugin)
 
 
-  const { collateralDeltaUsd, collateralToken, focusMode, indexToken, inputToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage } = config.tradeConfig
+  const { collateralDeltaUsd, collateralToken, collateralDelta, sizeDelta, focusMode, indexToken, inputToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage } = config.tradeConfig
   const {
-    availableIndexLiquidityUsd, averagePrice, collateralDelta, collateralTokenDescription,
+    availableIndexLiquidityUsd, averagePrice, collateralTokenDescription,
     collateralTokenPoolInfo, collateralTokenPrice, executionFee, fundingFee,
     indexTokenDescription, indexTokenPrice, inputTokenDescription, inputTokenPrice,
     isInputTokenApproved, isTradingEnabled, liquidationPrice, marginFee,
-    position, sizeDelta, swapFee, walletBalance
+    position, swapFee, walletBalance
   } = config.tradeState
 
   const walletBalanceUsd = skipRepeats(combineArray(params => {
@@ -284,12 +288,12 @@ export const $TradeBox = (config: ITradeBox) => component((
 
   const requestTradeError = filterNull(awaitPromises(map(async req => {
     try {
-      await req.ctxQuery
+      await req.request
       return null
     } catch (err) {
       return String(err)
     }
-  }, clickRequestTrade)))
+  }, clickProposeTrade)))
 
   const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
 
@@ -423,19 +427,115 @@ export const $TradeBox = (config: ITradeBox) => component((
     return getTokenAmount(amountUsd, state.indexTokenPrice, state.indexTokenDescription.decimals)
   }, combineObject({ indexTokenDescription, indexTokenPrice }), autoFillSizeUsd)
 
-  const reqTradeCtxQuery = map(req => req.ctxQuery, clickRequestTrade)
-
-  const ctxPendingDisable = startWith(false, switchLatest(map(ctxQuery => {
-    // const ctxQueryWwait = fromPromise(ctxQuery.then(req => req.wait()))
-    const ctxQueryStream = fromPromise(ctxQuery)
-    return startWith(true, constant(false, recoverWith(() => now(false), ctxQueryStream)))
-  }, reqTradeCtxQuery)))
 
   const $defualtSelectContainer = $row(
     style({ width: '95px', cursor: 'pointer', position: 'relative', alignSelf: 'center', border: `1px solid ${pallete.middleground}`, borderRadius: '12px' }),
     stylePseudo(':hover', { borderColor: `${pallete.primary}` })
   )
   const $defaultSelectionContainer = $row(layoutSheet.spacingTiny, style({ alignItems: 'center', flex: 1, padding: '6px 10px' }))
+
+  const requestTradeParams = snapshot((config, wallet): IRequestTradeParams => {
+    return { ...config, wallet }
+  }, combineObject(config.tradeConfig), clickProposeTrade)
+
+
+  const requestTrade: Stream<IRequestTrade> = multicast(snapshot((params, req) => {
+
+    const resolvedInputAddress = resolveAddress(config.chain.id, req.inputToken)
+    const from = req.isIncrease ? resolvedInputAddress : req.isLong ? req.indexToken : req.collateralToken
+    const to = req.isIncrease ? req.isLong ? req.indexToken : req.collateralToken : resolvedInputAddress
+
+    const swapRoute = from === to ? [to] : [from, to]
+
+    const slippageN = BigInt(Number(req.slippage) * 100)
+    const allowedSlippage = req.isLong
+      ? req.isIncrease
+        ? slippageN : -slippageN
+      : req.isIncrease
+        ? -slippageN : slippageN
+
+    const priceBasisPoints = BASIS_POINTS_DIVISOR + allowedSlippage
+
+    const acceptablePrice = params.indexTokenPrice * priceBasisPoints / BASIS_POINTS_DIVISOR
+
+    const isNative = req.inputToken === AddressZero
+
+    let request: Promise<viem.TransactionReceipt>
+
+    const address = getMappedValue2(TRADE_CONTRACT_MAPPING, config.chain.id, 'PositionRouter')
+
+    if (req.isIncrease) {
+
+
+      if (isNative) {
+        request = wagmiWriteContract({
+          abi: abi.positionRouter,
+          address,
+          functionName: 'createIncreasePositionETH',
+          args: [
+            swapRoute,
+            req.indexToken,
+            0n,
+            req.sizeDeltaUsd,
+            req.isLong,
+            acceptablePrice,
+            params.executionFee,
+            config.referralCode,
+            AddressZero,
+          ],
+          value: req.collateralDelta + params.executionFee
+        })
+      } else {
+
+        request = wagmiWriteContract({
+          abi: abi.positionRouter,
+          address,
+          value: params.executionFee,
+          functionName: 'createIncreasePosition',
+          args: [
+            swapRoute,
+            req.indexToken,
+            req.collateralDelta,
+            0n,
+            req.sizeDeltaUsd,
+            req.isLong,
+            acceptablePrice,
+            params.executionFee,
+            config.referralCode,
+            AddressZero,
+          ]
+        })
+      }
+
+    } else {
+
+      request = wagmiWriteContract({
+        abi: abi.positionRouter,
+        address,
+        value: params.executionFee,
+        functionName: 'createDecreasePosition',
+        args: [
+          swapRoute,
+          req.indexToken,
+          -req.collateralDeltaUsd,
+          -req.sizeDeltaUsd,
+          req.isLong,
+          req.wallet.account.address,
+          acceptablePrice,
+          0n,
+          params.executionFee,
+          isNative,
+          AddressZero,
+        ]
+      })
+    }
+
+    request.catch(err => {
+      console.error(err)
+    })
+
+    return { ...params, ...req, acceptablePrice, request, swapRoute }
+  }, combineObject({ executionFee, indexTokenPrice }), requestTradeParams))
 
   return [
     $card(style({ backgroundColor: 'transparent', flexDirection: screenUtils.isDesktopScreen ? 'column' : 'column-reverse', padding: 0, gap: 0 }))(
@@ -455,61 +555,62 @@ export const $TradeBox = (config: ITradeBox) => component((
       // )(
 
 
-      //   $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-      //     style({ padding: '2px', fontSize: '.75em' })(
-      //       $ButtonSecondary({
-      //         $content: $icon({ $content: $xCross, width: '24px', svgOps: style({ padding: '4px' }), viewBox: '0 0 32 32' })
-      //       })({
-      //         click: clickResetTradeModeTether()
-      //       })
-      //     ),
-      //     $text(style({ fontWeight: 'bold' }))(map(state => {
-      //       if (state.position.averagePrice > 0n) {
-      //         return state.isIncrease ? 'Increase' : 'Decrease'
-      //       }
 
-      //       return 'Open'
-      //     }, tradeState)),
-      //   ),
+      //   // $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+      //   //   style({ padding: '2px', fontSize: '.75em' })(
+      //   //     $ButtonSecondary({
+      //   //       $content: $icon({ $content: $xCross, width: '24px', svgOps: style({ padding: '4px' }), viewBox: '0 0 32 32' })
+      //   //     })({
+      //   //       click: clickResetTradeModeTether()
+      //   //     })
+      //   //   ),
+      //   //   $text(style({ fontWeight: 'bold' }))(map(state => {
+      //   //     if (state.position.averagePrice > 0n) {
+      //   //       return state.isIncrease ? 'Increase' : 'Decrease'
+      //   //     }
 
-      //   $Popover({
-      //     $target: $row(clickOpenTradeConfigTether(nodeEvent('click')), style({  padding: '6px 12px', border: `2px solid ${pallete.horizon}`, borderRadius: '30px' }))(
-      //       $text('Advanced'),
-      //       $icon({ $content: $caretDown, width: '14px', svgOps: style({ marginRight: '-5px' }), viewBox: '0 0 32 32' }),
-      //     ),
-      //     $popContent: map((_) => {
-      //       return $text('fff')
-      //     }, clickOpenTradeConfig),
-      //   })({
-      //     // overlayClick: clickPopoverClaimTether()
-      //   })
+      //   //     return 'Open'
+      //   //   }, combineObject({ position, isIncrease }))),
+      //   // ),
 
-      //   // $ButtonToggle({
-      //   //   $container: $row(layoutSheet.spacingSmall),
-      //   //   selected: config.tradeConfig.isLong,
-      //   //   options: [
-      //   //     true,
-      //   //     false,
-      //   //   ],
-      //   //   $$option: map(isLong => {
-      //   //     return $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
-      //   //       $icon({ $content: isLong ? $bull : $bear, width: '18px', viewBox: '0 0 32 32' }),
-      //   //       $text(isLong ? 'Long' : 'Short'),
-      //   //     )
-      //   //   })
-      //   // })({ select: switchIsLongTether() }),
+      //   // $Popover({
+      //   //   $target: $row(clickOpenTradeConfigTether(nodeEvent('click')), style({ padding: '6px 12px', border: `2px solid ${pallete.horizon}`, borderRadius: '30px' }))(
+      //   //     $text('Advanced'),
+      //   //     $icon({ $content: $caretDown, width: '14px', svgOps: style({ marginRight: '-5px' }), viewBox: '0 0 32 32' }),
+      //   //   ),
+      //   //   $popContent: map((_) => {
+      //   //     return $text('fff')
+      //   //   }, clickOpenTradeConfig),
+      //   // })({
+      //   //   // overlayClick: clickPopoverClaimTether()
+      //   // })
 
-      //   // $ButtonToggle({
-      //   //   $container: $row(layoutSheet.spacingSmall),
-      //   //   selected: config.tradeConfig.isIncrease,
-      //   //   options: [
-      //   //     true,
-      //   //     false,
-      //   //   ],
-      //   //   $$option: map(option => {
-      //   //     return $text(style({}))(option ? 'Deposit' : 'Withdraw')
-      //   //   })
-      //   // })({ select: switchisIncreaseTether() }),
+      //   $ButtonToggle({
+      //     $container: $row(layoutSheet.spacingSmall),
+      //     selected: config.tradeConfig.isLong,
+      //     options: [
+      //       true,
+      //       false,
+      //     ],
+      //     $$option: map(isLong => {
+      //       return $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+      //         $icon({ $content: isLong ? $bull : $bear, width: '18px', viewBox: '0 0 32 32' }),
+      //         $text(isLong ? 'Long' : 'Short'),
+      //       )
+      //     })
+      //   })({ select: switchIsLongTether() }),
+
+      //   $ButtonToggle({
+      //     $container: $row(layoutSheet.spacingSmall),
+      //     selected: config.tradeConfig.isIncrease,
+      //     options: [
+      //       true,
+      //       false,
+      //     ],
+      //     $$option: map(option => {
+      //       return $text(style({}))(option ? 'Deposit' : 'Withdraw')
+      //     })
+      //   })({ select: switchisIncreaseTether() }),
 
       // ),
 
@@ -895,6 +996,7 @@ export const $TradeBox = (config: ITradeBox) => component((
             })({
               select: switchIsLongTether()
             }),
+
             $Dropdown<ITokenIndex>({
               $container: $row(style({ position: 'relative', alignSelf: 'center' })),
               $selection: switchLatest(map(option => {
@@ -1329,10 +1431,9 @@ export const $TradeBox = (config: ITradeBox) => component((
                           click: clickResetTradeModeTether()
                         })
                       ),
-                      $ButtonPrimary({
-                        disabled: combineArray((isDisabled, isCtxPending) => {
-                          return isDisabled || isCtxPending
-                        }, disableButtonVlidation, ctxPendingDisable),
+                      $ButtonPrimaryCtx({
+                        request: map(req => req.request, requestTrade),
+                        disabled: combineArray((isDisabled) => isDisabled, disableButtonVlidation),
                         $content: $text(map(params => {
                           let modLabel: string
 
@@ -1349,96 +1450,8 @@ export const $TradeBox = (config: ITradeBox) => component((
                           return modLabel
                         }, combineObject({ position, sizeDeltaUsd, isIncrease })))
                       })({
-                        click: clickRequestTradeTether(
-                          snapshot((state) => {
-
-                            const resolvedInputAddress = resolveAddress(config.chain.id, inputToken)
-                            const from = state.isIncrease ? resolvedInputAddress : state.isLong ? state.indexToken : state.collateralToken
-                            const to = state.isIncrease ? state.isLong ? state.indexToken : state.collateralToken : resolvedInputAddress
-
-                            const swapRoute = from === to ? [to] : [from, to]
-
-                            const slippageN = BigInt(Number(state.slippage) * 100)
-                            // const allowedSlippage = state.isLong ? slippageN : -slippageN
-                            const allowedSlippage = state.isLong ? state.isIncrease ? slippageN : -slippageN : state.isIncrease ? -slippageN : slippageN
-
-                            const refPrice = state.isLong ? state.indexTokenPrice : state.indexTokenPrice
-                            const priceBasisPoints = BASIS_POINTS_DIVISOR + allowedSlippage
-
-                            const acceptablePrice = refPrice * priceBasisPoints / BASIS_POINTS_DIVISOR
-
-                            const isNative = inputToken === AddressZero
-
-                            let ctxQuery
-
-                            if (state.isIncrease) {
-
-                              if (isNative) {
-                                ctxQuery = tradeReader.positionRouter.simulate({
-                                  functionName: 'createIncreasePositionETH',
-                                  args: [
-                                    swapRoute,
-                                    state.indexToken,
-                                    0n,
-                                    state.sizeDeltaUsd,
-                                    state.isLong,
-                                    acceptablePrice,
-                                    state.executionFee,
-                                    config.referralCode,
-                                    AddressZero,
-                                  ],
-                                  value: state.collateralDelta + state.executionFee
-                                })
-                              } else {
-
-
-                                ctxQuery = tradeReader.positionRouter.simulate({
-                                  value: state.executionFee,
-                                  functionName: 'createIncreasePosition',
-                                  args: [
-                                    swapRoute,
-                                    state.indexToken,
-                                    state.collateralDelta,
-                                    0n,
-                                    state.sizeDeltaUsd,
-                                    state.isLong,
-                                    acceptablePrice,
-                                    state.executionFee,
-                                    config.referralCode,
-                                    AddressZero,
-                                  ]
-                                })
-                              }
-
-                            } else {
-                              ctxQuery = tradeReader.positionRouter.simulate({
-                                value: state.executionFee,
-                                functionName: 'createDecreasePosition',
-                                args: [
-                                  swapRoute,
-                                  state.indexToken,
-                                  // flip values. Contract code is using `uint` integers
-                                  -state.collateralDeltaUsd,
-                                  -state.sizeDeltaUsd,
-                                  state.isLong,
-                                  w3p.account.address,
-                                  acceptablePrice,
-                                  0n,
-                                  state.executionFee,
-                                  isNative,
-                                  AddressZero,
-                                ]
-                              })
-                            }
-
-                            // ctxQuery.catch(err => {
-                            //   console.error(err)
-                            // })
-
-
-                            return { ctxQuery, state, acceptablePrice }
-                          }, combineObject({ position, collateralDeltaUsd, executionFee, indexToken, slippage, indexTokenPrice, isIncrease, collateralDelta, sizeDeltaUsd, isLong, collateralToken })),
-                          multicast
+                        click: clickProposeTradeTether(
+                          constant(w3p)
                         )
                       })
                     )
@@ -1645,7 +1658,7 @@ export const $TradeBox = (config: ITradeBox) => component((
         enableTrading
       ]),
       approveInputToken,
-      requestTrade: clickRequestTrade,
+      requestTrade
 
     }
   ]

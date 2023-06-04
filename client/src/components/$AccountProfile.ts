@@ -14,6 +14,7 @@ export interface IAccountPreview {
   labelSize?: string
   showAddress?: boolean
   $container?: NodeComposeFn<$Node>
+  $profileContainer?: NodeComposeFn<$Node>
 }
 
 export interface IProfilePreview {
@@ -77,14 +78,14 @@ export const $accountPreview = ({
 
 
 export const $profilePreview = ({
-  $container, profile, showAddress = true, labelSize = '16px'
+  $container = $row, $profileContainer, profile, showAddress = true, labelSize = '16px'
 }: IProfilePreview) => {
-  return $row(layoutSheet.row, layoutSheet.spacingSmall, style({ alignItems: 'center', pointerEvents: 'none', textDecoration: 'none' }))(
+  return $container(layoutSheet.spacingSmall, style({ alignItems: 'center', pointerEvents: 'none', textDecoration: 'none' }))(
     profile.profile
-      ? style({ borderRadius: '50%' }, $berryByToken(profile.profile, $container))
+      ? style({ borderRadius: '50%' }, $berryByToken(profile.profile, $profileContainer))
       : $jazzicon({
         address: profile.id,
-        $container
+        $container: $profileContainer
       }),
     showAddress
       ? profile?.ens?.labelName

@@ -1,13 +1,12 @@
-import { Behavior, combineArray, O } from "@aelea/core"
+import { Behavior, combineArray } from "@aelea/core"
 import { $element, $text, component, style, stylePseudo } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { $alertIcon, $Tooltip } from "@gambitdao/ui-components"
-import { combine, constant, fromPromise, map, mergeArray, never, now, recoverWith, skipRepeats, startWith, switchLatest } from "@most/core"
+import { awaitPromises, constant, map, mergeArray, never, now, recoverWith, skipRepeats, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { $ButtonCore, $defaultButtonCore, IButtonCore } from "./$ButtonCore"
-import { Hash } from "@wagmi/core"
-import * as wagmi from "@wagmi/core"
+import * as viem from "viem"
 
 
 
@@ -71,7 +70,7 @@ export const $ButtonSecondary = (config: IButtonCore) => {
 
 
 export interface IButtonPrimaryCtx extends IButtonCore {
-  request: Stream<wagmi.PrepareWriteContractConfig>
+  request: Stream<Promise<viem.TransactionReceipt>>
   alert?: Stream<string | null>
 }
 
@@ -87,6 +86,19 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
 
   const newLocal: Stream<string | null> = config.alert || never()
 
+  const duringRequest = mergeArray([
+    constant(true, click),
+    awaitPromises(map(async req => {
+      try {
+        await req
+        return false
+      } catch (err) {
+        console.warn(err)
+        return false
+      }
+    }, config.request))
+  ])
+
   return [
     $row(style({ alignItems: 'center' }))(
       $ButtonCore({
@@ -95,10 +107,9 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
           stylePseudo(':hover', { backgroundColor: pallete.middleground })
         ),
         disabled: mergeArray([
-          constant(true, click),
           combineArray((isDisabled, isCtxPending) => {
             return isDisabled || isCtxPending
-          }, config.disabled || now(false), config.request)
+          }, config.disabled || now(false), duringRequest)
         ]),
         $content: config.$content
       })({

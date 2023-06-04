@@ -3,13 +3,11 @@ import { $Node, $element, $text, attr, component, nodeEvent, style } from "@aele
 import { $icon, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { CHAIN } from "@gambitdao/const"
-import { $alertContainer, $alertIcon } from "@gambitdao/ui-components"
-import { awaitPromises, empty, map, mergeArray, now, snapshot, switchLatest, tap } from "@most/core"
-import { Stream } from "@most/types"
+import { $alertContainer, $alertIcon, $walletConnectLogo } from "@gambitdao/ui-components"
+import { awaitPromises, empty, filter, map, mergeArray, now, snapshot, switchLatest, tap } from "@most/core"
 import { getNetwork } from "@wagmi/core"
-import { $caretDown } from "../elements/$icons"
 import { IWalletClient, chain, wallet, web3Modal } from "../wallet/walletLink"
-import { $ButtonPrimary, $ButtonSecondary } from "./form/$Button"
+import { $ButtonSecondary } from "./form/$Button"
 import { IButtonCore } from "./form/$ButtonCore"
 
 
@@ -22,7 +20,6 @@ export interface IConnectWalletPopover {
 }
 
 
-
 export const $IntermediateConnectButton = (config: IConnectWalletPopover) => component((
   [clickOpenPopover, clickOpenPopoverTether]: Behavior<any, any>,
 ) => {
@@ -32,19 +29,9 @@ export const $IntermediateConnectButton = (config: IConnectWalletPopover) => com
     switchLatest(map(w3p => {
       // no wallet connected, show connection flow
       if (!w3p) {
-        return $ConnectDropdown(
-          $ButtonPrimary({
-            $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-              $text('Connect Wallet'),
-              $icon({ $content: $caretDown, viewBox: '0 0 32 32', width: '16px', fill: pallete.background, svgOps: style({ marginTop: '2px' }) }),
-            ),
-            ...config.primaryButtonConfig
-
-          })({
-            click: clickOpenPopoverTether()
-          }),
-          clickOpenPopover
-        )({})
+        return $ConnectWeb3Modal()({
+          // walletChange
+        })
       }
 
 
@@ -63,6 +50,42 @@ export const $IntermediateConnectButton = (config: IConnectWalletPopover) => com
 })
 
 
+export const $ConnectWeb3Modal = () => component((
+  [walletChange, walletChangeTether]: Behavior<PointerEvent, any>,
+) => {
+
+  const ignoreAll = filter(() => false)
+
+
+  return [
+    $ButtonSecondary({
+      $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+        ignoreAll(walletChange),
+        $icon({
+          $content: $walletConnectLogo,
+          viewBox: '0 0 32 32',
+        }),
+        $text('WalletConnect'),
+      )
+    })({
+      click: walletChangeTether(
+        map(async () => {
+          await web3Modal.openModal()
+
+          return 'connectResult'
+        }),
+        awaitPromises,
+      )
+    }),
+
+    {
+      // walletChange
+    }
+  ]
+})
+
+
+
 export const $SwitchNetworkDropdown = (showLabel = false) => component((
   [changeNetwork, changeNetworkTether]: Behavior<any, any>,
 ) => {
@@ -78,10 +101,10 @@ export const $SwitchNetworkDropdown = (showLabel = false) => component((
 
             return CHAIN.BSC
           }),
-        ), style({ padding: '0 8px', cursor: 'pointer' }))(
+        ), style({ cursor: 'pointer' }))(
           $icon({
-            $content: $alertIcon, viewBox: '0 0 24 24', width: '26px',
-            svgOps: style({ fill: pallete.negative, padding: '3px', filter: 'drop-shadow(black 0px 0px 10px) drop-shadow(black 0px 0px 10px) drop-shadow(black 0px 0px 1px)' })
+            $content: $alertIcon, viewBox: '0 0 24 24', width: '36px',
+            svgOps: style({ fill: pallete.negative, placeSelf: 'center', padding: '3px', filter: 'drop-shadow(black 0px 0px 10px) drop-shadow(black 0px 0px 10px) drop-shadow(black 0px 0px 1px)' })
           }),
           showLabel ? $text(`${getNetwork().chain?.name} is not supported`) : empty()
         )
@@ -89,15 +112,18 @@ export const $SwitchNetworkDropdown = (showLabel = false) => component((
 
       const $container = network === null ? $alertContainer : $row
 
-      return $container(changeNetworkTether(
-        nodeEvent('click'),
-        tap(async () => {
-          await web3Modal.openModal({ route: 'SelectNetwork' })
+      return $container(
+        style({ cursor: 'pointer', placeContent: 'center' }),
+        changeNetworkTether(
+          nodeEvent('click'),
+          tap(async () => {
+            await web3Modal.openModal({ route: 'SelectNetwork' })
 
-          return CHAIN.BSC
-        }),
-      ), style({ padding: '0 8px', cursor: 'pointer' }))(
-        $element('img')(attr({ src: `/assets/chain/${network.id}.svg` }), style({ width: '26px' }))(),
+            return CHAIN.BSC
+          }),
+        )
+      )(
+        $element('img')(attr({ src: `/assets/chain/${network.id}.svg` }), style({ width: '32px', placeSelf: 'center' }))(),
       )
 
       // return style({ zoom: 1.1 })($alertTooltip($text('www')))
@@ -108,35 +134,3 @@ export const $SwitchNetworkDropdown = (showLabel = false) => component((
     }
   ]
 })
-
-
-export const $ConnectDropdown = ($trigger: $Node, clickOpenPopover: Stream<any>) => component((
-  [walletChange, walletChangeTether]: Behavior<PointerEvent, any>,
-) => {
-
-
-
-  return [
-    $ButtonSecondary({
-      $content: $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
-        // $WalletLogoMap[IWalletName.walletConnect],
-        $text('Wallet-Connect'),
-      )
-    })({
-      click: walletChangeTether(
-        map(async () => {
-          await web3Modal.openModal()
-
-          return 'connectResult'
-        }),
-        awaitPromises,
-      )
-    }),
-
-    {
-      walletChange
-    }
-  ]
-})
-
-

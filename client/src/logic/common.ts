@@ -6,42 +6,50 @@ import {
   IBerryDisplayTupleMap,
   getLabItemTupleIndex, labAttributeTuple
 } from "@gambitdao/gbc-middleware"
-import { ContractFunctionConfig, StreamInput, StreamInputArray } from "@gambitdao/gmx-middleware"
-import { awaitPromises, map, now, snapshot, switchLatest } from "@most/core"
+import { ContractFunctionConfig, StreamInput, StreamInputArray, switchMap } from "@gambitdao/gmx-middleware"
+import { awaitPromises, map, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import * as wagmi from "@wagmi/core"
 import type { Abi, AbiParametersToPrimitiveTypes, Address, ExtractAbiEvent, ExtractAbiFunction } from 'abitype'
 import * as viem from "viem"
 import { $berry, $defaultBerry } from "../components/$DisplayBerry"
-import { publicClient, wallet } from "../wallet/walletLink"
-import { WalletClient } from "viem"
+import { IWalletClient, publicClient, wallet } from "../wallet/walletLink"
 
 
 interface IContractConnect<TAbi extends Abi, TChain extends viem.Chain = viem.Chain> {
   read<TFunctionName extends string, TArgs extends AbiParametersToPrimitiveTypes<ExtractAbiFunction<TAbi, TFunctionName>['inputs']>>(functionName: viem.InferFunctionName<TAbi, TFunctionName, 'view' | 'pure'>, ...args_: onlyArray<TArgs> | onlyArray<StreamInputArray<onlyArray<TArgs>>>): Stream<viem.ReadContractReturnType<TAbi, TFunctionName>>
   listen<TEventName extends string, TLogs = viem.Log<bigint, number, ExtractAbiEvent<TAbi, TEventName>>>(eventName: viem.InferEventName<TAbi, TEventName>, args?: viem.GetEventArgs<TAbi, TEventName>): Stream<TLogs>
   simulate<TFunctionName extends string, TChainOverride extends viem.Chain | undefined = undefined>(simParams: Omit<viem.SimulateContractParameters<TAbi, TFunctionName, TChain, TChainOverride>, 'address' | 'abi'>): Stream<viem.SimulateContractReturnType<TAbi, TFunctionName, TChain, TChainOverride>>
-  write<TFunctionName extends string>(simParams: Stream<Omit<wagmi.PrepareWriteContractConfig<TAbi, TFunctionName, TChain['id'], WalletClient>, 'address' | 'abi'>>): Stream<wagmi.PrepareWriteContractConfig<TAbi, TFunctionName, TChain['id']>>
+  write<TFunctionName extends string>(simParams: Stream<Omit<wagmi.PrepareWriteContractConfig<TAbi, TFunctionName, TChain['id'], IWalletClient>, 'address' | 'abi'>>): Stream<wagmi.PrepareWriteContractConfig<TAbi, TFunctionName, TChain['id']>>
 }
 
+
+export const getMappedValue2 = <
+  TDeepMap extends Record<number, { [k: string]: Address }>,
+  TKey1 extends keyof TDeepMap,
+  TKey2 extends keyof TDeepMap[TKey1]
+>(mapOfMap: TDeepMap, map1Key: TKey1, map2Key: TKey2): TDeepMap[TKey1][TKey2] => {
+  const contractAddressMap = mapOfMap[map1Key]
+
+  if (!contractAddressMap) {
+    throw new Error(`map1Key[${String(map1Key)}] not found in map`)
+  }
+
+  const address = contractAddressMap[map2Key]
+
+  if (!address) {
+    throw new Error(`map2Key[${String(map2Key)}] not found in map`)
+  }
+
+  return address
+}
 
 export const getMappedContractAddress = <
   TDeepMap extends Record<number, { [k: string]: Address }>,
   TKey1 extends keyof TDeepMap,
   TKey2 extends keyof TDeepMap[TKey1],
-  TAddress extends TDeepMap[TKey1][TKey2],
 >(contractMap: TDeepMap, contractName: TKey2): Stream<TDeepMap[TKey1][TKey2]> => {
-  const newLocal = map(client => {
-    const contractAddressMap = contractMap[client.chain.id as TKey1]
-
-    if (!contractAddressMap) {
-      throw new Error(`Contract address not found for chain ${client.chain.id}`)
-    }
-
-    const address = contractMap[client.chain.id as TKey1][contractName] as TAddress
-    return address
-  }, publicClient)
-  return newLocal
+  return map(client => getMappedValue2(contractMap, client.chain.id as TKey1, contractName), publicClient)
 }
 
 
@@ -49,18 +57,11 @@ export const connectMappedContractConfig = <
   TDeepMap extends Record<number, { [k: string]: Address }>,
   TKey1 extends keyof TDeepMap,
   TKey2 extends keyof TDeepMap[TKey1],
-  TAddress extends TDeepMap[TKey1][TKey2],
   TAbi extends Abi,
 >(contractMap: TDeepMap, contractName: TKey2, abi: TAbi) => {
 
   const config = map(client => {
-    const contractAddressMap = contractMap[client.chain.id as TKey1]
-
-    if (!contractAddressMap) {
-      throw new Error(`Contract address not found for chain ${client.chain.id}`)
-    }
-
-    const address = contractMap[client.chain.id as TKey1][contractName] as TAddress
+    const address = getMappedValue2(contractMap, client.chain.id as TKey1, contractName)
     return { client, address, abi }
   }, fromStream(publicClient))
 
@@ -219,21 +220,43 @@ export const writeContract = <
   TPublicClient extends viem.PublicClient<TTransport, TChain, TIncludeActions>,
   TWalletClient extends wagmi.WalletClient = wagmi.WalletClient
 >(params_: Stream<ContractFunctionConfig<TAddress, TAbi, TTransport, TChain, TIncludeActions, TPublicClient>>) =>
-  <TFunctionName extends string>(simParams: Omit<wagmi.PrepareWriteContractConfig<TAbi, TFunctionName, TChain['id'], TWalletClient>, 'address' | 'abi'>): Stream<wagmi.PrepareWriteContractConfig<TAbi, TFunctionName, TChain['id']>> => {
+  <TFunctionName extends string>(simParams: Omit<wagmi.PrepareWriteContractConfig<TAbi, TFunctionName, TChain['id'], TWalletClient>, 'address' | 'abi'>): Stream<viem.WaitForTransactionReceiptReturnType<viem.Chain>> => {
 
-    const mapState = awaitPromises(snapshot(async (walletClient, params) => {
-      if (!walletClient) {
-        throw new Error('Wallet client is not defined')
-      }
+    const mapState = switchMap(params => {
+      return awaitPromises(map(async walletClient => {
+        if (!walletClient) {
+          throw new Error('Wallet client is not defined')
+        }
 
-      const simReq = await params.client.simulateContract({ address: params.address, abi: params.abi, ...simParams } as any)
+        const simReq = await params.client.simulateContract({ address: params.address, abi: params.abi, ...simParams } as any)
+        const hash = await walletClient.writeContract(simReq.request)
+        const recpt = await params.client.waitForTransactionReceipt({ hash })
 
-      const request = walletClient.writeContract(simReq.request)
-      return request
-    }, wallet, params_))
+        return recpt
+      }, wallet))
+    }, params_)
 
-    return mapState as any
+    return mapState
   }
+
+export const wagmiWriteContract = async <
+  TAbi extends Abi,
+  TFunctionName extends string,
+
+  // TTransport extends viem.Transport,
+  // TChain extends viem.Chain,
+  // TIncludeActions extends true,
+  // TWalletClient extends wagmi.WalletClient = wagmi.WalletClient
+  >(simParams: wagmi.PrepareWriteContractConfig<TAbi, TFunctionName>): Promise<viem.TransactionReceipt> => {
+
+  const client = wagmi.getPublicClient()
+  const simReq = await wagmi.prepareWriteContract(simParams as any)
+  const writeResults = await wagmi.writeContract(simReq.request)
+  const recpt = await client.waitForTransactionReceipt(writeResults)
+
+  return recpt
+
+}
 
 
 
@@ -245,54 +268,4 @@ export const waitForTransactionReceipt = async<
   const req = client.waitForTransactionReceipt({ hash })
   return req
 }
-
-
-
-export const $defaultLabItem = $defaultBerry(
-  style({ placeContent: 'center', overflow: 'hidden' })
-)
-
-export const $defaultLabItemMedium = $defaultLabItem(
-  style({ width: '70px', height: '70px' })
-)
-
-export const $defaultLabItemBig = $defaultLabItem(
-  style({ width: '250px', height: '250px' })
-)
-
-export const $defaultLabItemHuge = $defaultLabItem(
-  style({ width: '460px', height: '460px' })
-)
-
-export interface ILabItemDisplay {
-  id: number
-  $container?: NodeComposeFn<$Node>
-  background?: boolean
-  showFace?: boolean
-}
-
-const tupleLength = labAttributeTuple.length
-
-export const $labItem = ({ id, $container = $defaultLabItem, background = true, showFace = false }: ILabItemDisplay): $Node => {
-  const tupleIdx = getLabItemTupleIndex(id)
-  const localTuple = Array(tupleLength).fill(undefined) as IBerryDisplayTupleMap
-  localTuple.splice(tupleIdx, 1, id)
-
-  if (tupleIdx !== 5) {
-    localTuple.splice(5, 1, IAttributeHat.NUDE)
-  }
-
-  if (tupleIdx !== 3 && showFace) {
-    localTuple.splice(3, 1, IAttributeExpression.HAPPY)
-  }
-
-
-  const $csContainer = $container(
-    background
-      ? style({ backgroundColor: tupleIdx === 0 ? '' : colorAlpha(pallete.message, theme.name === 'light' ? .12 : .92) })
-      : O()
-  )
-  return $berry(localTuple, $csContainer)
-}
-
 

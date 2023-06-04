@@ -1,6 +1,6 @@
 import { Behavior } from "@aelea/core"
-import { $node, component, nodeEvent, style } from "@aelea/dom"
-import { $row } from "@aelea/ui-components"
+import { $Node, $node, NodeComposeFn, component, nodeEvent, style } from "@aelea/dom"
+import { $column, $row } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, map, mergeArray, now, snapshot, switchLatest } from "@most/core"
 import { $anchor } from "@gambitdao/ui-components"
@@ -15,11 +15,11 @@ import { $SwitchNetworkDropdown } from "./$ConnectAccount"
 
 
 export interface IWalletDisplay {
-  chainList: CHAIN[]
-  parentRoute: Route
+  parentRoute: Route,
+  $container?: NodeComposeFn<$Node>
 }
 
-export const $WalletDisplay = (config: IWalletDisplay) => component((
+export const $WalletDisplay = ({ $container = $row, parentRoute }: IWalletDisplay) => component((
   [profileLinkClick, profileLinkClickTether]: Behavior<any, any>,
   [routeChange, routeChangeTether]: Behavior<any, string>,
   [walletChange, walletChangeTether]: Behavior<any, string>,
@@ -28,11 +28,30 @@ export const $WalletDisplay = (config: IWalletDisplay) => component((
 
 
   return [
-    $row(style({ backgroundColor: `${pallete.background}`, borderRadius: '30px', width: '146px', height: '42px', alignItems: 'center' }))(
+    switchLatest(snapshot((_, accountResult) => {
 
-      switchLatest(snapshot((_, accountResult) => {
-        if (!accountResult.address) {
-          return walletChangeTether(
+      return $container(style({ backgroundColor: `${pallete.background}`, gap: '8px', borderRadius: '30px', placeContent: 'center' }))(
+
+        accountResult.address
+          ? $anchor(
+            style({ flexDirection: 'column' }),
+            routeChangeTether(
+              nodeEvent('click'),
+              map(path => {
+                const lastFragment = location.pathname.split('/').slice(-1)[0]
+                const newPath = `/app/wallet/${lastFragment === 'trade' ? IProfileActiveTab.TRADING.toLowerCase() : IProfileActiveTab.BERRIES.toLowerCase()}`
+
+                if (location.pathname !== newPath) {
+                  history.pushState(null, '', newPath)
+                }
+
+                return newPath
+              })
+            )
+          )(
+            $discoverIdentityDisplay({ address: accountResult.address, $profileContainer: $defaultBerry(style({ minWidth: '38px' })), $container: $container })
+          )
+          : walletChangeTether(
             nodeEvent('click'),
             map(async () => {
               await web3Modal.openModal()
@@ -41,38 +60,18 @@ export const $WalletDisplay = (config: IWalletDisplay) => component((
             awaitPromises
           )(
             style({ cursor: 'pointer' }, $disconnectedWalletDisplay())
-          )
-        }
+          ),
 
-        return $anchor(
-          routeChangeTether(
-            nodeEvent('click'),
-            map(path => {
-              const lastFragment = location.pathname.split('/').slice(-1)[0]
-              const newPath = `/app/wallet/${lastFragment === 'trade' ? IProfileActiveTab.TRADING.toLowerCase() : IProfileActiveTab.BERRIES.toLowerCase()}`
 
-              if (location.pathname !== newPath) {
-                history.pushState(null, '', newPath)
-              }
+        style({ backgroundColor: pallete.horizon, flex: 1 }, $seperator2),
 
-              return newPath
-            })
-          )
-        )(
-          $discoverIdentityDisplay({ address: accountResult.address, $container: $defaultBerry(style({ minWidth: '38px' })) })
-        )
+        $SwitchNetworkDropdown()({}),
+        $node(),
 
-      }, mergeArray([now(null), walletChange]), account)),
-
-      $node(style({ flex: 1 }))(),
-
-      style({ backgroundColor: pallete.horizon, width: '2px' }, $seperator2),
-
-      style({ alignSelf: 'stretch', borderRadius: '0 100px 100px 0' })(
-        $SwitchNetworkDropdown()({})
       )
 
-    ),
+
+    }, mergeArray([now(null), walletChange]), account)),
 
     {
       routeChange,

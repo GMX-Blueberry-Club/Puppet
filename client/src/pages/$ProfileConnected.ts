@@ -11,9 +11,8 @@ import { $ButtonToggle, $Link, $PnlValue, $TradePnl, $anchor, $defaulButtonToggl
 import { awaitPromises, map, mergeArray, now, zip } from "@most/core"
 import { $labLogo } from "../common/$icons"
 import { $CardTable } from "../components/$common"
-import { $ButtonPrimary, $ButtonSecondary, $defaultButtonSecondary } from "../components/form/$Button"
+import { $ButtonSecondary, $defaultButtonSecondary } from "../components/form/$Button"
 import { $responsiveFlex } from "../elements/$common"
-import { $labItem } from "../logic/common"
 import * as tradeReader from "../logic/contract/trade"
 import { BrowserStore } from "../logic/store"
 import { fadeIn } from "../transitions/enter"
@@ -266,46 +265,4 @@ export const $ProfileConnected = (config: IAccount) => component((
 
 
 
-export const $TransferItems = (items: { id: number, amount: number }[]) => component((
-  [selection, selectionTether]: Behavior<any, any>
-) => {
 
-  return [
-    $column(
-      $row(...items.map(item => {
-
-        return $row(
-          $labItem({ id: item.id })
-        )
-      })),
-
-      // $DropMultiSelect({
-      //   value: now([]),
-      //   $chip: $defaultChip(style({ padding: 0, overflow: 'hidden' })),
-      //   $$chip: map(item => {
-
-      //     return $row(style({ alignItems: 'center', gap: '8px', color: pallete.message }))(
-      //       style({ borderRadius: '50%' }, $labItem(item.id, 50)),
-      //       $text(String(item.id)),
-      //     )
-      //   }),
-      //   selectDrop: {
-      //     $container: $defaultSelectContainer(style({ padding: '10px', flexWrap: 'wrap', width: '100%', maxHeight: '400px', overflow: 'auto', flexDirection: 'row' })),
-      //     $$option: map((item) => {
-
-      //       return style({ cursor: 'pointer' }, $labItem(item.id, 50))
-      //     }),
-      //     list: items
-      //   }
-      // })({
-      //   selection: selectionTether()
-      // }),
-
-      $ButtonPrimary({
-        $content: $text('Send')
-      })({})
-    )
-
-
-  ]
-})
