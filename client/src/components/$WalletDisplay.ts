@@ -28,50 +28,48 @@ export const $WalletDisplay = ({ $container = $row, parentRoute }: IWalletDispla
 
 
   return [
-    switchLatest(snapshot((_, accountResult) => {
+    $container(style({ backgroundColor: `${pallete.background}`, gap: '8px', borderRadius: '30px', placeContent: 'center' }))(
+      $row(style({ flex: 1 }))(
+        switchLatest(snapshot((_, accountResult) => {
 
-      return $container(style({ backgroundColor: `${pallete.background}`, gap: '8px', borderRadius: '30px', placeContent: 'center' }))(
+          return accountResult.address
+            ? $anchor(
+              style({ flexDirection: 'column' }),
+              routeChangeTether(
+                nodeEvent('click'),
+                map(path => {
+                  const lastFragment = location.pathname.split('/').slice(-1)[0]
+                  const newPath = `/app/wallet/${lastFragment === 'trade' ? IProfileActiveTab.TRADING.toLowerCase() : IProfileActiveTab.BERRIES.toLowerCase()}`
 
-        accountResult.address
-          ? $anchor(
-            style({ flexDirection: 'column' }),
-            routeChangeTether(
-              nodeEvent('click'),
-              map(path => {
-                const lastFragment = location.pathname.split('/').slice(-1)[0]
-                const newPath = `/app/wallet/${lastFragment === 'trade' ? IProfileActiveTab.TRADING.toLowerCase() : IProfileActiveTab.BERRIES.toLowerCase()}`
+                  if (location.pathname !== newPath) {
+                    history.pushState(null, '', newPath)
+                  }
 
-                if (location.pathname !== newPath) {
-                  history.pushState(null, '', newPath)
-                }
-
-                return newPath
-              })
+                  return newPath
+                })
+              )
+            )(
+              $discoverIdentityDisplay({ address: accountResult.address, $profileContainer: $defaultBerry(style({ minWidth: '38px' })) })
             )
-          )(
-            $discoverIdentityDisplay({ address: accountResult.address, $profileContainer: $defaultBerry(style({ minWidth: '38px' })), $container: $container })
-          )
-          : walletChangeTether(
-            nodeEvent('click'),
-            map(async () => {
-              await web3Modal.openModal()
-              return `walletConnect`
-            }),
-            awaitPromises
-          )(
-            style({ cursor: 'pointer' }, $disconnectedWalletDisplay())
-          ),
+            : walletChangeTether(
+              nodeEvent('click'),
+              map(async () => {
+                await web3Modal.openModal()
+                return `walletConnect`
+              }),
+              awaitPromises
+            )(
+              style({ cursor: 'pointer' }, $disconnectedWalletDisplay())
+            )
 
 
-        style({ backgroundColor: pallete.horizon, flex: 1 }, $seperator2),
+        }, mergeArray([now(null), walletChange]), account))
+      ),
+      $seperator2,
 
-        $SwitchNetworkDropdown()({}),
-        $node(),
-
-      )
-
-
-    }, mergeArray([now(null), walletChange]), account)),
+      $SwitchNetworkDropdown()({}),
+      $node(),
+    ),
 
     {
       routeChange,

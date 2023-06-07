@@ -149,7 +149,7 @@ export const $openPositionPnlBreakdown = (trade: ITradeOpen, cumulativeFee: Stre
 
   return $column(layoutSheet.spacing)(
     $row(style({ placeContent: 'space-between' }))(
-      $text('Total breakdown'),
+      $text('Net PnL breakdown'),
       $row(layoutSheet.spacingTiny)(
         $text(style({ color: pallete.foreground, flex: 1 }))('Deposit'),
         $text(map(cumFee => {
@@ -162,10 +162,7 @@ export const $openPositionPnlBreakdown = (trade: ITradeOpen, cumulativeFee: Stre
       )
     ),
     $column(layoutSheet.spacingSmall)(
-      $row(layoutSheet.spacingTiny)(
-        $text(style({ color: pallete.foreground, flex: 1 }))('Swap Fees'),
-        $text('WIP')
-      ),
+
       $row(layoutSheet.spacingTiny)(
         $text(style({ color: pallete.foreground, flex: 1 }))('Margin Fee'),
         $PnlValue(-totalMarginFee)

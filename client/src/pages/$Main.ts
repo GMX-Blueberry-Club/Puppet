@@ -125,136 +125,139 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       ),
       router.contains(appRoute)(
         $rootContainer(style({
-          display: 'flex',
+          display: 'flex', flexDirection: 'column',
           gap: screenUtils.isDesktopScreen ? '35px' : '35px',
         }))(
 
-          $node(
+          $MainMenuSmall({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+            routeChange: linkClickTether(),
+          }),
+
+          $column(
             layoutSheet.spacingBig,
-            styleBehavior(map(isMobile => ({ flexDirection: isMobile ? 'row' : 'column' }), isMobileScreen)),
-            style({ display: 'flex', margin: '0 auto', maxWidth: '1440px', gap: screenUtils.isDesktopScreen ? '55px' : '55px', width: '100%' })
+            // styleBehavior(map(isMobile => ({ flexDirection: isMobile ? 'row' : 'column' }), isMobileScreen)),
+            style({ margin: '0 auto', maxWidth: '1440px', gap: screenUtils.isDesktopScreen ? '55px' : '55px', width: '100%' })
           )(
-            switchMap(isMobile => {
-              if (isMobile) {
-                return $MainMenu({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
-                  routeChange: linkClickTether(),
-                })
+
+            // switchMap(isMobile => {
+            //   if (isMobile) {
+            //     return $MainMenu({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+            //       routeChange: linkClickTether(),
+            //     })
+            //   }
+
+            //   return $MainMenuSmall({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+            //     routeChange: linkClickTether(),
+            //   })
+            // }, isMobileScreen),
+
+            router.contains(profileRoute)(
+              {
+                run(sink, scheduler) {
+                  const urlFragments = document.location.pathname.split('/')
+                  const account = urlFragments[urlFragments.length - 2].toLowerCase() as Address
+
+                  return $Profile({
+                    $accountDisplay: $row(layoutSheet.spacing, style({ flex: 1, alignItems: 'center', placeContent: 'center', zIndex: 1 }))(
+                      $discoverIdentityDisplay({
+                        address: account,
+                        labelSize: '1.5em'
+                      }),
+                    ),
+                    account: account,
+                    parentUrl: `/app/profile/${account}/`,
+                    parentRoute: profileRoute
+                  })({
+                    changeRoute: linkClickTether(),
+                  }).run(sink, scheduler)
+                },
               }
+            ),
+            router.contains(profileWalletRoute)(
+              fadeIn($ProfileConnected({
+                parentRoute: profileWalletRoute,
+                chainList: [CHAIN.ARBITRUM],
+                accountStakingStore
+              })({
+                changeRoute: linkClickTether(),
+              }))
+            ),
+            router.match(leaderboardRoute)(
+              fadeIn($Leaderboard({
+                parentRoute: appRoute
+              })({
+                routeChange: linkClickTether()
+              }))
+            ),
+            router.match(tradeRoute)(
+              $IntermediateConnectButton({
+                $$display: map(wallet => {
 
-              return $MainMenuSmall({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
-                routeChange: linkClickTether(),
-              })
-            }, isMobileScreen),
-
-            $column(style({ flex: 1, paddingTop: '55px' }))(
-              router.contains(profileRoute)(
-                {
-                  run(sink, scheduler) {
-                    const urlFragments = document.location.pathname.split('/')
-                    const account = urlFragments[urlFragments.length - 2].toLowerCase() as Address
-
-                    return $Profile({
-                      $accountDisplay: $row(layoutSheet.spacing, style({ flex: 1, alignItems: 'center', placeContent: 'center', zIndex: 1 }))(
-                        $discoverIdentityDisplay({
-                          address: account,
-                          labelSize: '1.5em'
-                        }),
-                      ),
-                      account: account,
-                      parentUrl: `/app/profile/${account}/`,
-                      parentRoute: profileRoute
-                    })({
-                      changeRoute: linkClickTether(),
-                    }).run(sink, scheduler)
-                  },
-                }
-              ),
-              router.contains(profileWalletRoute)(
-                fadeIn($ProfileConnected({
-                  parentRoute: profileWalletRoute,
-                  chainList: [CHAIN.ARBITRUM],
-                  accountStakingStore
-                })({
-                  changeRoute: linkClickTether(),
-                }))
-              ),
-              router.match(leaderboardRoute)(
-                fadeIn($Leaderboard({
-                  parentRoute: appRoute
-                })({
-                  routeChange: linkClickTether()
-                }))
-              ),
-              router.match(tradeRoute)(
-                $IntermediateConnectButton({
-                  $$display: map(wallet => {
-
-                    return $Trade({
-                      chain: wallet.chain,
-                      referralCode: BLUEBERRY_REFFERAL_CODE,
-                      tokenIndexMap: {
-                        [CHAIN.ARBITRUM]: [
-                          ARBITRUM_ADDRESS.NATIVE_TOKEN,
-                          ARBITRUM_ADDRESS.WBTC,
-                          ARBITRUM_ADDRESS.LINK,
-                          ARBITRUM_ADDRESS.UNI,
-                        ],
-                        [CHAIN.AVALANCHE]: [
-                          AVALANCHE_ADDRESS.NATIVE_TOKEN,
-                          AVALANCHE_ADDRESS.WETHE,
-                          AVALANCHE_ADDRESS.WBTCE,
-                          AVALANCHE_ADDRESS.BTCB,
-                        ]
-                      },
-                      tokenStableMap: {
-                        [CHAIN.ARBITRUM]: [
-                          ARBITRUM_ADDRESS.USDC,
-                          ARBITRUM_ADDRESS.USDT,
-                          ARBITRUM_ADDRESS.DAI,
-                          ARBITRUM_ADDRESS.FRAX,
-                          // ARBITRUM_ADDRESS.MIM,
-                        ],
-                        [CHAIN.AVALANCHE]: [
-                          AVALANCHE_ADDRESS.USDC,
-                          AVALANCHE_ADDRESS.USDCE,
-                          // AVALANCHE_ADDRESS.MIM,
-                        ]
-                      },
-                      parentRoute: tradeRoute,
-                      store
-                    })({
-                      changeRoute: linkClickTether()
-                    })
+                  return $Trade({
+                    chain: wallet.chain,
+                    referralCode: BLUEBERRY_REFFERAL_CODE,
+                    tokenIndexMap: {
+                      [CHAIN.ARBITRUM]: [
+                        ARBITRUM_ADDRESS.NATIVE_TOKEN,
+                        ARBITRUM_ADDRESS.WBTC,
+                        ARBITRUM_ADDRESS.LINK,
+                        ARBITRUM_ADDRESS.UNI,
+                      ],
+                      [CHAIN.AVALANCHE]: [
+                        AVALANCHE_ADDRESS.NATIVE_TOKEN,
+                        AVALANCHE_ADDRESS.WETHE,
+                        AVALANCHE_ADDRESS.WBTCE,
+                        AVALANCHE_ADDRESS.BTCB,
+                      ]
+                    },
+                    tokenStableMap: {
+                      [CHAIN.ARBITRUM]: [
+                        ARBITRUM_ADDRESS.USDC,
+                        ARBITRUM_ADDRESS.USDT,
+                        ARBITRUM_ADDRESS.DAI,
+                        ARBITRUM_ADDRESS.FRAX,
+                        // ARBITRUM_ADDRESS.MIM,
+                      ],
+                      [CHAIN.AVALANCHE]: [
+                        AVALANCHE_ADDRESS.USDC,
+                        AVALANCHE_ADDRESS.USDCE,
+                        // AVALANCHE_ADDRESS.MIM,
+                      ]
+                    },
+                    parentRoute: tradeRoute,
+                    store
+                  })({
+                    changeRoute: linkClickTether()
                   })
-                })({})
-              ),
-              router.match(tradeTermsAndConditions)(
-                $column(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
-                  $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
-                  $node(),
-                  $text(style({ fontSize: '1.5em', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
-                  $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host + '/app/' + TRADEURL} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
-                  $element('ul')(layoutSheet.spacing, style({ lineHeight: '1.5em' }))(
-                    $liItem(
-                      $text(`I am not a United States person or entity;`),
-                    ),
-                    $liItem(
-                      $text(`I am not a resident, national, or agent of any country to which the United States, the United Kingdom, the United Nations, or the European Union embargoes goods or imposes similar sanctions, including without limitation the U.S. Office of Foreign Asset Control, Specifically Designated Nationals and Blocked Person List;`),
-                    ),
-                    $liItem(
-                      $text(`I am legally entitled to access the Interface under the laws of the jurisdiction where I am located;`),
-                    ),
-                    $liItem(
-                      $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
-                    ),
+                })
+              })({})
+            ),
+            router.match(tradeTermsAndConditions)(
+              $column(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
+                $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
+                $node(),
+                $text(style({ fontSize: '1.5em', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
+                $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host + '/app/' + TRADEURL} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
+                $element('ul')(layoutSheet.spacing, style({ lineHeight: '1.5em' }))(
+                  $liItem(
+                    $text(`I am not a United States person or entity;`),
                   ),
-
-                  $node(style({ height: '100px' }))(),
-
+                  $liItem(
+                    $text(`I am not a resident, national, or agent of any country to which the United States, the United Kingdom, the United Nations, or the European Union embargoes goods or imposes similar sanctions, including without limitation the U.S. Office of Foreign Asset Control, Specifically Designated Nationals and Blocked Person List;`),
+                  ),
+                  $liItem(
+                    $text(`I am legally entitled to access the Interface under the laws of the jurisdiction where I am located;`),
+                  ),
+                  $liItem(
+                    $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
+                  ),
                 ),
 
+                $node(style({ height: '100px' }))(),
+
               ),
-            )
+
+            ),
 
           )
         )

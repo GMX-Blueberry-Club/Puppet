@@ -11,6 +11,9 @@
     "types": ".dist/types/index.d.ts",
     "scripts": {
         "clean": "rm -fr .dist/*",
-        "build": "tsc && tsc --outDir .dist/cjs --module CommonJS --declarationMap false --composite false --declaration false --declarationDir null"
+        "build": "tsc -b"
+    },
+    "dependencies": {
+        "middleware-const": "workspace:*"
     }
 }

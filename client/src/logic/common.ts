@@ -1,18 +1,10 @@
-import { O, combineArray, fromCallback, isStream } from "@aelea/core"
-import { $Node, NodeComposeFn, style } from "@aelea/dom"
-import { colorAlpha, pallete, theme } from "@aelea/ui-components-theme"
-import {
-  IAttributeExpression, IAttributeHat,
-  IBerryDisplayTupleMap,
-  getLabItemTupleIndex, labAttributeTuple
-} from "@gambitdao/gbc-middleware"
+import { combineArray, fromCallback, isStream } from "@aelea/core"
 import { ContractFunctionConfig, StreamInput, StreamInputArray, switchMap } from "@gambitdao/gmx-middleware"
 import { awaitPromises, map, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import * as wagmi from "@wagmi/core"
 import type { Abi, AbiParametersToPrimitiveTypes, Address, ExtractAbiEvent, ExtractAbiFunction } from 'abitype'
 import * as viem from "viem"
-import { $berry, $defaultBerry } from "../components/$DisplayBerry"
 import { IWalletClient, publicClient, wallet } from "../wallet/walletLink"
 
 
@@ -165,7 +157,7 @@ export const listenContract = <
   TIncludeActions extends true,
   TPublicClient extends viem.PublicClient<TTransport, TChain, TIncludeActions>,
 >(params_: Stream<ContractFunctionConfig<TAddress, TAbi, TTransport, TChain, TIncludeActions, TPublicClient>>) =>
-  <TEventName extends string, TLogs = viem.Log<bigint, number, ExtractAbiEvent<TAbi, TEventName>>>(eventName: viem.InferEventName<TAbi, TEventName>, args?: viem.GetEventArgs<TAbi, TEventName>): Stream<TLogs> => {
+  <TEventName extends string, TLogs = viem.Log<bigint, number, ExtractAbiEvent<TAbi, TEventName>, true>>(eventName: viem.InferEventName<TAbi, TEventName>, args?: viem.GetEventArgs<TAbi, TEventName>): Stream<TLogs> => {
 
     const mapState = switchLatest(map(({ abi, address, client }) => {
       const eventStream = fromCallback(emitCb => {

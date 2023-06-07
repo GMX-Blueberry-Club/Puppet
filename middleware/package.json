@@ -1,5 +1,5 @@
 {
-    "name": "@gambitdao/gbc-middleware",
+    "name": "puppet-middleware",
     "version": "0.0.0",
     "license": "MIT",
     "module": ".dist/esm/index.js",
@@ -24,8 +24,8 @@
         "@most/types": "^1.1.0",
         "@types/isomorphic-fetch": "^0.0.36",
         "@urql/core": "^4.0.7",
-        "abitype": "^0.8.5",
+        "abitype": "^0.8.7",
         "graphql": "^16.6.0",
-        "viem": "^0.3.40"
+        "viem": "^1.0.0"
     }
 }

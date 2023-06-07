@@ -28,6 +28,7 @@ import {
   ITokenDescription,
   ITokenIndex, ITokenInput, ITokenStable, ITrade, ITradeOpen, LIMIT_LEVERAGE, MARGIN_FEE_BASIS_POINTS, MIN_LEVERAGE, parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, TRADE_CONTRACT_MAPPING, USD_PERCISION, USDG_DECIMALS, zipState
 } from "@gambitdao/gmx-middleware"
+import { } from "@gambitdao/gmx-middleware"
 import {
   $alert, $alertTooltip, $anchor, $bear, $bull,
   $hintNumChange, $infoLabel, $infoLabeledValue, $infoTooltipLabel, $IntermediatePromise,
@@ -165,9 +166,9 @@ const MIN_LEVERAGE_NORMAL = formatToBasis(MIN_LEVERAGE) / LIMIT_LEVERAGE_NORMAL
 
 export const $TradeBox = (config: ITradeBox) => component((
   [openEnableTradingPopover, openEnableTradingPopoverTether]: Behavior<any, any>,
-  [enableTrading, enableTradingTether]: Behavior<any, boolean>,
+  [enableTradingPlugin, enableTradingPluginTether]: Behavior<PointerEvent, PointerEvent>,
   [approveInputToken, approveInputTokenTether]: Behavior<PointerEvent, boolean>,
-  [clickEnablePlugin, clickEnablePluginTether]: Behavior<PointerEvent>,
+  [approveTrading, approveTradingTether]: Behavior<PointerEvent, true>,
 
   [dismissEnableTradingOverlay, dismissEnableTradingOverlayTether]: Behavior<false, false>,
 
@@ -203,15 +204,7 @@ export const $TradeBox = (config: ITradeBox) => component((
   const routerContractAddress = contractMap.Router
   const positionRouterAddress = contractMap.PositionRouter
 
-  const requestEnablePlugin = switchMap(ev => {
-    const simReq = tradeReader.router.write({
-      functionName: 'approvePlugin',
-      args: [positionRouterAddress],
-      value: undefined
-    })
-
-    return simReq
-  }, clickEnablePlugin)
+  // const requestEnablePlugin = multicast()
 
 
   const { collateralDeltaUsd, collateralToken, collateralDelta, sizeDelta, focusMode, indexToken, inputToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage } = config.tradeConfig
@@ -536,6 +529,21 @@ export const $TradeBox = (config: ITradeBox) => component((
 
     return { ...params, ...req, acceptablePrice, request, swapRoute }
   }, combineObject({ executionFee, indexTokenPrice }), requestTradeParams))
+
+
+  const requestEnablePlugin = multicast(map(async () => {
+
+    const address = getMappedValue2(TRADE_CONTRACT_MAPPING, config.chain.id, 'Router')
+
+    const recpt = wagmiWriteContract({
+      address,
+      abi: abi.routerfeed,
+      functionName: 'approvePlugin',
+      args: [positionRouterAddress],
+      value: undefined
+    })
+    return recpt
+  }, enableTradingPlugin))
 
   return [
     $card(style({ backgroundColor: 'transparent', flexDirection: screenUtils.isDesktopScreen ? 'column' : 'column-reverse', padding: 0, gap: 0 }))(
@@ -1364,14 +1372,12 @@ export const $TradeBox = (config: ITradeBox) => component((
                                 request: requestEnablePlugin,
                                 $content: $text(!isPluginEnabled ? 'Enable GMX & Agree' : 'Agree')
                               })({
-                                click: clickEnablePluginTether()
+                                click: enableTradingPluginTether()
                               })
                               : $ButtonPrimary({
                                 $content: $text('Agree')
                               })({
-                                click: enableTradingTether(
-                                  constant(true)
-                                )
+                                click: approveTradingTether(constant(true))
                               })
                           )
                         }, openEnableTradingPopover),
@@ -1647,6 +1653,7 @@ export const $TradeBox = (config: ITradeBox) => component((
       ]),
       changeSlippage,
       enableTrading: mergeArray([
+        approveTrading,
         awaitPromises(map(async (ctx) => {
           try {
             await ctx
@@ -1654,8 +1661,7 @@ export const $TradeBox = (config: ITradeBox) => component((
           } catch (err) {
             return false
           }
-        }, clickEnablePlugin)),
-        enableTrading
+        }, requestEnablePlugin))
       ]),
       approveInputToken,
       requestTrade

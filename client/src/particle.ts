@@ -1,4 +1,3 @@
-// import * as THREE from 'three'
 
 
 // const screenWidth = window.innerWidth

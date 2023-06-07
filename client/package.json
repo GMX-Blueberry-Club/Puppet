@@ -1,5 +1,5 @@
 {
-    "name": "puppet.finance",
+    "name": "client",
     "version": "0.0.0",
     "license": "MIT",
     "private": true,
@@ -28,7 +28,7 @@
         "@most/scheduler": "^1.3.0",
         "@most/types": "^1.1.0",
         "@urql/core": "^4.0.7",
-        "@wagmi/core": "^1.0.8",
+        "@wagmi/core": "^1.1.0",
         "@walletconnect/auth-client": "^2.1.0",
         "@walletconnect/sign-client": "^2.7.3",
         "@web3modal/ethereum": "^2.4.0",
@@ -40,14 +40,11 @@
         "graphql": "^16.6.0",
         "jazzicon": "^1.5.0",
         "lightweight-charts": "^4.0.1",
-        "viem": "^0.3.40"
+        "viem": "^1.0.0"
     },
     "devDependencies": {
-        "@wagmi/cli": "^1.0.1",
+        "@wagmi/cli": "^1.1.0",
         "dotenv": "^16.0.3",
         "vite": "^4.3.8"
-    },
-    "engines": {
-        "node": "^18.0.0"
     }
 }

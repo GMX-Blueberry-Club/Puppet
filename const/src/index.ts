@@ -1,6 +1,5 @@
 
 
-
 export enum CHAIN {
   ETH = 1,
   ETH_ROPSTEN = 3,

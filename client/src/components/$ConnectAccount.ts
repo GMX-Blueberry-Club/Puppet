@@ -123,7 +123,7 @@ export const $SwitchNetworkDropdown = (showLabel = false) => component((
           }),
         )
       )(
-        $element('img')(attr({ src: `/assets/chain/${network.id}.svg` }), style({ width: '32px', placeSelf: 'center' }))(),
+        $element('img')(attr({ src: `/assets/chain/${network.id}.svg` }), style({ width: '28px', placeSelf: 'center' }))(),
       )
 
       // return style({ zoom: 1.1 })($alertTooltip($text('www')))

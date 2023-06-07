@@ -3,7 +3,7 @@ import { $element, $node, $text, attr, component, style } from "@aelea/dom"
 import { Route } from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { colorAlpha, pallete } from '@aelea/ui-components-theme'
-import { BLUEBERRY_REFFERAL_CODE, COMPETITION_METRIC_LIST, IBlueberryLadder, IRequestCompetitionLadderApi, TOURNAMENT_DURATION, TOURNAMENT_NEXT, TOURNAMENT_START, TOURNAMENT_TIME_ELAPSED, blueberrySubgraph } from '@gambitdao/gbc-middleware'
+import { BLUEBERRY_REFFERAL_CODE, COMPETITION_METRIC_LIST, IBlueberryLadder, IRequestCompetitionLadderApi, TOURNAMENT_DURATION, TOURNAMENT_NEXT, TOURNAMENT_START, TOURNAMENT_TIME_ELAPSED, blueberrySubgraph } from '@gambitdao/gbc-middleware/.dist/types'
 import { formatReadableUSD, formatToBasis, readableNumber } from '@gambitdao/gmx-middleware'
 import { $Link, $anchor, $infoLabeledValue, $infoTooltipLabel, ISortBy, invertColor } from '@gambitdao/ui-components'
 import { awaitPromises, empty, map, mergeArray, now, snapshot } from '@most/core'

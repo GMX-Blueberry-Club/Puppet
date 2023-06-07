@@ -238,11 +238,11 @@ export const $MainMenuSmall = ({ parentRoute, chainList, showAccount = true }: M
 
 
   const $menuItemList = [
-    $Link({ $content: $pageLink($gmxLogo, ''), url: '/app/trade', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+    $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
       // $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', disabled: now(false), route: parentRoute.create({ fragment: 'feefwefwe' }) })({
       click: routeChangeTether()
     }),
-    $Link({ $content: $pageLink($stackedCoins, ''), url: '/app/leaderboard', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+    $Link({ $content: $pageLink($stackedCoins, 'Leaderboard'), url: '/app/leaderboard', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
       click: routeChangeTether()
     }),
   ]
@@ -345,27 +345,25 @@ export const $MainMenuSmall = ({ parentRoute, chainList, showAccount = true }: M
   return [
 
     $row(layoutSheet.spacingBig, style({ padding: '14px', paddingLeft: '0', flexShrink: 0, alignItems: 'flex-end', borderRadius: '30px', placeContent: 'space-between' }))(
-      $row(layoutSheet.spacingBig, style({ alignItems: 'center' }))(
+      $row(layoutSheet.spacingBig, style({ alignItems: 'center', flex: 1 }))(
         $RouterAnchor({ url: '/', route: parentRoute, $anchor: $element('a')($icon({ $content: $puppetLogo, width: '45px', viewBox: '0 0 32 32' })) })({
           click: routeChangeTether()
         }),
-
-        ...screenUtils.isDesktopScreen ? $menuItemList : [],
-
-        // $extraMenuPopover,
       ),
 
-      // $column(screenUtils.isDesktopScreen ? layoutSheet.spacingBig : layoutSheet.spacing, style({ flex: 1, alignItems: 'flex-end', placeContent: 'center' }))(
+      $row(screenUtils.isDesktopScreen ? layoutSheet.spacingBig : layoutSheet.spacing, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
 
-
-      // ),
-
-      $row(layoutSheet.spacingBig, style({ placeContent: 'flex-end', flex: 1 }))(
+        ...screenUtils.isDesktopScreen ? $menuItemList : [],
         $WalletDisplay({
+          $container: $row(style({ minWidth: '140px', minHeight: '38px' })),
           parentRoute
         })({
           routeChange: routeChangeTether(),
         }),
+      ),
+
+      $row(layoutSheet.spacingBig, style({ placeContent: 'flex-end', flex: 1 }))(
+
         $extraMenuPopover,
 
         ...screenUtils.isDesktopScreen ? [

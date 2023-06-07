@@ -4,6 +4,7 @@
     "outDir": ".dist/esm",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
     "rootDir": "src",
     "lib": [
       "es2022",
