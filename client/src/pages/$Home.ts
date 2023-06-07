@@ -2,7 +2,7 @@ import { Behavior } from "@aelea/core"
 import { $element, $node, $text, component, eventElementTarget, style, styleBehavior, styleInline } from "@aelea/dom"
 import { Route } from "@aelea/router"
 import { $column, $icon, $row, designSheet, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { $alert, $anchor, $Link } from "@gambitdao/ui-components"
+import { $alert, $anchor, $Link } from "gmx-middleware-ui-components"
 import {
   ITreasuryStore
 } from "@gambitdao/gbc-middleware"

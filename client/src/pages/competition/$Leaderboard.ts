@@ -4,7 +4,7 @@ import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-compon
 import { ITrade, TOKEN_ADDRESS_TO_SYMBOL, TOKEN_SYMBOL, formatReadableUSD } from "gmx-middleware-utils"
 
 import { pallete } from "@aelea/ui-components-theme"
-import { $bear, $bull, $tokenIconMap } from "@gambitdao/ui-components"
+import { $bear, $bull, $tokenIconMap } from "gmx-middleware-ui-components"
 import { $CumulativePnl, ICompetitonCumulativeRoi } from "./$CumulativePnl"
 
 

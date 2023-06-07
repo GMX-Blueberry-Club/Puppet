@@ -3,8 +3,8 @@ import { $Branch, $Node, $element, $text, attr, component, nodeEvent, style } fr
 import { $RouterAnchor, Route } from '@aelea/router'
 import { $column, $icon, $row, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { CHAIN } from "@gambitdao/const"
-import { $Link, $anchor, $discord, $gitbook, $github, $instagram, $moreDots, $twitter } from "@gambitdao/ui-components"
+import { CHAIN } from "gmx-middleware-const"
+import { $Link, $anchor, $discord, $gitbook, $github, $instagram, $moreDots, $twitter } from "gmx-middleware-ui-components"
 import { awaitPromises, empty, map, multicast, snapshot, switchLatest } from '@most/core'
 import { Stream } from "@most/types"
 import { $bagOfCoinsCircle, $fileCheckCircle, $gmxLogo, $puppetLogo } from "../common/$icons"

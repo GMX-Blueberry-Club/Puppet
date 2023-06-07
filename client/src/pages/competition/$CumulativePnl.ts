@@ -5,7 +5,7 @@ import { $column, $row, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { colorAlpha, pallete } from '@aelea/ui-components-theme'
 import { BLUEBERRY_REFFERAL_CODE, COMPETITION_METRIC_LIST, IBlueberryLadder, IRequestCompetitionLadderApi, TOURNAMENT_DURATION, TOURNAMENT_NEXT, TOURNAMENT_START, TOURNAMENT_TIME_ELAPSED, blueberrySubgraph } from '@gambitdao/gbc-middleware'
 import { formatReadableUSD, formatToBasis, readableNumber } from "gmx-middleware-utils"
-import { $Link, $anchor, $infoLabeledValue, $infoTooltipLabel, ISortBy, invertColor } from '@gambitdao/ui-components'
+import { $Link, $anchor, $infoLabeledValue, $infoTooltipLabel, ISortBy, invertColor } from "gmx-middleware-ui-components"
 import { awaitPromises, empty, map, mergeArray, now, snapshot } from '@most/core'
 import { Stream } from '@most/types'
 import { IProfileActiveTab } from '../$Profile'

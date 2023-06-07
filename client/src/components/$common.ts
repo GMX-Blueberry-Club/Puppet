@@ -1,7 +1,7 @@
 import { $Node, NodeComposeFn, style, stylePseudo } from "@aelea/dom"
 import { pallete } from "@aelea/ui-components-theme"
 import { IAttributeBackground, IAttributeBadge, IAttributeMappings, IBerryDisplayTupleMap, IToken, getBerryFromItems, getLabItemTupleIndex, tokenIdAttributeTuple } from "@gambitdao/gbc-middleware"
-import { $Table, $defaultTableRowContainer, $defaultVScrollContainer, $infoLabeledValue, $spinner, TableOption } from "@gambitdao/ui-components"
+import { $Table, $defaultTableRowContainer, $defaultVScrollContainer, $infoLabeledValue, $spinner, TableOption } from "gmx-middleware-ui-components"
 import { $card } from "../elements/$common"
 import { $berry } from "./$DisplayBerry"
 

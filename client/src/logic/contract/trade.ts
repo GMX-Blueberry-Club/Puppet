@@ -1,7 +1,7 @@
 
 import { combineObject, replayLatest } from "@aelea/core"
 import { http, observer } from "@aelea/ui-components"
-import { CHAIN } from "@gambitdao/const"
+import { CHAIN } from "gmx-middleware-const"
 import {
   AddressZero, IAbstractPositionIdentity, IAbstractPositionKey, ITokenIndex,
   ITokenTrade, IVaultPosition, TOKEN_ADDRESS_TO_SYMBOL, TOKEN_SYMBOL, TRADE_CONTRACT_MAPPING, abi,

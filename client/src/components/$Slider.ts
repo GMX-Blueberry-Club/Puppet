@@ -2,7 +2,7 @@ import { Behavior, combineArray, combineObject, Op } from "@aelea/core"
 import { component, IBranch, style, nodeEvent, eventElementTarget, styleInline, $Node, NodeComposeFn, $text, drawLatest, styleBehavior } from "@aelea/dom"
 import { Input, $row, observer, screenUtils, $column } from "@aelea/ui-components"
 import { colorAlpha, pallete, theme } from "@aelea/ui-components-theme"
-import { invertColor } from "@gambitdao/ui-components"
+import { invertColor } from "gmx-middleware-ui-components"
 import { skipRepeats, snapshot, until, multicast, join, map, now, tap, mergeArray } from "@most/core"
 import { Stream } from "@most/types"
 

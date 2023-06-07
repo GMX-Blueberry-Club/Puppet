@@ -3,7 +3,7 @@ import { $row, $column, $icon } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { empty, map, periodic } from "@most/core"
 import { formatReadableUSD, unixTimestampNow } from "gmx-middleware-utils"
-import { $alertIcon, $defaultDropContainer, $PnlValue, $Tooltip } from "@gambitdao/ui-components"
+import { $alertIcon, $defaultDropContainer, $PnlValue, $Tooltip } from "gmx-middleware-ui-components"
 
 
 export const $alertTooltip = ($content: $Branch) => {

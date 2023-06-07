@@ -33,7 +33,7 @@ import {
   $alert, $alertTooltip, $anchor, $bear, $bull,
   $hintNumChange, $infoLabel, $infoLabeledValue, $infoTooltipLabel, $IntermediatePromise,
   $openPositionPnlBreakdown, $PnlValue, $riskLiquidator, $spinner, $tokenIconMap, $tokenLabelFromSummary
-} from "@gambitdao/ui-components"
+} from "gmx-middleware-ui-components"
 import {
   awaitPromises,
   constant,

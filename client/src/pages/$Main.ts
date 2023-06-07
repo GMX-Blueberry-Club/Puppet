@@ -3,7 +3,7 @@ import { $element, $node, $text, component, eventElementTarget, style, styleBeha
 import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet, observer, screenUtils } from '@aelea/ui-components'
 import { pallete } from "@aelea/ui-components-theme"
-import { CHAIN } from "@gambitdao/const"
+import { CHAIN } from "gmx-middleware-const"
 import { BLUEBERRY_REFFERAL_CODE, IAccountStakingStore, ITreasuryStore } from "@gambitdao/gbc-middleware"
 import {
   ARBITRUM_ADDRESS, AVALANCHE_ADDRESS,

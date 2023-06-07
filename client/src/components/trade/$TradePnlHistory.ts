@@ -2,7 +2,7 @@ import { Behavior, combineArray } from "@aelea/core"
 import { $Node, component, INode, NodeComposeFn, style } from "@aelea/dom"
 import { $column, observer } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { CHAIN } from "@gambitdao/const"
+import { CHAIN } from "gmx-middleware-const"
 import {
   unixTimestampNow, isTradeSettled, getDeltaPercentage, intervalListFillOrderMap,
   isTradeOpen, ITrade, formatFixed, getPnL, IPricefeed, readableNumber

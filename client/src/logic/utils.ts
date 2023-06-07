@@ -1,4 +1,4 @@
-import { CHAIN } from "@gambitdao/const"
+import { CHAIN } from "gmx-middleware-const"
 import {
   AddressZero, TOKEN_DESCRIPTION_MAP,
   ITokenDescription, TOKEN_ADDRESS_TO_SYMBOL, ITokenInput, ITokenTrade, CHAIN_ADDRESS_MAP, CHAIN_NATIVE_TO_SYMBOL, getSafeMappedValue, getMappedValue

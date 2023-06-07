@@ -27,7 +27,7 @@ import {
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { $ButtonToggle, $IntermediatePromise, $infoLabel, $infoLabeledValue, $infoTooltip, $spinner, $target, $txHashRef } from "@gambitdao/ui-components"
+import { $ButtonToggle, $IntermediatePromise, $infoLabel, $infoLabeledValue, $infoTooltip, $spinner, $target, $txHashRef } from "gmx-middleware-ui-components"
 import { awaitPromises, combine, constant, debounce, empty, filter, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, switchLatest, take, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"

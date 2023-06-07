@@ -79,15 +79,9 @@ importers:
       '@aelea/ui-components-theme':
         specifier: ^0.10.0
         version: 0.10.0
-      '@gambitdao/const':
-        specifier: workspace:*
-        version: link:../const
       '@gambitdao/gbc-middleware':
         specifier: workspace:*
         version: link:../@gambitdao-gbc-middleware
-      '@gambitdao/ui-components':
-        specifier: workspace:*
-        version: link:../ui-components
       '@most/core':
         specifier: ^1.6.1
         version: 1.6.1
@@ -133,6 +127,12 @@ importers:
       eventemitter3:
         specifier: ^5.0.1
         version: 5.0.1
+      gmx-middleware-const:
+        specifier: workspace:*
+        version: link:../gmx-middleware/const
+      gmx-middleware-ui-components:
+        specifier: workspace:*
+        version: link:../ui-components
       gmx-middleware-utils:
         specifier: workspace:*
         version: link:../gmx-middleware/utils
@@ -158,12 +158,6 @@ importers:
       vite:
         specifier: ^4.3.8
         version: 4.3.8
-
-  const:
-    dependencies:
-      gmx-middleware-const:
-        specifier: workspace:*
-        version: link:../gmx-middleware/const
 
   contracts-submodule:
     devDependencies:
@@ -355,9 +349,6 @@ importers:
       '@aelea/ui-components-theme':
         specifier: ^0.10.0
         version: 0.10.0
-      '@gambitdao/const':
-        specifier: workspace:*
-        version: link:../const
       '@most/core':
         specifier: ^1.6.1
         version: 1.6.1
@@ -376,6 +367,9 @@ importers:
       abitype:
         specifier: ^0.8.7
         version: 0.8.7(typescript@5.0.4)(zod@3.21.4)
+      gmx-middleware-const:
+        specifier: workspace:*
+        version: link:../gmx-middleware/const
       gmx-middleware-utils:
         specifier: workspace:*
         version: link:../gmx-middleware/utils

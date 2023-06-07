@@ -2,7 +2,7 @@ import { Behavior, combineArray, O, replayLatest } from "@aelea/core"
 import { $Node, $text, component, style } from "@aelea/dom"
 import { Route } from "@aelea/router"
 import { $column, layoutSheet } from "@aelea/ui-components"
-import { CHAIN } from "@gambitdao/const"
+import { CHAIN } from "gmx-middleware-const"
 import {
   getClientNativeTokenUsd,
   getGmxPriceUsd,
@@ -13,8 +13,8 @@ import {
   TRADE_CONTRACT_MAPPING,
   unixTimestampNow,
 } from "gmx-middleware-utils"
-import { $infoTooltipLabel, $openPositionPnlBreakdown, $PnlValue, $riskLiquidator, $sizeDisplay, $Table, $TradePnl } from "@gambitdao/ui-components"
-import { $ButtonToggle, $defaulButtonToggleContainer } from "@gambitdao/ui-components/src/$ButtonToggle"
+import { $infoTooltipLabel, $openPositionPnlBreakdown, $PnlValue, $riskLiquidator, $sizeDisplay, $Table, $TradePnl } from "gmx-middleware-ui-components"
+import { $ButtonToggle, $defaulButtonToggleContainer } from "gmx-middleware-ui-components"
 import { awaitPromises, combine, map, mergeArray, multicast, now, switchLatest } from "@most/core"
 import { Address } from "viem"
 import { $CardTable } from "../components/$common"

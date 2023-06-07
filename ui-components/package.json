@@ -1,5 +1,5 @@
 {
-    "name": "@gambitdao/ui-components",
+    "name": "gmx-middleware-ui-components",
     "version": "0.0.0",
     "license": "MIT",
     "type": "module",
@@ -19,7 +19,7 @@
         "@aelea/router": "^0.20.1",
         "@aelea/ui-components": "^0.28.1",
         "@aelea/ui-components-theme": "^0.10.0",
-        "@gambitdao/const": "workspace:*",
+        "gmx-middleware-const": "workspace:*",
         "gmx-middleware-utils": "workspace:*",
         "@most/core": "^1.6.1",
         "@most/disposable": "^1.3.0",
