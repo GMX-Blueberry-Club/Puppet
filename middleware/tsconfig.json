@@ -2,7 +2,6 @@
   "extends": "../tsconfig",
   "compilerOptions": {
     "outDir": ".dist/esm",
-    "skipLibCheck": true,
     "declarationDir": ".dist/types",
     "rootDir": "./src",
   },

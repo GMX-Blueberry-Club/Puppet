@@ -7,7 +7,7 @@
 // import {
 //   formatFixed, formatReadableUSD, isTradeSettled, readableNumber,
 //   isTradeLiquidated, CHAIN_TOKEN_ADDRESS_TO_SYMBOL, ITrade, IPricefeedParamApi, IChainParamApi, getDeltaPercentage, bnDiv, getPnL
-// } from "@gambitdao/gmx-middleware"
+// } from "gmx-middleware-utils"
 // import { ChartOptions, DeepPartial, MouseEventParams } from "lightweight-charts"
 // import { $bull, $bear, $target, $RiskLiquidator, $tokenIconMap } from "@gambitdao/ui-components"
 

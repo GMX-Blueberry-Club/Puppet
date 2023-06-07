@@ -2,7 +2,7 @@ import { Behavior, combineArray, combineObject, fromCallback, O, Op } from "@ael
 import { $Node, $wrapNativeElement, component, INode, style, styleInline } from "@aelea/dom"
 import { $row, observer } from '@aelea/ui-components'
 import { colorAlpha, pallete } from '@aelea/ui-components-theme'
-import { filterNull } from "@gambitdao/gmx-middleware"
+import { filterNull } from "gmx-middleware-utils"
 import { empty, filter, map, mergeArray, multicast, now, scan, snapshot, tap } from '@most/core'
 import { disposeWith } from '@most/disposable'
 import { Stream } from '@most/types'

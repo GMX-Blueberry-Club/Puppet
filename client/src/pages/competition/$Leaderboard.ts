@@ -1,7 +1,7 @@
 import { Behavior, O } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { ITrade, TOKEN_ADDRESS_TO_SYMBOL, TOKEN_SYMBOL, formatReadableUSD } from "@gambitdao/gmx-middleware"
+import { ITrade, TOKEN_ADDRESS_TO_SYMBOL, TOKEN_SYMBOL, formatReadableUSD } from "gmx-middleware-utils"
 
 import { pallete } from "@aelea/ui-components-theme"
 import { $bear, $bull, $tokenIconMap } from "@gambitdao/ui-components"

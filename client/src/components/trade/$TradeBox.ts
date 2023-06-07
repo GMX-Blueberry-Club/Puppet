@@ -27,8 +27,8 @@ import {
   IPricefeed,
   ITokenDescription,
   ITokenIndex, ITokenInput, ITokenStable, ITrade, ITradeOpen, LIMIT_LEVERAGE, MARGIN_FEE_BASIS_POINTS, MIN_LEVERAGE, parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, TRADE_CONTRACT_MAPPING, USD_PERCISION, USDG_DECIMALS, zipState
-} from "@gambitdao/gmx-middleware"
-import { } from "@gambitdao/gmx-middleware"
+} from "gmx-middleware-utils"
+import { } from "gmx-middleware-utils"
 import {
   $alert, $alertTooltip, $anchor, $bear, $bull,
   $hintNumChange, $infoLabel, $infoLabeledValue, $infoTooltipLabel, $IntermediatePromise,

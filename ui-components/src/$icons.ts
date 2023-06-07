@@ -1,5 +1,5 @@
 import { $svg, attr } from "@aelea/dom"
-import { TOKEN_SYMBOL } from "@gambitdao/gmx-middleware"
+import { TOKEN_SYMBOL } from "gmx-middleware-utils"
 
 export const $path = $svg('path')
 

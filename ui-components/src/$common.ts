@@ -3,7 +3,7 @@ import { $element, $node, $Node, $text, attr, style, styleBehavior, styleInline,
 import { $column, $icon, $row, $seperator, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { CHAIN } from "@gambitdao/const"
-import { bnDiv, formatReadableUSD, getNextLiquidationPrice, getTxExplorerUrl, IAbstractPositionStake, ITrade, ITradeOpen, liquidationWeight, shortenTxAddress, ITokenDescription, getFundingFee, getPnL, getMarginFees } from "@gambitdao/gmx-middleware"
+import { bnDiv, formatReadableUSD, getNextLiquidationPrice, getTxExplorerUrl, IAbstractPositionStake, ITrade, ITradeOpen, liquidationWeight, shortenTxAddress, ITokenDescription, getFundingFee, getPnL, getMarginFees } from "gmx-middleware-utils"
 import { now, map, empty, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import { $alertIcon, $caretDblDown, $info, $arrowRight, $tokenIconMap } from "./$icons.js"

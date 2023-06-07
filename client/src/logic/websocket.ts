@@ -2,7 +2,7 @@ import { O } from "@aelea/core"
 import { http } from "@aelea/ui-components"
 import { filter, map, mergeArray, multicast } from "@most/core"
 import { Stream } from "@most/types"
-import { ICommunicationMessage } from "@gambitdao/gmx-middleware"
+import { ICommunicationMessage } from "gmx-middleware-utils"
 
 
 export type ILoopMap<T> = {

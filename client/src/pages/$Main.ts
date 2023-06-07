@@ -10,7 +10,7 @@ import {
   ETH_ADDRESS_REGEXP,
   intervalTimeMap,
   switchMap
-} from '@gambitdao/gmx-middleware'
+} from "gmx-middleware-utils"
 import { map, merge, mergeArray, multicast, now, skipRepeats, startWith } from '@most/core'
 import { Address } from "viem"
 import { $discoverIdentityDisplay } from "../components/$AccountProfile"

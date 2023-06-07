@@ -1,4 +1,4 @@
-import { unixTimestampNow } from "@gambitdao/gmx-middleware"
+import { unixTimestampNow } from "gmx-middleware-utils"
 import { IAttributeBackground, IAttributeClothes, IAttributeBody, IAttributeExpression, IAttributeFaceAccessory, IAttributeHat, LabItemSale, MintRule, SvgPartsMap, IBerryDisplayTupleMap, IAttributeBadge, IToken } from "./types.js"
 import { svgParts } from "./mappings/svgParts.js"
 

@@ -1,4 +1,4 @@
-import { IAccountSummary, IChainParamApi, IEnsRegistration, intervalTimeMap, IResponsePageApi, IRequestPagePositionApi, IRequestSortApi, IRequestTimerangeApi, IntervalTime } from "@gambitdao/gmx-middleware"
+import { IAccountSummary, IChainParamApi, IEnsRegistration, intervalTimeMap, IResponsePageApi, IRequestPagePositionApi, IRequestSortApi, IRequestTimerangeApi, IntervalTime } from "gmx-middleware-utils"
 import { Address } from "viem"
 
 export type IPrice = {

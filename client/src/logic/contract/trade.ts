@@ -6,7 +6,7 @@ import {
   AddressZero, IAbstractPositionIdentity, IAbstractPositionKey, ITokenIndex,
   ITokenTrade, IVaultPosition, TOKEN_ADDRESS_TO_SYMBOL, TOKEN_SYMBOL, TRADE_CONTRACT_MAPPING, abi,
   div, filterNull, getChainName, getMappedValue, getSafeMappedValue, getTokenDescription, parseFixed, periodicRun, periodicSample, safeDiv, switchFailedSources
-} from "@gambitdao/gmx-middleware"
+} from "gmx-middleware-utils"
 import { empty, fromPromise, map, mergeArray, multicast, now, scan, skip, snapshot, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { fetchBalance, readContract } from "@wagmi/core"

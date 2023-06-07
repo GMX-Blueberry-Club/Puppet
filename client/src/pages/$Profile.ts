@@ -12,7 +12,7 @@ import {
   readableDate, timeSince,
   TRADE_CONTRACT_MAPPING,
   unixTimestampNow,
-} from "@gambitdao/gmx-middleware"
+} from "gmx-middleware-utils"
 import { $infoTooltipLabel, $openPositionPnlBreakdown, $PnlValue, $riskLiquidator, $sizeDisplay, $Table, $TradePnl } from "@gambitdao/ui-components"
 import { $ButtonToggle, $defaulButtonToggleContainer } from "@gambitdao/ui-components/src/$ButtonToggle"
 import { awaitPromises, combine, map, mergeArray, multicast, now, switchLatest } from "@most/core"

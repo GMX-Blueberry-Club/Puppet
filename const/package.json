@@ -14,6 +14,6 @@
         "build": "tsc -b"
     },
     "dependencies": {
-        "middleware-const": "workspace:*"
+        "gmx-middleware-const": "workspace:*"
     }
 }

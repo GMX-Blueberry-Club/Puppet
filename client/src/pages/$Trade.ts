@@ -24,7 +24,7 @@ import {
   switchMap,
   timeSince,
   unixTimestampNow
-} from "@gambitdao/gmx-middleware"
+} from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { $ButtonToggle, $IntermediatePromise, $infoLabel, $infoLabeledValue, $infoTooltip, $spinner, $target, $txHashRef } from "@gambitdao/ui-components"

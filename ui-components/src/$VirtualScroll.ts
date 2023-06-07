@@ -3,7 +3,7 @@ import { Behavior } from '@aelea/core'
 import { $Branch, $custom, $Node, $text, component, IBranch, NodeComposeFn, style } from '@aelea/dom'
 import { $column, layoutSheet, observer } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { zipState } from '@gambitdao/gmx-middleware'
+import { zipState } from "gmx-middleware-utils"
 import { filter, join, loop, map, mergeArray, multicast, scan, until } from "@most/core"
 import { Stream } from '@most/types'
 

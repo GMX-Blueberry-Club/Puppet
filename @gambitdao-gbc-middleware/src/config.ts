@@ -1,4 +1,4 @@
-import { groupByKey, intervalTimeMap, unixTimestampNow } from "@gambitdao/gmx-middleware"
+import { groupByKey, intervalTimeMap, unixTimestampNow } from "gmx-middleware-utils"
 import { IAttributeMappings, LabItemSale, SaleType } from "./types.js"
 import { parseEther } from "viem"
 

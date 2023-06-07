@@ -18,12 +18,13 @@ import {
   pagingQuery,
   readableNumber,
   toAccountSummaryList
-} from "@gambitdao/gmx-middleware"
+} from "gmx-middleware-utils"
 import { map } from "@most/core"
 import { ClientOptions, OperationContext, TypedDocumentNode, cacheExchange, createClient, fetchExchange, gql } from "@urql/core"
 import { numberToHex } from "viem"
 import { COMPETITION_METRIC_LIST, TOURNAMENT_DURATION, TOURNAMENT_TIME_ELAPSED } from "./config.js"
 import { IBlueberryLadder, ILabItem, ILabItemOwnership, IOwner, IRequestCompetitionLadderApi, IToken } from "./types.js"
+import fetch from "isomorphic-fetch"
 
 
 export const createSubgraphClient = (opts: ClientOptions) => {

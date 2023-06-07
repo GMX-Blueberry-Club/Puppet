@@ -6,7 +6,7 @@ import { CHAIN } from "@gambitdao/const"
 import {
   unixTimestampNow, isTradeSettled, getDeltaPercentage, intervalListFillOrderMap,
   isTradeOpen, ITrade, formatFixed, getPnL, IPricefeed, readableNumber
-} from "@gambitdao/gmx-middleware"
+} from "gmx-middleware-utils"
 import { multicast, switchLatest, empty, skipRepeatsWith, map } from "@most/core"
 import { Stream } from "@most/types"
 import { MouseEventParams, SingleValueData, Time, LineStyle, ChartOptions, DeepPartial, BarPrice } from "lightweight-charts"

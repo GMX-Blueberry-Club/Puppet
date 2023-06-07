@@ -1,5 +1,5 @@
 import { combineArray, fromCallback, isStream } from "@aelea/core"
-import { ContractFunctionConfig, StreamInput, StreamInputArray, switchMap } from "@gambitdao/gmx-middleware"
+import { ContractFunctionConfig, StreamInput, StreamInputArray, switchMap } from "gmx-middleware-utils"
 import { awaitPromises, map, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import * as wagmi from "@wagmi/core"
