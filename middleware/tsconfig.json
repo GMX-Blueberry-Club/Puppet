@@ -6,8 +6,6 @@
     "rootDir": "./src",
   },
   "references": [
-    {
-      "path": "../@gambitdao-gmx-middleware"
-    }
+
   ]
 }
