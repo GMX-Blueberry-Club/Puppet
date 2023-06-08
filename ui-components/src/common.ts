@@ -1,4 +1,4 @@
-import { intervalTimeMap } from "gmx-middleware-utils"
+import { intervalTimeMap } from "gmx-middleware-const"
 
 export function getIntervalBasedOnTimeframe(maxColumns: number, from: number, to: number) {
   const delta = to - from

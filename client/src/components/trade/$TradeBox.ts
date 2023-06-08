@@ -4,13 +4,8 @@ import { Route } from "@aelea/router"
 import { $column, $icon, $NumberTicker, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import {
-  abi,
   abs,
-  AddressZero,
-  ARBITRUM_ADDRESS_STABLE, AVALANCHE_ADDRESS_STABLE,
-  BASIS_POINTS_DIVISOR,
   bnDiv,
-  DEDUCT_USD_FOR_GAS,
   div,
   filterNull,
   formatFixed,
@@ -18,7 +13,6 @@ import {
   formatToBasis,
   getAdjustedDelta,
   getDenominator,
-  getMappedValue,
   getNativeTokenDescription,
   getPnL,
   getTokenAmount,
@@ -26,14 +20,21 @@ import {
   getTokenUsd,
   IPricefeed,
   ITokenDescription,
-  ITokenIndex, ITokenInput, ITokenStable, ITrade, ITradeOpen, LIMIT_LEVERAGE, MARGIN_FEE_BASIS_POINTS, MIN_LEVERAGE, parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, TRADE_CONTRACT_MAPPING, USD_PERCISION, USDG_DECIMALS, zipState
+  ITokenIndex,
+  ITokenInput,
+  ITokenStable,
+  ITrade,
+  ITradeOpen,
+  parseFixed,
+  parseReadableNumber,
+  readableNumber,
+  safeDiv,
+  StateStream,
+  switchMap,
+  zipState
 } from "gmx-middleware-utils"
-import { } from "gmx-middleware-utils"
-import {
-  $alert, $alertTooltip, $anchor, $bear, $bull,
-  $hintNumChange, $infoLabel, $infoLabeledValue, $infoTooltipLabel, $IntermediatePromise,
-  $openPositionPnlBreakdown, $PnlValue, $riskLiquidator, $spinner, $tokenIconMap, $tokenLabelFromSummary
-} from "gmx-middleware-ui-components"
+
+
 import {
   awaitPromises,
   constant,
@@ -55,14 +56,23 @@ import {
 import { Stream } from "@most/types"
 import { writeContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
+import GMX, { AddressZero, ARBITRUM_ADDRESS_STABLE, AVALANCHE_ADDRESS_STABLE, BASIS_POINTS_DIVISOR, DEDUCT_USD_FOR_GAS, LIMIT_LEVERAGE, MARGIN_FEE_BASIS_POINTS, MIN_LEVERAGE, USD_PERCISION, USDG_DECIMALS } from "gmx-middleware-const"
+import {
+  $alert, $alertTooltip, $anchor, $bear, $bull,
+  $hintNumChange, $infoLabel, $infoLabeledValue, $infoTooltipLabel, $IntermediatePromise,
+  $openPositionPnlBreakdown, $PnlValue, $riskLiquidator, $spinner, $tokenIconMap, $tokenLabelFromSummary
+} from "gmx-middleware-ui-components"
+import { } from "gmx-middleware-utils"
 import { MouseEventParams } from "lightweight-charts"
+import PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
-import { arbitrum, avalanche } from "viem/chains"
+import { arbitrum } from "viem/chains"
 import { $IntermediateConnectButton } from "../$ConnectAccount"
 import { $Popover } from "../$Popover"
 import { $Slider } from "../$Slider"
 import { $card } from "../../elements/$common"
 import { $caretDown } from "../../elements/$icons"
+import { wagmiWriteContract } from "../../logic/common"
 import * as tradeReader from "../../logic/contract/trade"
 import { BrowserStore } from "../../logic/store"
 import { resolveAddress } from "../../logic/utils"
@@ -71,7 +81,6 @@ import { account, IWalletClient } from "../../wallet/walletLink"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultButtonPrimary, $defaultMiniButtonSecondary } from "../form/$Button"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown"
 import { $TradePnlHistory } from "./$TradePnlHistory"
-import { getMappedValue2, wagmiWriteContract } from "../../logic/common"
 
 
 
@@ -81,6 +90,8 @@ export enum ITradeFocusMode {
 }
 
 export interface ITradeParams {
+  route: viem.Address | null
+
   position: tradeReader.IPositionGetter
   isTradingEnabled: boolean
   isInputTokenApproved: boolean
@@ -138,7 +149,7 @@ export interface ITradeBoxParams {
   tokenStableMap: Partial<Record<number, ITokenStable[]>>
   store: BrowserStore<"ROOT.v1.trade", string>
   parentRoute: Route
-  chain: typeof arbitrum | typeof avalanche
+  chain: typeof arbitrum
 }
 
 interface ITradeBox extends ITradeBoxParams {
@@ -200,11 +211,8 @@ export const $TradeBox = (config: ITradeBox) => component((
 
 ) => {
 
-  const contractMap = getMappedValue(TRADE_CONTRACT_MAPPING, config.chain.id)
-  const routerContractAddress = contractMap.Router
-  const positionRouterAddress = contractMap.PositionRouter
+  const positionRouterAddress = GMX.CONTRACT[config.chain.id].PositionRouter.address
 
-  // const requestEnablePlugin = multicast()
 
 
   const { collateralDeltaUsd, collateralToken, collateralDelta, sizeDelta, focusMode, indexToken, inputToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage } = config.tradeConfig
@@ -212,9 +220,10 @@ export const $TradeBox = (config: ITradeBox) => component((
     availableIndexLiquidityUsd, averagePrice, collateralTokenDescription,
     collateralTokenPoolInfo, collateralTokenPrice, executionFee, fundingFee,
     indexTokenDescription, indexTokenPrice, inputTokenDescription, inputTokenPrice,
-    isInputTokenApproved, isTradingEnabled, liquidationPrice, marginFee,
+    isInputTokenApproved, isTradingEnabled, liquidationPrice, marginFee, route,
     position, swapFee, walletBalance
   } = config.tradeState
+
 
   const walletBalanceUsd = skipRepeats(combineArray(params => {
     const amountUsd = getTokenUsd(params.walletBalance, params.inputTokenPrice, params.inputTokenDescription.decimals)
@@ -453,91 +462,64 @@ export const $TradeBox = (config: ITradeBox) => component((
 
     const isNative = req.inputToken === AddressZero
 
-    let request: Promise<viem.TransactionReceipt>
 
-    const address = getMappedValue2(TRADE_CONTRACT_MAPPING, config.chain.id, 'PositionRouter')
+    const swapParams = {
+      amount: 0n,
+      minOut: 0n,
+      path: swapRoute
+    }
+    const tradeParams = {
+      acceptablePrice,
+      amountIn: 0n,
+      collateralDelta: req.collateralDelta,
+      minOut: 0n,
+      sizeDelta: req.sizeDelta
+    }
 
-    if (req.isIncrease) {
+    const value = isNative ? params.executionFee + req.collateralDelta : params.executionFee
 
-
-      if (isNative) {
-        request = wagmiWriteContract({
-          abi: abi.positionRouter,
-          address,
-          functionName: 'createIncreasePositionETH',
-          args: [
-            swapRoute,
-            req.indexToken,
-            0n,
-            req.sizeDeltaUsd,
-            req.isLong,
-            acceptablePrice,
-            params.executionFee,
-            config.referralCode,
-            AddressZero,
-          ],
-          value: req.collateralDelta + params.executionFee
-        })
-      } else {
-
-        request = wagmiWriteContract({
-          abi: abi.positionRouter,
-          address,
-          value: params.executionFee,
-          functionName: 'createIncreasePosition',
-          args: [
-            swapRoute,
-            req.indexToken,
-            req.collateralDelta,
-            0n,
-            req.sizeDeltaUsd,
-            req.isLong,
-            acceptablePrice,
-            params.executionFee,
-            config.referralCode,
-            AddressZero,
-          ]
-        })
-      }
-
-    } else {
-
-      request = wagmiWriteContract({
-        abi: abi.positionRouter,
-        address,
-        value: params.executionFee,
-        functionName: 'createDecreasePosition',
+    const request = params.route
+      ? wagmiWriteContract({
+        abi: PUPPET.CONTRACT[config.chain.id].Route.abi,
+        address: params.route,
+        functionName: 'requestPosition',
+        value,
         args: [
-          swapRoute,
-          req.indexToken,
-          -req.collateralDeltaUsd,
-          -req.sizeDeltaUsd,
-          req.isLong,
-          req.wallet.account.address,
-          acceptablePrice,
-          0n,
+          tradeParams,
+          swapParams,
           params.executionFee,
-          isNative,
-          AddressZero,
+          req.isLong
         ]
       })
-    }
+      : wagmiWriteContract({
+        ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
+        value,
+        functionName: 'registerRouteAndRequestPosition',
+        args: [
+          tradeParams,
+          swapParams,
+          params.executionFee,
+          req.collateralToken,
+          req.indexToken,
+          req.isLong
+        ]
+      })
+
+
 
     request.catch(err => {
       console.error(err)
     })
 
     return { ...params, ...req, acceptablePrice, request, swapRoute }
-  }, combineObject({ executionFee, indexTokenPrice }), requestTradeParams))
+  }, combineObject({ executionFee, indexTokenPrice, route }), requestTradeParams))
 
 
   const requestEnablePlugin = multicast(map(async () => {
 
-    const address = getMappedValue2(TRADE_CONTRACT_MAPPING, config.chain.id, 'Router')
 
     const recpt = wagmiWriteContract({
-      address,
-      abi: abi.routerfeed,
+      ...GMX.CONTRACT[config.chain.id].Router,
       functionName: 'approvePlugin',
       args: [positionRouterAddress],
       value: undefined

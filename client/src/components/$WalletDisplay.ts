@@ -1,17 +1,16 @@
 import { Behavior } from "@aelea/core"
 import { $Node, $node, NodeComposeFn, component, nodeEvent, style } from "@aelea/dom"
-import { $column, $row } from "@aelea/ui-components"
+import { Route } from "@aelea/router"
+import { $row } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, map, mergeArray, now, snapshot, switchLatest } from "@most/core"
 import { $anchor } from "gmx-middleware-ui-components"
-import { $seperator2 } from "../pages/common"
-import { $disconnectedWalletDisplay, $discoverIdentityDisplay } from "./$AccountProfile"
-import { Route } from "@aelea/router"
 import { IProfileActiveTab } from "../pages/$Profile"
-import { $defaultBerry } from "./$DisplayBerry"
-import { CHAIN } from "gmx-middleware-const"
+import { $seperator2 } from "../pages/common"
 import { account, web3Modal } from "../wallet/walletLink"
+import { $disconnectedWalletDisplay, $discoverIdentityDisplay } from "./$AccountProfile"
 import { $SwitchNetworkDropdown } from "./$ConnectAccount"
+import { $defaultBerry } from "./$DisplayBerry"
 
 
 export interface IWalletDisplay {

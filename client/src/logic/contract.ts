@@ -1,12 +1,12 @@
 import { combineArray } from "@aelea/core"
 import { BI_18_PRECISION, IAsset } from "@gambitdao/gbc-middleware"
-import { ArbitrumAddress, AvalancheAddress, BASIS_POINTS_DIVISOR, TRADE_CONTRACT_MAPPING, intervalTimeMap } from "gmx-middleware-utils"
 import { abi } from "gmx-middleware-utils"
 import { awaitPromises, combine, map } from "@most/core"
 import { Stream } from "@most/types"
 import { erc20Abi } from "abitype/test"
 import { Address, PublicClient } from "viem"
 import { connectMappedContractConfig, contractReader } from "./common"
+import { intervalTimeMap, ArbitrumAddress, AvalancheAddress, TRADE_CONTRACT_MAPPING, BASIS_POINTS_DIVISOR } from "gmx-middleware-const"
 
 
 export type IGmxContractInfo = ReturnType<typeof connectGmxEarn>

@@ -2,23 +2,15 @@ import { Behavior, O, combineArray, combineObject, replayLatest } from "@aelea/c
 import { $node, $text, component, style, styleBehavior } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, observer, screenUtils } from "@aelea/ui-components"
 import {
-  AddressZero,
-  BASIS_POINTS_DIVISOR, CHAIN_ADDRESS_MAP,
   IPositionDecrease, IPositionIncrease,
   ITokenIndex, ITokenInput, ITokenStable, ITrade, ITradeOpen,
-  IntervalTime,
-  LIMIT_LEVERAGE,
-  STABLE_SWAP_FEE_BASIS_POINTS, STABLE_TAX_BASIS_POINTS, SWAP_FEE_BASIS_POINTS,
-  TAX_BASIS_POINTS,
-  TRADE_CONTRACT_MAPPING,
+
   TradeStatus,
-  USD_PERCISION,
-  abi, abs,
+  abs,
   div, filterNull,
   formatFixed,
   formatReadableUSD, formatToBasis, getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getLiquidationPrice, getMappedValue, getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getPnL, getPositionKey,
   getTokenAmount, getTokenDescription, gmxSubgraph,
-  intervalTimeMap,
   readableAccountingNumber,
   readableDate, readableNumber,
   switchMap,
@@ -27,13 +19,14 @@ import {
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { $ButtonToggle, $IntermediatePromise, $infoLabel, $infoLabeledValue, $infoTooltip, $spinner, $target, $txHashRef } from "gmx-middleware-ui-components"
 import { awaitPromises, combine, constant, debounce, empty, filter, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, switchLatest, take, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
+import { AddressZero, BASIS_POINTS_DIVISOR, CHAIN_ADDRESS_MAP, IntervalTime, LIMIT_LEVERAGE, STABLE_SWAP_FEE_BASIS_POINTS, STABLE_TAX_BASIS_POINTS, SWAP_FEE_BASIS_POINTS, TAX_BASIS_POINTS, TRADE_CONTRACT_MAPPING, USD_PERCISION, intervalTimeMap } from "gmx-middleware-const"
+import { $ButtonToggle, $IntermediatePromise, $infoLabel, $infoLabeledValue, $infoTooltip, $spinner, $target, $txHashRef } from "gmx-middleware-ui-components"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
-import * as viem from "viem"
+import { getRouteKey } from "puppet-middleware-utils"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $CardTable } from "../components/$common"
 import { $CandleSticks, IInitCandlesticksChart } from "../components/chart/$CandleSticks"
@@ -42,11 +35,12 @@ import { $Dropdown } from "../components/form/$Dropdown"
 import { $TradeBox, IRequestTrade, IRequestTradeParams, ITradeBoxParams, ITradeFocusMode } from "../components/trade/$TradeBox"
 import { $card } from "../elements/$common"
 import { $caretDown } from "../elements/$icons"
-import { connectMappedContractConfig, contractReader, getMappedValue2, listenContract, wagmiWriteContract } from "../logic/common"
+import { connectMappedContract, connectMappedContractConfig, contractReader, listenContract } from "../logic/common"
 import * as tradeReader from "../logic/contract/trade"
 import { resolveAddress } from "../logic/utils"
 import { walletLink } from "../wallet"
 import { account, wallet } from "../wallet/walletLink"
+import PUPPET from "puppet-middleware-const"
 
 
 export type ITradeComponent = ITradeBoxParams
@@ -121,10 +115,9 @@ export const $Trade = (config: ITradeComponent) => component((
 
 ) => {
 
-  const vaultConfig = connectMappedContractConfig(TRADE_CONTRACT_MAPPING, 'Vault', abi.vault)
-  const vaultListener = listenContract(vaultConfig)
+  const vaultConfig = connectMappedContractConfig(TRADE_CONTRACT_MAPPING, 'Vault', abi.gmxAbi.vault)
   const vaultReader = contractReader(vaultConfig)
-
+  const orchestrator = connectMappedContract(TRADE_CONTRACT_MAPPING, 'Vault', PUPPET.CONTRACT[config.chain.id].Orchestrator)
 
 
   const executionFee = replayLatest(multicast(tradeReader.positionRouter.read('minExecutionFee')))
@@ -413,9 +406,21 @@ export const $Trade = (config: ITradeComponent) => component((
   ]))
 
 
-
-
+  // [config]
   const tradeConfig = { focusMode, slippage, isLong, isIncrease, inputToken, collateralToken, indexToken, leverage, collateralDelta, sizeDelta, collateralDeltaUsd, sizeDeltaUsd }
+
+
+  const route = switchMap(params => {
+    if (!params.wallet) {
+      throw new Error('wallet is required')
+    }
+
+    const key = getRouteKey(params.wallet.account.address, params.collateralToken, params.indexToken, params.isLong)
+    return map(hasRoute => hasRoute ? key : null, orchestrator.read('isRoute', key))
+  }, combineObject({ inputToken, collateralToken, indexToken, isLong, wallet }))
+
+
+  // const hasRoute = orchestrator.read('isRoute', routeKey)
 
 
   const averagePrice = map(params => {
@@ -602,6 +607,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
             tradeConfig,
             tradeState: {
+              route,
 
               position,
               collateralTokenPoolInfo,

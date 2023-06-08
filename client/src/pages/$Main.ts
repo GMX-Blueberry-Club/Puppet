@@ -1,20 +1,16 @@
-import { Behavior, O } from "@aelea/core"
-import { $element, $node, $text, component, eventElementTarget, style, styleBehavior } from "@aelea/dom"
+import { Behavior } from "@aelea/core"
+import { $element, $node, $text, component, eventElementTarget, style } from "@aelea/dom"
 import * as router from '@aelea/router'
-import { $column, $row, designSheet, layoutSheet, observer, screenUtils } from '@aelea/ui-components'
+import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { pallete } from "@aelea/ui-components-theme"
-import { CHAIN } from "gmx-middleware-const"
 import { BLUEBERRY_REFFERAL_CODE, IAccountStakingStore, ITreasuryStore } from "@gambitdao/gbc-middleware"
-import {
-  ARBITRUM_ADDRESS, AVALANCHE_ADDRESS,
-  ETH_ADDRESS_REGEXP,
-  intervalTimeMap,
-  switchMap
-} from "gmx-middleware-utils"
 import { map, merge, mergeArray, multicast, now, skipRepeats, startWith } from '@most/core'
+import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN, intervalTimeMap } from "gmx-middleware-const"
+import { ETH_ADDRESS_REGEXP } from "gmx-middleware-utils"
 import { Address } from "viem"
 import { $discoverIdentityDisplay } from "../components/$AccountProfile"
-import { $MainMenu, $MainMenuSmall } from '../components/$MainMenu'
+import { $IntermediateConnectButton } from "../components/$ConnectAccount"
+import { $MainMenuSmall } from '../components/$MainMenu'
 import { createLocalStorageChain } from "../logic/store"
 import { helloBackend } from '../logic/websocket'
 import { fadeIn } from "../transitions/enter"
@@ -23,8 +19,6 @@ import { $Profile } from "./$Profile"
 import { $ProfileConnected } from "./$ProfileConnected"
 import { $Trade } from "./$Trade"
 import { $Leaderboard } from "./competition/$Leaderboard"
-import { $IntermediateConnectButton } from "../components/$ConnectAccount"
-import { $responsiveFlex } from "../elements/$common"
 
 
 

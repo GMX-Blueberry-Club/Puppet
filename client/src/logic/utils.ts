@@ -1,11 +1,5 @@
-import { CHAIN } from "gmx-middleware-const"
-import {
-  AddressZero, TOKEN_DESCRIPTION_MAP,
-  ITokenDescription, TOKEN_ADDRESS_TO_SYMBOL, ITokenInput, ITokenTrade, CHAIN_ADDRESS_MAP, CHAIN_NATIVE_TO_SYMBOL, getSafeMappedValue, getMappedValue
-} from "gmx-middleware-utils"
-
-
-
+import { AddressZero, CHAIN, CHAIN_ADDRESS_MAP, TOKEN_ADDRESS_TO_SYMBOL } from "gmx-middleware-const"
+import { ITokenInput, ITokenTrade, getSafeMappedValue } from "gmx-middleware-utils"
 
 
 

@@ -1,11 +1,12 @@
 
 import { combineObject, replayLatest } from "@aelea/core"
 import { http, observer } from "@aelea/ui-components"
-import { CHAIN } from "gmx-middleware-const"
+import { AddressZero, CHAIN, TOKEN_ADDRESS_TO_SYMBOL, TOKEN_SYMBOL, TRADE_CONTRACT_MAPPING } from "gmx-middleware-const"
 import {
-  AddressZero, IAbstractPositionIdentity, IAbstractPositionKey, ITokenIndex,
-  ITokenTrade, IVaultPosition, TOKEN_ADDRESS_TO_SYMBOL, TOKEN_SYMBOL, TRADE_CONTRACT_MAPPING, abi,
-  div, filterNull, getChainName, getMappedValue, getSafeMappedValue, getTokenDescription, parseFixed, periodicRun, periodicSample, safeDiv, switchFailedSources
+  IAbstractPositionIdentity, IAbstractPositionKey, ITokenIndex,
+  ITokenSymbol,
+  ITokenTrade, IVaultPosition, abi,
+  div, filterNull, getMappedValue, getSafeMappedValue, getTokenDescription, parseFixed, periodicRun, periodicSample, safeDiv, switchFailedSources
 } from "gmx-middleware-utils"
 import { empty, fromPromise, map, mergeArray, multicast, now, scan, skip, snapshot, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
@@ -47,7 +48,7 @@ export interface ITokenInfo {
 }
 
 
-const derievedSymbolMapping: { [k: string]: TOKEN_SYMBOL } = {
+const derievedSymbolMapping: { [k: string]: ITokenSymbol } = {
   [TOKEN_SYMBOL.WETH]: TOKEN_SYMBOL.ETH,
   [TOKEN_SYMBOL.WBTC]: TOKEN_SYMBOL.BTC,
   [TOKEN_SYMBOL.BTCB]: TOKEN_SYMBOL.BTC,
@@ -371,7 +372,7 @@ export const exchangesWebsocketPriceSource = (chain: CHAIN, token: ITokenTrade) 
   const source = gmxIOPriceMapSource[chain as keyof typeof gmxIOPriceMapSource]
 
   if (!source) {
-    throw new Error(`no price mapping exists for chain ${getChainName(chain)} ${chain}`)
+    throw new Error(`no price mapping exists for chain ${chain} ${chain}`)
   }
 
   return map(pmap => {

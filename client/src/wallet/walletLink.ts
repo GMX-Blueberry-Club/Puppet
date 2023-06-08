@@ -12,7 +12,7 @@ import { arbitrum, avalanche } from "viem/chains"
 
 const chains = [arbitrum, avalanche]
 
-export type ISupportedChain = (typeof arbitrum | typeof avalanche) & { unsupported?: boolean }
+export type ISupportedChain = (typeof arbitrum) & { unsupported?: boolean }
 export type ISupportedId = ISupportedChain['id']
 
 export interface IWalletConnected {
