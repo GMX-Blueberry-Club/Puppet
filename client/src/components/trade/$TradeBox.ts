@@ -4,37 +4,9 @@ import { Route } from "@aelea/router"
 import { $column, $icon, $NumberTicker, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import {
-  abs,
-  bnDiv,
-  div,
-  filterNull,
-  formatFixed,
-  formatReadableUSD,
-  formatToBasis,
-  getAdjustedDelta,
-  getDenominator,
-  getNativeTokenDescription,
-  getPnL,
-  getTokenAmount,
-  getTokenDescription,
-  getTokenUsd,
-  IPricefeed,
-  ITokenDescription,
-  ITokenIndex,
-  ITokenInput,
-  ITokenStable,
-  ITrade,
-  ITradeOpen,
-  parseFixed,
-  parseReadableNumber,
-  readableNumber,
-  safeDiv,
-  StateStream,
-  switchMap,
-  zipState
+  abs, bnDiv, div, filterNull, formatFixed, formatReadableUSD, formatToBasis, getAdjustedDelta, getDenominator,
+  getNativeTokenDescription, getPnL, getTokenAmount, getTokenDescription, getTokenUsd, IPricefeed, ITokenDescription, ITokenIndex, ITokenInput, ITokenStable, ITrade, ITradeOpen, parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, zipState
 } from "gmx-middleware-utils"
-
-
 import {
   awaitPromises,
   constant,
@@ -56,7 +28,7 @@ import {
 import { Stream } from "@most/types"
 import { writeContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
-import GMX, { AddressZero, ARBITRUM_ADDRESS_STABLE, AVALANCHE_ADDRESS_STABLE, BASIS_POINTS_DIVISOR, DEDUCT_USD_FOR_GAS, LIMIT_LEVERAGE, MARGIN_FEE_BASIS_POINTS, MIN_LEVERAGE, USD_PERCISION, USDG_DECIMALS } from "gmx-middleware-const"
+import * as GMX from "gmx-middleware-const"
 import {
   $alert, $alertTooltip, $anchor, $bear, $bull,
   $hintNumChange, $infoLabel, $infoLabeledValue, $infoTooltipLabel, $IntermediatePromise,
@@ -64,7 +36,7 @@ import {
 } from "gmx-middleware-ui-components"
 import { } from "gmx-middleware-utils"
 import { MouseEventParams } from "lightweight-charts"
-import PUPPET from "puppet-middleware-const"
+import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { $IntermediateConnectButton } from "../$ConnectAccount"
@@ -72,8 +44,7 @@ import { $Popover } from "../$Popover"
 import { $Slider } from "../$Slider"
 import { $card } from "../../elements/$common"
 import { $caretDown } from "../../elements/$icons"
-import { wagmiWriteContract } from "../../logic/common"
-import * as tradeReader from "../../logic/contract/trade"
+import { connectContract, wagmiWriteContract } from "../../logic/common"
 import { BrowserStore } from "../../logic/store"
 import { resolveAddress } from "../../logic/utils"
 import { $Index } from "../../pages/competition/$Leaderboard"
@@ -81,6 +52,7 @@ import { account, IWalletClient } from "../../wallet/walletLink"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultButtonPrimary, $defaultMiniButtonSecondary } from "../form/$Button"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown"
 import { $TradePnlHistory } from "./$TradePnlHistory"
+import { connectTrade, getErc20Balance, IPositionGetter, ITokenPoolInfo } from "../../logic/trade"
 
 
 
@@ -92,7 +64,7 @@ export enum ITradeFocusMode {
 export interface ITradeParams {
   route: viem.Address | null
 
-  position: tradeReader.IPositionGetter
+  position: IPositionGetter
   isTradingEnabled: boolean
   isInputTokenApproved: boolean
 
@@ -114,7 +86,7 @@ export interface ITradeParams {
   averagePrice: bigint | null
   liquidationPrice: bigint | null
 
-  collateralTokenPoolInfo: tradeReader.ITokenPoolInfo
+  collateralTokenPoolInfo: ITokenPoolInfo
 }
 
 export interface ITradeConfig {
@@ -172,14 +144,16 @@ export type IRequestTrade = IRequestTradeParams & {
 }
 
 const BOX_SPACING = 20
-const LIMIT_LEVERAGE_NORMAL = formatToBasis(LIMIT_LEVERAGE)
-const MIN_LEVERAGE_NORMAL = formatToBasis(MIN_LEVERAGE) / LIMIT_LEVERAGE_NORMAL
+const LIMIT_LEVERAGE_NORMAL = formatToBasis(GMX.LIMIT_LEVERAGE)
+const MIN_LEVERAGE_NORMAL = formatToBasis(GMX.MIN_LEVERAGE) / LIMIT_LEVERAGE_NORMAL
 
 export const $TradeBox = (config: ITradeBox) => component((
   [openEnableTradingPopover, openEnableTradingPopoverTether]: Behavior<any, any>,
+
   [enableTradingPlugin, enableTradingPluginTether]: Behavior<PointerEvent, PointerEvent>,
-  [approveInputToken, approveInputTokenTether]: Behavior<PointerEvent, boolean>,
   [approveTrading, approveTradingTether]: Behavior<PointerEvent, true>,
+
+  [clickApproveInputToken, clickApproveInputTokenTether]: Behavior<PointerEvent, { route: viem.Address, inputToken: viem.Address }>,
 
   [dismissEnableTradingOverlay, dismissEnableTradingOverlayTether]: Behavior<false, false>,
 
@@ -192,7 +166,7 @@ export const $TradeBox = (config: ITradeBox) => component((
 
   [changeInputToken, changeInputTokenTether]: Behavior<ITokenInput, ITokenInput>,
   [changeIndexToken, changeIndexTokenTether]: Behavior<ITokenIndex, ITokenIndex>,
-  [changeCollateralToken, changeCollateralTokenTether]: Behavior<ARBITRUM_ADDRESS_STABLE | AVALANCHE_ADDRESS_STABLE, ARBITRUM_ADDRESS_STABLE | AVALANCHE_ADDRESS_STABLE>,
+  [changeCollateralToken, changeCollateralTokenTether]: Behavior<GMX.ARBITRUM_ADDRESS_STABLE | GMX.AVALANCHE_ADDRESS_STABLE>,
 
   [switchIsIncrease, switchisIncreaseTether]: Behavior<boolean, boolean>,
   [slideLeverage, slideLeverageTether]: Behavior<number, bigint>,
@@ -211,9 +185,14 @@ export const $TradeBox = (config: ITradeBox) => component((
 
 ) => {
 
+
+  const tradeReader = connectTrade(config.chain)
+  const pricefeed = connectContract(GMX.CONTRACT[config.chain.id].VaultPriceFeed)
+  const router = connectContract(GMX.CONTRACT[config.chain.id].Router)
+  const vault = connectContract(GMX.CONTRACT[config.chain.id].Vault)
+
+
   const positionRouterAddress = GMX.CONTRACT[config.chain.id].PositionRouter.address
-
-
 
   const { collateralDeltaUsd, collateralToken, collateralDelta, sizeDelta, focusMode, indexToken, inputToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage } = config.tradeConfig
   const {
@@ -228,15 +207,15 @@ export const $TradeBox = (config: ITradeBox) => component((
   const walletBalanceUsd = skipRepeats(combineArray(params => {
     const amountUsd = getTokenUsd(params.walletBalance, params.inputTokenPrice, params.inputTokenDescription.decimals)
 
-    return params.inputToken === AddressZero ? amountUsd - DEDUCT_USD_FOR_GAS : amountUsd
+    return params.inputToken === GMX.AddressZero ? amountUsd - GMX.DEDUCT_USD_FOR_GAS : amountUsd
   }, combineObject({ walletBalance, inputTokenPrice, inputToken, inputTokenDescription })))
 
 
 
   const validationError = skipRepeats(map((state) => {
 
-    if (state.leverage > LIMIT_LEVERAGE) {
-      return `Leverage exceeds ${formatToBasis(LIMIT_LEVERAGE)}x`
+    if (state.leverage > GMX.LIMIT_LEVERAGE) {
+      return `Leverage exceeds ${formatToBasis(GMX.LIMIT_LEVERAGE)}x`
     }
 
     if (state.isIncrease) {
@@ -248,7 +227,7 @@ export const $TradeBox = (config: ITradeBox) => component((
         return `Not enough ${state.inputTokenDescription.symbol} in connected account`
       }
 
-      if (state.leverage < MIN_LEVERAGE) {
+      if (state.leverage < GMX.MIN_LEVERAGE) {
         return `Leverage below 1.1x`
       }
 
@@ -267,7 +246,7 @@ export const $TradeBox = (config: ITradeBox) => component((
 
         const totalOut = collateralDelta + adjustedSizeDelta - fees
 
-        const nextUsdgAmount = totalOut * getDenominator(USDG_DECIMALS) / USD_PERCISION
+        const nextUsdgAmount = totalOut * getDenominator(GMX.USDG_DECIMALS) / GMX.USD_PERCISION
         if (state.collateralTokenPoolInfo.usdgAmounts + nextUsdgAmount > state.collateralTokenPoolInfo.maxUsdgAmounts) {
           return `${state.collateralTokenDescription.symbol} pool exceeded, you cannot receive ${state.inputTokenDescription.symbol}, switch to ${state.collateralTokenDescription.symbol} in the first input token switcher`
         }
@@ -288,14 +267,7 @@ export const $TradeBox = (config: ITradeBox) => component((
     leverage, position, swapFee, marginFee, fundingFee, liquidationPrice, walletBalanceUsd, isIncrease, indexTokenPrice, collateralDelta, collateralDeltaUsd, inputTokenDescription, collateralToken, sizeDeltaUsd, availableIndexLiquidityUsd, inputToken, collateralTokenPoolInfo, collateralTokenDescription, indexTokenDescription, isLong,
   })))
 
-  const requestTradeError = filterNull(awaitPromises(map(async req => {
-    try {
-      await req.request
-      return null
-    } catch (err) {
-      return String(err)
-    }
-  }, clickProposeTrade)))
+
 
   const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
 
@@ -319,7 +291,7 @@ export const $TradeBox = (config: ITradeBox) => component((
       return 0n
     }
 
-    const collateral = div(state.position.size, LIMIT_LEVERAGE)
+    const collateral = div(state.position.size, GMX.LIMIT_LEVERAGE)
     const deltaUsd = collateral - state.position.collateral - state.position.entryFundingRate
 
     return deltaUsd
@@ -396,7 +368,7 @@ export const $TradeBox = (config: ITradeBox) => component((
       const positionCollateral = state.position.collateral - state.fundingFee
 
       const totalCollateral = collateralDeltaUsd + positionCollateral - state.swapFee
-      const delta = (totalCollateral * state.leverage / BASIS_POINTS_DIVISOR - state.position.size) * BASIS_POINTS_DIVISOR
+      const delta = (totalCollateral * state.leverage / GMX.BASIS_POINTS_DIVISOR - state.position.size) * GMX.BASIS_POINTS_DIVISOR
 
 
       if (state.position.size > 0n) {
@@ -409,12 +381,12 @@ export const $TradeBox = (config: ITradeBox) => component((
       }
 
 
-      if (!state.isIncrease && state.leverage <= MIN_LEVERAGE) {
+      if (!state.isIncrease && state.leverage <= GMX.MIN_LEVERAGE) {
         return -state.position.size
       }
 
-      const toNumerator = delta * BASIS_POINTS_DIVISOR
-      const toDenominator = MARGIN_FEE_BASIS_POINTS * state.leverage + BASIS_POINTS_DIVISOR * BASIS_POINTS_DIVISOR
+      const toNumerator = delta * GMX.BASIS_POINTS_DIVISOR
+      const toDenominator = GMX.MARGIN_FEE_BASIS_POINTS * state.leverage + GMX.BASIS_POINTS_DIVISOR * GMX.BASIS_POINTS_DIVISOR
 
       const deltaAfterFees = toNumerator / toDenominator
       return deltaAfterFees
@@ -456,15 +428,15 @@ export const $TradeBox = (config: ITradeBox) => component((
       : req.isIncrease
         ? -slippageN : slippageN
 
-    const priceBasisPoints = BASIS_POINTS_DIVISOR + allowedSlippage
+    const priceBasisPoints = GMX.BASIS_POINTS_DIVISOR + allowedSlippage
 
-    const acceptablePrice = params.indexTokenPrice * priceBasisPoints / BASIS_POINTS_DIVISOR
+    const acceptablePrice = params.indexTokenPrice * priceBasisPoints / GMX.BASIS_POINTS_DIVISOR
 
-    const isNative = req.inputToken === AddressZero
+    const isNative = req.inputToken === GMX.AddressZero
 
 
     const swapParams = {
-      amount: 0n,
+      amount: req.collateralDelta,
       minOut: 0n,
       path: swapRoute
     }
@@ -473,7 +445,7 @@ export const $TradeBox = (config: ITradeBox) => component((
       amountIn: 0n,
       collateralDelta: req.collateralDelta,
       minOut: 0n,
-      sizeDelta: req.sizeDelta
+      sizeDelta: req.sizeDeltaUsd
     }
 
     const value = isNative ? params.executionFee + req.collateralDelta : params.executionFee
@@ -506,18 +478,25 @@ export const $TradeBox = (config: ITradeBox) => component((
       })
 
 
-
-    request.catch(err => {
-      console.error(err)
-    })
-
     return { ...params, ...req, acceptablePrice, request, swapRoute }
   }, combineObject({ executionFee, indexTokenPrice, route }), requestTradeParams))
 
+  const requestTradeError = filterNull(awaitPromises(map(async req => {
+    try {
+      await req.request
+      return null
+    } catch (err) {
+
+      if (err instanceof viem.ContractFunctionExecutionError && err.cause instanceof viem.ContractFunctionRevertedError) {
+        return String(err.cause.reason)
+      }
+
+      return null
+    }
+  }, requestTrade)))
+
 
   const requestEnablePlugin = multicast(map(async () => {
-
-
     const recpt = wagmiWriteContract({
       ...GMX.CONTRACT[config.chain.id].Router,
       functionName: 'approvePlugin',
@@ -526,6 +505,16 @@ export const $TradeBox = (config: ITradeBox) => component((
     })
     return recpt
   }, enableTradingPlugin))
+
+  const requestApproveSpend = multicast(map(params => {
+    const recpt = wagmiWriteContract({
+      address: params.inputToken,
+      abi: erc20Abi,
+      functionName: 'approve',
+      args: [params.route, 2n ** 256n - 1n]
+    })
+    return recpt
+  }, clickApproveInputToken))
 
   return [
     $card(style({ backgroundColor: 'transparent', flexDirection: screenUtils.isDesktopScreen ? 'column' : 'column-reverse', padding: 0, gap: 0 }))(
@@ -727,9 +716,9 @@ export const $TradeBox = (config: ITradeBox) => component((
                   $container: $defaultSelectContainer(style({ minWidth: '290px', left: 0 })),
                   $$option: map(option => {
                     const token = resolveAddress(chainId, option)
-                    const balanceAmount = tradeReader.getErc20Balance(config.chain, option, address)
-                    const price = tradeReader.pricefeed.read('getPrimaryPrice', token, false)
-                    const tokenDesc = option === AddressZero ? getNativeTokenDescription(chainId) : getTokenDescription(option)
+                    const balanceAmount = getErc20Balance(config.chain, option, address)
+                    const price = pricefeed.read('getPrimaryPrice', token, false)
+                    const tokenDesc = option === GMX.AddressZero ? getNativeTokenDescription(chainId) : getTokenDescription(option)
 
                     return $row(style({ placeContent: 'space-between', flex: 1 }))(
                       $tokenLabelFromSummary(tokenDesc),
@@ -742,7 +731,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                     )
                   }),
                   list: [
-                    AddressZero,
+                    GMX.AddressZero,
                     ...config.tokenIndexMap[chainId] || [],
                     ...config.tokenStableMap[chainId] || [],
                   ],
@@ -857,7 +846,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                 return 0
               }
 
-              const multiplier = bnDiv(leverage, LIMIT_LEVERAGE)
+              const multiplier = bnDiv(leverage, GMX.LIMIT_LEVERAGE)
 
               return multiplier
             }, config.tradeConfig.leverage),
@@ -876,11 +865,11 @@ export const $TradeBox = (config: ITradeBox) => component((
 
                   if (state.focusMode === ITradeFocusMode.size) {
                     const ratio = div(state.position.size + state.sizeDeltaUsd, state.walletBalanceUsd + state.position.collateral - state.fundingFee)
-                    return bnDiv(ratio, LIMIT_LEVERAGE)
+                    return bnDiv(ratio, GMX.LIMIT_LEVERAGE)
                   }
                   const totalCollateral = state.collateralDeltaUsd + state.position.collateral - state.fundingFee
 
-                  return Math.max(MIN_LEVERAGE_NORMAL, bnDiv(div(state.position.size, totalCollateral), LIMIT_LEVERAGE))
+                  return Math.max(MIN_LEVERAGE_NORMAL, bnDiv(div(state.position.size, totalCollateral), GMX.LIMIT_LEVERAGE))
                 }
 
                 return MIN_LEVERAGE_NORMAL
@@ -890,7 +879,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                 const totalSize = state.sizeDeltaUsd + state.position.size
 
                 if (state.position.averagePrice > 0n) {
-                  return bnDiv(div(totalSize, state.position.collateral - state.fundingFee), LIMIT_LEVERAGE)
+                  return bnDiv(div(totalSize, state.position.collateral - state.fundingFee), GMX.LIMIT_LEVERAGE)
                 }
 
                 return 0
@@ -914,7 +903,7 @@ export const $TradeBox = (config: ITradeBox) => component((
 
                   // return 1
                   const ratio = div(totalSize, state.position.collateral - state.fundingFee)
-                  const newLocal = bnDiv(ratio, LIMIT_LEVERAGE)
+                  const newLocal = bnDiv(ratio, GMX.LIMIT_LEVERAGE)
                   return Math.min(1, newLocal)
                 }
 
@@ -924,7 +913,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                   const totalCollateral = state.position.collateral - state.fundingFee + state.collateralDeltaUsd
                   const ratio = div(state.position.size, totalCollateral)
 
-                  return Math.min(1, bnDiv(ratio, LIMIT_LEVERAGE))
+                  return Math.min(1, bnDiv(ratio, GMX.LIMIT_LEVERAGE))
                 }
               }
 
@@ -934,7 +923,7 @@ export const $TradeBox = (config: ITradeBox) => component((
           })({
             change: slideLeverageTether(
               map(leverage => {
-                const leverageRatio = BigInt(Math.round(Math.abs(leverage) * Number(LIMIT_LEVERAGE)))
+                const leverageRatio = BigInt(Math.round(Math.abs(leverage) * Number(GMX.LIMIT_LEVERAGE)))
 
                 return leverageRatio
               }),
@@ -1196,7 +1185,11 @@ export const $TradeBox = (config: ITradeBox) => component((
           //   )
           // })({})),
           $$display: map(w3p => {
-
+            const getIsPluginEnabled = (address: viem.Address) => router.read(
+              'approvedPlugins',
+              address,
+              GMX.CONTRACT[config.chain.id].PositionRouter.address
+            )
 
             return $column(style({ minHeight: '140px', flexDirection: screenUtils.isDesktopScreen ? 'column' : 'column-reverse' }))(
               $column(style({ padding: '16px', margin: 'auto 0', placeContent: 'space-between' }), styleInline(map(mode => ({ height: '140px', display: mode ? 'flex' : 'none' }), inTradeMode)))(
@@ -1232,7 +1225,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                           const depositTokenNorm = resolveAddress(config.chain.id, params.inputToken)
                           const outputToken = params.isLong ? params.indexToken : params.collateralToken
                           const totalSizeUsd = params.position.size + params.sizeDeltaUsd
-                          const nextSize = totalSizeUsd * params.collateralTokenPoolInfo.rate / BASIS_POINTS_DIVISOR / 100n
+                          const nextSize = totalSizeUsd * params.collateralTokenPoolInfo.rate / GMX.BASIS_POINTS_DIVISOR / 100n
 
                           return $column(
                             depositTokenNorm !== outputToken ? $row(layoutSheet.spacingTiny)(
@@ -1265,7 +1258,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                             $text('Payback accumulates every time you trade and is distributed once every week back to your account in ETH or AVAX.'),
                             $row(layoutSheet.spacingTiny)(
                               $text(style({ color: pallete.foreground }))('Open + Close Payback'),
-                              $text(style({ color: pallete.positive }))(map(params => formatReadableUSD(params.marginFee * 2000n / BASIS_POINTS_DIVISOR), combineObject({ marginFee })))
+                              $text(style({ color: pallete.positive }))(map(params => formatReadableUSD(params.marginFee * 2000n / GMX.BASIS_POINTS_DIVISOR), combineObject({ marginFee })))
                             ),
                             $text(style({ color: pallete.positive }))('Trading Competition'),
                             $node(
@@ -1274,12 +1267,12 @@ export const $TradeBox = (config: ITradeBox) => component((
                             ),
                             $row(layoutSheet.spacingTiny)(
                               $text(style({ color: pallete.foreground }))('Your added contribution'),
-                              $text(style({ color: pallete.positive }))(map(params => formatReadableUSD(params.marginFee * 2500n / BASIS_POINTS_DIVISOR), combineObject({ marginFee })))
+                              $text(style({ color: pallete.positive }))(map(params => formatReadableUSD(params.marginFee * 2500n / GMX.BASIS_POINTS_DIVISOR), combineObject({ marginFee })))
                             ),
                           ),
                           'Payback'
                         ),
-                        $text(style({ color: pallete.positive }))(map(params => formatReadableUSD(params.marginFee * 1000n / BASIS_POINTS_DIVISOR), combineObject({ marginFee })))
+                        $text(style({ color: pallete.positive }))(map(params => formatReadableUSD(params.marginFee * 1000n / GMX.BASIS_POINTS_DIVISOR), combineObject({ marginFee })))
                       )
                     }
 
@@ -1317,8 +1310,8 @@ export const $TradeBox = (config: ITradeBox) => component((
                 ),
 
                 $column(layoutSheet.spacingSmall)(
-                  switchLatest(combineArray((isPluginEnabled, isEnabled, isInputTokenApproved, inputToken, inputTokenDesc) => {
-                    if (!isPluginEnabled || !isEnabled) {
+                  switchLatest(map(params => {
+                    if (!params.isPluginEnabled || !params.isTradingEnabled) {
                       return $Popover({
                         $target: $row(style({ placeContent: 'flex-end' }))(
                           $ButtonSecondary({
@@ -1349,17 +1342,17 @@ export const $TradeBox = (config: ITradeBox) => component((
                               $anchor(attr({ href: '/app/trading-terms-and-conditions' }))($text('Terms & Conditions'))
                             ),
 
-                            !isPluginEnabled
-                              ? $ButtonPrimaryCtx({
-                                request: requestEnablePlugin,
-                                $content: $text(!isPluginEnabled ? 'Enable GMX & Agree' : 'Agree')
-                              })({
-                                click: enableTradingPluginTether()
-                              })
-                              : $ButtonPrimary({
+                            params.isPluginEnabled
+                              ? $ButtonPrimary({
                                 $content: $text('Agree')
                               })({
                                 click: approveTradingTether(constant(true))
+                              })
+                              : $ButtonPrimaryCtx({
+                                request: requestEnablePlugin,
+                                $content: $text('Enable GMX & Agree')
+                              })({
+                                click: enableTradingPluginTether()
                               })
                           )
                         }, openEnableTradingPopover),
@@ -1368,29 +1361,14 @@ export const $TradeBox = (config: ITradeBox) => component((
                       })
                     }
 
-                    if (!isInputTokenApproved) {
+                    if (params.route && !params.isInputTokenApproved) {
 
-                      return $ButtonPrimary({
-                        $content: $text(`Approve ${inputTokenDesc.symbol}`)
+                      return $ButtonPrimaryCtx({
+                        request: requestApproveSpend,
+                        $content: $text(`Approve ${params.inputTokenDescription.symbol}`)
                       })({
-                        click: approveInputTokenTether(
-                          map(async (c) => {
-
-                            try {
-                              await writeContract({
-                                address: inputToken,
-                                abi: erc20Abi,
-                                functionName: 'approve',
-                                args: [positionRouterAddress, 2n ** 256n - 1n]
-                              })
-                              return true
-                            } catch (e) {
-                              console.error(e)
-                              return false
-                            }
-
-                          }),
-                          awaitPromises
+                        click: clickApproveInputTokenTether(
+                          constant({ route: params.route, inputToken: params.inputToken })
                         )
                       })
                     }
@@ -1443,7 +1421,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                         )
                       })
                     )
-                  }, tradeReader.getIsPluginEnabled(w3p.account.address), config.tradeState.isTradingEnabled, config.tradeState.isInputTokenApproved, config.tradeConfig.inputToken, config.tradeState.inputTokenDescription))
+                  }, combineObject({ isPluginEnabled: getIsPluginEnabled(w3p.account.address), isInputTokenApproved, route, isTradingEnabled, inputToken, inputTokenDescription })))
                 ),
               ),
 
@@ -1478,7 +1456,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                     }, pnlCrossHairTime))
 
 
-                    const nextSize = params.position.size * params.collateralTokenPoolInfo.rate / BASIS_POINTS_DIVISOR / 100n
+                    const nextSize = params.position.size * params.collateralTokenPoolInfo.rate / GMX.BASIS_POINTS_DIVISOR / 100n
 
 
                     return $column(style({ position: 'relative' }))(
@@ -1556,7 +1534,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                     ...res.map(trade => {
 
                       const positionMarkPrice = tradeReader.getLatestPrice(now(trade.indexToken))
-                      const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', trade.collateralToken)
+                      const cumulativeFee = vault.read('cumulativeFundingRates', trade.collateralToken)
                       const pnl = map(params => {
                         const delta = getPnL(trade.isLong, trade.averagePrice, params.positionMarkPrice, trade.size)
 
@@ -1636,16 +1614,23 @@ export const $TradeBox = (config: ITradeBox) => component((
       changeSlippage,
       enableTrading: mergeArray([
         approveTrading,
-        awaitPromises(map(async (ctx) => {
+        filterNull(awaitPromises(map(async (ctx) => {
           try {
             await ctx
             return true
           } catch (err) {
-            return false
+            return null
           }
-        }, requestEnablePlugin))
+        }, requestEnablePlugin)))
       ]),
-      approveInputToken,
+      approveInputToken: filterNull(awaitPromises(map(async (ctx) => {
+        try {
+          await ctx
+          return true
+        } catch (err) {
+          return null
+        }
+      }, requestApproveSpend))),
       requestTrade
 
     }

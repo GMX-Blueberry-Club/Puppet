@@ -5,7 +5,7 @@ import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-
 import { pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE, IAccountStakingStore, ITreasuryStore } from "@gambitdao/gbc-middleware"
 import { map, merge, mergeArray, multicast, now, skipRepeats, startWith } from '@most/core'
-import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN, intervalTimeMap } from "gmx-middleware-const"
+import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN, TIME_INTERVAL_MAP } from "gmx-middleware-const"
 import { ETH_ADDRESS_REGEXP } from "gmx-middleware-utils"
 import { Address } from "viem"
 import { $discoverIdentityDisplay } from "../components/$AccountProfile"
@@ -73,7 +73,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
   // localstorage state
   const store = createLocalStorageChain('ROOT', 'v1')
-  const treasuryStore = store.craete('treasuryStore', { startedStakingGlpTimestamp: 1639431367, startedStakingGmxTimestamp: 1639432924 - intervalTimeMap.MIN5 } as ITreasuryStore)
+  const treasuryStore = store.craete('treasuryStore', { startedStakingGlpTimestamp: 1639431367, startedStakingGmxTimestamp: 1639432924 - TIME_INTERVAL_MAP.MIN5 } as ITreasuryStore)
   const accountStakingStore = store.craete('treasuryStore', {} as IAccountStakingStore)
 
 

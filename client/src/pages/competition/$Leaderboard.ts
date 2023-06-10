@@ -1,16 +1,15 @@
 import { Behavior, O } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { ITrade, TOKEN_ADDRESS_TO_SYMBOL, TOKEN_SYMBOL, formatReadableUSD } from "gmx-middleware-utils"
+import { ITokenSymbol, ITrade, formatReadableUSD } from "gmx-middleware-utils"
+import * as GMX from "gmx-middleware-const"
 
 import { pallete } from "@aelea/ui-components-theme"
 import { $bear, $bull, $tokenIconMap } from "gmx-middleware-ui-components"
 import { $CumulativePnl, ICompetitonCumulativeRoi } from "./$CumulativePnl"
 
 
-export interface ILeaderboard extends ICompetitonCumulativeRoi {
-
-}
+export type ILeaderboard = ICompetitonCumulativeRoi
 
 export const $Leaderboard = (config: ILeaderboard) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
@@ -55,7 +54,7 @@ export const $Index = (pos: ITrade) => $column(style({ position: 'relative', pla
       viewBox: '0 0 32 32',
       width: '26px'
     }),
-    $TokenIcon(TOKEN_ADDRESS_TO_SYMBOL[pos.indexToken], { width: '28px' }),
+    $TokenIcon(GMX.TOKEN_ADDRESS_TO_SYMBOL[pos.indexToken], { width: '28px' }),
     $text(formatReadableUSD(pos.averagePrice))
   ),
   // $text(style({ fontSize: '.65em' }))(formatReadableUSD(pos.averagePrice)),
@@ -71,7 +70,7 @@ export const $Index = (pos: ITrade) => $column(style({ position: 'relative', pla
 
 
 
-export const $TokenIcon = (indexToken: TOKEN_SYMBOL, IIcon?: { width?: string }) => {
+export const $TokenIcon = (indexToken: ITokenSymbol, IIcon?: { width?: string }) => {
   const $token = $tokenIconMap[indexToken]
 
   if (!$token) {

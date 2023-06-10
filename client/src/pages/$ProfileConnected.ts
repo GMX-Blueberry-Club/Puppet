@@ -13,7 +13,7 @@ import { $labLogo } from "../common/$icons"
 import { $CardTable } from "../components/$common"
 import { $ButtonSecondary, $defaultButtonSecondary } from "../components/form/$Button"
 import { $responsiveFlex } from "../elements/$common"
-import * as tradeReader from "../logic/contract/trade"
+import * as tradeReader from "../logic/trade"
 import { BrowserStore } from "../logic/store"
 import { fadeIn } from "../transitions/enter"
 import { walletLink } from "../wallet"
@@ -227,7 +227,7 @@ export const $ProfileConnected = (config: IAccount) => component((
       //       stakingInfo: multicast(arbitrumContract),
       //       walletLink: config.walletLink,
       //       // priceFeedHistoryMap: pricefeedQuery,
-      //       // graphInterval: intervalTimeMap.HR4,
+      //       // graphInterval: GMX.TIME_INTERVAL_MAP.HR4,
       //     })({}),
       //   ),
       // ),

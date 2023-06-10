@@ -1,4 +1,5 @@
-import { IAccountSummary, IChainParamApi, IEnsRegistration, intervalTimeMap, IResponsePageApi, IRequestPagePositionApi, IRequestSortApi, IRequestTimerangeApi, IntervalTime } from "gmx-middleware-utils"
+import { IAccountSummary, IChainParamApi, IEnsRegistration, IResponsePageApi, IRequestPagePositionApi, IRequestSortApi, IRequestTimerangeApi } from "gmx-middleware-utils"
+import * as GMX from "gmx-middleware-const"
 import { Address } from "viem"
 
 export type IPrice = {
@@ -520,7 +521,7 @@ export type MintRule = MintPublic | MintHolder | MintPrivate
 
 
 export interface IRequestLeaderboardApi extends IRequestPagePositionApi, IChainParamApi, IRequestSortApi<keyof IBlueberryLadder> {
-  timeInterval: typeof intervalTimeMap.HR24 | typeof intervalTimeMap.DAY7 | typeof intervalTimeMap.MONTH
+  timeInterval: typeof GMX.TIME_INTERVAL_MAP.HR24 | typeof GMX.TIME_INTERVAL_MAP.DAY7 | typeof GMX.TIME_INTERVAL_MAP.MONTH
 }
 export interface IRequestCompetitionLadderApi extends IChainParamApi, IRequestSortApi<IBlueberryLadder>, IRequestPagePositionApi, IRequestTimerangeApi {
   referralCode: string

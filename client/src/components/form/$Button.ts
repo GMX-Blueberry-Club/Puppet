@@ -78,13 +78,6 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
   [click, clickTether]: Behavior<PointerEvent, PointerEvent>
 ) => {
 
-  // const ctxPendingDisable = startWith(false, switchLatest(map(ctxQuery => {
-  //   // const ctxQueryWwait = fromPromise(ctxQuery.then(req => req.wait()))
-  //   const ctxQueryStream = fromPromise(ctxQuery)
-  //   return startWith(true, constant(false, recoverWith(() => now(false), ctxQueryStream)))
-  // }, config.request)))
-
-  const newLocal: Stream<string | null> = config.alert || never()
 
   const duringRequest = mergeArray([
     constant(true, click),
@@ -100,39 +93,20 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
   ])
 
   return [
-    $row(style({ alignItems: 'center' }))(
-      $ButtonCore({
-        $container: config.$container || $defaultButtonPrimary(
-          style({ alignItems: 'center' }),
-          stylePseudo(':hover', { backgroundColor: pallete.middleground })
-        ),
-        disabled: mergeArray([
-          combineArray((isDisabled, isCtxPending) => {
-            return isDisabled || isCtxPending
-          }, config.disabled || now(false), duringRequest)
-        ]),
-        $content: config.$content
-      })({
-        click: clickTether()
-      }),
-
-      switchLatest(map(error => {
-        if (error === null) {
-          return never()
-        }
-
-        return $row(style({ width: '0px' }))(
-          $Tooltip({
-            $content: $text(style({ fontSize: '.75em', }))(error),
-            $container: $column(style({ zIndex: 5, marginLeft: '-15px', position: 'relative', backgroundColor: '#000', borderRadius: '50%', })),
-            $anchor: $icon({
-              $content: $alertIcon, viewBox: '0 0 24 24', width: '28px',
-              svgOps: style({ fill: pallete.negative, padding: '3px', filter: 'drop-shadow(black 0px 0px 10px) drop-shadow(black 0px 0px 10px) drop-shadow(black 0px 0px 1px)' })
-            })
-          })({})
-        )
-      }, skipRepeats(newLocal))),
-    ),
+    $ButtonCore({
+      $container: config.$container || $defaultButtonPrimary(
+        style({ alignItems: 'center' }),
+        stylePseudo(':hover', { backgroundColor: pallete.middleground })
+      ),
+      disabled: mergeArray([
+        combineArray((isDisabled, isCtxPending) => {
+          return isDisabled || isCtxPending
+        }, config.disabled || now(false), duringRequest)
+      ]),
+      $content: config.$content
+    })({
+      click: clickTether()
+    }),
 
 
     {

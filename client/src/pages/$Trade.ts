@@ -23,9 +23,10 @@ import { awaitPromises, combine, constant, debounce, empty, filter, map, mergeAr
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
-import { AddressZero, BASIS_POINTS_DIVISOR, CHAIN_ADDRESS_MAP, IntervalTime, LIMIT_LEVERAGE, STABLE_SWAP_FEE_BASIS_POINTS, STABLE_TAX_BASIS_POINTS, SWAP_FEE_BASIS_POINTS, TAX_BASIS_POINTS, TRADE_CONTRACT_MAPPING, USD_PERCISION, intervalTimeMap } from "gmx-middleware-const"
+import * as GMX from "gmx-middleware-const"
 import { $ButtonToggle, $IntermediatePromise, $infoLabel, $infoLabeledValue, $infoTooltip, $spinner, $target, $txHashRef } from "gmx-middleware-ui-components"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
+import * as PUPPET from "puppet-middleware-const"
 import { getRouteKey } from "puppet-middleware-utils"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $CardTable } from "../components/$common"
@@ -35,12 +36,12 @@ import { $Dropdown } from "../components/form/$Dropdown"
 import { $TradeBox, IRequestTrade, IRequestTradeParams, ITradeBoxParams, ITradeFocusMode } from "../components/trade/$TradeBox"
 import { $card } from "../elements/$common"
 import { $caretDown } from "../elements/$icons"
-import { connectMappedContract, connectMappedContractConfig, contractReader, listenContract } from "../logic/common"
-import * as tradeReader from "../logic/contract/trade"
+import { connectContract } from "../logic/common"
+import * as tradeReader from "../logic/trade"
 import { resolveAddress } from "../logic/utils"
 import { walletLink } from "../wallet"
 import { account, wallet } from "../wallet/walletLink"
-import PUPPET from "puppet-middleware-const"
+import { connectTrade, getErc20Balance, latestPriceFromExchanges } from "../logic/trade"
 
 
 export type ITradeComponent = ITradeBoxParams
@@ -55,27 +56,27 @@ export type ITradeComponent = ITradeBoxParams
 
 
 
-const timeFrameLablMap = {
-  [intervalTimeMap.SEC]: '1s',
-  [intervalTimeMap.MIN]: '1m',
-  [intervalTimeMap.MIN5]: '5m',
-  [intervalTimeMap.MIN15]: '15m',
-  [intervalTimeMap.MIN30]: '30m',
-  [intervalTimeMap.MIN60]: '1h',
-  [intervalTimeMap.HR2]: '2h',
-  [intervalTimeMap.HR4]: '4h',
-  [intervalTimeMap.HR8]: '8h',
-  [intervalTimeMap.HR24]: '1d',
-  [intervalTimeMap.DAY7]: '1w',
-  [intervalTimeMap.MONTH]: '1mo',
-  [intervalTimeMap.MONTH2]: '2mo',
-  [intervalTimeMap.YEAR]: '2yr',
+const TIME_INTERVAL_LABEL_MAP = {
+  [GMX.TIME_INTERVAL_MAP.SEC]: '1s',
+  [GMX.TIME_INTERVAL_MAP.MIN]: '1m',
+  [GMX.TIME_INTERVAL_MAP.MIN5]: '5m',
+  [GMX.TIME_INTERVAL_MAP.MIN15]: '15m',
+  [GMX.TIME_INTERVAL_MAP.MIN30]: '30m',
+  [GMX.TIME_INTERVAL_MAP.MIN60]: '1h',
+  [GMX.TIME_INTERVAL_MAP.HR2]: '2h',
+  [GMX.TIME_INTERVAL_MAP.HR4]: '4h',
+  [GMX.TIME_INTERVAL_MAP.HR8]: '8h',
+  [GMX.TIME_INTERVAL_MAP.HR24]: '1d',
+  [GMX.TIME_INTERVAL_MAP.DAY7]: '1w',
+  [GMX.TIME_INTERVAL_MAP.MONTH]: '1mo',
+  [GMX.TIME_INTERVAL_MAP.MONTH2]: '2mo',
+  [GMX.TIME_INTERVAL_MAP.YEAR]: '2yr',
 } as const
 
 
 
 export const $Trade = (config: ITradeComponent) => component((
-  [selectTimeFrame, selectTimeFrameTether]: Behavior<IntervalTime>,
+  [selectTimeFrame, selectTimeFrameTether]: Behavior<GMX.IntervalTime>,
   [changeRoute, changeRouteTether]: Behavior<string>,
 
   [changeInputToken, changeInputTokenTether]: Behavior<ITokenInput>,
@@ -115,22 +116,31 @@ export const $Trade = (config: ITradeComponent) => component((
 
 ) => {
 
-  const vaultConfig = connectMappedContractConfig(TRADE_CONTRACT_MAPPING, 'Vault', abi.gmxAbi.vault)
-  const vaultReader = contractReader(vaultConfig)
-  const orchestrator = connectMappedContract(TRADE_CONTRACT_MAPPING, 'Vault', PUPPET.CONTRACT[config.chain.id].Orchestrator)
+  const gmxContractMap = GMX.CONTRACT[config.chain.id];
+  const puppetContractMap = PUPPET.CONTRACT[config.chain.id];
+
+  const tradeReader = connectTrade(config.chain)
+
+  // const vaultConfig = connectMappedContractConfig(CONTRACT, 'Vault')
+  // const vaultReader = contractReader(vaultConfig)
+  const vault = connectContract(gmxContractMap.Vault)
+  const positionRouter = connectContract(gmxContractMap.PositionRouter)
+  const usdg = connectContract(gmxContractMap.USDG)
+  const orchestrator = connectContract(puppetContractMap.Orchestrator)
 
 
-  const executionFee = replayLatest(multicast(tradeReader.positionRouter.read('minExecutionFee')))
+
+  const executionFee = replayLatest(multicast(positionRouter.read('minExecutionFee')))
 
   const tradingStore = config.store.craete('trade', 'tradeBox')
 
-  const timeFrameStore = tradingStore.craete('portfolio-chart-interval', intervalTimeMap.MIN60)
+  const timeFrameStore = tradingStore.craete('portfolio-chart-interval', GMX.TIME_INTERVAL_MAP.MIN60)
 
   const isTradingEnabledStore = tradingStore.craete('isTradingEnabled-v2', false)
-  const leverageStore = tradingStore.craete('leverage', LIMIT_LEVERAGE / 4n)
+  const leverageStore = tradingStore.craete('leverage', GMX.LIMIT_LEVERAGE / 4n)
   const focusModeStore = tradingStore.craete('focusMode', ITradeFocusMode.collateral)
   const isLongStore = tradingStore.craete('isLong', true)
-  const inputTokenStore = tradingStore.craete('inputToken', AddressZero as ITokenInput)
+  const inputTokenStore = tradingStore.craete('inputToken', GMX.AddressZero as ITokenInput)
   const indexTokenStore = tradingStore.craete('indexToken', null as ITokenIndex | null)
   const collateralTokenStore = tradingStore.craete('collateralToken', null as ITokenStable | null)
   const isIncreaseStore = tradingStore.craete('isIncrease', true)
@@ -152,13 +162,13 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const chainId = config.chain.id
 
-  const nativeToken = CHAIN_ADDRESS_MAP[chainId].NATIVE_TOKEN
+  const nativeToken = GMX.CHAIN_ADDRESS_MAP[chainId].NATIVE_TOKEN
 
 
   const inputToken: Stream<ITokenInput> = inputTokenStore.storeReplay(
     changeInputToken,
     map(token => {
-      if (token === AddressZero) {
+      if (token === GMX.AddressZero) {
         return token
       }
 
@@ -183,7 +193,7 @@ export const $Trade = (config: ITradeComponent) => component((
     map(token => {
       const matchedToken = config.tokenStableMap[chainId]?.find(t => t === token)
 
-      return matchedToken || CHAIN_ADDRESS_MAP[chainId].USDC
+      return matchedToken || GMX.CHAIN_ADDRESS_MAP[chainId].USDC
     })
   )
 
@@ -197,22 +207,37 @@ export const $Trade = (config: ITradeComponent) => component((
       return now(0n)
     }
 
-    return tradeReader.getErc20Balance(config.chain, params.inputToken, params.wallet.account.address)
+    return getErc20Balance(config.chain, params.inputToken, params.wallet.account.address)
   }, combineObject({ inputToken, wallet }))))
 
 
   const inputTokenPrice = skipRepeats(tradeReader.getLatestPrice(inputToken))
   const indexTokenPrice = skipRepeats(multicast(switchLatest(map(token => {
-    return observer.duringWindowActivity(tradeReader.latestPriceFromExchanges(token))
+    return observer.duringWindowActivity(latestPriceFromExchanges(token))
   }, indexToken))))
   const collateralTokenPrice = skipRepeats(tradeReader.getLatestPrice(collateralToken))
 
 
 
-  const newLocal2 = debounce(50, combineObject({ account, indexToken, collateralToken, isLong }))
+  const route = switchMap(params => {
+    if (!params.wallet) {
+      throw new Error('wallet is required')
+    }
+
+    const key = getRouteKey(params.wallet.account.address, params.collateralToken, params.indexToken, params.isLong)
+    return map(route => {
+
+      return route === GMX.AddressZero ? null : route
+    }, orchestrator.read('getRoute', key))
+  }, combineObject({ inputToken, collateralToken, indexToken, isLong, wallet }))
+
+
+  const newLocal2 = debounce(50, combineObject({ route, indexToken, collateralToken, isLong }))
+
   const newLocal_1 = map(params => {
+
     const collateralToken = params.isLong ? params.indexToken : params.collateralToken
-    const address = params.account.address || AddressZero
+    const address = params.route || GMX.AddressZero
     const key = getPositionKey(address, collateralToken, params.indexToken, params.isLong)
 
 
@@ -224,17 +249,13 @@ export const $Trade = (config: ITradeComponent) => component((
   }, newLocal_1)
 
 
-  const keeperExecuteIncrease = tradeReader.executeIncreasePosition
-  const keeperDecreaseIncrease = tradeReader.executeDecreasePosition
-  const keeperCancelIncrease = tradeReader.cancelIncreasePosition
-  const keeperCancelDecrease = tradeReader.executeDecreasePosition
+  const keeperExecuteIncrease = positionRouter.listen('ExecuteIncreasePosition')
+  const keeperDecreaseIncrease = positionRouter.listen('ExecuteDecreasePosition')
+  const keeperCancelIncrease = positionRouter.listen('CancelIncreasePosition')
+  const keeperCancelDecrease = positionRouter.listen('CancelDecreasePosition')
 
 
-  // const keeperExecuteIncrease = tradeReader.executeIncreasePosition // mapKeeperEvent(globalPositionRouterReader.listen<KeeperIncreaseRequest>('ExecuteIncreasePosition'))
-  // const keeperDecreaseIncrease = tradeReader.executeDecreasePosition // mapKeeperEvent(globalPositionRouterReader.listen<KeeperDecreaseRequest>('ExecuteDecreasePosition'))
-  // const keeperCancelIncrease = tradeReader.cancelIncreasePosition // mapKeeperEvent(globalPositionRouterReader.listen<KeeperIncreaseRequest>('CancelIncreasePosition'))
-  // const keeperCancelDecrease = tradeReader.executeDecreasePosition // mapKeeperEvent(globalPositionRouterReader.listen<KeeperDecreaseRequest>('CancelDecreasePosition'))
-
+  
 
   const adjustPosition = multicast(mergeArray([
     keeperExecuteIncrease,
@@ -243,7 +264,7 @@ export const $Trade = (config: ITradeComponent) => component((
     keeperCancelDecrease,
   ]))
 
-  const positions = vaultReader('positions', map(pos => pos.key, positionKey))
+  const positions = vault.read('positions', map(pos => pos.key, positionKey))
 
   const positionChange: Stream<tradeReader.IPositionGetter> = multicast(map(params => {
     const [size, collateral, averagePrice, entryFundingRate, reserveAmount, realisedPnl, lastIncreasedTime] = params.positions
@@ -276,7 +297,7 @@ export const $Trade = (config: ITradeComponent) => component((
       return { ...pos, ...update }
     },
     positionChange,
-    tradeReader.positionUpdateEvent
+    vault.listen('UpdatePosition')
     // tradeReader.positionUpdateEvent
   ))
 
@@ -302,16 +323,16 @@ export const $Trade = (config: ITradeComponent) => component((
         }
       },
       positionChange,
-      mergeArray([tradeReader.positionCloseEvent, tradeReader.positionLiquidateEvent])
+      mergeArray([vault.listen('ClosePosition'), vault.listen('LiquidatePosition')])
       // mergeArray([tradeReader.positionCloseEvent, tradeReader.positionLiquidateEvent])
     ))
   ])))
 
-  const inputTokenWeight = vaultReader('tokenWeights', inputToken)
-  const inputTokenDebtUsd = tradeReader.vault.read('usdgAmounts', inputToken)
+  const inputTokenWeight = vault.read('tokenWeights', inputToken)
+  const inputTokenDebtUsd = vault.read('usdgAmounts', inputToken)
 
   const inputTokenDescription = combineArray((network, token) => {
-    if (network.id || token === AddressZero) {
+    if (network.id || token === GMX.AddressZero) {
       return getNativeTokenDescription(network.id)
     }
 
@@ -335,8 +356,8 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const swapFee = replayLatest(multicast(skipRepeats(map((params) => {
     const inputAndIndexStable = params.inputTokenDescription.isStable && params.indexTokenDescription.isStable
-    const swapFeeBasisPoints = inputAndIndexStable ? STABLE_SWAP_FEE_BASIS_POINTS : SWAP_FEE_BASIS_POINTS
-    const taxBasisPoints = inputAndIndexStable ? STABLE_TAX_BASIS_POINTS : TAX_BASIS_POINTS
+    const swapFeeBasisPoints = inputAndIndexStable ? GMX.STABLE_SWAP_FEE_BASIS_POINTS : GMX.SWAP_FEE_BASIS_POINTS
+    const taxBasisPoints = inputAndIndexStable ? GMX.STABLE_TAX_BASIS_POINTS : GMX.TAX_BASIS_POINTS
 
     const rsolvedInputAddress = resolveAddress(chainId, params.inputToken)
     if (rsolvedInputAddress === params.collateralToken) {
@@ -356,7 +377,7 @@ export const $Trade = (config: ITradeComponent) => component((
     }
 
 
-    const usdgAmount = amountUsd * getDenominator(params.inputTokenDescription.decimals) / USD_PERCISION
+    const usdgAmount = amountUsd * getDenominator(params.inputTokenDescription.decimals) / GMX.USD_PERCISION
 
     const feeBps0 = getFeeBasisPoints(
       params.inputTokenDebtUsd,
@@ -380,12 +401,12 @@ export const $Trade = (config: ITradeComponent) => component((
     )
 
     const feeBps = feeBps0 > feeBps1 ? feeBps0 : feeBps1
-    const addedSwapFee = feeBps ? amountUsd * feeBps / BASIS_POINTS_DIVISOR : 0n
+    const addedSwapFee = feeBps ? amountUsd * feeBps / GMX.BASIS_POINTS_DIVISOR : 0n
 
     return addedSwapFee
   }, combineObject({
     collateralToken, inputToken, isIncrease, sizeDeltaUsd, isLong, collateralDeltaUsd, network: walletLink.chain,
-    collateralTokenPoolInfo, usdgSupply: tradeReader.usdg.read('totalSupply'), totalTokenWeight: tradeReader.vault.read('totalTokenWeights'),
+    collateralTokenPoolInfo, usdgSupply: usdg.read('totalSupply'), totalTokenWeight: vault.read('totalTokenWeights'),
     position, inputTokenDescription, inputTokenWeight, inputTokenDebtUsd, indexTokenDescription, indexTokenPrice
   })))))
 
@@ -410,14 +431,6 @@ export const $Trade = (config: ITradeComponent) => component((
   const tradeConfig = { focusMode, slippage, isLong, isIncrease, inputToken, collateralToken, indexToken, leverage, collateralDelta, sizeDelta, collateralDeltaUsd, sizeDeltaUsd }
 
 
-  const route = switchMap(params => {
-    if (!params.wallet) {
-      throw new Error('wallet is required')
-    }
-
-    const key = getRouteKey(params.wallet.account.address, params.collateralToken, params.indexToken, params.isLong)
-    return map(hasRoute => hasRoute ? key : null, orchestrator.read('isRoute', key))
-  }, combineObject({ inputToken, collateralToken, indexToken, isLong, wallet }))
 
 
   // const hasRoute = orchestrator.read('isRoute', routeKey)
@@ -471,22 +484,22 @@ export const $Trade = (config: ITradeComponent) => component((
       }
 
 
-      if (params.inputToken === AddressZero || !params.isIncrease) {
+      if (params.inputToken === GMX.AddressZero || !params.isIncrease) {
         return true
       }
 
-      const contractAddress = getMappedValue(TRADE_CONTRACT_MAPPING, chainId).Router
+      const contractAddress = getMappedValue(GMX.TRADE_CONTRACT_MAPPING, chainId).Router
 
-      if (contractAddress === null || !params.wallet) {
+      if (params.route === null || contractAddress === null || !params.wallet) {
         return false
       }
 
       try {
         const allowedSpendAmount = await readContract({
-          address: params.wallet.account.address,
+          address: params.inputToken,
           abi: erc20Abi,
           functionName: 'allowance',
-          args: [params.wallet.account.address, contractAddress]
+          args: [params.wallet.account.address, params.route]
         })
 
         return allowedSpendAmount > collateralDeltaUsd
@@ -495,7 +508,7 @@ export const $Trade = (config: ITradeComponent) => component((
         return false
       }
 
-    }, collateralDeltaUsd, combineObject({ wallet, inputToken, isIncrease }))),
+    }, collateralDeltaUsd, combineObject({ wallet, inputToken, isIncrease, route }))),
   ])))
 
   const availableIndexLiquidityUsd = tradeReader.getAvailableLiquidityUsd(indexToken, collateralToken)
@@ -612,8 +625,8 @@ export const $Trade = (config: ITradeComponent) => component((
               position,
               collateralTokenPoolInfo,
               isTradingEnabled,
-              availableIndexLiquidityUsd,
               isInputTokenApproved,
+              availableIndexLiquidityUsd,
 
               inputTokenPrice,
               indexTokenPrice,
@@ -667,22 +680,22 @@ export const $Trade = (config: ITradeComponent) => component((
                 ? $ButtonToggle({
                   selected: timeframe,
                   options: [
-                    intervalTimeMap.MIN5,
-                    intervalTimeMap.MIN15,
-                    intervalTimeMap.MIN60,
-                    intervalTimeMap.HR4,
-                    intervalTimeMap.HR24,
-                    // intervalTimeMap.DAY7,
+                    GMX.TIME_INTERVAL_MAP.MIN5,
+                    GMX.TIME_INTERVAL_MAP.MIN15,
+                    GMX.TIME_INTERVAL_MAP.MIN60,
+                    GMX.TIME_INTERVAL_MAP.HR4,
+                    GMX.TIME_INTERVAL_MAP.HR24,
+                    // GMX.TIME_INTERVAL_MAP.DAY7,
                   ],
                   $$option: map(option => {
-                    const timeframeLabel = timeFrameLablMap[option]
+                    const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
 
                     return $text(timeframeLabel)
                   })
                 })({ select: selectTimeFrameTether() })
                 : $Dropdown({
                   $selection: switchLatest(map((option) => {
-                    const timeframeLabel = timeFrameLablMap[option]
+                    const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
 
                     return style({ padding: '8px', alignSelf: 'center' })(
                       $ButtonSecondary({
@@ -696,17 +709,17 @@ export const $Trade = (config: ITradeComponent) => component((
                   value: {
                     value: timeframe,
                     $$option: map((option) => {
-                      const timeframeLabel = timeFrameLablMap[option]
+                      const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
 
                       return $text(style({ fontSize: '0.85em' }))(timeframeLabel)
                     }),
                     list: [
-                      intervalTimeMap.MIN5,
-                      intervalTimeMap.MIN15,
-                      intervalTimeMap.MIN60,
-                      intervalTimeMap.HR4,
-                      intervalTimeMap.HR24,
-                      // intervalTimeMap.DAY7,
+                      GMX.TIME_INTERVAL_MAP.MIN5,
+                      GMX.TIME_INTERVAL_MAP.MIN15,
+                      GMX.TIME_INTERVAL_MAP.MIN60,
+                      GMX.TIME_INTERVAL_MAP.HR4,
+                      GMX.TIME_INTERVAL_MAP.HR24,
+                      // GMX.TIME_INTERVAL_MAP.DAY7,
                     ],
                   }
                 })({

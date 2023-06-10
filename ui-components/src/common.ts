@@ -1,14 +1,14 @@
-import { intervalTimeMap } from "gmx-middleware-const"
+import * as GMX from "gmx-middleware-const"
 
 export function getIntervalBasedOnTimeframe(maxColumns: number, from: number, to: number) {
   const delta = to - from
 
-  const interval = maxColumns < delta / intervalTimeMap.DAY7
-    ? intervalTimeMap.DAY7 : maxColumns < delta / intervalTimeMap.HR24
-      ? intervalTimeMap.HR24 : maxColumns < delta / intervalTimeMap.HR4
-        ? intervalTimeMap.HR4 : maxColumns < delta / intervalTimeMap.MIN60
-          ? intervalTimeMap.MIN60 : maxColumns < delta / intervalTimeMap.MIN15
-            ? intervalTimeMap.MIN15 : intervalTimeMap.MIN5
+  const interval = maxColumns < delta / GMX.TIME_INTERVAL_MAP.DAY7
+    ? GMX.TIME_INTERVAL_MAP.DAY7 : maxColumns < delta / GMX.TIME_INTERVAL_MAP.HR24
+      ? GMX.TIME_INTERVAL_MAP.HR24 : maxColumns < delta / GMX.TIME_INTERVAL_MAP.HR4
+        ? GMX.TIME_INTERVAL_MAP.HR4 : maxColumns < delta / GMX.TIME_INTERVAL_MAP.MIN60
+          ? GMX.TIME_INTERVAL_MAP.MIN60 : maxColumns < delta / GMX.TIME_INTERVAL_MAP.MIN15
+            ? GMX.TIME_INTERVAL_MAP.MIN15 : GMX.TIME_INTERVAL_MAP.MIN5
 
   return interval
 }

@@ -173,6 +173,9 @@ importers:
 
   const:
     dependencies:
+      gmx-middleware-const:
+        specifier: workspace:*
+        version: link:../gmx-middleware/const
       viem:
         specifier: ^1.0.0
         version: 1.0.0(typescript@5.1.3)
@@ -218,6 +221,9 @@ importers:
 
   gmx-middleware/const:
     dependencies:
+      abitype:
+        specifier: ^0.8.7
+        version: 0.8.7(typescript@5.1.3)(zod@3.21.4)
       viem:
         specifier: ^1.0.0
         version: 1.0.0(typescript@5.1.3)

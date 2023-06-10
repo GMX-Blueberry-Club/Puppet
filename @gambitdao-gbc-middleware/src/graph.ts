@@ -1,5 +1,6 @@
 import { O } from "@aelea/core"
 import { map } from "@most/core"
+export { Stream } from "@most/types"
 import { ClientOptions, OperationContext, TypedDocumentNode, cacheExchange, createClient, fetchExchange, gql } from "@urql/core"
 import {
   IAccountSummary,
@@ -20,7 +21,7 @@ import fetch from "isomorphic-fetch"
 import { numberToHex } from "viem"
 import { COMPETITION_METRIC_LIST, TOURNAMENT_DURATION, TOURNAMENT_TIME_ELAPSED } from "./config.js"
 import { IBlueberryLadder, ILabItem, ILabItemOwnership, IOwner, IRequestCompetitionLadderApi, IToken } from "./types.js"
-import { USD_PERCISION, intervalTimeMap, BASIS_POINTS_DIVISOR, CHAIN_ADDRESS_MAP } from "gmx-middleware-const"
+import * as GMX from "gmx-middleware-const"
 
 
 export const createSubgraphClient = (opts: ClientOptions) => {
@@ -196,7 +197,7 @@ _${id}: token(id: "${numberToHex(id)}") {
 
 
 const MIN_ROI_THRESHOLD = 50n
-const MIN_PNL_THRESHOLD = USD_PERCISION * 5n
+const MIN_PNL_THRESHOLD = GMX.USD_PERCISION * 5n
 
 
 function isWinner(summary: IAccountSummary) {
@@ -206,7 +207,7 @@ function isWinner(summary: IAccountSummary) {
 export const competitionLeaderboard = O(
   map(async (queryParams: IRequestCompetitionLadderApi) => {
 
-    const queryCache = cache('cacheKey', intervalTimeMap.MIN5, async () => {
+    const queryCache = cache('cacheKey', GMX.TIME_INTERVAL_MAP.MIN5, async () => {
 
       const tradeList = await gmxSubgraph.getCompetitionTrades(queryParams)
       const priceMap = await gmxSubgraph.getPriceMap(queryParams.to, queryParams)
@@ -233,7 +234,7 @@ export const competitionLeaderboard = O(
       const averageMaxCollateral = totalMaxCollateral / activeWinnerCount
       const estSize = size * BigInt(TOURNAMENT_DURATION) / BigInt(TOURNAMENT_TIME_ELAPSED)
 
-      const prizePool = getMarginFees(size) * 2500n / BASIS_POINTS_DIVISOR
+      const prizePool = getMarginFees(size) * 2500n / GMX.BASIS_POINTS_DIVISOR
       const estPrizePool = prizePool * BigInt(TOURNAMENT_DURATION) / BigInt(TOURNAMENT_TIME_ELAPSED)
 
       const totalScore = summaryList.reduce((s, n) => {
@@ -283,13 +284,13 @@ export const competitionLeaderboard = O(
       if (TOURNAMENT_DURATION === TOURNAMENT_TIME_ELAPSED) {
         // log CSV file for airdrop
 
-        const nativeToken = getMappedValue(CHAIN_ADDRESS_MAP, queryParams.chain).NATIVE_TOKEN
+        const nativeToken = getMappedValue(GMX.CHAIN_ADDRESS_MAP, queryParams.chain).NATIVE_TOKEN
 
         console.log(
           'token_type,token_address,receiver,amount,id\n' + sortedCompetitionList
             .filter(x => {
               const prize = prizePool * x.score / totalScore
-              return prize > USD_PERCISION * 5n
+              return prize > GMX.USD_PERCISION * 5n
             })
             .map((x, idx) => {
               const ethPrice = BigInt(priceMap['_' + nativeToken])

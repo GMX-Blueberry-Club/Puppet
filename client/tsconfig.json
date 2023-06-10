@@ -28,6 +28,15 @@
   "references": [
     {
       "path": "../middleware"
-    }
+    },
+    {
+      "path": "../const"
+    },
+    {
+      "path": "../ui-components"
+    },
+    {
+      "path": "../@gambitdao-gbc-middleware"
+    },
   ]
 }

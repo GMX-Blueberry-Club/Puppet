@@ -1,29 +1,22 @@
-import { Behavior, combineArray, O, replayLatest } from "@aelea/core"
+import { Behavior, O } from "@aelea/core"
 import { $Node, $text, component, style } from "@aelea/dom"
 import { Route } from "@aelea/router"
 import { $column, layoutSheet } from "@aelea/ui-components"
-import { CHAIN } from "gmx-middleware-const"
+import { awaitPromises, combine, map, mergeArray, now } from "@most/core"
+import { $ButtonToggle, $defaulButtonToggleContainer, $infoTooltipLabel, $openPositionPnlBreakdown, $PnlValue, $riskLiquidator, $sizeDisplay, $Table, $TradePnl } from "gmx-middleware-ui-components"
 import {
-  getClientNativeTokenUsd,
-  getGmxPriceUsd,
-  getSafeMappedValue,
   gmxSubgraph,
   IRequestAccountTradeListApi,
   readableDate, timeSince,
-  TRADE_CONTRACT_MAPPING,
-  unixTimestampNow,
+  unixTimestampNow
 } from "gmx-middleware-utils"
-import { $infoTooltipLabel, $openPositionPnlBreakdown, $PnlValue, $riskLiquidator, $sizeDisplay, $Table, $TradePnl } from "gmx-middleware-ui-components"
-import { $ButtonToggle, $defaulButtonToggleContainer } from "gmx-middleware-ui-components"
-import { awaitPromises, combine, map, mergeArray, multicast, now, switchLatest } from "@most/core"
 import { Address } from "viem"
 import { $CardTable } from "../components/$common"
-import { connectGmxEarn } from "../logic/contract"
-import * as tradeReader from "../logic/contract/trade"
+import { $card } from "../elements/$common"
+import * as tradeReader from "../logic/trade"
 import { fadeIn } from "../transitions/enter"
 import { walletLink } from "../wallet"
 import { $Index } from "./competition/$Leaderboard"
-import { $card } from "../elements/$common"
 
 
 
@@ -50,7 +43,6 @@ export const $Profile = (config: IProfile) => component((
   [requestAccountTradeList, requestAccountTradeListTether]: Behavior<number, IRequestAccountTradeListApi>,
 ) => {
 
-  // activeTab: Stream<IProfileActiveTab>
 
   const accountOpenTradeList = gmxSubgraph.accountOpenTradeList(
     map(chain => {
@@ -60,20 +52,6 @@ export const $Profile = (config: IProfile) => component((
       }
     }, walletLink.chain)
   )
-
-  const clientNativeTokenPrice = getClientNativeTokenUsd(walletLink.publicClient)
-  const clientGmxPrice = replayLatest(multicast(getGmxPriceUsd(walletLink.publicClient, clientNativeTokenPrice)))
-
-
-  const arbitrumContract = switchLatest(combineArray((provider, chain) => {
-    const contractMapping = getSafeMappedValue(TRADE_CONTRACT_MAPPING, chain, CHAIN.ARBITRUM)
-
-    if (contractMapping === null) {
-      return now(null)
-    }
-
-    return connectGmxEarn(now(provider), config.account, clientGmxPrice, contractMapping).stakingRewards
-  }, walletLink.publicClient, walletLink.chain))
 
 
   return [
@@ -229,7 +207,7 @@ export const $Profile = (config: IProfile) => component((
         //       stakingInfo: multicast(arbitrumContract),
         //       walletLink: config.walletLink,
         //       // priceFeedHistoryMap: pricefeedQuery,
-        //       // graphInterval: intervalTimeMap.HR4,
+        //       // graphInterval: GMX.TIME_INTERVAL_MAP.HR4,
         //     })({}),
         //   ),
         // ),
