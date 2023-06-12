@@ -16,7 +16,6 @@ import { empty, map } from "@most/core"
 
 export interface ITreasury {
   parentRoute: Route
-  treasuryStore: BrowserStore<"ROOT.v1.treasuryStore", ITreasuryStore>
 }
 
 const styleEl = document.createElement('style')

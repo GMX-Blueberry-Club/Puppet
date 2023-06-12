@@ -3,15 +3,15 @@ import { $element, $node, $text, component, eventElementTarget, style } from "@a
 import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { pallete } from "@aelea/ui-components-theme"
-import { BLUEBERRY_REFFERAL_CODE, IAccountStakingStore, ITreasuryStore } from "@gambitdao/gbc-middleware"
+import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
 import { map, merge, mergeArray, multicast, now, skipRepeats, startWith } from '@most/core'
-import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN, TIME_INTERVAL_MAP } from "gmx-middleware-const"
+import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN } from "gmx-middleware-const"
 import { ETH_ADDRESS_REGEXP } from "gmx-middleware-utils"
 import { Address } from "viem"
 import { $discoverIdentityDisplay } from "../components/$AccountProfile"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $MainMenuSmall } from '../components/$MainMenu'
-import { createLocalStorageChain } from "../logic/store"
+import * as database from "../logic/database"
 import { helloBackend } from '../logic/websocket'
 import { fadeIn } from "../transitions/enter"
 import { $Home } from "./$Home"
@@ -71,11 +71,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
 
 
-  // localstorage state
-  const store = createLocalStorageChain('ROOT', 'v1')
-  const treasuryStore = store.craete('treasuryStore', { startedStakingGlpTimestamp: 1639431367, startedStakingGmxTimestamp: 1639432924 - TIME_INTERVAL_MAP.MIN5 } as ITreasuryStore)
-  const accountStakingStore = store.craete('treasuryStore', {} as IAccountStakingStore)
 
+  
 
   const $liItem = $element('li')(style({ marginBottom: '14px' }))
 
@@ -112,7 +109,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
         )(
           $Home({
             parentRoute: rootRoute,
-            treasuryStore,
           })({ routeChanges: linkClickTether() })
 
         )
@@ -170,8 +166,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
             router.contains(profileWalletRoute)(
               fadeIn($ProfileConnected({
                 parentRoute: profileWalletRoute,
-                chainList: [CHAIN.ARBITRUM],
-                accountStakingStore
+                chainList: [CHAIN.ARBITRUM]
               })({
                 changeRoute: linkClickTether(),
               }))
@@ -218,8 +213,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                         // AVALANCHE_ADDRESS.MIM,
                       ]
                     },
-                    parentRoute: tradeRoute,
-                    store
+                    parentRoute: tradeRoute
                   })({
                     changeRoute: linkClickTether()
                   })

@@ -1,7 +1,5 @@
 {
     "name": "client",
-    "version": "0.0.0",
-    "license": "MIT",
     "private": true,
     "files": [
         ".dist"
@@ -17,11 +15,6 @@
         "@aelea/router": "^0.20.1",
         "@aelea/ui-components": "^0.28.1",
         "@aelea/ui-components-theme": "^0.10.0",
-        "gmx-middleware-const": "workspace:*",
-        "gmx-middleware-utils": "workspace:*",
-        "gmx-middleware-ui-components": "workspace:*",
-        "puppet-middleware-utils": "workspace:*",
-        "puppet-middleware-const": "workspace:*",
         "@gambitdao/gbc-middleware": "workspace:*",
         "@most/core": "^1.6.1",
         "@most/disposable": "^1.3.0",
@@ -37,10 +30,18 @@
         "@web3modal/standalone": "^2.3.7",
         "abitype": "^0.8.5",
         "construct-style-sheets-polyfill": "3.1.0",
+        "ethereum-indexer-js-processor": "^0.6.4",
         "eventemitter3": "^5.0.1",
+        "gmx-middleware-const": "workspace:*",
+        "gmx-middleware-ui-components": "workspace:*",
+        "gmx-middleware-utils": "workspace:*",
+        "gmx-middleware-browser-indexer": "workspace:*",
         "graphql": "^16.6.0",
         "jazzicon": "^1.5.0",
         "lightweight-charts": "^4.0.1",
+        "puppet-middleware-const": "workspace:*",
+        "puppet-middleware-utils": "workspace:*",
+        "@noble/hashes": "^1.3.1",
         "viem": "^1.0.0"
     },
     "devDependencies": {

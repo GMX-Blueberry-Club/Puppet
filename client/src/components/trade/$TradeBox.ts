@@ -4,10 +4,6 @@ import { Route } from "@aelea/router"
 import { $column, $icon, $NumberTicker, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import {
-  abs, bnDiv, div, filterNull, formatFixed, formatReadableUSD, formatToBasis, getAdjustedDelta, getDenominator,
-  getNativeTokenDescription, getPnL, getTokenAmount, getTokenDescription, getTokenUsd, IPricefeed, ITokenDescription, ITokenIndex, ITokenInput, ITokenStable, ITrade, ITradeOpen, parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, zipState
-} from "gmx-middleware-utils"
-import {
   awaitPromises,
   constant,
   delay,
@@ -26,7 +22,6 @@ import {
   zip
 } from "@most/core"
 import { Stream } from "@most/types"
-import { writeContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
 import * as GMX from "gmx-middleware-const"
 import {
@@ -34,7 +29,10 @@ import {
   $hintNumChange, $infoLabel, $infoLabeledValue, $infoTooltipLabel, $IntermediatePromise,
   $openPositionPnlBreakdown, $PnlValue, $riskLiquidator, $spinner, $tokenIconMap, $tokenLabelFromSummary
 } from "gmx-middleware-ui-components"
-import { } from "gmx-middleware-utils"
+import {
+  abs, bnDiv, div, filterNull, formatFixed, formatReadableUSD, formatToBasis, getAdjustedDelta, getDenominator,
+  getNativeTokenDescription, getPnL, getTokenAmount, getTokenDescription, getTokenUsd, IPricefeed, ITokenDescription, ITokenIndex, ITokenInput, ITokenStable, ITrade, ITradeOpen, parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, zipState
+} from "gmx-middleware-utils"
 import { MouseEventParams } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
@@ -45,14 +43,15 @@ import { $Slider } from "../$Slider"
 import { $card } from "../../elements/$common"
 import { $caretDown } from "../../elements/$icons"
 import { connectContract, wagmiWriteContract } from "../../logic/common"
-import { BrowserStore } from "../../logic/store"
+import { connectTrade, getErc20Balance, IPositionGetter, ITokenPoolInfo } from "../../logic/trade"
 import { resolveAddress } from "../../logic/utils"
 import { $Index } from "../../pages/competition/$Leaderboard"
 import { account, IWalletClient } from "../../wallet/walletLink"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultButtonPrimary, $defaultMiniButtonSecondary } from "../form/$Button"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown"
 import { $TradePnlHistory } from "./$TradePnlHistory"
-import { connectTrade, getErc20Balance, IPositionGetter, ITokenPoolInfo } from "../../logic/trade"
+import * as database from "../../logic/database"
+import { rootDataScope } from "../../logic/data"
 
 
 
@@ -119,7 +118,6 @@ export interface ITradeBoxParams {
   referralCode: viem.Hex
   tokenIndexMap: Partial<Record<number, ITokenIndex[]>>
   tokenStableMap: Partial<Record<number, ITokenStable[]>>
-  store: BrowserStore<"ROOT.v1.trade", string>
   parentRoute: Route
   chain: typeof arbitrum
 }
@@ -223,7 +221,7 @@ export const $TradeBox = (config: ITradeBox) => component((
         return `Not enough liquidity. current capcity ${formatReadableUSD(state.availableIndexLiquidityUsd)}`
       }
 
-      if (abs(state.collateralDeltaUsd) > state.walletBalanceUsd) {
+      if (state.isIncrease ? state.collateralDelta > state.walletBalance : state.collateralDeltaUsd > state.walletBalanceUsd) {
         return `Not enough ${state.inputTokenDescription.symbol} in connected account`
       }
 
@@ -264,7 +262,10 @@ export const $TradeBox = (config: ITradeBox) => component((
 
     return null
   }, combineObject({
-    leverage, position, swapFee, marginFee, fundingFee, liquidationPrice, walletBalanceUsd, isIncrease, indexTokenPrice, collateralDelta, collateralDeltaUsd, inputTokenDescription, collateralToken, sizeDeltaUsd, availableIndexLiquidityUsd, inputToken, collateralTokenPoolInfo, collateralTokenDescription, indexTokenDescription, isLong,
+    leverage, position, swapFee, marginFee, fundingFee, liquidationPrice, walletBalance,
+    walletBalanceUsd, isIncrease, indexTokenPrice, collateralDelta, collateralDeltaUsd, inputTokenDescription,
+    collateralToken, sizeDeltaUsd, availableIndexLiquidityUsd, inputToken, collateralTokenPoolInfo,
+    collateralTokenDescription, indexTokenDescription, isLong,
   })))
 
 

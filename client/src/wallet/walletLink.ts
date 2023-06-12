@@ -4,6 +4,7 @@ import { awaitPromises, delay, map, mergeArray, now } from "@most/core"
 import { Stream } from "@most/types"
 import { Address, GetAccountResult, GetNetworkResult, InjectedConnector, WalletClient, configureChains, createConfig, createStorage, getAccount, getNetwork, getPublicClient, getWalletClient, getWebSocketPublicClient, watchAccount, watchNetwork } from '@wagmi/core'
 import { WalletConnectConnector } from '@wagmi/core/connectors/walletConnect'
+import { alchemyProvider } from "@wagmi/core/providers/alchemy"
 import { jsonRpcProvider } from '@wagmi/core/providers/jsonRpc'
 import { EthereumClient } from '@web3modal/ethereum'
 import { Web3Modal } from '@web3modal/html'
@@ -26,9 +27,12 @@ const storage = createStorage({ storage: window.localStorage })
 
 const projectId = 'c7cea9637dde679f833971689e9a3119'
 
+
+
 const configChain = configureChains(
   [arbitrum, avalanche],
   [
+    alchemyProvider({ apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low' }),
     // w3mProvider({ projectId }),
     jsonRpcProvider({
       rpc: chain => {

@@ -19,7 +19,7 @@ import {
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, combine, constant, debounce, empty, filter, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, switchLatest, take, zip } from "@most/core"
+import { awaitPromises, combine, constant, debounce, empty, filter, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, take, tap, throttle, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
@@ -42,6 +42,8 @@ import { resolveAddress } from "../logic/utils"
 import { walletLink } from "../wallet"
 import { account, wallet } from "../wallet/walletLink"
 import { connectTrade, getErc20Balance, latestPriceFromExchanges } from "../logic/trade"
+import * as database from "../logic/database"
+import { rootScope } from "../logic/data"
 
 
 export type ITradeComponent = ITradeBoxParams
@@ -81,7 +83,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
   [changeInputToken, changeInputTokenTether]: Behavior<ITokenInput>,
   [changeIndexToken, changeIndexTokenTether]: Behavior<ITokenIndex>,
-  [changeCollateralToken, changeCollateralTokenTether]: Behavior<ITokenStable>,
+  [changeShortCollateralToken, changeShortCollateralTokenTether]: Behavior<ITokenStable>,
 
   [switchFocusMode, switchFocusModeTether]: Behavior<ITradeFocusMode>,
   [switchIsLong, switchIsLongTether]: Behavior<boolean>,
@@ -116,8 +118,10 @@ export const $Trade = (config: ITradeComponent) => component((
 
 ) => {
 
-  const gmxContractMap = GMX.CONTRACT[config.chain.id];
-  const puppetContractMap = PUPPET.CONTRACT[config.chain.id];
+  const chainId = config.chain.id
+  const nativeToken = GMX.CHAIN_ADDRESS_MAP[chainId].NATIVE_TOKEN
+  const gmxContractMap = GMX.CONTRACT[config.chain.id]
+  const puppetContractMap = PUPPET.CONTRACT[config.chain.id]
 
   const tradeReader = connectTrade(config.chain)
 
@@ -132,74 +136,66 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const executionFee = replayLatest(multicast(positionRouter.read('minExecutionFee')))
 
-  const tradingStore = config.store.craete('trade', 'tradeBox')
+  const tradingStore = database.createStoreScope(rootScope, 'tradeBox', empty())
 
-  const timeFrameStore = tradingStore.craete('portfolio-chart-interval', GMX.TIME_INTERVAL_MAP.MIN60)
 
-  const isTradingEnabledStore = tradingStore.craete('isTradingEnabled-v2', false)
-  const leverageStore = tradingStore.craete('leverage', GMX.LIMIT_LEVERAGE / 4n)
-  const focusModeStore = tradingStore.craete('focusMode', ITradeFocusMode.collateral)
-  const isLongStore = tradingStore.craete('isLong', true)
-  const inputTokenStore = tradingStore.craete('inputToken', GMX.AddressZero as ITokenInput)
-  const indexTokenStore = tradingStore.craete('indexToken', null as ITokenIndex | null)
-  const collateralTokenStore = tradingStore.craete('collateralToken', null as ITokenStable | null)
-  const isIncreaseStore = tradingStore.craete('isIncrease', true)
-  const slippageStore = tradingStore.craete('slippage', '0.35')
-  // const collateralRatioStore = tradingStore.craete('collateralRatio', 0)
+  const timeframe = database.createStoreScope(tradingStore, GMX.TIME_INTERVAL_MAP.MIN60, selectTimeFrame)
+  const isTradingEnabled = database.createStoreScope(timeframe, false, enableTrading)
 
-  const isTradingEnabled = isTradingEnabledStore.storeReplay(enableTrading)
-  const timeframe = timeFrameStore.storeReplay(selectTimeFrame)
+  const isLong = database.createStoreScope(isTradingEnabled, true, switchIsLong)
+  const isIncrease = database.createStoreScope(isLong, true, switchIsIncrease)
 
-  const isLong = isLongStore.storeReplay(mergeArray([map(t => t.isLong, switchTrade), switchIsLong]))
-  const isIncrease = isIncreaseStore.storeReplay(switchIsIncrease)
-
-  const focusMode = focusModeStore.storeReplay(switchFocusMode)
+  const focusMode = database.createStoreScope(isIncrease, ITradeFocusMode.collateral, switchFocusMode)
   const collateralDeltaUsd = replayLatest(changeCollateralDeltaUsd, 0n)
+  // const collateralDeltaUsd = database.createStoreScope(focusMode, 0n, tap(console.log, changeCollateralDeltaUsd))
   const sizeDeltaUsd = replayLatest(changeSizeDeltaUsd, 0n)
+  // const sizeDeltaUsd = database.createStoreScope(collateralDeltaUsd, 0n, changeSizeDeltaUsd)
+  const slippage = database.createStoreScope(focusMode, '0.35', changeSlippage)
 
 
-  const slippage = slippageStore.storeReplay(changeSlippage)
 
-  const chainId = config.chain.id
+  const inputToken = database.createStoreScope(slippage, GMX.AddressZero as ITokenInput, changeInputToken)
+  const indexToken = database.createStoreScope(inputToken, nativeToken as ITokenIndex, changeIndexToken)
+  const shortCollateralToken = database.createStoreScope(indexToken, null as ITokenStable | null, changeShortCollateralToken)
 
-  const nativeToken = GMX.CHAIN_ADDRESS_MAP[chainId].NATIVE_TOKEN
 
 
-  const inputToken: Stream<ITokenInput> = inputTokenStore.storeReplay(
-    changeInputToken,
-    map(token => {
-      if (token === GMX.AddressZero) {
-        return token
-      }
 
-      const allTokens = [...config.tokenIndexMap[chainId] || [], ...config.tokenStableMap[chainId] || []]
-      const matchedToken = allTokens?.find(t => t === token)
+  // const inputToken: Stream<ITokenInput> = inputTokenStore.storeReplay(
+  //   changeInputToken,
+  //   map(token => {
+  //     if (token === GMX.AddressZero) {
+  //       return token
+  //     }
 
-      return matchedToken || nativeToken
-    })
-  )
+  //     const allTokens = [...config.tokenIndexMap[chainId] || [], ...config.tokenStableMap[chainId] || []]
+  //     const matchedToken = allTokens?.find(t => t === token)
 
-  const indexToken: Stream<ITokenIndex> = indexTokenStore.storeReplay(
-    mergeArray([map(t => t.indexToken, switchTrade), changeIndexToken]),
-    map(token => {
-      const matchedToken = config.tokenIndexMap[chainId]?.find(t => t === token)
+  //     return matchedToken || nativeToken
+  //   })
+  // )
 
-      return matchedToken || nativeToken
-    })
-  )
+  // const indexToken: Stream<ITokenIndex> = indexTokenStore.storeReplay(
+  //   mergeArray([map(t => t.indexToken, switchTrade), changeIndexToken]),
+  //   map(token => {
+  //     const matchedToken = config.tokenIndexMap[chainId]?.find(t => t === token)
 
-  const collateralTokenReplay: Stream<ITokenStable> = collateralTokenStore.storeReplay(
-    mergeArray([map(t => t.collateralToken, switchTrade), changeCollateralToken]),
-    map(token => {
-      const matchedToken = config.tokenStableMap[chainId]?.find(t => t === token)
+  //     return matchedToken || nativeToken
+  //   })
+  // )
 
-      return matchedToken || GMX.CHAIN_ADDRESS_MAP[chainId].USDC
-    })
-  )
+  // const collateralTokenReplay: Stream<ITokenStable> = collateralTokenStore.storeReplay(
+  //   mergeArray([map(t => t.collateralToken, switchTrade), changeCollateralToken]),
+  //   map(token => {
+  //     const matchedToken = config.tokenStableMap[chainId]?.find(t => t === token)
+
+  //     return matchedToken || GMX.CHAIN_ADDRESS_MAP[chainId].USDC
+  //   })
+  // )
 
   const collateralToken: Stream<ITokenStable | ITokenIndex> = map(params => {
-    return params.isLong ? params.indexToken : params.collateralTokenReplay
-  }, combineObject({ isLong, indexToken, collateralTokenReplay }))
+    return params.isLong ? params.indexToken : params.shortCollateralToken
+  }, combineObject({ isLong, indexToken, shortCollateralToken, switchTrade: startWith(null, switchTrade) }))
 
 
   const walletBalance = replayLatest(multicast(switchMap(params => {
@@ -255,7 +251,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const keeperCancelDecrease = positionRouter.listen('CancelDecreasePosition')
 
 
-  
+
 
   const adjustPosition = multicast(mergeArray([
     keeperExecuteIncrease,
@@ -415,16 +411,18 @@ export const $Trade = (config: ITradeComponent) => component((
     return getFundingFee(params.position.entryFundingRate, params.collateralTokenPoolInfo.cumulativeRate, params.position.size)
   }, combineObject({ collateralTokenPoolInfo, position }))
 
-  const leverage = leverageStore.store(mergeArray([
-    changeLeverage,
-    zip((params, stake) => {
+
+  const leverage = mergeArray([
+    filterNull(zip((params, stake) => {
       if (stake.averagePrice > 0n) {
         return div(stake.size + params.sizeDeltaUsd, stake.collateral + params.collateralDeltaUsd - params.fundingFee)
       }
 
-      return leverageStore.getState()
-    }, combineObject({ collateralDeltaUsd, sizeDeltaUsd, fundingFee }), position),
-  ]))
+      return null
+    }, combineObject({ collateralDeltaUsd, sizeDeltaUsd, fundingFee }), position)),
+
+    database.createStoreScope(shortCollateralToken, GMX.LIMIT_LEVERAGE / 4n, changeLeverage)
+  ])
 
 
   // [config]
@@ -432,8 +430,6 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
 
-
-  // const hasRoute = orchestrator.read('isRoute', routeKey)
 
 
   const averagePrice = map(params => {
@@ -580,6 +576,12 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
 
+  const requestPricefeed = snapshot(async (params, requestPricefeed) => {
+    const pricefeed = await requestPricefeed
+    return { ...params, pricefeed }
+  }, combineObject({ timeframe, indexToken }), pricefeed)
+
+
   return [
     $node(
       style({
@@ -649,7 +651,7 @@ export const $Trade = (config: ITradeComponent) => component((
             changeCollateralDeltaUsd: changeCollateralDeltaUsdTether(),
             changeSizeDeltaUsd: changeSizeDeltaUsdTether(),
             changeInputToken: changeInputTokenTether(),
-            changeCollateralToken: changeCollateralTokenTether(),
+            changeCollateralToken: changeShortCollateralTokenTether(),
             changeIndexToken: changeIndexTokenTether(),
             switchIsLong: switchIsLongTether(),
             changeRoute: changeRouteTether(),
@@ -739,11 +741,13 @@ export const $Trade = (config: ITradeComponent) => component((
             ),
 
             $IntermediatePromise({
-              query: pricefeed,
-              $$done: snapshot((params, data) => {
+              query: requestPricefeed,
+              $loader: style({ inset: 0, position: 'absolute' })($spinner),
+              $$done: map(params => {
+
                 const tf = params.timeframe
 
-                const fst = data[data.length - 1]
+                const fst = params.pricefeed[params.pricefeed.length - 1]
                 const initialTick = {
                   open: formatFixed(fst.o, 30),
                   high: formatFixed(fst.h, 30),
@@ -786,7 +790,7 @@ export const $Trade = (config: ITradeComponent) => component((
                     )
                   ),
                   series: {
-                    data: data.map(({ o, h, l, c, timestamp }) => {
+                    data: params.pricefeed.map(({ o, h, l, c, timestamp }) => {
                       const open = formatFixed(o, 30)
                       const high = formatFixed(h, 30)
                       const low = formatFixed(l, 30)
@@ -924,7 +928,7 @@ export const $Trade = (config: ITradeComponent) => component((
                   visibleLogicalRangeChange: chartVisibleLogicalRangeChangeTether(),
                 })
 
-              }, combineObject({ timeframe, indexToken })),
+              }),
             })({})
 
 

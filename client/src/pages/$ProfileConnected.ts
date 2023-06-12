@@ -1,29 +1,176 @@
-import { Behavior, O } from "@aelea/core"
+import { Behavior, O, nullSink } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import { Route } from "@aelea/router"
 import { $column, $icon, $row, layoutSheet } from "@aelea/ui-components"
 
 import { pallete } from "@aelea/ui-components-theme"
-import { CHAIN } from "gmx-middleware-const"
 import { IAccountStakingStore } from "@gambitdao/gbc-middleware"
-import { IRequestAccountTradeListApi, TradeStatus, filterNull, gmxSubgraph, readableDate, timeSince, unixTimestampNow } from "gmx-middleware-utils"
-import { $ButtonToggle, $Link, $PnlValue, $TradePnl, $anchor, $defaulButtonToggleContainer, $infoTooltipLabel, $openPositionPnlBreakdown, $riskLiquidator, $sizeDisplay } from "gmx-middleware-ui-components"
 import { awaitPromises, map, mergeArray, now, zip } from "@most/core"
+import { newDefaultScheduler } from "@most/scheduler"
+import { CHAIN } from "gmx-middleware-const"
+import { $ButtonToggle, $Link, $PnlValue, $TradePnl, $anchor, $defaulButtonToggleContainer, $infoTooltipLabel, $openPositionPnlBreakdown, $riskLiquidator, $sizeDisplay } from "gmx-middleware-ui-components"
+import { IRequestAccountTradeListApi, TradeStatus, filterNull, gmxSubgraph, readableDate, timeSince, unixTimestampNow } from "gmx-middleware-utils"
 import { $labLogo } from "../common/$icons"
 import { $CardTable } from "../components/$common"
 import { $ButtonSecondary, $defaultButtonSecondary } from "../components/form/$Button"
 import { $responsiveFlex } from "../elements/$common"
 import * as tradeReader from "../logic/trade"
-import { BrowserStore } from "../logic/store"
 import { fadeIn } from "../transitions/enter"
 import { walletLink } from "../wallet"
 import { IProfileActiveTab } from "./$Profile"
 import { $Index } from "./competition/$Leaderboard"
+import * as PUPPET from "puppet-middleware-const"
+
+import { JSProcessor, fromJSProcessor } from "ethereum-indexer-js-processor"
+import { createIndexerState, keepStateOnIndexedDB } from "gmx-middleware-browser-indexer"
+import { connect } from "@wagmi/core"
+import { publicClient } from "../wallet/walletLink"
+import { parseAbiItem, toHex } from "viem"
+
+
+// we need the contract info
+// the abi will be used by the processor to have its type generated, allowing you to get type-safety
+// the adress will be given to the indexer, so it index only this contract
+// the startBlock field allow to tell the indexer to start indexing from that point only
+// here it is the block at which the contract was deployed
+const contract = {
+  ...PUPPET.CONTRACT[42161].Route,
+  address: '0x568810Dc2E4d5Bd115865CAc16Ffa0B44ef02955',
+  startBlock: 99683620,
+} as const
+
+// we define the type of the state computed by the processor
+// we can also declare it inline in the generic type of JSProcessor
+type State = { greetings: { account: `0x${string}`; message: string }[] };
+
+// the processor is given the type of the ABI as Generic type to get generated
+// it also specify the type which represent the current state
+const processor: JSProcessor<typeof contract.abi, State> = {
+  // you can set a version, ideally you would generate it so that it changes for each change
+  // when a version changes, the indexer will detect that and clear the state
+  // if it has the event stream cached, it will repopulate the state automatically
+  version: "0.0.2",
+  // this function set the starting state
+  // this allow the app to always have access to a state, no undefined needed
+  construct() {
+    return {
+      greetings: []
+    }
+  },
+  onCreatedIncreasePositionRequest(state, event) {
+
+    debugger
+    const greetingFound = state.greetings.find(
+      (v) => v.account === event.args.acceptablePrice
+    )
+
+  }
+  // each event has an associated on<EventName> function which is given both the current state and the typed event
+  // each event's argument can be accessed via the `args` field
+  // it then modify the state as it wishes
+  // behind the scene, the JSProcessor will handle reorg by reverting and applying new events automatically
+  // onMessageChanged(state, event): void {
+  //   const greetingFound = state.greetings.find(
+  //     (v) => v.account === event.args.user
+  //   )
+  //   if (greetingFound) {
+  //     greetingFound.message = event.args.message
+  //   } else {
+  //     state.greetings.push({
+  //       message: event.args.message,
+  //       account: event.args.user,
+  //     })
+  //   }
+  // },
+}
+
+// we setup the indexer via a call to `createIndexerState`
+// this setup a set of observable (subscribe pattern)
+// including one for the current state (computed by the processor above)
+// and one for the syncing
+// we then call `.withHooks(react)` to transform these observable in react hooks ready to be used.
+const indexer = createIndexerState(
+  fromJSProcessor(processor)(),
+  {
+    keepState: keepStateOnIndexedDB("basic") as any,
+  }
+)
+
+
+
+// const indexing = map(async client => {
+
+//   const abi = PUPPET.CONTRACT[42161].Route.abi
+
+//   const filter = await client.createContractEventFilter({
+//     strict: true,
+//     fromBlock: 99683620n,
+//     address: '0x568810Dc2E4d5Bd115865CAc16Ffa0B44ef02955',
+//     abi,
+//   })
+
+//   const logs = await client.getFilterLogs({
+//     filter
+//   })
+
+
+//   debugger
+
+
+//   // indexer.init({
+//   //   provider: client.transport,
+//   //   source: {
+//   //     chainId: String(client.chain.id),
+//   //     contracts: [contract]
+//   //   },
+//   // }).then(() => {
+//   //   // this automatically index on a timer
+//   //   // alternatively you can call `indexMore` or `indexMoreAndCatchupIfNeeded`, both available from the return value of `createIndexerState`
+//   //   // startAutoIndexing is easier but manually calling `indexMore` or `indexMoreAndCatchupIfNeeded` is better
+//   //   // this is because you can call them for every `newHeads` eth_subscribe message
+//   //   indexer.startAutoIndexing()
+//   // })
+
+
+//   // const event = parseAbiItem('event CreateIncreasePosition(address indexed account, address[] path, address indexToken, uint256 amountIn, uint256 minOut, uint256 sizeDelta, bool isLong, uint256 acceptablePrice, uint256 executionFee, uint256 index, uint256 queueIndex, uint256 blockNumber, uint256 blockTime, uint256 gasPrice)')
+
+//   // const filter = await client.getLogs({
+//   //   address: '0xb87a436b93ffe9d75c5cfa7bacfff96430b09868',
+//   //   // strict: true,
+//   //   event: parseAbiItem('event CreateIncreasePosition(address indexed account, address[] path, address indexToken, uint256 amountIn, uint256 minOut, uint256 sizeDelta, bool isLong, uint256 acceptablePrice, uint256 executionFee, uint256 index, uint256 queueIndex, uint256 blockNumber, uint256 blockTime, uint256 gasPrice)'), 
+//   //   // event: {
+//   //   //   type: 'event',
+//   //   //   name: 'Transfer',
+//   //   //   inputs: [
+//   //   //     { type: 'address', indexed: true, name: 'from' },
+//   //   //     { type: 'address', indexed: true, name: 'to' },
+//   //   //     { type: 'uint256', indexed: false, name: 'value' }
+//   //   //   ]
+//   //   // },
+//   //   fromBlock: 99717243n,
+//   //   // toBlock: "latest"
+//   // })
+
+//   // const filter = await client.createContractEventFilter({
+//   //   address: '0xb87a436b93ffe9d75c5cfa7bacfff96430b09868',
+//   //   abi: PUPPET.CONTRACT[42161].Route.abi,
+//   //   eventName: 'CreatedIncreasePositionRequest'
+//   // })
+//   // // ...
+//   // const logs = await client.getFilterLogs({ filter })
+
+//   // const logs = await client.getFilterLogs({ filter })
+
+
+
+
+// }, publicClient).run(nullSink, newDefaultScheduler())
+
+
 
 export interface IAccount {
   parentRoute: Route
   chainList: CHAIN[]
-  accountStakingStore: BrowserStore<"ROOT.v1.treasuryStore", IAccountStakingStore>
 }
 
 export const $ProfileConnected = (config: IAccount) => component((
@@ -79,7 +226,7 @@ export const $ProfileConnected = (config: IAccount) => component((
         })({ select: selectProfileModeTether() }),
 
 
-        
+
 
         fadeIn(
           $column(layoutSheet.spacingBig, style({ flex: 1 }))(

@@ -225,7 +225,6 @@ export function connectTrade(chain: ISupportedChain) {
     const maxGlobalShortSizes = positionRouter.read('maxGlobalShortSizes', indexToken)
     const maxGlobalLongSizes = positionRouter.read('maxGlobalLongSizes', indexToken)
 
-    const state = combineObject({ collateralToken, maxGlobalShortSizes, maxGlobalLongSizes, indexToken, globalShortSizes, guaranteedUsd })
 
     return map(params => {
       const collateralTokenDescription = getTokenDescription(params.collateralToken)
@@ -235,7 +234,7 @@ export function connectTrade(chain: ISupportedChain) {
       const globalMaxSize = isStable ? params.maxGlobalShortSizes : params.maxGlobalLongSizes
 
       return globalMaxSize - vaultSize
-    }, state)
+    }, combineObject({ collateralToken, maxGlobalShortSizes, maxGlobalLongSizes, indexToken, globalShortSizes, guaranteedUsd }))
   }
 
 
