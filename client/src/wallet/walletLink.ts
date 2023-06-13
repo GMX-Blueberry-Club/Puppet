@@ -6,7 +6,7 @@ import { Address, GetAccountResult, GetNetworkResult, InjectedConnector, WalletC
 import { WalletConnectConnector } from '@wagmi/core/connectors/walletConnect'
 import { alchemyProvider } from "@wagmi/core/providers/alchemy"
 import { jsonRpcProvider } from '@wagmi/core/providers/jsonRpc'
-import { EthereumClient } from '@web3modal/ethereum'
+import { EthereumClient, w3mProvider } from '@web3modal/ethereum'
 import { Web3Modal } from '@web3modal/html'
 import { PublicClient, Transport } from "viem"
 import { arbitrum, avalanche } from "viem/chains"
@@ -33,7 +33,7 @@ const configChain = configureChains(
   [arbitrum, avalanche],
   [
     alchemyProvider({ apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low' }),
-    // w3mProvider({ projectId }),
+    w3mProvider({ projectId }),
     jsonRpcProvider({
       rpc: chain => {
         const supportedChains = [

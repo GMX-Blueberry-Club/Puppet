@@ -51,7 +51,7 @@ import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultButtonPrim
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown"
 import { $TradePnlHistory } from "./$TradePnlHistory"
 import * as database from "../../logic/database"
-import { rootDataScope } from "../../logic/data"
+import { rootDataScope } from "../../data"
 
 
 
@@ -1600,7 +1600,14 @@ export const $TradeBox = (config: ITradeBox) => component((
 
           return div(state.position.size, state.position.collateral - state.fundingFee)
         }, combineObject({ position, fundingFee }), resetTrade)),
-        mergeArray([clickClose, slideLeverage])
+        filterNull(zip((params, stake) => {
+          if (stake.averagePrice > 0n) {
+            return div(stake.size + params.sizeDeltaUsd, stake.collateral + params.collateralDeltaUsd - params.fundingFee)
+          }
+
+          return null
+        }, combineObject({ collateralDeltaUsd, sizeDeltaUsd, fundingFee }), position)),
+        mergeArray([clickClose, slideLeverage]),
       ]),
       switchIsIncrease,
       changeCollateralToken,

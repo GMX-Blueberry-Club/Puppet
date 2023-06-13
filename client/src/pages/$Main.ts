@@ -10,7 +10,7 @@ import { ETH_ADDRESS_REGEXP } from "gmx-middleware-utils"
 import { Address } from "viem"
 import { $discoverIdentityDisplay } from "../components/$AccountProfile"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
-import { $MainMenuSmall } from '../components/$MainMenu'
+import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu'
 import * as database from "../logic/database"
 import { helloBackend } from '../logic/websocket'
 import { fadeIn } from "../transitions/enter"
@@ -19,6 +19,7 @@ import { $Profile } from "./$Profile"
 import { $ProfileConnected } from "./$ProfileConnected"
 import { $Trade } from "./$Trade"
 import { $Leaderboard } from "./competition/$Leaderboard"
+import { $PuppetPortfolio } from "./$Puppet"
 
 
 
@@ -72,7 +73,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
 
 
-  
+
 
   const $liItem = $element('li')(style({ marginBottom: '14px' }))
 
@@ -114,20 +115,38 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
         )
       ),
       router.contains(appRoute)(
-        $rootContainer(style({
-          display: 'flex', flexDirection: 'column',
-          gap: screenUtils.isDesktopScreen ? '35px' : '35px',
-        }))(
-
-          $MainMenuSmall({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
-            routeChange: linkClickTether(),
-          }),
+        $rootContainer(
+          screenUtils.isDesktopScreen
+            ? style({
+              display: 'flex', flexDirection: 'row',
+            })
+            : style({
+              display: 'flex', flexDirection: 'column',
+              gap: '35px',
+            })
+        )(
+          screenUtils.isDesktopScreen
+            ? $MainMenu({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+              routeChange: linkClickTether(),
+            })
+            : $MainMenuMobile({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+              routeChange: linkClickTether(),
+            }),
 
           $column(
             layoutSheet.spacingBig,
             // styleBehavior(map(isMobile => ({ flexDirection: isMobile ? 'row' : 'column' }), isMobileScreen)),
-            style({ margin: '0 auto', maxWidth: '1440px', gap: screenUtils.isDesktopScreen ? '55px' : '55px', width: '100%' })
+            style({ margin: '0 auto', maxWidth: '1440px', paddingTop: screenUtils.isDesktopScreen ? '55px' : '', gap: screenUtils.isDesktopScreen ? '55px' : '55px', width: '100%' })
           )(
+
+            router.match(appRoute)(
+              fadeIn($PuppetPortfolio({
+                parentRoute: profileWalletRoute,
+                chainList: [CHAIN.ARBITRUM]
+              })({
+                changeRoute: linkClickTether(),
+              }))
+            ),
 
             // switchMap(isMobile => {
             //   if (isMobile) {

@@ -98,74 +98,6 @@ const indexer = createIndexerState(
 
 
 
-// const indexing = map(async client => {
-
-//   const abi = PUPPET.CONTRACT[42161].Route.abi
-
-//   const filter = await client.createContractEventFilter({
-//     strict: true,
-//     fromBlock: 99683620n,
-//     address: '0x568810Dc2E4d5Bd115865CAc16Ffa0B44ef02955',
-//     abi,
-//   })
-
-//   const logs = await client.getFilterLogs({
-//     filter
-//   })
-
-
-//   debugger
-
-
-//   // indexer.init({
-//   //   provider: client.transport,
-//   //   source: {
-//   //     chainId: String(client.chain.id),
-//   //     contracts: [contract]
-//   //   },
-//   // }).then(() => {
-//   //   // this automatically index on a timer
-//   //   // alternatively you can call `indexMore` or `indexMoreAndCatchupIfNeeded`, both available from the return value of `createIndexerState`
-//   //   // startAutoIndexing is easier but manually calling `indexMore` or `indexMoreAndCatchupIfNeeded` is better
-//   //   // this is because you can call them for every `newHeads` eth_subscribe message
-//   //   indexer.startAutoIndexing()
-//   // })
-
-
-//   // const event = parseAbiItem('event CreateIncreasePosition(address indexed account, address[] path, address indexToken, uint256 amountIn, uint256 minOut, uint256 sizeDelta, bool isLong, uint256 acceptablePrice, uint256 executionFee, uint256 index, uint256 queueIndex, uint256 blockNumber, uint256 blockTime, uint256 gasPrice)')
-
-//   // const filter = await client.getLogs({
-//   //   address: '0xb87a436b93ffe9d75c5cfa7bacfff96430b09868',
-//   //   // strict: true,
-//   //   event: parseAbiItem('event CreateIncreasePosition(address indexed account, address[] path, address indexToken, uint256 amountIn, uint256 minOut, uint256 sizeDelta, bool isLong, uint256 acceptablePrice, uint256 executionFee, uint256 index, uint256 queueIndex, uint256 blockNumber, uint256 blockTime, uint256 gasPrice)'), 
-//   //   // event: {
-//   //   //   type: 'event',
-//   //   //   name: 'Transfer',
-//   //   //   inputs: [
-//   //   //     { type: 'address', indexed: true, name: 'from' },
-//   //   //     { type: 'address', indexed: true, name: 'to' },
-//   //   //     { type: 'uint256', indexed: false, name: 'value' }
-//   //   //   ]
-//   //   // },
-//   //   fromBlock: 99717243n,
-//   //   // toBlock: "latest"
-//   // })
-
-//   // const filter = await client.createContractEventFilter({
-//   //   address: '0xb87a436b93ffe9d75c5cfa7bacfff96430b09868',
-//   //   abi: PUPPET.CONTRACT[42161].Route.abi,
-//   //   eventName: 'CreatedIncreasePositionRequest'
-//   // })
-//   // // ...
-//   // const logs = await client.getFilterLogs({ filter })
-
-//   // const logs = await client.getFilterLogs({ filter })
-
-
-
-
-// }, publicClient).run(nullSink, newDefaultScheduler())
-
 
 
 export interface IAccount {
@@ -188,25 +120,25 @@ export const $ProfileConnected = (config: IAccount) => component((
       layoutSheet.spacingBig,
       // style({ maxWidth: '560px', width: '100%', margin: '0 auto', })
     )(
-      $column(layoutSheet.spacing, style({ flex: 1 }))(
+      // $column(layoutSheet.spacing, style({ flex: 1 }))(
 
-        $column(layoutSheet.spacing, style({ alignItems: 'center' }))(
-          $Link({
-            $content: $anchor(
-              $ButtonSecondary({
-                $container: $defaultButtonSecondary,
-                $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
-                  $icon({ $content: $labLogo, width: '16px', fill: pallete.middleground, viewBox: '0 0 32 32' }),
-                  $text('Wardrobe')
-                )
-              })({}),
-            ),
-            url: '/app/wardrobe', route: config.parentRoute
-          })({
-            click: changeRouteTether()
-          })
-        ),
-      ),
+      //   $column(layoutSheet.spacing, style({ alignItems: 'center' }))(
+      //     $Link({
+      //       $content: $anchor(
+      //         $ButtonSecondary({
+      //           $container: $defaultButtonSecondary,
+      //           $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
+      //             $icon({ $content: $labLogo, width: '16px', fill: pallete.middleground, viewBox: '0 0 32 32' }),
+      //             $text('Wardrobe')
+      //           )
+      //         })({}),
+      //       ),
+      //       url: '/app/wardrobe', route: config.parentRoute
+      //     })({
+      //       click: changeRouteTether()
+      //     })
+      //   ),
+      // ),
 
       $node(),
 

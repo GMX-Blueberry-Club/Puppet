@@ -45,21 +45,11 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
 
 
   const $pageLink = ($iconPath: $Branch<SVGPathElement>, text: string | Stream<string>) => $row(style({ alignItems: 'center', cursor: 'pointer' }))(
-    $icon({ $content: $iconPath, width: '16px', fill: pallete.middleground, svgOps: style({ minWidth: '36px' }), viewBox: '0 0 32 32' }),
+    $icon({ $content: $iconPath, width: '26px', svgOps: style({ minWidth: '36px' }), viewBox: '0 0 32 32' }),
     $text(text)
   )
 
 
-
-  const $menuItemList = [
-    $Link({ $content: $pageLink($gmxLogo, ''), url: '/app/trade', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
-      // $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', disabled: now(false), route: parentRoute.create({ fragment: 'feefwefwe' }) })({
-      click: routeChangeTether()
-    }),
-    $Link({ $content: $pageLink($stackedCoins, ''), url: '/app/leaderboard', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
-      click: routeChangeTether()
-    }),
-  ]
 
 
 
@@ -96,13 +86,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
     ),
     $popContent: map((_) => {
       return $column(layoutSheet.spacingBig, style({ marginTop: screenUtils.isMobileScreen ? '-40px' : '' }))(
-        ...screenUtils.isMobileScreen
-          ? [
-            ...$menuItemList,
-            ...$treasuryLinks
-          ]
-          : [],
-
+        
         // ...screenUtils.isMobileScreen ? $menuItemList : [],
         $row(layoutSheet.spacingBig, style({ flexWrap: 'wrap', width: '210px' }))(
           $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://docs.blueberry.club/' }))(
@@ -162,7 +146,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
     // bottom: 0;
     // margin-left: -90px;
 
-    $column(layoutSheet.spacingBig, style({ marginLeft: '-90px', padding: '14px', paddingLeft: '0', flexShrink: 0, alignItems: 'flex-end', borderRadius: '30px', borderRight: `1px solid ${colorAlpha(pallete.foreground, .20)}`, placeContent: 'space-between' }))(
+    $column(layoutSheet.spacingBig, style({ padding: '14px', paddingLeft: '0', flexShrink: 0, alignItems: 'flex-end', borderRadius: '30px', borderRight: `1px solid ${colorAlpha(pallete.foreground, .20)}`, placeContent: 'space-between' }))(
       $column(layoutSheet.spacingBig, style({ alignItems: 'center' }))(
         $RouterAnchor({ url: '/', route: parentRoute, $anchor: $element('a')($icon({ $content: $puppetLogo, width: '45px', viewBox: '0 0 32 32' })) })({
           click: routeChangeTether()
@@ -172,8 +156,16 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
         // $extraMenuPopover,
       ),
 
-      $column(screenUtils.isDesktopScreen ? layoutSheet.spacingBig : layoutSheet.spacing, style({ flex: 1, alignItems: 'flex-end', placeContent: 'center' }))(
-        ...screenUtils.isDesktopScreen ? $menuItemList : [],
+      $column(screenUtils.isDesktopScreen ? layoutSheet.spacingBig : layoutSheet.spacing, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
+        
+        $Link({ $content: $pageLink($gmxLogo, ''), url: '/app/trade', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+          // $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', disabled: now(false), route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+          click: routeChangeTether()
+        }),
+
+        $Link({ $content: $pageLink($stackedCoins, ''), url: '/app/leaderboard', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+          click: routeChangeTether()
+        }),
 
         $WalletDisplay({
           $container: $column(style({ width: '45px' })),
@@ -181,6 +173,8 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
         })({
           routeChange: routeChangeTether(),
         }),
+
+
       ),
 
       $column(layoutSheet.spacingBig, style({ placeContent: 'flex-end', flex: 1 }))(
@@ -188,13 +182,13 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
 
         ...screenUtils.isDesktopScreen ? [
           $circleButtonAnchor(attr({ href: 'https://docs.blueberry.club/' }))(
-            $icon({ $content: $gitbook, width: '22px', viewBox: `0 0 32 32` })
+            $icon({ $content: $gitbook, fill: pallete.middleground, width: '22px', viewBox: `0 0 32 32` })
           ),
           $circleButtonAnchor(attr({ href: 'https://discord.com/invite/7ZMmeU3z9j' }))(
-            $icon({ $content: $discord, width: '22px', viewBox: `0 0 32 32` })
+            $icon({ $content: $discord, fill: pallete.middleground, width: '22px', viewBox: `0 0 32 32` })
           ),
           $circleButtonAnchor(attr({ href: 'https://twitter.com/GBlueberryClub' }))(
-            $icon({ $content: $twitter, width: '22px', viewBox: `0 0 24 24` })
+            $icon({ $content: $twitter, fill: pallete.middleground, width: '22px', viewBox: `0 0 24 24` })
           ),
           // $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://www.instagram.com/blueberryclub.eth' }))(
           //   $icon({ $content: $instagram, width: '18px', viewBox: `0 0 32 32` })
@@ -210,7 +204,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
   ]
 })
 
-export const $MainMenuSmall = ({ parentRoute, chainList, showAccount = true }: MainMenu) => component((
+export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: MainMenu) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
   [clickPopoverClaim, clickPopoverClaimTether]: Behavior<any, any>,
   [walletChange, walletChangeTether]: Behavior<any, any>,

@@ -1,20 +1,16 @@
 import { fromCallback } from '@aelea/core'
-import { combine, continueWith, map, switchLatest, take, tap } from "@most/core"
+import { concatMap, continueWith, fromPromise, map, switchLatest, take, tap, throttle } from "@most/core"
+import { curry2, curry3 } from '@most/prelude'
 import { Stream } from "@most/types"
 import { sha256 } from '@noble/hashes/sha256'
 import { bytesToHex } from '@noble/hashes/utils'
-import { switchMap } from 'gmx-middleware-utils'
-
 
 
 // @ts-ignore
 BigInt.prototype.toJSON = function () { return this.toString() + 'n' }
-const ES_BIGINT_EXP = /-?\d+n$/
-
 
 
 export function initDbStore<TName extends string>(dbName: TName): Stream<IDBDatabase> {
-
   const cb = fromCallback<IDBDatabase>(cb => {
     const indexedDB = window.indexedDB
     const request = indexedDB.open(dbName, 1)
@@ -27,15 +23,10 @@ export function initDbStore<TName extends string>(dbName: TName): Stream<IDBData
       cb(db)
     }
 
-
     request.onupgradeneeded = (event) => {
       const db = request.result
-      const transaction = db.createObjectStore(dbName, { keyPath: 'id' })
-
-      // transaction.put({ id: 'databaseVersion', www: '222' })
+      db.createObjectStore(dbName, { keyPath: 'id' })
     }
-
-
 
     return () => {
       request.onsuccess = null
@@ -46,101 +37,82 @@ export function initDbStore<TName extends string>(dbName: TName): Stream<IDBData
   return cb
 }
 
-function transact(db: IDBDatabase, id: string, data: any) {
-  return fromCallback(cbf => {
+function transact<TResult>(db: IDBDatabase, action: (store: IDBObjectStore) => IDBRequest<TResult>): Stream<TResult> {
+  return fromPromise(new Promise((resolve, reject) => {
     const transaction = db.transaction(db.name, 'readwrite')
     const store = transaction.objectStore(db.name)
+    const request = action(store)
 
-    console.log(data)
-    const request = store.put({ id, data })
-    request.onsuccess = () => cbf(data)
-    request.onerror = (err) => console.error(err)
-
-    return () => {
-      request.onsuccess = null
-    }
-  })
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  }))
 }
 
-export function store<TData>(dbEvent: Stream<IDBDatabase>, key: string, write: Stream<TData>): Stream<TData> {
+export function getStore<TData>(dbEvent: Stream<IDBDatabase>, key: string): Stream<TData> {
   return switchLatest(map(db => {
-    return tap(data => {
-      const transaction = db.transaction(db.name, 'readwrite')
-      const store = transaction.objectStore(db.name)
+    return transact(db, store => {
+      return store.get(key)
+    })
+  }, dbEvent))
+}
 
-      store.put({ id: key, data })
+export function streamSaveStore<TData>(dbEvent: Stream<IDBDatabase>, key: string, write: Stream<TData>): Stream<IDBValidKey> {
+  return switchLatest(map(db => {
+    return concatMap(data => {
+      return transact(db, store => {
+        return store.put({ id: key, data })
+      })
     }, write)
   }, dbEvent))
 }
 
-// export function storeReplay<TData>(scope: TScopeNext, write: Stream<TData>): Stream<TData> {
-//   const replay: Stream<TData> = take(1, switchLatest(map(db => {
-//     return fromCallback(cbf => {
-//       const objectStore = db.transaction(scope.key, 'readonly').objectStore(scope.key)
-//       const request = objectStore.get(scope.key)
-//       request.onsuccess = () => {
 
-//         const result = request.result === undefined ? scope.initalState : request.result.data
-//         cbf(result)
-//       }
-
-//       return () => {
-//         request.onsuccess = null
-//       }
-//     })
-//   }, scope.db)))
-
-//   const doWrite = store(scope, write)
-
-//   return continueWith(() => doWrite, replay)
-// }
-
-
-
-export interface IScopeConfig<TData> {
-  initialState: TData
+export interface IStoreConfig {
   db: Stream<IDBDatabase>
   key: string
 }
-
-export interface TScopeNext<TData> extends IScopeConfig<TData>, Stream<TData> {
+export interface IStoreScope<TData> extends IStoreConfig, Stream<TData> {
   write: Stream<TData>
+  scope: ICreateScopeCurry2
 }
 
-export function createStoreScope<TData>(parentScope: IScopeConfig<any>, initialState: TData, write: Stream<TData>): TScopeNext<TData> {
+
+export type ICreateScopeFn<TData> = (write: Stream<TData>) => IStoreScope<TData>
+
+export interface ICreateScopeCurry2 {
+  <TData>(initialState: TData, write: Stream<TData>): IStoreScope<TData>
+  <TData>(initialState: TData): (write: Stream<TData>) => IStoreScope<TData>
+}
+
+export interface ICreateScopeCurry3 {
+  <TData>(parentScope: IStoreConfig, initialState: TData, write: Stream<TData>): IStoreScope<TData>
+  <TData>(parentScope: IStoreConfig, initialState: TData): (write: Stream<TData>) => IStoreScope<TData>
+  (parentScope: IStoreConfig): ICreateScopeCurry2
+}
+
+
+
+
+export const createStoreScope: ICreateScopeCurry3 = curry3(<TData>(parentScope: IStoreConfig, initialState: TData, write: Stream<TData>): IStoreScope<TData> => {
   const newKey = hashData(JSON.stringify(initialState))
   const nextKey = hashData(`${parentScope.key}.${newKey}`)
 
-  const startWith: Stream<TData> = take(1, switchLatest(map(db => {
-    return fromCallback(cbf => {
-      const objectStore = db.transaction(db.name, 'readonly').objectStore(db.name)
-      const request = objectStore.get(nextKey)
-      request.onsuccess = () => {
-        const result = request.result === undefined ? initialState : request.result.data
-        cbf(result)
-      }
+  const startWith: Stream<TData> = map(data => data === undefined ? initialState : data, getStore<TData>(parentScope.db, nextKey))
 
-      return () => {
-        request.onsuccess = null
-      }
-    })
-  }, parentScope.db)))
-
-  const doWrite = store(parentScope.db, nextKey, write)
+  const doWrite = streamSaveStore(parentScope.db, nextKey, write)
   const replay = continueWith(() => doWrite, startWith)
 
 
   return {
+    scope: createStoreScope({ key: nextKey, db: parentScope.db }),
     run(sink, scheduler) {
       return replay.run(sink, scheduler)
     },
     db: parentScope.db,
-    initialState,
     key: nextKey,
-    write
+    write,
   }
-}
-
+})
 
 
 

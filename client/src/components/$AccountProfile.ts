@@ -22,6 +22,7 @@ export interface IProfilePreview {
   $container?: NodeComposeFn<$Node>
   labelSize?: string
   showAddress?: boolean
+  $profileContainer?: NodeComposeFn<$Node>
 }
 
 export interface IAccountClaim extends IAccountPreview {
@@ -65,12 +66,12 @@ export const $discoverIdentityDisplay = (config: IAccountPreview) => {
 
 
 export const $accountPreview = ({
-  address, showAddress = true, $container, labelSize
+  address, showAddress = true, $container = $row, labelSize, $profileContainer
 }: IAccountPreview) => {
-  return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', pointerEvents: 'none', textDecoration: 'none' }))(
+  return $container(layoutSheet.spacingSmall, style({ alignItems: 'center', placeContent: 'center', pointerEvents: 'none', textDecoration: 'none' }))(
     $jazzicon({
       address,
-      $container
+      $container: $profileContainer
     }),
     showAddress ? $AccountLabel(address, labelSize) : empty(),
   )

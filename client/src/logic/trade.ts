@@ -163,7 +163,7 @@ export function getErc20Balance(chain: Chain, token: ITokenTrade | typeof GMX.Ad
 
 export function connectTrade(chain: ISupportedChain) {
 
-  const contract = GMX.CONTRACT[chain.id];
+  const contract = GMX.CONTRACT[chain.id]
   // export const positionRouter = connectMappedContract(TRADE_CONTRACT_MAPPING, 'PositionRouter', abi.positionRouter)
   const positionRouter = connectContract(contract.PositionRouter)
   const pricefeed = connectContract(contract.VaultPriceFeed)

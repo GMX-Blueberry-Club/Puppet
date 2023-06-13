@@ -43,7 +43,7 @@ import { walletLink } from "../wallet"
 import { account, wallet } from "../wallet/walletLink"
 import { connectTrade, getErc20Balance, latestPriceFromExchanges } from "../logic/trade"
 import * as database from "../logic/database"
-import { rootScope } from "../logic/data"
+import { rootStoreScope, rootStoreScope } from "../data"
 
 
 export type ITradeComponent = ITradeBoxParams
@@ -136,28 +136,25 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const executionFee = replayLatest(multicast(positionRouter.read('minExecutionFee')))
 
-  const tradingStore = database.createStoreScope(rootScope, 'tradeBox', empty())
+  const tradingStore = rootStoreScope.scope('tradeBox', empty())
 
 
-  const timeframe = database.createStoreScope(tradingStore, GMX.TIME_INTERVAL_MAP.MIN60, selectTimeFrame)
-  const isTradingEnabled = database.createStoreScope(timeframe, false, enableTrading)
+  const timeframe = tradingStore.scope(GMX.TIME_INTERVAL_MAP.MIN60, selectTimeFrame)
+  const isTradingEnabled = timeframe.scope(false, enableTrading)
+  const isLong = isTradingEnabled.scope(true, switchIsLong)
+  const isIncrease = isLong.scope(true, switchIsIncrease)
+  const focusMode = isIncrease.scope(ITradeFocusMode.collateral, switchFocusMode)
+  const slippage = focusMode.scope('0.35', changeSlippage)
+  const inputToken = slippage.scope( GMX.AddressZero as ITokenInput, changeInputToken)
+  const indexToken = inputToken.scope(nativeToken as ITokenIndex, changeIndexToken)
+  const shortCollateralToken = indexToken.scope(null as ITokenStable | null, changeShortCollateralToken)
+  const leverage = shortCollateralToken.scope(GMX.LIMIT_LEVERAGE / 4n, changeLeverage) 
 
-  const isLong = database.createStoreScope(isTradingEnabled, true, switchIsLong)
-  const isIncrease = database.createStoreScope(isLong, true, switchIsIncrease)
 
-  const focusMode = database.createStoreScope(isIncrease, ITradeFocusMode.collateral, switchFocusMode)
   const collateralDeltaUsd = replayLatest(changeCollateralDeltaUsd, 0n)
   // const collateralDeltaUsd = database.createStoreScope(focusMode, 0n, tap(console.log, changeCollateralDeltaUsd))
   const sizeDeltaUsd = replayLatest(changeSizeDeltaUsd, 0n)
   // const sizeDeltaUsd = database.createStoreScope(collateralDeltaUsd, 0n, changeSizeDeltaUsd)
-  const slippage = database.createStoreScope(focusMode, '0.35', changeSlippage)
-
-
-
-  const inputToken = database.createStoreScope(slippage, GMX.AddressZero as ITokenInput, changeInputToken)
-  const indexToken = database.createStoreScope(inputToken, nativeToken as ITokenIndex, changeIndexToken)
-  const shortCollateralToken = database.createStoreScope(indexToken, null as ITokenStable | null, changeShortCollateralToken)
-
 
 
 
@@ -231,7 +228,6 @@ export const $Trade = (config: ITradeComponent) => component((
   const newLocal2 = debounce(50, combineObject({ route, indexToken, collateralToken, isLong }))
 
   const newLocal_1 = map(params => {
-
     const collateralToken = params.isLong ? params.indexToken : params.collateralToken
     const address = params.route || GMX.AddressZero
     const key = getPositionKey(address, collateralToken, params.indexToken, params.isLong)
@@ -412,17 +408,6 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ collateralTokenPoolInfo, position }))
 
 
-  const leverage = mergeArray([
-    filterNull(zip((params, stake) => {
-      if (stake.averagePrice > 0n) {
-        return div(stake.size + params.sizeDeltaUsd, stake.collateral + params.collateralDeltaUsd - params.fundingFee)
-      }
-
-      return null
-    }, combineObject({ collateralDeltaUsd, sizeDeltaUsd, fundingFee }), position)),
-
-    database.createStoreScope(shortCollateralToken, GMX.LIMIT_LEVERAGE / 4n, changeLeverage)
-  ])
 
 
   // [config]
@@ -510,24 +495,22 @@ export const $Trade = (config: ITradeComponent) => component((
   const availableIndexLiquidityUsd = tradeReader.getAvailableLiquidityUsd(indexToken, collateralToken)
 
 
-  const accountOpenTradeList = gmxSubgraph.accountOpenTradeList(
-    map(w3p => {
-      if (!w3p) {
-        throw new Error('No wallet connected')
-      }
+  const accountOpenTradeList = switchMap(route => {
+    if (!route) {
+      return now([])
+    }
 
-      return {
-        account: w3p.account.address,
-        chain: w3p.chain.id,
-      }
-    }, wallet)
-  )
+    return gmxSubgraph.accountOpenTradeList(now({
+      account: route,
+      chain: config.chain.id,
+    }))
+  }, route)
 
   const openTradeListQuery: Stream<Promise<ITradeOpen[]>> = mergeArray([
     combineArray(async (pos, listQuery) => {
       const tradeList = await listQuery
 
-      if (pos.averagePrice === 0n && tradeList.length === 0) {
+      if (pos.averagePrice === 0n || !tradeList) {
         return []
       }
 

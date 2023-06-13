@@ -30,7 +30,6 @@ export const $WalletDisplay = ({ $container = $row, parentRoute }: IWalletDispla
     $container(style({ backgroundColor: `${pallete.background}`, gap: '8px', borderRadius: '30px', placeContent: 'center' }))(
       $row(style({ flex: 1 }))(
         switchLatest(snapshot((_, accountResult) => {
-
           return accountResult.address
             ? $anchor(
               style({ flexDirection: 'column' }),
@@ -48,7 +47,7 @@ export const $WalletDisplay = ({ $container = $row, parentRoute }: IWalletDispla
                 })
               )
             )(
-              $discoverIdentityDisplay({ address: accountResult.address, $profileContainer: $defaultBerry(style({ minWidth: '38px' })) })
+              $discoverIdentityDisplay({ address: accountResult.address, labelSize: '.75em', $container, $profileContainer: $defaultBerry(style({ minWidth: '38px' })) })
             )
             : walletChangeTether(
               nodeEvent('click'),
