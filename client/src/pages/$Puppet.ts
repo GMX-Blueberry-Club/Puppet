@@ -3,9 +3,9 @@ import { $text, component, style } from "@aelea/dom"
 import { Route } from "@aelea/router"
 import { $column, layoutSheet } from "@aelea/ui-components"
 
-import { awaitPromises, empty, map, mergeArray } from "@most/core"
+import { awaitPromises, chain, empty, join, map, mergeArray } from "@most/core"
 import { CHAIN } from "gmx-middleware-const"
-import { IRequestAccountTradeListApi, filterNull } from "gmx-middleware-utils"
+import { IRequestAccountTradeListApi, filterNull, switchMap } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { $responsiveFlex } from "../elements/$common"
 import { fadeIn } from "../transitions/enter"
@@ -18,7 +18,7 @@ import { rootStoreScope } from "../data"
 import { connectContract } from "../logic/common"
 import * as database from "../logic/database"
 import { publicClient } from "../wallet/walletLink"
-import { getStoredEvents } from "../logic/indexer"
+import { syncEvent } from "../logic/indexer"
 
 // we need the contract info
 // the abi will be used by the processor to have its type generated, allowing you to get type-safety
@@ -87,22 +87,18 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
 
   const $title = $text(style({ fontWeight: 'bold', fontSize: '1.55em' }))
 
-  const tradingStore = rootStoreScope.scope('puppetPortfolio', empty())
+  // const tradingStore = rootStoreScope.scope('puppetPortfolio', empty())
 
-  const route = {
+
+
+
+  const requests = syncEvent({
     ...PUPPET.CONTRACT[42161].Route,
     address: '0x568810Dc2E4d5Bd115865CAc16Ffa0B44ef02955' as Address,
-  }
-
-
-  const requests = getStoredEvents({
-    ...route,
-    fromBlock: 99683620n,
+    startBlock: 0n,
     eventName: 'CreatedIncreasePositionRequest',
-    store: tradingStore,
+    store: rootStoreScope,
   }) 
-
-  
 
 
   return [
@@ -112,7 +108,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
     )(
 
       $column(layoutSheet.spacingBig, style({ flex: 2 }))(
-        requests,
+        chain(ev => $text(String(ev.transactionHash)), requests),
 
         fadeIn(
           $column(layoutSheet.spacingBig, style({ flex: 1 }))(

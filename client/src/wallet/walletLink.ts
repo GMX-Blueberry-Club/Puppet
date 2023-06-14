@@ -33,7 +33,7 @@ const configChain = configureChains(
   [arbitrum, avalanche],
   [
     alchemyProvider({ apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low' }),
-    w3mProvider({ projectId }),
+    // w3mProvider({ projectId }),
     jsonRpcProvider({
       rpc: chain => {
         const supportedChains = [
@@ -93,7 +93,7 @@ export const chain: Stream<ISupportedChain> = map(getNetworkResult => {
 
   return chain
 }, mergeArray([
-  map(() => getNetwork(), now(null)),
+  // map(() => getNetwork(), now(null)),
   networkChange
 ]))
 

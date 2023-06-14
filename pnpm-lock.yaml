@@ -65,8 +65,8 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
       viem:
-        specifier: ^1.0.0
-        version: 1.0.0(typescript@5.1.3)
+        specifier: ^1.0.7
+        version: 1.0.7(typescript@5.1.3)
 
   client:
     dependencies:
@@ -111,7 +111,7 @@ importers:
         version: 4.0.7(graphql@16.6.0)
       '@wagmi/core':
         specifier: ^1.1.0
-        version: 1.1.0(react@18.2.0)(typescript@5.1.3)(viem@1.0.0)
+        version: 1.1.0(react@18.2.0)(typescript@5.1.3)(viem@1.0.7)
       '@walletconnect/auth-client':
         specifier: ^2.1.0
         version: 2.1.0
@@ -120,7 +120,7 @@ importers:
         version: 2.7.3
       '@web3modal/ethereum':
         specifier: ^2.4.0
-        version: 2.4.0(@wagmi/core@1.1.0)(viem@1.0.0)
+        version: 2.4.0(@wagmi/core@1.1.0)(viem@1.0.7)
       '@web3modal/html':
         specifier: ^2.4.0
         version: 2.4.0(react@18.2.0)
@@ -167,8 +167,8 @@ importers:
         specifier: workspace:*
         version: link:../middleware
       viem:
-        specifier: ^1.0.0
-        version: 1.0.0(typescript@5.1.3)
+        specifier: ^1.0.7
+        version: 1.0.7(typescript@5.1.3)
     devDependencies:
       '@wagmi/cli':
         specifier: ^1.1.0
@@ -186,8 +186,8 @@ importers:
         specifier: workspace:*
         version: link:../gmx-middleware/const
       viem:
-        specifier: ^1.0.0
-        version: 1.0.0(typescript@5.1.3)
+        specifier: ^1.0.7
+        version: 1.0.7(typescript@5.1.3)
 
   contracts-submodule:
     devDependencies:
@@ -255,8 +255,8 @@ importers:
         specifier: ^0.8.7
         version: 0.8.7(typescript@5.1.3)(zod@3.21.4)
       viem:
-        specifier: ^1.0.0
-        version: 1.0.0(typescript@5.1.3)
+        specifier: ^1.0.7
+        version: 1.0.7(typescript@5.1.3)
 
   gmx-middleware/subgraph:
     dependencies:
@@ -309,8 +309,8 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0(ws@8.12.0)
       viem:
-        specifier: ^1.0.0
-        version: 1.0.0(typescript@5.1.3)
+        specifier: ^1.0.7
+        version: 1.0.7(typescript@5.1.3)
 
   gmx-middleware/wallet-link:
     dependencies:
@@ -387,8 +387,8 @@ importers:
         specifier: workspace:*
         version: link:../const
       viem:
-        specifier: ^1.0.0
-        version: 1.0.0(typescript@5.1.3)
+        specifier: ^1.0.7
+        version: 1.0.7(typescript@5.1.3)
 
   subgraph:
     dependencies:
@@ -448,8 +448,8 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0
       viem:
-        specifier: ^1.0.0
-        version: 1.0.0(typescript@5.1.3)
+        specifier: ^1.0.7
+        version: 1.0.7(typescript@5.1.3)
     devDependencies:
       '@types/node':
         specifier: 18.16.3
@@ -2316,7 +2316,7 @@ packages:
         optional: true
     dependencies:
       '@wagmi/chains': 1.0.0(typescript@5.1.3)
-      '@wagmi/core': 1.1.0(react@18.2.0)(typescript@5.1.3)(viem@1.0.0)
+      '@wagmi/core': 1.1.0(react@18.2.0)(typescript@5.1.3)(viem@1.0.7)
       abitype: 0.8.7(typescript@5.1.3)(zod@3.21.4)
       abort-controller: 3.0.0
       bundle-require: 3.1.2(esbuild@0.15.13)
@@ -2345,7 +2345,7 @@ packages:
       - utf-8-validate
     dev: true
 
-  /@wagmi/connectors@2.1.0(@wagmi/chains@1.0.0)(react@18.2.0)(typescript@5.1.3)(viem@1.0.0):
+  /@wagmi/connectors@2.1.0(@wagmi/chains@1.0.0)(react@18.2.0)(typescript@5.1.3)(viem@1.0.7):
     resolution: {integrity: sha512-bmBMHOEeLQsv9YedDkZwbmYIh82x9CsvSUjD7kAHeSHLOO8Fod6/sBuVKMrAAjoTOaCpliTqKit6TUlZxw8yOg==}
     peerDependencies:
       '@wagmi/chains': '>=1.0.0'
@@ -2368,7 +2368,7 @@ packages:
       abitype: 0.8.7(typescript@5.1.3)(zod@3.21.4)
       eventemitter3: 4.0.7
       typescript: 5.1.3
-      viem: 1.0.0(typescript@5.1.3)
+      viem: 1.0.7(typescript@5.1.3)
     transitivePeerDependencies:
       - '@react-native-async-storage/async-storage'
       - bufferutil
@@ -2380,7 +2380,7 @@ packages:
       - utf-8-validate
       - zod
 
-  /@wagmi/core@1.1.0(react@18.2.0)(typescript@5.1.3)(viem@1.0.0):
+  /@wagmi/core@1.1.0(react@18.2.0)(typescript@5.1.3)(viem@1.0.7):
     resolution: {integrity: sha512-4EB/Huw4SEXZk45IypPlTj1b7g48fFHk9C5bipdtgD14EwMTdk+z774ViWAI8C+MHPsGBE1rrGMxlDZohdAmPA==}
     peerDependencies:
       typescript: '>=5.0.4'
@@ -2390,11 +2390,11 @@ packages:
         optional: true
     dependencies:
       '@wagmi/chains': 1.0.0(typescript@5.1.3)
-      '@wagmi/connectors': 2.1.0(@wagmi/chains@1.0.0)(react@18.2.0)(typescript@5.1.3)(viem@1.0.0)
+      '@wagmi/connectors': 2.1.0(@wagmi/chains@1.0.0)(react@18.2.0)(typescript@5.1.3)(viem@1.0.7)
       abitype: 0.8.7(typescript@5.1.3)(zod@3.21.4)
       eventemitter3: 4.0.7
       typescript: 5.1.3
-      viem: 1.0.0(typescript@5.1.3)
+      viem: 1.0.7(typescript@5.1.3)
       zustand: 4.3.8(react@18.2.0)
     transitivePeerDependencies:
       - '@react-native-async-storage/async-storage'
@@ -2930,14 +2930,14 @@ packages:
     transitivePeerDependencies:
       - react
 
-  /@web3modal/ethereum@2.4.0(@wagmi/core@1.1.0)(viem@1.0.0):
+  /@web3modal/ethereum@2.4.0(@wagmi/core@1.1.0)(viem@1.0.7):
     resolution: {integrity: sha512-lS1rxQombivrzfU+UDwrduq5/TepEBd1J0D2N0DrVV71jtJBj4O3J7CE8eP0BkhWyoa+hIG6jd1iWN0OJ0TzKg==}
     peerDependencies:
       '@wagmi/core': '>=1'
       viem: '>=0.3'
     dependencies:
-      '@wagmi/core': 1.1.0(react@18.2.0)(typescript@5.1.3)(viem@1.0.0)
-      viem: 1.0.0(typescript@5.1.3)
+      '@wagmi/core': 1.1.0(react@18.2.0)(typescript@5.1.3)(viem@1.0.7)
+      viem: 1.0.7(typescript@5.1.3)
     dev: false
 
   /@web3modal/html@2.4.0(react@18.2.0):
@@ -8414,8 +8414,10 @@ packages:
       - zod
     dev: true
 
-  /viem@1.0.0(typescript@5.1.3):
-    resolution: {integrity: sha512-JqdO5TYSuv+/cV9xOmHUKB6qXeyLHtl3gcYYHnfFstfdzivfBttmKtwHiZPdffvcr5DqKsYFT5LLrFnfz5vfLQ==}
+  /viem@1.0.7(typescript@5.1.3):
+    resolution: {integrity: sha512-P/T2Zn8+V74kxO2e2NdhNR/MBtldovssigvc36+7g3DgTeETKnSS1fMQdBl0jE+Atlal+M6cuJ2HcFY7U45o0Q==}
+    peerDependencies:
+      typescript: '>=5.0.4'
     dependencies:
       '@adraffy/ens-normalize': 1.9.0
       '@noble/curves': 1.0.0
@@ -8425,10 +8427,10 @@ packages:
       '@wagmi/chains': 1.1.0(typescript@5.1.3)
       abitype: 0.8.7(typescript@5.1.3)(zod@3.21.4)
       isomorphic-ws: 5.0.0(ws@8.12.0)
+      typescript: 5.1.3
       ws: 8.12.0(bufferutil@4.0.7)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bufferutil
-      - typescript
       - utf-8-validate
       - zod
 

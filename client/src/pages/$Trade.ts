@@ -43,7 +43,8 @@ import { walletLink } from "../wallet"
 import { account, wallet } from "../wallet/walletLink"
 import { connectTrade, getErc20Balance, latestPriceFromExchanges } from "../logic/trade"
 import * as database from "../logic/database"
-import { rootStoreScope, rootStoreScope } from "../data"
+import { rootStoreScope } from "../data"
+import { createStoreScope, writeStoreScope } from "../logic/database"
 
 
 export type ITradeComponent = ITradeBoxParams
@@ -136,19 +137,18 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const executionFee = replayLatest(multicast(positionRouter.read('minExecutionFee')))
 
-  const tradingStore = rootStoreScope.scope('tradeBox', empty())
+  const tradingStore = createStoreScope(rootStoreScope, 'tradeBox' as const)
 
-
-  const timeframe = tradingStore.scope(GMX.TIME_INTERVAL_MAP.MIN60, selectTimeFrame)
-  const isTradingEnabled = timeframe.scope(false, enableTrading)
-  const isLong = isTradingEnabled.scope(true, switchIsLong)
-  const isIncrease = isLong.scope(true, switchIsIncrease)
-  const focusMode = isIncrease.scope(ITradeFocusMode.collateral, switchFocusMode)
-  const slippage = focusMode.scope('0.35', changeSlippage)
-  const inputToken = slippage.scope( GMX.AddressZero as ITokenInput, changeInputToken)
-  const indexToken = inputToken.scope(nativeToken as ITokenIndex, changeIndexToken)
-  const shortCollateralToken = indexToken.scope(null as ITokenStable | null, changeShortCollateralToken)
-  const leverage = shortCollateralToken.scope(GMX.LIMIT_LEVERAGE / 4n, changeLeverage) 
+  const timeframe = writeStoreScope(tradingStore, GMX.TIME_INTERVAL_MAP.MIN60, selectTimeFrame)
+  const isTradingEnabled = writeStoreScope(timeframe, false, enableTrading)
+  const isLong = writeStoreScope(isTradingEnabled, true, switchIsLong)
+  const isIncrease = writeStoreScope(isLong, true, switchIsIncrease)
+  const focusMode = writeStoreScope(isIncrease, ITradeFocusMode.collateral, switchFocusMode)
+  const slippage = writeStoreScope(focusMode, '0.35', changeSlippage)
+  const inputToken = writeStoreScope(slippage, GMX.AddressZero as ITokenInput, changeInputToken)
+  const indexToken = writeStoreScope(inputToken, nativeToken as ITokenIndex, changeIndexToken)
+  const shortCollateralToken = writeStoreScope(indexToken, null as ITokenStable | null, changeShortCollateralToken)
+  const leverage = writeStoreScope(shortCollateralToken, GMX.LIMIT_LEVERAGE / 4n, changeLeverage) 
 
 
   const collateralDeltaUsd = replayLatest(changeCollateralDeltaUsd, 0n)
@@ -209,7 +209,6 @@ export const $Trade = (config: ITradeComponent) => component((
     return observer.duringWindowActivity(latestPriceFromExchanges(token))
   }, indexToken))))
   const collateralTokenPrice = skipRepeats(tradeReader.getLatestPrice(collateralToken))
-
 
 
   const route = switchMap(params => {
@@ -497,7 +496,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const accountOpenTradeList = switchMap(route => {
     if (!route) {
-      return now([])
+      return now(Promise.resolve([]))
     }
 
     return gmxSubgraph.accountOpenTradeList(now({
