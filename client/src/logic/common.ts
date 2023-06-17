@@ -144,12 +144,14 @@ export const listenContract = <
   <TEventName extends string, TLogs = viem.Log<bigint, number, ExtractAbiEvent<TAbi, TEventName>, true>>(eventName: viem.InferEventName<TAbi, TEventName>, args?: viem.GetEventArgs<TAbi, TEventName>): Stream<TLogs> => {
 
     const eventStream = fromCallback(emitCb => {
+      const watchParams = {
+        ...params_,
+        eventName,
+        args: args as any
+      }
+      debugger
       const listener = wagmi.watchContractEvent<TAbi, TEventName>(
-        {
-          ...params_,
-          eventName,
-          args: args as any
-        },
+        watchParams,
         logs => {
           for (const key in logs) {
             if (Object.prototype.hasOwnProperty.call(logs, key)) {

@@ -140,12 +140,17 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
           )(
 
             router.match(appRoute)(
-              fadeIn($PuppetPortfolio({
-                parentRoute: profileWalletRoute,
-                chainList: [CHAIN.ARBITRUM]
-              })({
-                changeRoute: linkClickTether(),
-              }))
+              $IntermediateConnectButton({
+                $$display: map(wallet => {
+                  return $PuppetPortfolio({
+                    wallet,
+                    parentRoute: profileWalletRoute,
+                    chainList: [CHAIN.ARBITRUM]
+                  })({
+                    changeRoute: linkClickTether(),
+                  })
+                })
+              })({})
             ),
 
             // switchMap(isMobile => {
@@ -170,7 +175,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                     $accountDisplay: $row(layoutSheet.spacing, style({ flex: 1, alignItems: 'center', placeContent: 'center', zIndex: 1 }))(
                       $discoverIdentityDisplay({
                         address: account,
-                        labelSize: '1.5em'
+                        // labelSize: '1.5em'
                       }),
                     ),
                     account: account,

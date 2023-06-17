@@ -6,7 +6,7 @@ import { Address, GetAccountResult, GetNetworkResult, InjectedConnector, WalletC
 import { WalletConnectConnector } from '@wagmi/core/connectors/walletConnect'
 import { alchemyProvider } from "@wagmi/core/providers/alchemy"
 import { jsonRpcProvider } from '@wagmi/core/providers/jsonRpc'
-import { EthereumClient, w3mProvider } from '@web3modal/ethereum'
+import { EthereumClient, w3mProvider, w3mConnectors } from '@web3modal/ethereum'
 import { Web3Modal } from '@web3modal/html'
 import { PublicClient, Transport } from "viem"
 import { arbitrum, avalanche } from "viem/chains"
@@ -25,7 +25,7 @@ export type IWalletClient = WalletClient<Transport, ISupportedChain>
 
 const storage = createStorage({ storage: window.localStorage })
 
-const projectId = 'c7cea9637dde679f833971689e9a3119'
+const projectId = 'fdc797f2e6a68e01b9e17843c939673e'
 
 
 
@@ -33,27 +33,27 @@ const configChain = configureChains(
   [arbitrum, avalanche],
   [
     alchemyProvider({ apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low' }),
-    // w3mProvider({ projectId }),
-    jsonRpcProvider({
-      rpc: chain => {
-        const supportedChains = [
-          1, 3, 4, 5, 10, 42, 56, 69, 97, 100, 137, 280, 324, 420, 42161, 42220, 43114, 80001, 421611,
-          421613, 1313161554, 1313161555
-        ]
-        const NAMESPACE = 'eip155'
+    w3mProvider({ projectId }),
+    // jsonRpcProvider({
+    //   rpc: chain => {
+    //     const supportedChains = [
+    //       1, 3, 4, 5, 10, 42, 56, 69, 97, 100, 137, 280, 324, 420, 42161, 42220, 43114, 80001, 421611,
+    //       421613, 1313161554, 1313161555
+    //     ]
+    //     const NAMESPACE = 'eip155'
 
-        if (supportedChains.includes(chain.id)) {
-          return {
-            http: `https://rpc.walletconnect.com/v1/?chainId=${NAMESPACE}:${chain.id}&projectId=${projectId}`
-          }
-        }
+    //     if (supportedChains.includes(chain.id)) {
+    //       return {
+    //         http: `https://rpc.walletconnect.com/v1/?chainId=${NAMESPACE}:${chain.id}&projectId=${projectId}`
+    //       }
+    //     }
 
-        return {
-          http: chain.rpcUrls.default.http[0],
-          webSocket: chain.rpcUrls.default.webSocket?.[0]
-        }
-      }
-    })
+    //     return {
+    //       http: chain.rpcUrls.default.http[0],
+    //       webSocket: chain.rpcUrls.default.webSocket?.[0]
+    //     }
+    //   }
+    // })
   ],
 )
 
@@ -68,6 +68,8 @@ const injectedConnector = new InjectedConnector({ chains, options: { name: 'inje
 export const walletConfig = createConfig({
   autoConnect: true,
   connectors: [injectedConnector, wcConnector],
+  // connectors: w3mConnectors({ projectId, version: 2, chains }),
+
   publicClient: configChain.publicClient,
   webSocketPublicClient: configChain.webSocketPublicClient,
   storage,
@@ -93,14 +95,14 @@ export const chain: Stream<ISupportedChain> = map(getNetworkResult => {
 
   return chain
 }, mergeArray([
-  // map(() => getNetwork(), now(null)),
+  map(() => getNetwork(), now(null)),
   networkChange
 ]))
 
 
 
 export const account = mergeArray([
-  map(() => getAccount(), delay(500, now(null))),
+  map(() => getAccount(), now(null)),
   accountChange
 ])
 
@@ -129,8 +131,8 @@ export const wallet = awaitPromises(map(async params => {
 
 export const web3Modal = new Web3Modal({
   defaultChain: arbitrum,
-  privacyPolicyUrl: 'https://www.walletconnect.com/privacy-policy.html',
-  explorerRecommendedWalletIds: ['fbc8d86ad914ebd733fec4812b4b7af5ca709fdd9e75a930115e5baa02c4ef4c'],
+  // privacyPolicyUrl: 'https://www.walletconnect.com/privacy-policy.html',
+  // explorerRecommendedWalletIds: ['fbc8d86ad914ebd733fec4812b4b7af5ca709fdd9e75a930115e5baa02c4ef4c'],
   projectId,
   themeVariables: {
     '--w3m-accent-color': '#FF8700',

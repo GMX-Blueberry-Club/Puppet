@@ -2,79 +2,24 @@ import { Behavior } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import { Route } from "@aelea/router"
 import { $column, layoutSheet } from "@aelea/ui-components"
-
-import { awaitPromises, chain, empty, join, map, mergeArray } from "@most/core"
+import { chain, map, mergeArray } from "@most/core"
 import { CHAIN } from "gmx-middleware-const"
-import { IRequestAccountTradeListApi, filterNull, switchMap } from "gmx-middleware-utils"
+import { IRequestAccountTradeListApi } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
+import * as GMX from "gmx-middleware-const"
 import { $responsiveFlex } from "../elements/$common"
 import { fadeIn } from "../transitions/enter"
 import { IProfileActiveTab } from "./$Profile"
-
-import { JSProcessor, fromJSProcessor } from "ethereum-indexer-js-processor"
-import { createIndexerState, keepStateOnIndexedDB } from "gmx-middleware-browser-indexer"
 import { Address } from "viem"
 import { rootStoreScope } from "../data"
-import { connectContract } from "../logic/common"
-import * as database from "../logic/database"
-import { publicClient } from "../wallet/walletLink"
 import { syncEvent } from "../logic/indexer"
-
-// we need the contract info
-// the abi will be used by the processor to have its type generated, allowing you to get type-safety
-// the adress will be given to the indexer, so it index only this contract
-// the startBlock field allow to tell the indexer to start indexing from that point only
-// here it is the block at which the contract was deployed
-const contract = {
-  ...PUPPET.CONTRACT[42161].Route,
-  address: '0x568810Dc2E4d5Bd115865CAc16Ffa0B44ef02955',
-  startBlock: 99683620,
-} as const
-
-// we define the type of the state computed by the processor
-// we can also declare it inline in the generic type of JSProcessor
-type State = { greetings: { account: `0x${string}`; message: string }[] };
-
-// the processor is given the type of the ABI as Generic type to get generated
-// it also specify the type which represent the current state
-// const processor: JSProcessor<typeof contract.abi, State> = {
-//   // you can set a version, ideally you would generate it so that it changes for each change
-//   // when a version changes, the indexer will detect that and clear the state
-//   // if it has the event stream cached, it will repopulate the state automatically
-//   version: "0.0.2",
-//   // this function set the starting state
-//   // this allow the app to always have access to a state, no undefined needed
-//   construct() {
-//     return {
-//       greetings: []
-//     }
-//   },
-//   onCreatedIncreasePositionRequest(state, event) {
-//     debugger
-//     const greetingFound = state.greetings.find(
-//       (v) => v.account === event.args.acceptablePrice
-//     )
-//   }
-// }
-
-
-// const indexer = createIndexerState(
-//   fromJSProcessor(processor)(),
-//   {
-//     keepState: keepStateOnIndexedDB("basic") as any,
-//   }
-// ).startAutoIndexing()
-
-
-// indexer.init({
-//   provider: ethereum,
-//   source: { chainId, contracts: [contract] },
-// })
+import { IWalletClient } from "../wallet/walletLink"
+import { $discoverIdentityDisplay } from "../components/$AccountProfile"
 
 
 
 export interface IPuppetPortfolio {
-  address: Address,
+  wallet: IWalletClient,
   parentRoute: Route
   chainList: CHAIN[]
 }
@@ -91,12 +36,36 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
 
 
 
-
-  const requests = syncEvent({
+  const routeEvents = syncEvent({
     ...PUPPET.CONTRACT[42161].Route,
     address: '0x568810Dc2E4d5Bd115865CAc16Ffa0B44ef02955' as Address,
-    startBlock: 0n,
-    eventName: 'CreatedIncreasePositionRequest',
+    eventName: 'CallbackReceived',
+    store: rootStoreScope,
+    args: {
+      isIncrease: true
+    }
+  })
+
+  const gmxEvents = syncEvent({
+    ...GMX.CONTRACT[42161].PositionRouter,
+    // address: '0x568810Dc2E4d5Bd115865CAc16Ffa0B44ef02955' as Address,
+    eventName: 'ExecuteIncreasePosition',
+    store: rootStoreScope,
+    startBlock: 101037003n,
+    args: {
+      account: '0x568810Dc2E4d5Bd115865CAc16Ffa0B44ef02955'
+    }
+  }) 
+
+  const depositEvents = syncEvent({
+    ...PUPPET.CONTRACT[42161].Orchestrator,
+    eventName: 'Deposited',
+    store: rootStoreScope,
+  }) 
+
+  const withdrawEvents = syncEvent({
+    ...PUPPET.CONTRACT[42161].Orchestrator,
+    eventName: 'Withdrawn',
     store: rootStoreScope,
   }) 
 
@@ -108,11 +77,16 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
     )(
 
       $column(layoutSheet.spacingBig, style({ flex: 2 }))(
-        chain(ev => $text(String(ev.transactionHash)), requests),
+        chain(ev => $text(JSON.stringify(ev.args)), depositEvents),
+        // chain(ev => $text(JSON.stringify(ev.args)), routeEvents),
 
         fadeIn(
           $column(layoutSheet.spacingBig, style({ flex: 1 }))(
-            $title('Open Positions'),
+            $discoverIdentityDisplay({
+              address: config.wallet.account.address,
+              labelSize: '1.5em'
+            }),
+            // $title('Open Positions'),
             // $CardTable({
             //   dataSource: awaitPromises(gmxSubgraph.accountOpenTradeList(requestAccountTradeList)),
             //   columns: [
