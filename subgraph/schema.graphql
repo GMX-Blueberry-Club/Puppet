@@ -1,0 +1,251 @@
+
+
+type PositionAdjustmentRequestExecution @entity(immutable: true) {
+  id: Bytes!
+  account: Bytes!
+  trade: TradeLink!
+
+  path: [String!]!
+  indexToken: Bytes!
+  amountIn: BigInt!
+  minOut: BigInt!
+  sizeDelta: BigInt!
+  isLong: Boolean!
+  acceptablePrice: BigInt!
+  executionFee: BigInt!
+  blockGap: BigInt!
+  timeGap: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+
+type PositionAdjustment @entity(immutable: true) {
+  id: Bytes!
+  trade: TradeLink!
+  account: Bytes!
+
+  collateralToken: Bytes!
+  indexToken: Bytes!
+  isLong: Boolean!
+  key: Bytes!
+  isIncrease: Boolean!
+
+  collateralDelta: BigInt!
+  sizeDelta: BigInt!
+  price: BigInt!
+  fee: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+
+type PositionUpdate @entity(immutable: true) {
+  id: Bytes!
+  trade: TradeLink!
+
+  key: Bytes!
+
+  size: BigInt!
+  collateral: BigInt!
+
+  reserveAmount: BigInt!
+  realisedPnl: BigInt!
+  averagePrice: BigInt!
+  entryFundingRate: BigInt!
+  markPrice: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+
+
+type TradeLink @entity(immutable: true) {
+  id: Bytes!
+
+  account: Bytes!
+  collateralToken: Bytes!
+  indexToken: Bytes!
+  isLong: Boolean!
+  key: Bytes!
+
+  keeperAdjustList: [PositionAdjustmentRequestExecution!] @derivedFrom(field: "trade")
+
+  adjustList: [PositionAdjustment!] @derivedFrom(field: "trade")
+  updateList: [PositionUpdate!] @derivedFrom(field: "trade")
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+
+type PositionSlot @entity {
+  id: Bytes!
+  idCount: Int!
+  link: TradeLink!
+
+  account: Bytes!
+  collateralToken: Bytes!
+  indexToken: Bytes!
+  isLong: Boolean!
+  key: Bytes!
+
+  collateral: BigInt!
+  size: BigInt!
+  averagePrice: BigInt!
+  entryFundingRate: BigInt!
+  realisedPnl: BigInt!
+  reserveAmount: BigInt!
+
+  cumulativeCollateral: BigInt!
+  cumulativeSize: BigInt!
+  cumulativeFee: BigInt!
+
+  maxCollateral: BigInt!
+  maxSize: BigInt!
+}
+
+type PositionSettled @entity(immutable: true) {
+  id: Bytes!
+  idCount: Int!
+  link: TradeLink!
+
+  account: Bytes!
+  collateralToken: Bytes!
+  indexToken: Bytes!
+  isLong: Boolean!
+  key: Bytes!
+
+  collateral: BigInt!
+  size: BigInt!
+  averagePrice: BigInt!
+  entryFundingRate: BigInt!
+  realisedPnl: BigInt!
+  reserveAmount: BigInt!
+
+  cumulativeCollateral: BigInt!
+  cumulativeSize: BigInt!
+  cumulativeFee: BigInt!
+
+  maxCollateral: BigInt!
+  maxSize: BigInt!
+
+  markPrice: BigInt!
+  isLiquidated: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+
+type RouteRegistration @entity(immutable: true) {
+  id: Bytes!
+  trader: Bytes!
+  route: Bytes!
+  routeTypeKey: Bytes!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type PositionAdjustmentRequest @entity(immutable: true) {
+  id: Bytes!
+  caller: Bytes!
+  route: Bytes!
+  requestKey: Bytes!
+  routeTypeKey: Bytes!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Subscribe @entity(immutable: true) {
+  id: Bytes!
+  traders: [Bytes!]!
+  allowances: [BigInt!]!
+  puppet: Bytes!
+  routeTypeKey: Bytes!
+  subscribe: Boolean!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Transfer @entity(immutable: true) {
+  id: Bytes!
+  token: Bytes!
+  from: Bytes!
+  to: Bytes!
+  amount: BigInt!
+  amountUsd: BigInt!
+  
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Route @entity(immutable: true) {
+  id: Bytes!
+  routeTypeKey: Bytes!
+  address: Bytes!
+  trader: Bytes!
+
+  collateralToken: Bytes!
+  indexToken: Bytes!
+  isLong: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type AdjustmentExecution @entity(immutable: true) {
+  id: Bytes! # account + index
+  route: Bytes!
+
+  keeperExecution: PositionAdjustmentRequestExecution!
+
+  requestKey: Bytes!
+  isExecuted: Boolean!
+  isIncrease: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+
+type MirrorPositionSlot @entity {
+  id: Bytes!
+  trader: Bytes!
+  route: Bytes!
+
+  positionSlot: PositionSlot!
+  link: MirrorPositionLink!
+}
+
+type MirrorPositionAdjustment @entity(immutable: true) {
+  # adjustList: [MirrorPositionAdjustment!] @derivedFrom(field: "link")
+  id: Bytes!
+  tradeLink: TradeLink!
+  route: Bytes!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type MirrorPositionLink @entity(immutable: true) {
+  # adjustList: [MirrorPositionAdjustment!] @derivedFrom(field: "link")
+  id: Bytes!
+  tradeLink: TradeLink!
+  route: Bytes!
+}
