@@ -1,8 +1,8 @@
-import { Behavior } from "@aelea/core"
+import { Behavior, nullSink } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import { Route } from "@aelea/router"
 import { $column, layoutSheet } from "@aelea/ui-components"
-import { chain, map, mergeArray } from "@most/core"
+import { at, chain, loop, map, mergeArray } from "@most/core"
 import { CHAIN } from "gmx-middleware-const"
 import { IRequestAccountTradeListApi } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
@@ -12,11 +12,52 @@ import { fadeIn } from "../transitions/enter"
 import { IProfileActiveTab } from "./$Profile"
 import { Address } from "viem"
 import { rootStoreScope } from "../data"
-import { syncEvent } from "../logic/indexer"
+import { processSources, syncEvent, replaySubgraphEvent, getEventOrderIdentifier } from "../logic/indexer"
 import { IWalletClient } from "../wallet/walletLink"
 import { $discoverIdentityDisplay } from "../components/$AccountProfile"
+import { newDefaultScheduler } from "@most/scheduler"
 
+const logs = [
+  {
+    account: "0x364ed130c39baa6f9f64c2961d93c52321bc4f4d",
+    indexToken: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+    transactionIndex: 2n,
+    logIndex: 20n,
+    blockTimestamp: 1687365680n,
+    blockNumber: 103487081n,
+    orderIdentifier: 1034870812020n,
+  },
+  {
+    account: "0xa37d1bfc67f20ac3d88a3d50e2d315a95161d89c",
+    indexToken: "0xf97f4df75117a78c1a5a0dbb814af92458539fb4",
+    transactionIndex: 2n,
+    logIndex: 18n,
+    blockTimestamp: 1687354227n,
+    blockNumber: 103441117n,
+    orderIdentifier: 1034411172018n,
 
+  },
+  {
+    account: "0xb855598131e5ad8f727d9e19fa299e9d23466c95",
+    indexToken: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+    transactionIndex: 3n,
+    logIndex: 16n,
+    blockTimestamp: 1687401633n,
+    blockNumber: 103626756n,
+    orderIdentifier: 1036267563016n,
+  }
+]
+
+// const logEvents = mergeArray(logs.map(l => {
+//   const n = Number(l.orderIdentifier)
+//   const scheduleTime = n / Math.pow(10, n.toString().length)
+//   return at(scheduleTime, l)
+// })).run({
+//   ...nullSink,
+//   event: (time, value) => {
+//     console.log(value.orderIdentifier)
+//   },
+// }, newDefaultScheduler())
 
 export interface IPuppetPortfolio {
   wallet: IWalletClient,
@@ -36,38 +77,83 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
 
 
 
-  const routeEvents = syncEvent({
-    ...PUPPET.CONTRACT[42161].Route,
-    address: '0x568810Dc2E4d5Bd115865CAc16Ffa0B44ef02955' as Address,
-    eventName: 'CallbackReceived',
+  // const routeEvents = syncEvent({
+  //   ...PUPPET.CONTRACT[42161].Route,
+  //   address: '0x568810Dc2E4d5Bd115865CAc16Ffa0B44ef02955' as Address,
+  //   eventName: 'CallbackReceived',
+  //   store: rootStoreScope,
+  //   args: {
+  //     isIncrease: true
+  //   }
+  // })
+
+  // const gmxEvents = syncEvent({
+  //   ...GMX.CONTRACT[42161].PositionRouter,
+  //   // address: '0x568810Dc2E4d5Bd115865CAc16Ffa0B44ef02955' as Address,
+  //   eventName: 'ExecuteIncreasePosition',
+  //   store: rootStoreScope,
+  //   startBlock: 101037003n,
+  //   args: {
+  //     account: '0x568810Dc2E4d5Bd115865CAc16Ffa0B44ef02955'
+  //   }
+  // })
+
+  // const depositEvents = syncSubgraphEvent({
+  //   ...PUPPET.CONTRACT[42161].Orchestrator,
+  //   eventName: 'Deposited',
+  //   store: rootStoreScope,
+  // })
+
+  // const withdrawEvents = syncSubgraphEvent({
+  //   ...PUPPET.CONTRACT[42161].Orchestrator,
+  //   eventName: 'Withdrawn',
+  //   store: rootStoreScope,
+  // })
+
+
+
+  const increaseEvents = replaySubgraphEvent({
+    ...GMX.CONTRACT[42161].Vault,
+    eventName: 'IncreasePosition',
     store: rootStoreScope,
     args: {
-      isIncrease: true
+      account: '0x93720df7718752879bb26b40f2c4b21e537715e1',
     }
   })
 
-  const gmxEvents = syncEvent({
-    ...GMX.CONTRACT[42161].PositionRouter,
-    // address: '0x568810Dc2E4d5Bd115865CAc16Ffa0B44ef02955' as Address,
-    eventName: 'ExecuteIncreasePosition',
+  const decreaseEvents = replaySubgraphEvent({
+    ...GMX.CONTRACT[42161].Vault,
+    eventName: 'DecreasePosition',
     store: rootStoreScope,
-    startBlock: 101037003n,
     args: {
-      account: '0x568810Dc2E4d5Bd115865CAc16Ffa0B44ef02955'
+      account: '0x93720df7718752879bb26b40f2c4b21e537715e1',
     }
-  }) 
+  })
 
-  const depositEvents = syncEvent({
-    ...PUPPET.CONTRACT[42161].Orchestrator,
-    eventName: 'Deposited',
-    store: rootStoreScope,
-  }) 
 
-  const withdrawEvents = syncEvent({
-    ...PUPPET.CONTRACT[42161].Orchestrator,
-    eventName: 'Withdrawn',
-    store: rootStoreScope,
-  }) 
+  const trade = processSources(
+    {
+      hello: 'world'
+    },
+    {
+      source: increaseEvents,
+      step(seed, value) {
+        console.log(getEventOrderIdentifier(value))
+        return {
+          hello: 'world'
+        }
+      },
+    },
+    {
+      source: decreaseEvents,
+      step(seed, value) {
+        console.log(getEventOrderIdentifier(value))
+        return {
+          hello: 'world'
+        }
+      },
+    },
+  )
 
 
   return [
@@ -77,7 +163,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
     )(
 
       $column(layoutSheet.spacingBig, style({ flex: 2 }))(
-        chain(ev => $text(JSON.stringify(ev.args)), depositEvents),
+        chain(ev => $text(JSON.stringify(ev.hello)), trade),
         // chain(ev => $text(JSON.stringify(ev.args)), routeEvents),
 
         fadeIn(

@@ -149,7 +149,6 @@ export const listenContract = <
         eventName,
         args: args as any
       }
-      debugger
       const listener = wagmi.watchContractEvent<TAbi, TEventName>(
         watchParams,
         logs => {

@@ -57,7 +57,7 @@ export const $WalletDisplay = ({ $container = $row, parentRoute }: IWalletDispla
               }),
               awaitPromises
             )(
-              style({ cursor: 'pointer' }, $disconnectedWalletDisplay())
+              style({ cursor: 'pointer' }, $disconnectedWalletDisplay($container))
             )
 
 

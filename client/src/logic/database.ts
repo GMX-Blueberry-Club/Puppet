@@ -1,5 +1,4 @@
-import { fromCallback } from '@aelea/core'
-import { concatMap, constant, continueWith, fromPromise, map, switchLatest, take, tap, throttle } from "@most/core"
+import { concatMap, constant, continueWith, fromPromise, map, switchLatest } from "@most/core"
 import { curry2, curry3 } from '@most/prelude'
 import { Stream } from "@most/types"
 import { sha256 } from '@noble/hashes/sha256'
@@ -7,7 +6,7 @@ import { bytesToHex } from '@noble/hashes/utils'
 
 
 // @ts-ignore
-BigInt.prototype.toJSON = function () { return this.toString() + 'n' }
+BigInt.prototype.toJSON = function () { return this.toString() }
 
 
 export function initDbStore<TName extends string>(dbName: TName): Stream<IDBDatabase> {
@@ -44,7 +43,7 @@ export function transact<TResult>(db: IDBDatabase, action: (store: IDBObjectStor
 export function getStore<TData>(dbEvent: Stream<IDBDatabase>, key: string): Stream<{ key: string, data: TData } | undefined> {
   return switchLatest(map(db => {
     const getTx = transact(db, store => store.get(key))
-    return map(res => res, getTx)
+    return getTx
   }, dbEvent))
 }
 

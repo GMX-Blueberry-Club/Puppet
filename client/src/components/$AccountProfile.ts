@@ -97,11 +97,11 @@ export const $profilePreview = ({
 }
 
 
-export const $disconnectedWalletDisplay = (avatarSize = 38) => {
-  const sizePx = avatarSize + 'px'
+export const $disconnectedWalletDisplay = ($container = $row) => {
+  const sizePx = '38px'
   const $wrapper = $node(style({ width: sizePx, height: sizePx, minWidth: sizePx, minHeight: sizePx, borderRadius: '50%' }))
 
-  return $row(layoutSheet.row, layoutSheet.spacingSmall, style({ alignItems: 'center', textDecoration: 'none' }))(
+  return $container(layoutSheet.spacingSmall, style({ alignItems: 'center', textDecoration: 'none' }))(
     $wrapper(style({ display: 'flex', border: `1px solid ${pallete.foreground}`, placeContent: 'center', alignItems: 'center' }))(
       $text(style({ fontWeight: 800, color: pallete.foreground }))('?')
     ),

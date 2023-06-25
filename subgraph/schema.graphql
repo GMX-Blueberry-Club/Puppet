@@ -1,196 +1,233 @@
 
 
-type PositionAdjustmentRequestExecution @entity(immutable: true) {
-  id: Bytes!
-  account: Bytes!
-  trade: TradeLink!
+# type PositionAdjustmentRequestExecution @entity(immutable: true) {
+#   id: Bytes!
+#   account: Bytes!
+#   trade: TradeLink!
 
-  path: [String!]!
-  indexToken: Bytes!
-  amountIn: BigInt!
-  minOut: BigInt!
-  sizeDelta: BigInt!
-  isLong: Boolean!
-  acceptablePrice: BigInt!
-  executionFee: BigInt!
-  blockGap: BigInt!
-  timeGap: BigInt!
+#   path: [String!]!
+#   indexToken: Bytes!
+#   amountIn: BigInt!
+#   minOut: BigInt!
+#   sizeDelta: BigInt!
+#   isLong: Boolean!
+#   acceptablePrice: BigInt!
+#   executionFee: BigInt!
+#   blockGap: BigInt!
+#   timeGap: BigInt!
 
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
 
+# type PositionAdjustment @entity(immutable: true) {
+#   id: Bytes!
+#   trade: TradeLink!
+#   account: Bytes!
 
-type PositionAdjustment @entity(immutable: true) {
-  id: Bytes!
-  trade: TradeLink!
-  account: Bytes!
+#   collateralToken: Bytes!
+#   indexToken: Bytes!
+#   isLong: Boolean!
+#   key: Bytes!
+#   isIncrease: Boolean!
 
-  collateralToken: Bytes!
-  indexToken: Bytes!
-  isLong: Boolean!
-  key: Bytes!
-  isIncrease: Boolean!
+#   collateralDelta: BigInt!
+#   sizeDelta: BigInt!
+#   price: BigInt!
+#   fee: BigInt!
 
-  collateralDelta: BigInt!
-  sizeDelta: BigInt!
-  price: BigInt!
-  fee: BigInt!
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
 
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
+# type PositionUpdate @entity(immutable: true) {
+#   id: Bytes!
+#   trade: TradeLink!
 
+#   key: Bytes!
 
-type PositionUpdate @entity(immutable: true) {
-  id: Bytes!
-  trade: TradeLink!
+#   size: BigInt!
+#   collateral: BigInt!
 
-  key: Bytes!
+#   reserveAmount: BigInt!
+#   realisedPnl: BigInt!
+#   averagePrice: BigInt!
+#   entryFundingRate: BigInt!
+#   markPrice: BigInt!
 
-  size: BigInt!
-  collateral: BigInt!
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
 
-  reserveAmount: BigInt!
-  realisedPnl: BigInt!
-  averagePrice: BigInt!
-  entryFundingRate: BigInt!
-  markPrice: BigInt!
+# type TradeLink @entity(immutable: true) {
+#   id: Bytes!
 
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
+#   account: Bytes!
+#   collateralToken: Bytes!
+#   indexToken: Bytes!
+#   isLong: Boolean!
+#   key: Bytes!
 
+#   keeperAdjustList: [PositionAdjustmentRequestExecution!] @derivedFrom(field: "trade")
 
+#   adjustList: [PositionAdjustment!] @derivedFrom(field: "trade")
+#   updateList: [PositionUpdate!] @derivedFrom(field: "trade")
 
-type TradeLink @entity(immutable: true) {
-  id: Bytes!
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
 
-  account: Bytes!
-  collateralToken: Bytes!
-  indexToken: Bytes!
-  isLong: Boolean!
-  key: Bytes!
+# type PositionSlot @entity {
+#   id: Bytes!
+#   idCount: Int!
+#   link: TradeLink!
 
-  keeperAdjustList: [PositionAdjustmentRequestExecution!] @derivedFrom(field: "trade")
+#   account: Bytes!
+#   collateralToken: Bytes!
+#   indexToken: Bytes!
+#   isLong: Boolean!
+#   key: Bytes!
 
-  adjustList: [PositionAdjustment!] @derivedFrom(field: "trade")
-  updateList: [PositionUpdate!] @derivedFrom(field: "trade")
+#   collateral: BigInt!
+#   size: BigInt!
+#   averagePrice: BigInt!
+#   entryFundingRate: BigInt!
+#   realisedPnl: BigInt!
+#   reserveAmount: BigInt!
 
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
+#   cumulativeCollateral: BigInt!
+#   cumulativeSize: BigInt!
+#   cumulativeFee: BigInt!
 
+#   maxCollateral: BigInt!
+#   maxSize: BigInt!
+# }
 
-type PositionSlot @entity {
-  id: Bytes!
-  idCount: Int!
-  link: TradeLink!
+# type PositionSettled @entity(immutable: true) {
+#   id: Bytes!
+#   idCount: Int!
+#   link: TradeLink!
 
-  account: Bytes!
-  collateralToken: Bytes!
-  indexToken: Bytes!
-  isLong: Boolean!
-  key: Bytes!
+#   account: Bytes!
+#   collateralToken: Bytes!
+#   indexToken: Bytes!
+#   isLong: Boolean!
+#   key: Bytes!
 
-  collateral: BigInt!
-  size: BigInt!
-  averagePrice: BigInt!
-  entryFundingRate: BigInt!
-  realisedPnl: BigInt!
-  reserveAmount: BigInt!
+#   collateral: BigInt!
+#   size: BigInt!
+#   averagePrice: BigInt!
+#   entryFundingRate: BigInt!
+#   realisedPnl: BigInt!
+#   reserveAmount: BigInt!
 
-  cumulativeCollateral: BigInt!
-  cumulativeSize: BigInt!
-  cumulativeFee: BigInt!
+#   cumulativeCollateral: BigInt!
+#   cumulativeSize: BigInt!
+#   cumulativeFee: BigInt!
 
-  maxCollateral: BigInt!
-  maxSize: BigInt!
-}
+#   maxCollateral: BigInt!
+#   maxSize: BigInt!
 
-type PositionSettled @entity(immutable: true) {
-  id: Bytes!
-  idCount: Int!
-  link: TradeLink!
+#   markPrice: BigInt!
+#   isLiquidated: Boolean!
 
-  account: Bytes!
-  collateralToken: Bytes!
-  indexToken: Bytes!
-  isLong: Boolean!
-  key: Bytes!
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
 
-  collateral: BigInt!
-  size: BigInt!
-  averagePrice: BigInt!
-  entryFundingRate: BigInt!
-  realisedPnl: BigInt!
-  reserveAmount: BigInt!
+# type RouteRegistration @entity(immutable: true) {
+#   id: Bytes!
+#   trader: Bytes!
+#   route: Bytes!
+#   routeTypeKey: Bytes!
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
 
-  cumulativeCollateral: BigInt!
-  cumulativeSize: BigInt!
-  cumulativeFee: BigInt!
+# type PositionAdjustmentRequest @entity(immutable: true) {
+#   id: Bytes!
+#   caller: Bytes!
+#   route: Bytes!
+#   requestKey: Bytes!
+#   routeTypeKey: Bytes!
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
 
-  maxCollateral: BigInt!
-  maxSize: BigInt!
+# type Subscribe @entity(immutable: true) {
+#   id: Bytes!
+#   traders: [Bytes!]!
+#   allowances: [BigInt!]!
+#   puppet: Bytes!
+#   routeTypeKey: Bytes!
+#   subscribe: Boolean!
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
 
-  markPrice: BigInt!
-  isLiquidated: Boolean!
-
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-
-type RouteRegistration @entity(immutable: true) {
-  id: Bytes!
-  trader: Bytes!
-  route: Bytes!
-  routeTypeKey: Bytes!
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type PositionAdjustmentRequest @entity(immutable: true) {
-  id: Bytes!
-  caller: Bytes!
-  route: Bytes!
-  requestKey: Bytes!
-  routeTypeKey: Bytes!
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type Subscribe @entity(immutable: true) {
-  id: Bytes!
-  traders: [Bytes!]!
-  allowances: [BigInt!]!
-  puppet: Bytes!
-  routeTypeKey: Bytes!
-  subscribe: Boolean!
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type Transfer @entity(immutable: true) {
-  id: Bytes!
-  token: Bytes!
-  from: Bytes!
-  to: Bytes!
-  amount: BigInt!
-  amountUsd: BigInt!
+# type Transfer @entity(immutable: true) {
+#   id: Bytes!
+#   token: Bytes!
+#   from: Bytes!
+#   to: Bytes!
+#   amount: BigInt!
+#   amountUsd: BigInt!
   
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type AdjustmentExecution @entity(immutable: true) {
+#   id: Bytes! # account + index
+#   route: Bytes!
+
+#   keeperExecution: PositionAdjustmentRequestExecution!
+
+#   requestKey: Bytes!
+#   isExecuted: Boolean!
+#   isIncrease: Boolean!
+
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type MirrorPositionSlot @entity {
+#   id: Bytes!
+#   trader: Bytes!
+#   route: Bytes!
+
+#   positionSlot: PositionSlot!
+#   link: MirrorPositionLink!
+# }
+
+# type MirrorPositionAdjustment @entity(immutable: true) {
+#   # adjustList: [MirrorPositionAdjustment!] @derivedFrom(field: "link")
+#   id: Bytes!
+#   tradeLink: TradeLink!
+#   route: Bytes!
+
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type MirrorPositionLink @entity(immutable: true) {
+#   # adjustList: [MirrorPositionAdjustment!] @derivedFrom(field: "link")
+#   id: Bytes!
+#   tradeLink: TradeLink!
+#   route: Bytes!
+# }
+
 
 type Route @entity(immutable: true) {
   id: Bytes!
@@ -205,47 +242,405 @@ type Route @entity(immutable: true) {
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
 }
 
-type AdjustmentExecution @entity(immutable: true) {
-  id: Bytes! # account + index
-  route: Bytes!
 
-  keeperExecution: PositionAdjustmentRequestExecution!
-
-  requestKey: Bytes!
-  isExecuted: Boolean!
-  isIncrease: Boolean!
+type Callback @entity(immutable: true) {
+  id: Bytes!
+  callbackTarget: Bytes! # address
+  success: Boolean! # bool
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
 }
 
-
-type MirrorPositionSlot @entity {
+type CreateDecreasePosition @entity(immutable: true) {
   id: Bytes!
-  trader: Bytes!
-  route: Bytes!
-
-  positionSlot: PositionSlot!
-  link: MirrorPositionLink!
-}
-
-type MirrorPositionAdjustment @entity(immutable: true) {
-  # adjustList: [MirrorPositionAdjustment!] @derivedFrom(field: "link")
-  id: Bytes!
-  tradeLink: TradeLink!
-  route: Bytes!
+  account: Bytes! # address
+  path: [Bytes!]! # address[]
+  indexToken: Bytes! # address
+  collateralDelta: BigInt! # uint256
+  sizeDelta: BigInt! # uint256
+  isLong: Boolean! # bool
+  receiver: Bytes! # address
+  acceptablePrice: BigInt! # uint256
+  minOut: BigInt! # uint256
+  executionFee: BigInt! # uint256
+  index: BigInt! # uint256
+  queueIndex: BigInt! # uint256
+  blockTime: BigInt! # uint256
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
 }
 
-type MirrorPositionLink @entity(immutable: true) {
-  # adjustList: [MirrorPositionAdjustment!] @derivedFrom(field: "link")
+type CreateIncreasePosition @entity(immutable: true) {
   id: Bytes!
-  tradeLink: TradeLink!
-  route: Bytes!
+  account: Bytes! # address
+  path: [Bytes!]! # address[]
+  indexToken: Bytes! # address
+  amountIn: BigInt! # uint256
+  minOut: BigInt! # uint256
+  sizeDelta: BigInt! # uint256
+  isLong: Boolean! # bool
+  acceptablePrice: BigInt! # uint256
+  executionFee: BigInt! # uint256
+  index: BigInt! # uint256
+  queueIndex: BigInt! # uint256
+  blockTime: BigInt! # uint256
+  gasPrice: BigInt! # uint256
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type ExecuteDecreasePosition @entity(immutable: true) {
+  id: Bytes!
+  account: Bytes! # address
+  path: [Bytes!]! # address[]
+  indexToken: Bytes! # address
+  collateralDelta: BigInt! # uint256
+  sizeDelta: BigInt! # uint256
+  isLong: Boolean! # bool
+  receiver: Bytes! # address
+  acceptablePrice: BigInt! # uint256
+  minOut: BigInt! # uint256
+  executionFee: BigInt! # uint256
+  blockGap: BigInt! # uint256
+  timeGap: BigInt! # uint256
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type ExecuteIncreasePosition @entity(immutable: true) {
+  id: Bytes!
+  account: Bytes! # address
+  path: [Bytes!]! # address[]
+  indexToken: Bytes! # address
+  amountIn: BigInt! # uint256
+  minOut: BigInt! # uint256
+  sizeDelta: BigInt! # uint256
+  isLong: Boolean! # bool
+  acceptablePrice: BigInt! # uint256
+  executionFee: BigInt! # uint256
+  blockGap: BigInt! # uint256
+  timeGap: BigInt! # uint256
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type ClosePosition @entity(immutable: true) {
+  id: Bytes!
+  key: Bytes! # bytes32
+  size: BigInt! # uint256
+  collateral: BigInt! # uint256
+  averagePrice: BigInt! # uint256
+  entryFundingRate: BigInt! # uint256
+  reserveAmount: BigInt! # uint256
+  realisedPnl: BigInt! # int256
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type DecreasePosition @entity(immutable: true) {
+  id: Bytes!
+  key: Bytes! # bytes32
+  account: Bytes! # address
+  collateralToken: Bytes! # address
+  indexToken: Bytes! # address
+  collateralDelta: BigInt! # uint256
+  sizeDelta: BigInt! # uint256
+  isLong: Boolean! # bool
+  price: BigInt! # uint256
+  fee: BigInt! # uint256
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type IncreasePosition @entity(immutable: true) {
+  id: Bytes!
+  key: Bytes! # bytes32
+  account: Bytes! # address
+  collateralToken: Bytes! # address
+  indexToken: Bytes! # address
+  collateralDelta: BigInt! # uint256
+  sizeDelta: BigInt! # uint256
+  isLong: Boolean! # bool
+  price: BigInt! # uint256
+  fee: BigInt! # uint256
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type LiquidatePosition @entity(immutable: true) {
+  id: Bytes!
+  key: Bytes! # bytes32
+  account: Bytes! # address
+  collateralToken: Bytes! # address
+  indexToken: Bytes! # address
+  isLong: Boolean! # bool
+  size: BigInt! # uint256
+  collateral: BigInt! # uint256
+  reserveAmount: BigInt! # uint256
+  realisedPnl: BigInt! # int256
+  markPrice: BigInt! # uint256
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+
+type Swap @entity(immutable: true) {
+  id: Bytes!
+  account: Bytes! # address
+  tokenIn: Bytes! # address
+  tokenOut: Bytes! # address
+  amountIn: BigInt! # uint256
+  amountOut: BigInt! # uint256
+  amountOutAfterFees: BigInt! # uint256
+  feeBasisPoints: BigInt! # uint256
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type UpdatePosition @entity(immutable: true) {
+  id: Bytes!
+  key: Bytes! # bytes32
+  size: BigInt! # uint256
+  collateral: BigInt! # uint256
+  averagePrice: BigInt! # uint256
+  entryFundingRate: BigInt! # uint256
+  reserveAmount: BigInt! # uint256
+  realisedPnl: BigInt! # int256
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type ApprovePlugin @entity(immutable: true) {
+  id: Bytes!
+  caller: Bytes! # address
+  routeTypeKey: Bytes! # bytes32
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type AuthorityUpdated @entity(immutable: true) {
+  id: Bytes!
+  user: Bytes! # address
+  newAuthority: Bytes! # address
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type PuppetCallback @entity(immutable: true) {
+  id: Bytes!
+  route: Bytes! # address
+  requestKey: Bytes! # bytes32
+  isExecuted: Boolean! # bool
+  isIncrease: Boolean! # bool
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type CreditPuppet @entity(immutable: true) {
+  id: Bytes!
+  amount: BigInt! # uint256
+  asset: Bytes! # address
+  puppet: Bytes! # address
+  caller: Bytes! # address
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type DebitPuppet @entity(immutable: true) {
+  id: Bytes!
+  amount: BigInt! # uint256
+  asset: Bytes! # address
+  puppet: Bytes! # address
+  caller: Bytes! # address
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type DecreaseSize @entity(immutable: true) {
+  id: Bytes!
+  requestKey: Bytes! # bytes32
+  routeKey: Bytes! # bytes32
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type Deposit @entity(immutable: true) {
+  id: Bytes!
+  amount: BigInt! # uint256
+  asset: Bytes! # address
+  caller: Bytes! # address
+  puppet: Bytes! # address
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type Liquidate @entity(immutable: true) {
+  id: Bytes!
+  routeKey: Bytes! # bytes32
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type RegisterRoute @entity(immutable: true) {
+  id: Bytes!
+  trader: Bytes! # address
+  route: Bytes! # address
+  routeTypeKey: Bytes! # bytes32
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type RequestPositionAdjustment @entity(immutable: true) {
+  id: Bytes!
+  caller: Bytes! # address
+  route: Bytes! # address
+  requestKey: Bytes! # bytes32
+  routeTypeKey: Bytes! # bytes32
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type Send @entity(immutable: true) {
+  id: Bytes!
+  amount: BigInt! # uint256
+  asset: Bytes! # address
+  receiver: Bytes! # address
+  caller: Bytes! # address
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type SetRouteType @entity(immutable: true) {
+  id: Bytes!
+  routeTypeKey: Bytes! # bytes32
+  collateral: Bytes! # address
+  index: Bytes! # address
+  isLong: Boolean! # bool
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type Subscribe @entity(immutable: true) {
+  id: Bytes!
+  traders: [Bytes!]! # address[]
+  allowances: [BigInt!]! # uint256[]
+  puppet: Bytes! # address
+  routeTypeKey: Bytes! # bytes32
+  subscribe: Boolean! # bool
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type Withdraw @entity(immutable: true) {
+  id: Bytes!
+  amount: BigInt! # uint256
+  asset: Bytes! # address
+  receiver: Bytes! # address
+  puppet: Bytes! # address
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  transactionIndex: BigInt!
+  logIndex: BigInt!
 }

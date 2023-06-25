@@ -2,94 +2,6 @@ specVersion: 0.0.5
 schema:
   file: ./schema.graphql
 dataSources:
-  - kind: ethereum/contract
-    name: PositionRouter
-    network: arbitrum-one
-    source:
-      address: "0xb87a436B93fFE9D75c5cFA7bAcFff96430b09868"
-      abi: PositionRouter
-      startBlock: 103044446
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.6
-      language: wasm/assemblyscript
-      entities:
-        - ExecuteIncreasePosition
-        - ExecuteDecreasePosition
-      abis:
-        - name: PositionRouter
-          file: ./abis/PositionRouter.json
-      eventHandlers:
-        - event: ExecuteIncreasePosition(indexed address,address[],address,uint256,uint256,uint256,bool,uint256,uint256,uint256,uint256)
-          handler: handleExecuteIncreasePosition
-        - event: ExecuteDecreasePosition(indexed address,address[],address,uint256,uint256,bool,address,uint256,uint256,uint256,uint256,uint256)
-          handler: handleExecuteDecreasePosition
-      file: ./src/trading.ts
-
-  - kind: ethereum/contract
-    name: Vault
-    network: arbitrum-one
-    source:
-      address: "0x489ee077994b6658eafa855c308275ead8097c4a"
-      abi: Vault
-      startBlock: 103044446
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.6
-      language: wasm/assemblyscript
-      entities:
-        - AdjustPosition
-        - UpdatePosition
-        - TradeLink
-        - PositionSlot
-        - PositionSettled
-      abis:
-        - name: Vault
-          file: ./abis/Vault.json
-        - name: ReferralStorage
-          file: ./abis/ReferralStorage.json
-        - name: VaultPricefeed
-          file: ./abis/VaultPricefeed.json
-        # - name: Orchestrator
-        #   file: ./abis/Orchestrator.json
-      eventHandlers:
-        - event: ClosePosition(bytes32,uint256,uint256,uint256,uint256,uint256,int256)
-          handler: handleClosePosition
-        - event: DecreasePosition(bytes32,address,address,address,uint256,uint256,bool,uint256,uint256)
-          handler: handleDecreasePosition
-        - event: IncreasePosition(bytes32,address,address,address,uint256,uint256,bool,uint256,uint256)
-          handler: handleIncreasePosition
-        - event: LiquidatePosition(bytes32,address,address,address,bool,uint256,uint256,uint256,int256,uint256)
-          handler: handleLiquidatePosition
-        - event: UpdatePosition(bytes32,uint256,uint256,uint256,uint256,uint256,int256)
-          handler: handleUpdatePosition
-      file: ./src/trading.ts
-
-  - kind: ethereum
-    name: Orchestrator
-    network: arbitrum-one
-    source:
-      address: "0x92A3f7796f05305600864F38A77DF3812f664Df8"
-      abi: Orchestrator
-      startBlock: 103044446
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - Callback
-      abis:
-        - name: Orchestrator
-          file: ./abis/Orchestrator.json
-        - name: ERC20
-          file: ./abis/ERC20.json
-      eventHandlers:
-        - event: Callback(indexed address,indexed bytes32,indexed bool,bool)
-          handler: handleCallback
-        - event: RegisterRoute(indexed address,indexed address,indexed bytes32)
-          handler: handleRegisterRoute
-      file: ./src/orchestrator.ts
-
   - kind: ethereum
     name: RouteFactory
     network: arbitrum-one
@@ -107,7 +19,133 @@ dataSources:
         - name: RouteFactory
           file: ./abis/RouteFactory.json
       eventHandlers:
-        - event: RouteCreated(indexed address,indexed address,indexed address,address,address,address,bool)
+        - event: RouteCreated(indexed address,indexed address,indexed
+            address,address,address,address,bool)
           handler: handleRouteCreated
       file: ./src/orchestrator.ts
-
+  - kind: ethereum
+    name: PositionRouter
+    network: arbitrum-one
+    source:
+      address: "0xb87a436B93fFE9D75c5cFA7bAcFff96430b09868"
+      abi: PositionRouter
+      startBlock: 103044446
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Callback
+        - CreateDecreasePosition
+        - CreateIncreasePosition
+        - ExecuteDecreasePosition
+        - ExecuteDecreasePosition
+      abis:
+        - name: PositionRouter
+          file: ./abis/PositionRouter.json
+      eventHandlers:
+        - event: Callback(address,bool)
+          handler: handleCallback
+        - event: CreateDecreasePosition(indexed
+            address,address[],address,uint256,uint256,bool,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
+          handler: handleCreateDecreasePosition
+        - event: CreateIncreasePosition(indexed
+            address,address[],address,uint256,uint256,uint256,bool,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
+          handler: handleCreateIncreasePosition
+        - event: ExecuteDecreasePosition(indexed
+            address,address[],address,uint256,uint256,bool,address,uint256,uint256,uint256,uint256,uint256)
+          handler: handleExecuteDecreasePosition
+        - event: ExecuteIncreasePosition(indexed
+            address,address[],address,uint256,uint256,uint256,bool,uint256,uint256,uint256,uint256)
+          handler: handleExecuteIncreasePosition
+      file: ./src/positionRouter.ts
+  - kind: ethereum
+    name: Vault
+    network: arbitrum-one
+    source:
+      address: "0x489ee077994b6658eafa855c308275ead8097c4a"
+      abi: Vault
+      startBlock: 103044446
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - ClosePosition
+        - DecreasePosition
+        - IncreasePoolAmount
+        - IncreasePosition
+        - LiquidatePosition
+        - Swap
+        - UpdatePosition
+      abis:
+        - name: Vault
+          file: ./abis/Vault.json
+      eventHandlers:
+        - event: ClosePosition(bytes32,uint256,uint256,uint256,uint256,uint256,int256)
+          handler: handleClosePosition
+        - event: DecreasePosition(bytes32,address,address,address,uint256,uint256,bool,uint256,uint256)
+          handler: handleDecreasePosition
+        - event: IncreasePosition(bytes32,address,address,address,uint256,uint256,bool,uint256,uint256)
+          handler: handleIncreasePosition
+        - event: LiquidatePosition(bytes32,address,address,address,bool,uint256,uint256,uint256,int256,uint256)
+          handler: handleLiquidatePosition
+        - event: Swap(address,address,address,uint256,uint256,uint256,uint256)
+          handler: handleSwap
+        - event: UpdatePosition(bytes32,uint256,uint256,uint256,uint256,uint256,int256)
+          handler: handleUpdatePosition
+      file: ./src/vault.ts
+  - kind: ethereum
+    name: Orchestrator
+    network: arbitrum-one
+    source:
+      address: "0x92A3f7796f05305600864F38A77DF3812f664Df8"
+      abi: Orchestrator
+      startBlock: 103044446
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - ApprovePlugin
+        - PuppetCallback
+        - CreditPuppet
+        - DebitPuppet
+        - DecreaseSize
+        - Deposit
+        - Liquidate
+        - RegisterRoute
+        - RequestPositionAdjustment
+        - Send
+        - SetRouteType
+        - Subscribe
+        - Withdraw
+      abis:
+        - name: Orchestrator
+          file: ./abis/Orchestrator.json
+      eventHandlers:
+        - event: Callback(indexed address,indexed bytes32,indexed bool,bool)
+          handler: handleCallback
+        - event: CreditPuppet(uint256,indexed address,indexed address,indexed address)
+          handler: handleCreditPuppet
+        - event: DebitPuppet(uint256,indexed address,indexed address,indexed address)
+          handler: handleDebitPuppet
+        - event: DecreaseSize(indexed bytes32,indexed bytes32)
+          handler: handleDecreaseSize
+        - event: Deposit(indexed uint256,indexed address,address,indexed address)
+          handler: handleDeposit
+        - event: Liquidate(indexed bytes32)
+          handler: handleLiquidate
+        - event: RegisterRoute(indexed address,indexed address,indexed bytes32)
+          handler: handleRegisterRoute
+        - event: RequestPositionAdjustment(indexed address,indexed address,indexed bytes32,bytes32)
+          handler: handleRequestPositionAdjustment
+        - event: Send(uint256,indexed address,indexed address,indexed address)
+          handler: handleSend
+        - event: SetRouteType(bytes32,address,address,bool)
+          handler: handleSetRouteType
+        - event: Subscribe(address[],uint256[],indexed address,indexed bytes32,indexed bool)
+          handler: handleSubscribe
+        - event: Withdraw(uint256,indexed address,indexed address,indexed address)
+          handler: handleWithdraw
+      file: ./src/orchestrator.ts

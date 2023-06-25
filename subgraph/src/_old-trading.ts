@@ -13,7 +13,7 @@ import {
   TradeLink,
 } from "../generated/schema"
 
-import { getUniqueEventId, ZERO_BI } from "./helpers"
+import { getEventOrderIdentifier, getUniqueEventId, ZERO_BI } from "./helpers"
 
 const referralStorageAddress = Address.fromString("0xe6fab3F0c7199b0d34d7FbE83394fc0e0D06e99d")
 const vaultPricefeedAddress = Address.fromString("0x2d68011bcA022ed0E474264145F46CC4de96a002")
@@ -21,17 +21,17 @@ const vaultPricefeedAddress = Address.fromString("0x2d68011bcA022ed0E474264145F4
 
 
 
-const getTradeLinkId = (id: i32, key: Bytes): Bytes =>
-  Bytes.fromUTF8('TradeLink')
+const getTradeLinkId = (id: i32, key: Bytes): Bytes => {
+  return Bytes.fromUTF8('TradeLink')
     .concatI32(id)
     .concat(key)
+}
 
 
 
 
 export function handleExecuteIncreasePosition(event: positionRouter.ExecuteIncreasePosition): void {
 
-  event.params.
 
   const positionAdjustmentRequestExecution = new PositionAdjustmentRequestExecution(key)
 
@@ -42,7 +42,7 @@ export function handleExecuteIncreasePosition(event: positionRouter.ExecuteIncre
   positionSlot.key = key
 
 
-  
+
   positionSlot.save()
 }
 

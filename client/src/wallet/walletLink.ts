@@ -1,8 +1,8 @@
-import { combineObject, fromCallback } from "@aelea/core"
+import { combineObject, fromCallback, replayLatest } from "@aelea/core"
 import { pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, delay, map, mergeArray, now } from "@most/core"
+import { awaitPromises, delay, map, mergeArray, multicast, now } from "@most/core"
 import { Stream } from "@most/types"
-import { Address, GetAccountResult, GetNetworkResult, InjectedConnector, WalletClient, configureChains, createConfig, createStorage, getAccount, getNetwork, getPublicClient, getWalletClient, getWebSocketPublicClient, watchAccount, watchNetwork } from '@wagmi/core'
+import { Address, GetAccountResult, GetNetworkResult, InjectedConnector, WalletClient, configureChains, createConfig, createStorage, getAccount, getNetwork, getPublicClient, getWalletClient, getWebSocketPublicClient, multicall, watchAccount, watchNetwork } from '@wagmi/core'
 import { WalletConnectConnector } from '@wagmi/core/connectors/walletConnect'
 import { alchemyProvider } from "@wagmi/core/providers/alchemy"
 import { jsonRpcProvider } from '@wagmi/core/providers/jsonRpc'
@@ -67,8 +67,9 @@ export const wcConnector = new WalletConnectConnector({
 const injectedConnector = new InjectedConnector({ chains, options: { name: 'injected' } })
 export const walletConfig = createConfig({
   autoConnect: true,
-  connectors: [injectedConnector, wcConnector],
-  // connectors: w3mConnectors({ projectId, version: 2, chains }),
+  connectors: w3mConnectors({ projectId, version: 2, chains }),
+
+  // connectors: [injectedConnector, wcConnector],
 
   publicClient: configChain.publicClient,
   webSocketPublicClient: configChain.webSocketPublicClient,
@@ -85,7 +86,9 @@ export const accountChange = fromCallback<GetAccountResult>(watchAccount)
 
 
 
-export const chain: Stream<ISupportedChain> = map(getNetworkResult => {
+export const chain: Stream<ISupportedChain> = replayLatest(multicast(map(getNetworkResult => {
+  debugger
+
   if (!getNetworkResult) {
     throw new Error('network is null')
   }
@@ -95,9 +98,9 @@ export const chain: Stream<ISupportedChain> = map(getNetworkResult => {
 
   return chain
 }, mergeArray([
-  map(() => getNetwork(), now(null)),
+  // map(() => getNetwork(), now(null)),
   networkChange
-]))
+]))))
 
 
 
@@ -106,18 +109,17 @@ export const account = mergeArray([
   accountChange
 ])
 
-export const publicClient: Stream<PublicClient<Transport, ISupportedChain>> = map(params => {
+export const publicClient: Stream<PublicClient<Transport, ISupportedChain>> = replayLatest(multicast(map(params => {
   if (params.chain == null) {
     throw new Error('network is null')
   }
 
   const chainId = params.chain.id
-  const wsc = getWebSocketPublicClient({ chainId })
+  const wsc = getWebSocketPublicClient({ chainId }) || getWebSocketPublicClient({ chainId: arbitrum.id })
   const clientAvaialble = wsc || getPublicClient({ chainId }) || getPublicClient({ chainId: arbitrum.id })
 
   return clientAvaialble
-}, combineObject({ chain }))
-
+}, combineObject({ chain }))))
 
 
 export const wallet = awaitPromises(map(async params => {
