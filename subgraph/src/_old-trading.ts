@@ -30,22 +30,6 @@ const getTradeLinkId = (id: i32, key: Bytes): Bytes => {
 
 
 
-export function handleExecuteIncreasePosition(event: positionRouter.ExecuteIncreasePosition): void {
-
-
-  const positionAdjustmentRequestExecution = new PositionAdjustmentRequestExecution(key)
-
-  positionSlot.account = event.params.account
-  positionSlot.collateralToken = event.params.collateralToken
-  positionSlot.indexToken = event.params.indexToken
-  positionSlot.isLong = event.params.isLong
-  positionSlot.key = key
-
-
-
-  positionSlot.save()
-}
-
 
 export function handleIncreasePosition(event: vault.IncreasePosition): void {
   const key = event.params.key
@@ -68,7 +52,7 @@ export function handleIncreasePosition(event: vault.IncreasePosition): void {
   const countId = positionSlot.size.equals(ZERO_BI) ? positionSlot.idCount + 1 : positionSlot.idCount
   const tradeLinkId = getTradeLinkId(countId, event.params.key)
 
-  positionSlot.link = tradeLinkId
+  // positionSlot.link = tradeLinkId
   positionSlot.idCount = countId
   positionSlot.collateral = positionSlot.collateral.plus(event.params.collateralDelta)
   positionSlot.size = positionSlot.size.plus(event.params.sizeDelta)

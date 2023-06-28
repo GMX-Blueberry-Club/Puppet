@@ -1,7 +1,7 @@
 import { Behavior, O } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { ITokenSymbol, ITrade, formatReadableUSD } from "gmx-middleware-utils"
+import { ITokenSymbol, ITrade, ITradeSettled, formatReadableUSD, getMappedValue, getAveragePrice } from "gmx-middleware-utils"
 import * as GMX from "gmx-middleware-const"
 
 import { pallete } from "@aelea/ui-components-theme"
@@ -46,25 +46,28 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
 
 
-export const $Index = (pos: ITrade) => $column(style({ position: 'relative', placeContent: 'center' }))(
-  $row(layoutSheet.spacingTiny, style({ alignItems: 'center', fontSize: '.65em' }))(
-    $icon({
-      svgOps: style({ borderRadius: '50%', padding: '4px', marginRight: '-10px', zIndex: 0, alignItems: 'center', fill: pallete.message, backgroundColor: pallete.horizon }),
-      $content: pos.isLong ? $bull : $bear,
-      viewBox: '0 0 32 32',
-      width: '26px'
-    }),
-    $TokenIcon(GMX.TOKEN_ADDRESS_TO_SYMBOL[pos.indexToken], { width: '28px' }),
-    $text(formatReadableUSD(pos.averagePrice))
-  ),
-  // $text(style({ fontSize: '.65em' }))(formatReadableUSD(pos.averagePrice)),
-  // $column(style({ marginLeft: '-5px', borderRadius: '50%', padding: '6px', alignItems: 'center', backgroundColor: pallete.horizon }))(
-  //   $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+export const $Index = (pos: ITrade | ITradeSettled) => {
 
-  //     $leverage(pos)
-  //   ),
-  // )
-)
+  return $column(style({ position: 'relative', placeContent: 'center' }))(
+    $row(layoutSheet.spacingTiny, style({ alignItems: 'center', fontSize: '.65em' }))(
+      $icon({
+        svgOps: style({ borderRadius: '50%', padding: '4px', marginRight: '-10px', zIndex: 0, alignItems: 'center', fill: pallete.message, backgroundColor: pallete.horizon }),
+        $content: pos.isLong ? $bull : $bear,
+        viewBox: '0 0 32 32',
+        width: '26px'
+      }),
+      $TokenIcon(getMappedValue(GMX.TOKEN_ADDRESS_TO_SYMBOL, pos.indexToken), { width: '28px' }),
+      $text(formatReadableUSD(getAveragePrice(pos)))
+    ),
+    // $text(style({ fontSize: '.65em' }))(formatReadableUSD(pos.averagePrice)),
+    // $column(style({ marginLeft: '-5px', borderRadius: '50%', padding: '6px', alignItems: 'center', backgroundColor: pallete.horizon }))(
+    //   $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+
+    //     $leverage(pos)
+    //   ),
+    // )
+  )
+}
 
 
 

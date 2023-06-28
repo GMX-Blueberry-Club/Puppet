@@ -1,27 +1,14 @@
 import { O } from "@aelea/core"
 import { map } from "@most/core"
-export { Stream } from "@most/types"
 import { ClientOptions, OperationContext, TypedDocumentNode, cacheExchange, createClient, fetchExchange, gql } from "@urql/core"
 import {
-  IAccountSummary,
   IIdentifiableEntity, IRequestPagePositionApi,
-  cacheMap,
-  div,
-  formatFixed,
-  getMappedValue,
-  getMarginFees,
-  getTokenAmount,
-  gmxSubgraph,
-  groupByKey,
-  pagingQuery,
-  readableNumber,
-  toAccountSummaryList
+  cacheMap
 } from "gmx-middleware-utils"
 import fetch from "isomorphic-fetch"
 import { numberToHex } from "viem"
-import { COMPETITION_METRIC_LIST, TOURNAMENT_DURATION, TOURNAMENT_TIME_ELAPSED } from "./config.js"
-import { IBlueberryLadder, ILabItem, ILabItemOwnership, IOwner, IRequestCompetitionLadderApi, IToken } from "./types.js"
-import * as GMX from "gmx-middleware-const"
+import { ILabItem, ILabItemOwnership, IOwner, IToken } from "./types.js"
+export { Stream } from "@most/types"
 
 
 export const createSubgraphClient = (opts: ClientOptions) => {
@@ -193,185 +180,6 @@ _${id}: token(id: "${numberToHex(id)}") {
 
   return rawList.map(token => tokenJson(token))
 }
-
-
-
-const MIN_ROI_THRESHOLD = 50n
-const MIN_PNL_THRESHOLD = GMX.USD_PERCISION * 5n
-
-
-function isWinner(summary: IAccountSummary) {
-  return summary.pnl > MIN_PNL_THRESHOLD && div(summary.pnl, summary.maxCollateral) > MIN_ROI_THRESHOLD
-}
-
-export const competitionLeaderboard = O(
-  map(async (queryParams: IRequestCompetitionLadderApi) => {
-
-    const queryCache = cache('cacheKey', GMX.TIME_INTERVAL_MAP.MIN5, async () => {
-
-      const tradeList = await gmxSubgraph.getCompetitionTrades(queryParams)
-      const priceMap = await gmxSubgraph.getPriceMap(queryParams.to, queryParams)
-
-      const summaryList = toAccountSummaryList(tradeList, priceMap, queryParams.maxCollateral, queryParams.to)
-
-      const { size, activeWinnerCount, totalMaxCollateral } = summaryList.reduce((s, n) => {
-        if (isWinner(n)) {
-          s.activeWinnerCount++
-          s.totalMaxCollateral += n.maxCollateral
-        }
-
-        if (n.pnl > s.pnl ? n.pnl : s.pnl) {
-          s.pnl = n.pnl
-          s.highestMaxCollateralBasedOnPnl = n.maxCollateral
-        }
-
-        s.size += n.cumSize
-
-        return s
-      }, { highestMaxCollateralBasedOnPnl: 0n, pnl: 0n, size: 0n, totalMaxCollateral: 0n, activeWinnerCount: 0n })
-
-
-      const averageMaxCollateral = totalMaxCollateral / activeWinnerCount
-      const estSize = size * BigInt(TOURNAMENT_DURATION) / BigInt(TOURNAMENT_TIME_ELAPSED)
-
-      const prizePool = getMarginFees(size) * 2500n / GMX.BASIS_POINTS_DIVISOR
-      const estPrizePool = prizePool * BigInt(TOURNAMENT_DURATION) / BigInt(TOURNAMENT_TIME_ELAPSED)
-
-      const totalScore = summaryList.reduce((s, n) => {
-        const score = queryParams.metric === 'roi'
-          ? div(n.pnl, n.maxCollateral > averageMaxCollateral ? n.maxCollateral : averageMaxCollateral)
-          : n[queryParams.metric]
-
-        return score > 0n ? s + score : s
-      }, 0n)
-
-      let connectedProfile: null | IBlueberryLadder = null
-
-
-      const sortedCompetitionList: IBlueberryLadder[] = summaryList
-        .map(summary => {
-          const maxCollateral = summary.maxCollateral > averageMaxCollateral ? summary.maxCollateral : averageMaxCollateral
-          const score = queryParams.metric === 'roi' ? div(summary.pnl, maxCollateral) : summary[queryParams.metric]
-
-          const reward = estPrizePool * score / totalScore
-          const prize = isWinner(summary) ? reward : 0n
-
-
-          return {
-            summary,
-            prize,
-            score
-          }
-        })
-        .sort((a, b) => Number(b.score - a.score))
-        .map(({ prize, score, summary }, idx) => {
-          const tempSummary: IBlueberryLadder = {
-            ...summary,
-            profile: null,
-            rank: idx + 1,
-            prize, score
-
-          }
-
-          if (queryParams.account === summary.account) {
-            connectedProfile = tempSummary
-          }
-
-          return tempSummary
-        })
-
-
-      if (TOURNAMENT_DURATION === TOURNAMENT_TIME_ELAPSED) {
-        // log CSV file for airdrop
-
-        const nativeToken = getMappedValue(GMX.CHAIN_ADDRESS_MAP, queryParams.chain).NATIVE_TOKEN
-
-        console.log(
-          'token_type,token_address,receiver,amount,id\n' + sortedCompetitionList
-            .filter(x => {
-              const prize = prizePool * x.score / totalScore
-              return prize > GMX.USD_PERCISION * 5n
-            })
-            .map((x, idx) => {
-              const ethPrice = BigInt(priceMap['_' + nativeToken])
-              const prizeUsd = prizePool * x.score / totalScore
-              const tokenAmount = formatFixed(getTokenAmount(prizeUsd, ethPrice, 18), 18)
-
-              return `erc20,${nativeToken},${x.account},${readableNumber(tokenAmount)},`
-            }).join('\n')
-        )
-      }
-
-      return {
-        sortedCompetitionList, averageMaxCollateral, estSize, estPrizePool,
-        size, totalScore, prizePool, profile: connectedProfile as null | IBlueberryLadder
-      }
-    })
-
-    const res = await queryCache
-
-
-
-    if (COMPETITION_METRIC_LIST.indexOf(queryParams.selector as any) > -1 && queryParams.direction === 'desc') {
-      const spage = pagingQuery(queryParams, res.sortedCompetitionList)
-      const { offset, pageSize } = spage
-
-      if (spage.offset === 0 && res.profile !== null) {
-
-        const idxProfile = spage.page.indexOf(res.profile)
-
-        if (idxProfile > -1) {
-          spage.page.splice(idxProfile, 1)
-        }
-
-
-        spage.page.unshift(res.profile)
-
-        return {
-          ...res,
-          list: { offset, pageSize: pageSize + (idxProfile === -1 ? 1 : 0), page: spage.page }
-        }
-      }
-
-      return {
-        ...res,
-        list: { offset, pageSize, page: spage.page }
-      }
-    }
-
-
-    return {
-      ...res,
-      list: pagingQuery(queryParams, res.sortedCompetitionList)
-    }
-  }),
-  map(async query => {
-    const res = await query
-    const accountList = res.list.page.map(a => a.account)
-    const [queryProfilePicklist, ensList] = await Promise.all([getProfilePickList(accountList), gmxSubgraph.getEnsProfileListPick(accountList)])
-
-    const gbcListMap = groupByKey(queryProfilePicklist.filter(x => x?.id), x => x.id)
-    const ensListMap = groupByKey(ensList, x => x.domain.resolvedAddress.id)
-
-    const page = res.list.page.map(summary => {
-      const profile = gbcListMap[summary.account]
-      const ens = ensListMap[summary.account]
-
-      return { ...summary, profile: profile ? { ...profile, ens } : null }
-    })
-
-
-    return {
-      ...res,
-      list: {
-        ...res.list,
-        page: page
-      }
-    }
-  })
-)
-
-
 
 
 

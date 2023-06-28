@@ -86,9 +86,7 @@ export const accountChange = fromCallback<GetAccountResult>(watchAccount)
 
 
 
-export const chain: Stream<ISupportedChain> = replayLatest(multicast(map(getNetworkResult => {
-  debugger
-
+export const chain: Stream<ISupportedChain> = map(getNetworkResult => {
   if (!getNetworkResult) {
     throw new Error('network is null')
   }
@@ -98,9 +96,9 @@ export const chain: Stream<ISupportedChain> = replayLatest(multicast(map(getNetw
 
   return chain
 }, mergeArray([
-  // map(() => getNetwork(), now(null)),
-  networkChange
-]))))
+  map(() => getNetwork(), now(null)),
+  // networkChange
+]))
 
 
 
@@ -109,7 +107,7 @@ export const account = mergeArray([
   accountChange
 ])
 
-export const publicClient: Stream<PublicClient<Transport, ISupportedChain>> = replayLatest(multicast(map(params => {
+export const publicClient: Stream<PublicClient<Transport, ISupportedChain>> = map(params => {
   if (params.chain == null) {
     throw new Error('network is null')
   }
@@ -119,7 +117,7 @@ export const publicClient: Stream<PublicClient<Transport, ISupportedChain>> = re
   const clientAvaialble = wsc || getPublicClient({ chainId }) || getPublicClient({ chainId: arbitrum.id })
 
   return clientAvaialble
-}, combineObject({ chain }))))
+}, combineObject({ chain }))
 
 
 export const wallet = awaitPromises(map(async params => {

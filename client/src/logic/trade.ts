@@ -7,7 +7,7 @@ import { fetchBalance, readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
 import * as GMX from "gmx-middleware-const"
 import {
-  IAbstractPositionIdentity, IAbstractPositionKey, ITokenIndex, ITokenSymbol, ITokenTrade, IVaultPosition,
+  IAbstractPositionIdentity, IAbstractPositionKey, ITokenSymbol, IVaultPosition,
   div, filterNull, getMappedValue, getSafeMappedValue, getTokenDescription, parseFixed, periodicRun, periodicSample, safeDiv, switchFailedSources
 } from "gmx-middleware-utils"
 import { Address, Chain } from "viem"
@@ -15,7 +15,7 @@ import { arbitrum, avalanche } from "viem/chains"
 import { ISupportedChain } from "../wallet/walletLink"
 import { connectContract } from "./common"
 import { resolveAddress } from "./utils"
-
+import * as viem from "viem"
 
 
 export type IPositionGetter = IVaultPosition & IAbstractPositionKey & IAbstractPositionIdentity
@@ -71,8 +71,8 @@ const gmxIOPriceMapSource = {
   })))),
 }
 
-export function latestPriceFromExchanges(indexToken: ITokenTrade): Stream<bigint> {
-  const existingToken = getSafeMappedValue(GMX.TOKEN_ADDRESS_TO_SYMBOL, indexToken, indexToken)
+export function latestPriceFromExchanges(indexToken: viem.Address): Stream<bigint> {
+  const existingToken = getMappedValue(GMX.TOKEN_ADDRESS_TO_SYMBOL, indexToken)
   const symbol = derievedSymbolMapping[existingToken] || existingToken
 
   if (symbol === null) {
@@ -134,7 +134,7 @@ export function latestPriceFromExchanges(indexToken: ITokenTrade): Stream<bigint
 }
 
 
-export function getErc20Balance(chain: Chain, token: ITokenTrade | typeof GMX.AddressZero, address: Address): Stream<bigint> {
+export function getErc20Balance(chain: Chain, token: viem.Address | typeof GMX.AddressZero, address: Address): Stream<bigint> {
 
   if (token === GMX.AddressZero) {
     return fromPromise(fetchBalance({ address }).then(res => res.value))
@@ -179,7 +179,7 @@ export function connectTrade(chain: ISupportedChain) {
 
 
 
-  const getTokenFundingRate = (token: Stream<ITokenTrade>) => {
+  const getTokenFundingRate = (token: Stream<viem.Address>) => {
     const reservedAmounts = vault.read('reservedAmounts', token)
     const poolAmounts = vault.read('poolAmounts', token)
 
@@ -188,7 +188,7 @@ export function connectTrade(chain: ISupportedChain) {
     }, combineObject({ fundingRateFactor: getFundingRateFactor(token), poolAmounts, reservedAmounts, token }))
   }
 
-  const getFundingRateFactor = (token: Stream<ITokenTrade>) => {
+  const getFundingRateFactor = (token: Stream<viem.Address>) => {
     const stableFundingRateFactor = vault.read('stableFundingRateFactor')
     const fundingRateFactor = vault.read('fundingRateFactor')
 
@@ -202,7 +202,7 @@ export function connectTrade(chain: ISupportedChain) {
     }, combineObject({ token, stableFundingRateFactor, fundingRateFactor }))
   }
 
-  const getTokenPoolInfo = (token: Stream<ITokenTrade>): Stream<ITokenPoolInfo> => {
+  const getTokenPoolInfo = (token: Stream<viem.Address>): Stream<ITokenPoolInfo> => {
     const rateFactor = getFundingRateFactor(token)
     const cumulativeRate = vault.read('cumulativeFundingRates', token)
     const reservedAmount = vault.read('reservedAmounts', token)
@@ -219,7 +219,7 @@ export function connectTrade(chain: ISupportedChain) {
     }, dataRead)
   }
 
-  const getAvailableLiquidityUsd = (indexToken: Stream<ITokenIndex>, collateralToken: Stream<ITokenTrade>) => {
+  const getAvailableLiquidityUsd = (indexToken: Stream<viem.Address>, collateralToken: Stream<viem.Address>) => {
     const globalShortSizes = vault.read('globalShortSizes', indexToken)
     const guaranteedUsd = vault.read('guaranteedUsd', indexToken)
     const maxGlobalShortSizes = positionRouter.read('maxGlobalShortSizes', indexToken)
@@ -250,7 +250,7 @@ export function connectTrade(chain: ISupportedChain) {
     return obj
   }, keyEvent, mergeArray([positionLiquidateEvent, positionCloseEvent])))
 
-  const getVaultPrimaryPrice = (token: Stream<ITokenTrade>) => {
+  const getVaultPrimaryPrice = (token: Stream<viem.Address>) => {
     const primaryPrice = pricefeed.read('getPrimaryPrice', token, now(false))
 
     return observer.duringWindowActivity(periodicSample(primaryPrice, {
@@ -259,9 +259,7 @@ export function connectTrade(chain: ISupportedChain) {
     }))
   }
 
-
-
-  function getLatestPrice(token: Stream<ITokenTrade>) {
+  function getLatestPrice(token: Stream<viem.Address>) {
     const wsPrice = switchLatest(map(params => {
       const resolvedToken = resolveAddress(chain.id, params.token)
 
@@ -274,11 +272,7 @@ export function connectTrade(chain: ISupportedChain) {
     ])
   }
 
-
-
-
-
-  const exchangesWebsocketPriceSource = (chain: ISupportedChain, token: ITokenTrade) => {
+  const exchangesWebsocketPriceSource = (chain: ISupportedChain, token: viem.Address) => {
     const source = gmxIOPriceMapSource[chain.id]
 
     if (!source) {
@@ -302,11 +296,14 @@ export function connectTrade(chain: ISupportedChain) {
     getFundingRateFactor,
     getTokenPoolInfo,
     getAvailableLiquidityUsd,
+
+    // contract readers
+    router, vault, pricefeed, positionRouter, 
   }
 }
 
 
-export async function getGmxIOPriceMap(url: string): Promise<{ [key in ITokenIndex]: bigint }> {
+export async function getGmxIOPriceMap(url: string): Promise<{ [key in viem.Address]: bigint }> {
   const res = await fetch(url)
   const json = await res.json()
 
@@ -318,7 +315,7 @@ export async function getGmxIOPriceMap(url: string): Promise<{ [key in ITokenInd
   }, {})
 }
 
-export async function getGmxIoOrders(network: typeof arbitrum | typeof avalanche, account: string): Promise<{ [key in ITokenIndex]: bigint }> {
+export async function getGmxIoOrders(network: typeof arbitrum | typeof avalanche, account: string): Promise<{ [key in viem.Address]: bigint }> {
   const res = await fetch(GMX_URL_CHAIN[network.id] + `/orders_indices?account=${account}`)
   const json = await res.json()
 

@@ -1,5 +1,4 @@
 {
-  "eslint.packageManager": "pnpm",
   "npm.packageManager": "pnpm",
   "search.exclude": {
     "**/.dist": true,

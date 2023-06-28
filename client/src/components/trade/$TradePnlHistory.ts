@@ -5,7 +5,7 @@ import { pallete } from "@aelea/ui-components-theme"
 import { CHAIN } from "gmx-middleware-const"
 import {
   unixTimestampNow, isTradeSettled, getDeltaPercentage, intervalListFillOrderMap,
-  isTradeOpen, ITrade, formatFixed, getPnL, IPricefeed, readableNumber
+  ITrade, formatFixed, getPnL, IPricefeed, readableNumber, getTradeTotalFee
 } from "gmx-middleware-utils"
 import { multicast, switchLatest, empty, skipRepeatsWith, map } from "@most/core"
 import { Stream } from "@most/types"
@@ -46,14 +46,15 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
   const historicPnL = multicast(combineArray((displayColumnCount) => {
 
     const startPrice = config.trade.updateList[0].averagePrice
-    const endtime = isTradeSettled(config.trade) ? config.trade.settledTimestamp : unixTimestampNow()
-    const timeRange = endtime - config.trade.timestamp
+    const startTime = config.trade.increaseList[0].blockTimestamp
+    const endtime = isTradeSettled(config.trade) ? config.trade.settlement.blockTimestamp : unixTimestampNow()
+    const timeRange = endtime - startTime
     const interval = Math.floor(timeRange / displayColumnCount) || 1
 
     const initalUpdate = config.trade.updateList[0]
 
     const initialTick: IPricefeedTick = {
-      time: config.trade.timestamp,
+      time: startTime,
       price: startPrice,
       collateral: initalUpdate.collateral,
       size: initalUpdate.size,
@@ -75,9 +76,9 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
       // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
       interval,
       seed: initialTick,
-      getTime: x => x.timestamp,
+      getTime: x => x.blockTimestamp,
       fillMap: (prev, next) => {
-        const time = next.timestamp
+        const time = next.blockTimestamp
 
         if (next.__typename === 'UpdatePosition') {
           const pnl = getPnL(config.trade.isLong, next.averagePrice, next.markPrice, next.size)
@@ -104,10 +105,10 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
 
     if (isTradeSettled(config.trade)) {
       const pnl = 0n
-      const pnlPercentage = getDeltaPercentage(pnl, config.trade.collateral)
-      const realisedPnl = config.trade.realisedPnl
+      const pnlPercentage = getDeltaPercentage(pnl, config.trade.maxCollateral)
+      const realisedPnl = config.trade.settlement.realisedPnl
 
-      data.push({ ...lastChange, pnl, realisedPnl, pnlPercentage, time: config.trade.settledTimestamp })
+      data.push({ ...lastChange, pnl, realisedPnl, pnlPercentage, time: config.trade.settlement.blockTimestamp })
     }
 
     return { data, interval }
@@ -121,20 +122,21 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
         combineArray(({ data, interval }) => {
 
           return $Chart({
-            realtimeSource: isTradeOpen(config.trade)
-              ? map((price): SingleValueData => {
+            realtimeSource: isTradeSettled(config.trade)
+              ? empty()
+              : map((price): SingleValueData => {
                 const nextTime = unixTimestampNow()
                 const nextTimeslot = Math.floor(nextTime / interval)
+                const lastUpdate = config.trade.updateList[config.trade.updateList.length - 1]
 
-                const pnl = getPnL(config.trade.isLong, config.trade.averagePrice, price, config.trade.size) + config.trade.realisedPnl + -config.trade.fee
+                const pnl = getPnL(config.trade.isLong, lastUpdate.averagePrice, price, lastUpdate.size) + lastUpdate.realisedPnl - getTradeTotalFee(config.trade)
                 const value = formatFixed(pnl, 30)
 
                 return {
                   value,
                   time: nextTimeslot * interval as Time
                 }
-              }, config.latestPrice)
-              : empty(),
+              }, config.latestPrice),
             initializeSeries: map((api) => {
               const series = api.addBaselineSeries({
                 // topFillColor1: pallete.positive,

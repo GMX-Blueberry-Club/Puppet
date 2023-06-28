@@ -1,12 +1,13 @@
-import { concatMap, constant, continueWith, fromPromise, map, switchLatest } from "@most/core"
+import { concatMap, constant, continueWith, empty, fromPromise, map, switchLatest } from "@most/core"
 import { curry2, curry3 } from '@most/prelude'
 import { Stream } from "@most/types"
 import { sha256 } from '@noble/hashes/sha256'
 import { bytesToHex } from '@noble/hashes/utils'
+import { unixTimestampNow } from "gmx-middleware-utils"
 
 
 // @ts-ignore
-BigInt.prototype.toJSON = function () { return this.toString() }
+BigInt.prototype.toJSON = function () { return this.toString() + 'n' }
 
 
 export function initDbStore<TName extends string>(dbName: TName): Stream<IDBDatabase> {
@@ -40,19 +41,18 @@ export function transact<TResult>(db: IDBDatabase, action: (store: IDBObjectStor
   }))
 }
 
-export function getStore<TData>(dbEvent: Stream<IDBDatabase>, key: string): Stream<{ key: string, data: TData } | undefined> {
+export function getStore<TData>(scope: IStoreScope<TData>): Stream<{ key: string, data: TData } | undefined> {
   return switchLatest(map(db => {
-    const getTx = transact(db, store => store.get(key))
-    return getTx
-  }, dbEvent))
+    return transact(db, store => store.get(scope.key))
+  }, scope.db))
 }
 
-export function streamSaveStore<TData>(dbEvent: Stream<IDBDatabase>, key: string, write: Stream<TData>): Stream<TData> {
+export function streamSaveStore<TData>(scope: IStoreScope<TData>, write: Stream<TData>): Stream<TData> {
   return switchLatest(map(db => {
     return concatMap(data => {
-      return constant(data, transact(db, store => store.put({ id: key, data })))
+      return constant(data, transact(db, store => store.put({ lasteUpdate: unixTimestampNow(), id: scope.key, data })))
     }, write)
-  }, dbEvent))
+  }, scope.db))
 }
 
 
@@ -92,28 +92,45 @@ export const createStoreScope: IScopeCurry2 = curry2(<TData>(parentScope: IStore
   const newKey = hashData(JSON.stringify(initialState))
   const nextKey = hashData(`${parentScope.key}.${newKey}`)
 
-  const state: Stream<TData> = map(res => {
-    return res === undefined ? initialState : res.data
-  }, getStore<TData>(parentScope.db, nextKey))
-
-  return {
+  const newScope: IStoreScope<TData> = {
     run(sink, scheduler) {
       return state.run(sink, scheduler)
     },
     db: parentScope.db,
     key: nextKey,
   }
+
+  const currentState = getStore(newScope)
+  const state: Stream<TData> = map(res => {
+    return res === undefined ? initialState : res.data
+  }, currentState)
+
+  return newScope
 })
 
 
-export const writeStoreScope: IWriteScopeCurry3 = curry3(<TData>(parentScope: IStoreConfig, initialState: TData, write: Stream<TData>): IWriteStoreScope<TData> => {
+export const writeStoreReplayScope: IWriteScopeCurry3 = curry3(<TData>(parentScope: IStoreConfig, initialState: TData, write: Stream<TData>): IWriteStoreScope<TData> => {
   const scope = createStoreScope(parentScope, initialState)
-  const doWrite = streamSaveStore(parentScope.db, scope.key, write)
+  const doWrite = streamSaveStore(scope, write)
   const state = continueWith(() => doWrite, scope)
 
   return {
     run(sink, scheduler) {
       return state.run(sink, scheduler)
+    },
+    db: scope.db,
+    key: scope.key,
+    write,
+  }
+})
+
+export const writeStoreScope: IWriteScopeCurry3 = curry3(<TData>(parentScope: IStoreConfig, initialState: TData, write: Stream<TData>): IWriteStoreScope<TData> => {
+  const scope = createStoreScope(parentScope, initialState)
+  const doWrite = streamSaveStore(scope, write)
+
+  return {
+    run(sink, scheduler) {
+      return doWrite.run(sink, scheduler)
     },
     db: scope.db,
     key: scope.key,

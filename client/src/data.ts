@@ -1,14 +1,14 @@
-import * as database from './logic/database'
+import * as database from './logic/browserDatabaseScope'
 
 
 export const rootStoreScope = database.createStoreScope(
-    {
-        key: 'parentScope.key',
-        db: database.initDbStore('rootDb')
-    },
-    {
-        ddwd: 'childScope.key',
-    }
+  {
+    key: 'rootScope',
+    db: database.initDbStore('rootScope')
+  },
+  {
+    version: '0.0.1-alpha',
+  }
 )
 
 

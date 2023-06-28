@@ -3,11 +3,11 @@ import { $node, $text, component, style, styleBehavior } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, observer, screenUtils } from "@aelea/ui-components"
 import {
   IPositionDecrease, IPositionIncrease,
-  ITokenIndex, ITokenInput, ITokenStable, ITrade, ITradeOpen,
-
+  IPositionUpdate,
+  ITrade,
   TradeStatus,
   abs,
-  div, filterNull,
+  filterNull,
   formatFixed,
   formatReadableUSD, formatToBasis, getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getLiquidationPrice, getMappedValue, getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getPnL, getPositionKey,
   getTokenAmount, getTokenDescription, gmxSubgraph,
@@ -19,7 +19,7 @@ import {
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, combine, constant, debounce, empty, filter, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, take, tap, throttle, zip } from "@most/core"
+import { awaitPromises, combine, constant, debounce, empty, filter, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, take, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
@@ -28,23 +28,23 @@ import { $ButtonToggle, $IntermediatePromise, $infoLabel, $infoLabeledValue, $in
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
 import { getRouteKey } from "puppet-middleware-utils"
+import * as viem from "viem"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $CardTable } from "../components/$common"
 import { $CandleSticks, IInitCandlesticksChart } from "../components/chart/$CandleSticks"
 import { $ButtonSecondary } from "../components/form/$Button"
 import { $Dropdown } from "../components/form/$Dropdown"
 import { $TradeBox, IRequestTrade, IRequestTradeParams, ITradeBoxParams, ITradeFocusMode } from "../components/trade/$TradeBox"
+import { rootStoreScope } from "../data"
 import { $card } from "../elements/$common"
 import { $caretDown } from "../elements/$icons"
+import { createStoreScope, writeStoreReplayScope } from "../logic/browserDatabaseScope"
 import { connectContract } from "../logic/common"
 import * as tradeReader from "../logic/trade"
+import { connectTrade, getErc20Balance, latestPriceFromExchanges } from "../logic/trade"
 import { resolveAddress } from "../logic/utils"
 import { walletLink } from "../wallet"
-import { account, wallet } from "../wallet/walletLink"
-import { connectTrade, getErc20Balance, latestPriceFromExchanges } from "../logic/trade"
-import * as database from "../logic/database"
-import { rootStoreScope } from "../data"
-import { createStoreScope, writeStoreScope } from "../logic/database"
+import { wallet } from "../wallet/walletLink"
 
 
 export type ITradeComponent = ITradeBoxParams
@@ -82,9 +82,9 @@ export const $Trade = (config: ITradeComponent) => component((
   [selectTimeFrame, selectTimeFrameTether]: Behavior<GMX.IntervalTime>,
   [changeRoute, changeRouteTether]: Behavior<string>,
 
-  [changeInputToken, changeInputTokenTether]: Behavior<ITokenInput>,
-  [changeIndexToken, changeIndexTokenTether]: Behavior<ITokenIndex>,
-  [changeShortCollateralToken, changeShortCollateralTokenTether]: Behavior<ITokenStable>,
+  [changeInputToken, changeInputTokenTether]: Behavior<viem.Address>,
+  [changeIndexToken, changeIndexTokenTether]: Behavior<viem.Address>,
+  [changeShortCollateralToken, changeShortCollateralTokenTether]: Behavior<viem.Address>,
 
   [switchFocusMode, switchFocusModeTether]: Behavior<ITradeFocusMode>,
   [switchIsLong, switchIsLongTether]: Behavior<boolean>,
@@ -139,16 +139,16 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const tradingStore = createStoreScope(rootStoreScope, 'tradeBox' as const)
 
-  const timeframe = writeStoreScope(tradingStore, GMX.TIME_INTERVAL_MAP.MIN60, selectTimeFrame)
-  const isTradingEnabled = writeStoreScope(timeframe, false, enableTrading)
-  const isLong = writeStoreScope(isTradingEnabled, true, switchIsLong)
-  const isIncrease = writeStoreScope(isLong, true, switchIsIncrease)
-  const focusMode = writeStoreScope(isIncrease, ITradeFocusMode.collateral, switchFocusMode)
-  const slippage = writeStoreScope(focusMode, '0.35', changeSlippage)
-  const inputToken = writeStoreScope(slippage, GMX.AddressZero as ITokenInput, changeInputToken)
-  const indexToken = writeStoreScope(inputToken, nativeToken as ITokenIndex, changeIndexToken)
-  const shortCollateralToken = writeStoreScope(indexToken, null as ITokenStable | null, changeShortCollateralToken)
-  const leverage = writeStoreScope(shortCollateralToken, GMX.LIMIT_LEVERAGE / 4n, changeLeverage) 
+  const timeframe = writeStoreReplayScope(tradingStore, GMX.TIME_INTERVAL_MAP.MIN60, selectTimeFrame)
+  const isTradingEnabled = writeStoreReplayScope(timeframe, false, enableTrading)
+  const isLong = writeStoreReplayScope(isTradingEnabled, true, switchIsLong)
+  const isIncrease = writeStoreReplayScope(isLong, true, switchIsIncrease)
+  const focusMode = writeStoreReplayScope(isIncrease, ITradeFocusMode.collateral, switchFocusMode)
+  const slippage = writeStoreReplayScope(focusMode, '0.35', changeSlippage)
+  const inputToken = writeStoreReplayScope(slippage, GMX.AddressZero, changeInputToken)
+  const indexToken = writeStoreReplayScope(inputToken, nativeToken, changeIndexToken)
+  const shortCollateralToken = writeStoreReplayScope(indexToken, null as viem.Address | null, changeShortCollateralToken)
+  const leverage = writeStoreReplayScope(shortCollateralToken, GMX.LIMIT_LEVERAGE / 4n, changeLeverage) 
 
 
   const collateralDeltaUsd = replayLatest(changeCollateralDeltaUsd, 0n)
@@ -190,7 +190,7 @@ export const $Trade = (config: ITradeComponent) => component((
   //   })
   // )
 
-  const collateralToken: Stream<ITokenStable | ITokenIndex> = map(params => {
+  const collateralToken: Stream<viem.Address> = map(params => {
     return params.isLong ? params.indexToken : params.shortCollateralToken
   }, combineObject({ isLong, indexToken, shortCollateralToken, switchTrade: startWith(null, switchTrade) }))
 
@@ -505,7 +505,7 @@ export const $Trade = (config: ITradeComponent) => component((
     }))
   }, route)
 
-  const openTradeListQuery: Stream<Promise<ITradeOpen[]>> = mergeArray([
+  const openTradeListQuery: Stream<Promise<ITrade[]>> = mergeArray([
     combineArray(async (pos, listQuery) => {
       const tradeList = await listQuery
 
@@ -517,15 +517,15 @@ export const $Trade = (config: ITradeComponent) => component((
 
       if (pos.averagePrice > 0n && trade === null) {
         const timestamp = unixTimestampNow()
-        const syntheticUpdate = { ...pos, timestamp, realisedPnl: 0n, markPrice: pos.averagePrice, isLong: pos.isLong, __typename: 'UpdatePosition' }
-        const newTrade = {
+        const syntheticUpdate: IPositionUpdate = { ...pos, timestamp, realisedPnl: 0n, markPrice: pos.averagePrice, isLong: pos.isLong, __typename: 'UpdatePosition' }
+        const newTrade: ITrade = {
           ...pos,
           timestamp,
           updateList: [syntheticUpdate],
           increaseList: [], decreaseList: [],
           fee: 0n,
           status: TradeStatus.OPEN
-        } as any as ITradeOpen
+        }
 
         return [newTrade, ...tradeList]
       }

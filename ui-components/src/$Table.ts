@@ -137,6 +137,8 @@ export const $Table = <T, FilterState = never>({
           )
         })
 
+        console.log($items)
+
         if (Array.isArray(res)) {
           return $items
         } else {

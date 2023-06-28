@@ -31,7 +31,10 @@ import {
 } from "gmx-middleware-ui-components"
 import {
   abs, bnDiv, div, filterNull, formatFixed, formatReadableUSD, formatToBasis, getAdjustedDelta, getDenominator,
-  getNativeTokenDescription, getPnL, getTokenAmount, getTokenDescription, getTokenUsd, IPricefeed, ITokenDescription, ITokenIndex, ITokenInput, ITokenStable, ITrade, ITradeOpen, parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, zipState
+  getNativeTokenDescription, getPnL, getTokenAmount, getTokenDescription, getTokenUsd,
+  IIndexedLogType,
+  IPricefeed, ITokenDescription,
+  ITrade, parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, zipState
 } from "gmx-middleware-utils"
 import { MouseEventParams } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
@@ -50,8 +53,6 @@ import { account, IWalletClient } from "../../wallet/walletLink"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultButtonPrimary, $defaultMiniButtonSecondary } from "../form/$Button"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown"
 import { $TradePnlHistory } from "./$TradePnlHistory"
-import * as database from "../../logic/database"
-import { rootDataScope } from "../../data"
 
 
 
@@ -91,9 +92,9 @@ export interface ITradeParams {
 export interface ITradeConfig {
   isLong: boolean
 
-  inputToken: ITokenInput
-  indexToken: ITokenIndex
-  collateralToken: ITokenStable
+  inputToken: viem.Address
+  indexToken: viem.Address
+  collateralToken: viem.Address
 
   isIncrease: boolean
   focusMode: ITradeFocusMode
@@ -116,20 +117,20 @@ export interface ITradeState extends ITradeConfig, ITradeParams {
 
 export interface ITradeBoxParams {
   referralCode: viem.Hex
-  tokenIndexMap: Partial<Record<number, ITokenIndex[]>>
-  tokenStableMap: Partial<Record<number, ITokenStable[]>>
+  tokenIndexMap: Partial<Record<number, viem.Address[]>>
+  tokenStableMap: Partial<Record<number, viem.Address[]>>
   parentRoute: Route
   chain: typeof arbitrum
 }
 
 interface ITradeBox extends ITradeBoxParams {
-  openTradeListQuery: Stream<Promise<ITradeOpen[]>>
+  openTradeListQuery: Stream<Promise<ITrade[]>>
 
   pricefeed: Stream<Promise<IPricefeed[]>>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>
 
-  trade: Stream<Promise<ITradeOpen | null>>
+  trade: Stream<Promise<ITrade | null>>
 }
 
 export type IRequestTradeParams = ITradeConfig & { wallet: IWalletClient }
@@ -162,8 +163,8 @@ export const $TradeBox = (config: ITradeBox) => component((
   [inputCollateralDeltaUsd, inputCollateralDeltaTetherUsd]: Behavior<INode, bigint>,
   [inputSizeDeltaUsd, inputSizeDeltaTetherUsd]: Behavior<INode, bigint>,
 
-  [changeInputToken, changeInputTokenTether]: Behavior<ITokenInput, ITokenInput>,
-  [changeIndexToken, changeIndexTokenTether]: Behavior<ITokenIndex, ITokenIndex>,
+  [changeInputToken, changeInputTokenTether]: Behavior<viem.Address, viem.Address>,
+  [changeIndexToken, changeIndexTokenTether]: Behavior<viem.Address, viem.Address>,
   [changeCollateralToken, changeCollateralTokenTether]: Behavior<GMX.ARBITRUM_ADDRESS_STABLE | GMX.AVALANCHE_ADDRESS_STABLE>,
 
   [switchIsIncrease, switchisIncreaseTether]: Behavior<boolean, boolean>,
@@ -699,7 +700,7 @@ export const $TradeBox = (config: ITradeBox) => component((
 
               const chainId = config.chain.id
 
-              return $Dropdown<ITokenInput>({
+              return $Dropdown({
                 $container: $row(style({ position: 'relative', alignSelf: 'center' })),
                 $selection: switchLatest(map(option => {
                   return $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
@@ -977,7 +978,7 @@ export const $TradeBox = (config: ITradeBox) => component((
               select: switchIsLongTether()
             }),
 
-            $Dropdown<ITokenIndex>({
+            $Dropdown<IIndexedLogType>({
               $container: $row(style({ position: 'relative', alignSelf: 'center' })),
               $selection: switchLatest(map(option => {
                 const tokenDesc = getTokenDescription(option)
