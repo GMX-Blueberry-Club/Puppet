@@ -77,14 +77,14 @@ importers:
         specifier: ^1.3.2
         version: 1.3.2
       '@aelea/dom':
-        specifier: ^0.2.1
-        version: 0.2.1
+        specifier: ^0.2.2
+        version: 0.2.2
       '@aelea/router':
-        specifier: ^0.20.1
-        version: 0.20.1
+        specifier: ^0.20.2
+        version: 0.20.2
       '@aelea/ui-components':
-        specifier: ^0.28.1
-        version: 0.28.1
+        specifier: ^0.28.2
+        version: 0.28.2
       '@aelea/ui-components-theme':
         specifier: ^0.10.0
         version: 0.10.0
@@ -258,8 +258,8 @@ importers:
         specifier: ^1.3.2
         version: 1.3.2
       '@aelea/dom':
-        specifier: ^0.2.1
-        version: 0.2.1
+        specifier: ^0.2.2
+        version: 0.2.2
       '@most/core':
         specifier: ^1.6.1
         version: 1.6.1
@@ -397,14 +397,14 @@ importers:
         specifier: ^1.3.2
         version: 1.3.2
       '@aelea/dom':
-        specifier: ^0.2.1
-        version: 0.2.1
+        specifier: ^0.2.2
+        version: 0.2.2
       '@aelea/router':
-        specifier: ^0.20.1
-        version: 0.20.1
+        specifier: ^0.20.2
+        version: 0.20.2
       '@aelea/ui-components':
-        specifier: ^0.28.1
-        version: 0.28.1
+        specifier: ^0.28.2
+        version: 0.28.2
       '@aelea/ui-components-theme':
         specifier: ^0.10.0
         version: 0.10.0
@@ -435,6 +435,9 @@ importers:
       jazzicon:
         specifier: ^1.5.0
         version: 1.5.0
+      lightweight-charts:
+        specifier: ^4.0.1
+        version: 4.0.1
       viem:
         specifier: ^1.1.7
         version: 1.1.7(typescript@5.1.3)(zod@3.21.4)
@@ -490,8 +493,8 @@ packages:
       '@most/types': 1.1.0
     dev: false
 
-  /@aelea/dom@0.2.1:
-    resolution: {integrity: sha512-lDN4HOEJvQHjLwF4ow0Wud409SHyH1uwfEh5rR45Mwu2MvhioDnFSeyqeatagH5WCehV2sUQ/HydvCUKa5faOg==}
+  /@aelea/dom@0.2.2:
+    resolution: {integrity: sha512-vqbmnURU2kzH/L+NYrrljoPTXdRfwvM4or4zdpTBN0KNYSyvN8qCyxtH9SfSpNmxw2jCyMh2DQHeUnoHkWfchQ==}
     dependencies:
       '@aelea/core': 1.3.2
       '@most/core': 1.6.1
@@ -502,11 +505,11 @@ packages:
       csstype: 3.1.2
     dev: false
 
-  /@aelea/router@0.20.1:
-    resolution: {integrity: sha512-zutOXC18FHP+BhlXobMc5EsfZV0NuQ9nXD5J465VuSvL8d3UCHLXA68tobtHTwOk2vM4J68q0+RGPA4fRId+Gw==}
+  /@aelea/router@0.20.2:
+    resolution: {integrity: sha512-IP+QykubKFJtwR5gJ/orjasI5sivCiyzHhZPFURfkBa2YwOaBFI2VDfcHiNN185pFs70j+kBNPS9Qi3KciUDVw==}
     dependencies:
       '@aelea/core': 1.3.2
-      '@aelea/dom': 0.2.1
+      '@aelea/dom': 0.2.2
       '@most/core': 1.6.1
       '@most/disposable': 1.3.0
       '@most/prelude': 1.8.0
@@ -518,11 +521,11 @@ packages:
     resolution: {integrity: sha512-sbf2zslPhDsCUMMe0AWaFxCAqDDoTzpUkHYSMPt6DVZDrd3RjQTk5OrJmTHuGKhLcd4CPL6OVTOBLIxa/rgu7A==}
     dev: false
 
-  /@aelea/ui-components@0.28.1:
-    resolution: {integrity: sha512-JFjKtKX3gWT+Kv4xI/E3P0sK/3UIe9EM2sz4nl9aIFu0GxSNuXdNiX7HXHuqcLd4oxMbhMcuLgl572NqQrDQKA==}
+  /@aelea/ui-components@0.28.2:
+    resolution: {integrity: sha512-lanmB3cAWIWBaoBHOomK/BFCQ9MALggr6sHQYDY/j/lBxsr/ja62/SjX1LY2T0saMUXyNCs0dk19Yht2YAMF6Q==}
     dependencies:
       '@aelea/core': 1.3.2
-      '@aelea/dom': 0.2.1
+      '@aelea/dom': 0.2.2
       '@aelea/ui-components-theme': 0.10.0
       '@most/core': 1.6.1
       '@most/disposable': 1.3.0

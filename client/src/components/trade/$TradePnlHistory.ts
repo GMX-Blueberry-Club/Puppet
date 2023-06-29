@@ -1,16 +1,16 @@
 import { Behavior, combineArray } from "@aelea/core"
-import { $Node, component, INode, NodeComposeFn, style } from "@aelea/dom"
+import { $Node, INode, NodeComposeFn, component, style } from "@aelea/dom"
 import { $column, observer } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { CHAIN } from "gmx-middleware-const"
-import {
-  unixTimestampNow, isTradeSettled, getDeltaPercentage, intervalListFillOrderMap,
-  ITrade, formatFixed, getPnL, IPricefeed, readableNumber, getTradeTotalFee
-} from "gmx-middleware-utils"
-import { multicast, switchLatest, empty, skipRepeatsWith, map } from "@most/core"
+import { map, multicast, skipRepeatsWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { MouseEventParams, SingleValueData, Time, LineStyle, ChartOptions, DeepPartial, BarPrice } from "lightweight-charts"
-import { $Chart } from "../chart/$Chart"
+import { CHAIN } from "gmx-middleware-const"
+import { $Baseline, $Chart } from "gmx-middleware-ui-components"
+import {
+  IPricefeed, ITrade, formatFixed, getDeltaPercentage, getPnL,
+  intervalListFillOrderMap, isTradeSettled, readableNumber, unixTimestampNow
+} from "gmx-middleware-utils"
+import { BarPrice, ChartOptions, DeepPartial, LineStyle, MouseEventParams, Time } from "lightweight-charts"
 
 interface ITradePnlPreview {
   $container: NodeComposeFn<$Node>
@@ -121,153 +121,81 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
       switchLatest(
         combineArray(({ data, interval }) => {
 
-          return $Chart({
-            realtimeSource: isTradeSettled(config.trade)
-              ? empty()
-              : map((price): SingleValueData => {
-                const nextTime = unixTimestampNow()
-                const nextTimeslot = Math.floor(nextTime / interval)
-                const lastUpdate = config.trade.updateList[config.trade.updateList.length - 1]
+          return $Baseline({
+            
+            // realtimeSource: isTradeSettled(config.trade)
+            //   ? empty()
+            //   : map((price): SingleValueData => {
+            //     const nextTime = unixTimestampNow()
+            //     const nextTimeslot = Math.floor(nextTime / interval)
+            //     const lastUpdate = config.trade.updateList[config.trade.updateList.length - 1]
 
-                const pnl = getPnL(config.trade.isLong, lastUpdate.averagePrice, price, lastUpdate.size) + lastUpdate.realisedPnl - getTradeTotalFee(config.trade)
-                const value = formatFixed(pnl, 30)
+            //     const pnl = getPnL(config.trade.isLong, lastUpdate.averagePrice, price, lastUpdate.size) + lastUpdate.realisedPnl - getTradeTotalFee(config.trade)
+            //     const value = formatFixed(pnl, 30)
 
-                return {
-                  value,
-                  time: nextTimeslot * interval as Time
-                }
-              }, config.latestPrice),
-            initializeSeries: map((api) => {
-              const series = api.addBaselineSeries({
-                // topFillColor1: pallete.positive,
-                // topFillColor2: pallete.positive,
-                priceFormat: {
-                  type: 'custom',
-                  formatter: (priceValue: BarPrice) => readableNumber(priceValue.valueOf())
-                },
-                topLineColor: pallete.positive,
-                bottomLineColor: pallete.negative,
-                baseValue: {
-                  type: 'price',
-                  price: 0,
-                },
-                baseLineStyle: LineStyle.Dashed,
-                lineWidth: 2,
-                baseLineColor: 'red',
-                baseLineVisible: true,
-                lastValueVisible: false,
-                priceLineVisible: false,
-              })
+            //     return {
+            //       value,
+            //       time: nextTimeslot * interval as Time
+            //     }
+            //   }, config.latestPrice),
+            data: data.map(({ pnl, time, realisedPnl }) => ({ time: time as Time, value: formatFixed(pnl + realisedPnl, 30) })),
+            // initializeSeries: map((api) => {
+            //   const high = data[data.reduce((seed, b, idx) => b.pnl > data[seed].pnl ? idx : seed, Math.min(6, data.length - 1))]
+            //   const low = data[data.reduce((seed, b, idx) => b.pnl <= data[seed].pnl ? idx : seed, 0)]
 
+            //   if (high.pnl > 0 && low.pnl < 0) {
+            //     series.createPriceLine({
+            //       price: 0,
+            //       color: pallete.foreground,
+            //       lineWidth: 1,
+            //       lineVisible: true,
+            //       axisLabelVisible: true,
+            //       title: '',
+            //       lineStyle: LineStyle.SparseDotted,
+            //     })
+            //   }
+            //   // setTimeout(() => {
+            //   //   if (data.length > 10) {
+            //   //     if (low.pnl !== high.pnl) {
+            //   //       // const increaseList = trade.increaseList
+            //   //       // const increaseMarkers = increaseList
+            //   //       //   .slice(1)
+            //   //       //   .map((ip): SeriesMarker<Time> => {
+            //   //       //     return {
+            //   //       //       color: pallete.foreground,
+            //   //       //       position: "aboveBar",
+            //   //       //       shape: "arrowUp",
+            //   //       //       time: unixTimeTzOffset(ip.timestamp),
+            //   //       //       text: formatReadableUSD(ip.collateralDelta)
+            //   //       //     }
+            //   //       //   })
+            //   //       // const decreaseList = isTradeSettled(trade) ? trade.decreaseList.slice(0, -1) : trade.decreaseList
+            //   //       // const decreaseMarkers = decreaseList
+            //   //       //   .map((ip): SeriesMarker<Time> => {
+            //   //       //     return {
+            //   //       //       color: pallete.foreground,
+            //   //       //       position: 'belowBar',
+            //   //       //       shape: "arrowDown",
+            //   //       //       time: unixTimeTzOffset(ip.timestamp),
+            //   //       //       text: formatReadableUSD(ip.collateralDelta)
+            //   //       //     }
+            //   //       //   })
 
-              const chartData = data
-                // .sort((a, b) => b.time - a.time)
-                .map(({ pnl, time, realisedPnl }) => ({ time: time as Time, value: formatFixed(pnl + realisedPnl, 30) }))
-
-              series.setData(chartData)
-
-
-              const high = data[data.reduce((seed, b, idx) => b.pnl > data[seed].pnl ? idx : seed, Math.min(6, data.length - 1))]
-              const low = data[data.reduce((seed, b, idx) => b.pnl <= data[seed].pnl ? idx : seed, 0)]
-
-              if (high.pnl > 0 && low.pnl < 0) {
-                series.createPriceLine({
-                  price: 0,
-                  color: pallete.foreground,
-                  lineWidth: 1,
-                  lineVisible: true,
-                  axisLabelVisible: true,
-                  title: '',
-                  lineStyle: LineStyle.SparseDotted,
-                })
-              }
-
-
-              // setTimeout(() => {
-              //   if (data.length > 10) {
-              //     if (low.pnl !== high.pnl) {
-              //       // const increaseList = trade.increaseList
-              //       // const increaseMarkers = increaseList
-              //       //   .slice(1)
-              //       //   .map((ip): SeriesMarker<Time> => {
-              //       //     return {
-              //       //       color: pallete.foreground,
-              //       //       position: "aboveBar",
-              //       //       shape: "arrowUp",
-              //       //       time: unixTimeTzOffset(ip.timestamp),
-              //       //       text: formatReadableUSD(ip.collateralDelta)
-              //       //     }
-              //       //   })
-              //       // const decreaseList = isTradeSettled(trade) ? trade.decreaseList.slice(0, -1) : trade.decreaseList
-              //       // const decreaseMarkers = decreaseList
-              //       //   .map((ip): SeriesMarker<Time> => {
-              //       //     return {
-              //       //       color: pallete.foreground,
-              //       //       position: 'belowBar',
-              //       //       shape: "arrowDown",
-              //       //       time: unixTimeTzOffset(ip.timestamp),
-              //       //       text: formatReadableUSD(ip.collateralDelta)
-              //       //     }
-              //       //   })
-
-              //       // series.setMarkers([...increaseMarkers, ...decreaseMarkers].sort((a, b) => Number(a.time) - Number(b.time)))
+            //   //       // series.setMarkers([...increaseMarkers, ...decreaseMarkers].sort((a, b) => Number(a.time) - Number(b.time)))
 
 
-              //     }
-              //   }
+            //   //     }
+            //   //   }
 
-              //   api.timeScale().fitContent()
+            //   //   api.timeScale().fitContent()
 
-              // }, 90)
+            //   // }, 90)
 
 
-              return series
-            }),
-            chartConfig: {
-              layout: {
-                background: {
-                  color: 'transparent'
-                },
-                textColor: pallete.foreground,
-                fontFamily: 'Moderat',
-                fontSize: 10
-              },
-              leftPriceScale: {
-                scaleMargins: {
-                  top: 0.15,
-                  bottom: 0.05,
-                }
-              },
-              // rightPriceScale: {
-              //   // mode: PriceScaleMode.Logarithmic,
-              //   autoScale: true,
-              //   visible: true,
-              //   scaleMargins: {
-              //     top: 0.4,
-              //     bottom: 0,
-              //   }
-              // },
-              handleScale: false,
-              handleScroll: false,
-              timeScale: {
-                // rightOffset: 110,
-                secondsVisible: false,
-                timeVisible: true,
-                shiftVisibleRangeOnNewBar: true,
-                rightOffset: 0,
-                fixLeftEdge: true,
-                fixRightEdge: true,
-                borderVisible: false,
-                // visible: false,
-                // rightBarStaysOnScroll: true,
-              },
-              ...config.chartConfig || {}
-            },
-            containerOp: style({
-              display: 'flex',
-              flex: 1
-              // position: 'absolute', left: 0, top: 0, right: 0, bottom: 0
-            }),
+            //   return series
+            // }),
+            
+ 
           })({
             crosshairMove: crosshairMoveTether(
               skipRepeatsWith((a, b) => a.point?.x === b.point?.x),

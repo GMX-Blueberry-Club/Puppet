@@ -1,12 +1,12 @@
-import { Behavior, O } from "@aelea/core"
+import { Behavior, O, combineObject } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import { Route } from "@aelea/router"
-import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { map, mergeArray, now } from "@most/core"
+import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
+import { join, map, mergeArray, now, skipRepeatsWith, switchLatest } from "@most/core"
 import * as GMX from "gmx-middleware-const"
 import { CHAIN } from "gmx-middleware-const"
-import { $PnlValue, $TradePnl, $infoTooltipLabel, $openPositionPnlBreakdown, $riskLiquidator, $sizeDisplay } from "gmx-middleware-ui-components"
-import { IRequestAccountTradeListApi, ITrade, ITradeSettled, getTradeTotalFee, readableDate, timeSince, unixTimestampNow } from "gmx-middleware-utils"
+import { $Baseline, $PnlValue, $TradePnl, $infoTooltipLabel, $openPositionPnlBreakdown, $riskLiquidator, $sizeDisplay } from "gmx-middleware-ui-components"
+import { IRequestAccountTradeListApi, ITrade, ITradeSettled, formatFixed, formatReadableUSD, getTokenDescription, getTradeTotalFee, readableDate, timeSince, unixTimeTzOffset, unixTimestampNow } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { $discoverIdentityDisplay } from "../components/$AccountProfile"
 import { $CardTable } from "../components/$common"
@@ -18,6 +18,9 @@ import { fadeIn } from "../transitions/enter"
 import { IWalletClient } from "../wallet/walletLink"
 import { IProfileActiveTab } from "./$Profile"
 import { $Index } from "./competition/$Leaderboard"
+import { $Chart } from "gmx-middleware-ui-components/src/chart/$Chart"
+import { pallete } from "@aelea/ui-components-theme"
+import { SeriesMarker, Time, PriceScaleMode, CrosshairMode, LineStyle } from "lightweight-charts"
 
 const logs = [
   {
@@ -180,22 +183,18 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
       step(seed, value) {
         const key = getStoredPositionCounterId(seed, value.key)
 
-        seed.positions[key] ??= {
-          id: value.key,
+        seed.positions[key].increaseList.push(value)
+
+        return {
+          ...seed,
+          key,
           account: value.account,
           collateralToken: value.collateralToken,
           indexToken: value.indexToken,
           isLong: value.isLong,
+
           updateList: [],
-          decreaseList: [],
-          increaseList: [],
-          maxCollateral: value.collateralDelta,
-          maxSize: value.sizeDelta,
         }
-
-        seed.positions[key].increaseList.push(value)
-
-        return seed
       },
     },
     {
@@ -265,6 +264,8 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
 
         const trade = seed.positions[key]
 
+        debugger
+
         delete seed.positions[key]
 
         seed.positionsSettled[key] = {
@@ -287,6 +288,10 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
   const settledPositionList = map(pos => {
     return Object.values(pos.positionsSettled)
   }, positions)
+
+  const positionList = map(pos => {
+    return [...Object.values(pos.positionsSettled), ...Object.values(pos.positions)]
+  }, positions)
   return [
     $responsiveFlex(
       layoutSheet.spacingBig,
@@ -304,146 +309,78 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
         ),
 
         $card(style({ height: '200px' }))(
-          // $Chart({
-          //   initializeSeries: map(api => {
+          switchLatest(map(data => $Baseline({
+            initializeSeries: map(api => {
+              const series = api.addBaselineSeries({
+                topLineColor: pallete.positive,
+                baseValue: {
+                  type: 'price',
+                  price: 0,
+                },
+                lineWidth: 2,
+                baseLineVisible: false,
+                lastValueVisible: false,
+                priceLineVisible: false,
+              })
 
-          //     const endDate = unixTimestampNow()
-          //     const startDate = endDate - chartInterval
-          //     const series = api.addCandlestickSeries({
-          //       upColor: pallete.foreground,
-          //       downColor: 'transparent',
-          //       borderDownColor: pallete.foreground,
-          //       borderUpColor: pallete.foreground,
-          //       wickDownColor: pallete.foreground,
-          //       wickUpColor: pallete.foreground,
-          //     })
+              series.setData(data.map(({ time, value }) => ({ time: time as Time, value: formatFixed(value, 30) })))
 
-          //     const chartData = data.map(({ o, h, l, c, timestamp }) => {
-          //       const open = formatFixed(o, 30)
-          //       const high = formatFixed(h, 30)
-          //       const low = formatFixed(l, 30)
-          //       const close = formatFixed(c, 30)
+              const high = data[data.reduce((seed, b, idx) => b.value > data[seed].value ? idx : seed, Math.min(6, data.length - 1))]
+              const low = data[data.reduce((seed, b, idx) => b.value <= data[seed].value ? idx : seed, 0)]
 
-          //       return { open, high, low, close, time: timestamp }
-          //     })
+              if (high.value > 0 && low.value < 0) {
+                series.createPriceLine({
+                  price: 0,
+                  color: pallete.foreground,
+                  lineVisible: true,
+                  lineWidth: 1,
+                  axisLabelVisible: true,
+                  title: '',
+                  lineStyle: LineStyle.SparseDotted,
+                })
+              }
 
+              series.applyOptions({
+                scaleMargins: {
+                  top: .45,
+                  bottom: 0
+                }
+              })
 
+              setTimeout(() => {
+                api.timeScale().fitContent()
+              }, 50)
 
-          //     // @ts-ignore
-          //     series.setData(chartData)
+              return series
+            }),
+            chartConfig: {
+              handleScale: false,
 
-          //     const priceScale = series.priceScale()
-
-          //     priceScale.applyOptions({
-          //       scaleMargins: screenUtils.isDesktopScreen
-          //         ? {
-          //           top: 0.3,
-          //           bottom: 0.3
-          //         }
-          //         : {
-          //           top: 0.1,
-          //           bottom: 0.1
-          //         }
-          //     })
-
-
-          //     const selectedSymbolList = settledTradeList.filter(trade => selectedToken.symbol === getTokenDescription(trade.indexToken).symbol).filter(pos => pos.settledTimestamp > startDate)
-          //     const closedTradeList = selectedSymbolList.filter(isTradeClosed)
-          //     const liquidatedTradeList = selectedSymbolList.filter(isTradeLiquidated)
-
-          //     setTimeout(() => {
-
-          //       const increasePosMarkers = selectedSymbolList
-          //         .map((trade): SeriesMarker<Time> => {
-          //           return {
-          //             color: trade.isLong ? pallete.positive : pallete.negative,
-          //             position: "aboveBar",
-          //             shape: trade.isLong ? 'arrowUp' : 'arrowDown',
-          //             time: unixTimeTzOffset(trade.timestamp),
-          //           }
-          //         })
-
-          //       const closePosMarkers = closedTradeList
-          //         .map((trade): SeriesMarker<Time> => {
-          //           return {
-          //             color: pallete.message,
-          //             position: "belowBar",
-          //             shape: 'square',
-          //             text: '$' + formatReadableUSD(trade.realisedPnl),
-          //             time: unixTimeTzOffset(trade.settledTimestamp),
-          //           }
-          //         })
-
-          //       const liquidatedPosMarkers = liquidatedTradeList
-          //         .map((pos): SeriesMarker<Time> => {
-          //           return {
-          //             color: pallete.negative,
-          //             position: "belowBar",
-          //             shape: 'square',
-          //             text: '$-' + formatReadableUSD(pos.collateral),
-          //             time: unixTimeTzOffset(pos.settledTimestamp),
-          //           }
-          //         })
-
-          //       // console.log(new Date(closePosMarkers[0].time as number * 1000))
-
-          //       const markers = [...increasePosMarkers, ...closePosMarkers, ...liquidatedPosMarkers].sort((a, b) => a.time as number - (b.time as number))
-          //       series.setMarkers(markers)
-          //       // api.timeScale().fitContent()
-
-          //       // timescale.setVisibleRange({
-          //       //   from: startDate as Time,
-          //       //   to: endDate as Time
-          //       // })
-          //     }, 50)
-
-          //     return series
-          //   }),
-          //   containerOp: style({
-          //     minHeight: '300px',
-          //     width: '100%',
-          //   }),
-          //   chartConfig: {
-          //     rightPriceScale: {
-          //       entireTextOnly: true,
-          //       borderVisible: false,
-          //       mode: PriceScaleMode.Logarithmic,
-          //       scaleMargins: {
-          //         top: 0.1,
-          //         bottom: 0.1
-          //       }
-          //       // visible: false
-          //     },
-          //     timeScale: {
-          //       timeVisible: chartInterval <= intervalInMsMap.DAY7,
-          //       secondsVisible: chartInterval <= intervalInMsMap.MIN60,
-          //       borderVisible: true,
-          //       borderColor: pallete.horizon,
-          //       rightOffset: 15,
-          //       shiftVisibleRangeOnNewBar: true
-          //     },
-          //     crosshair: {
-          //       mode: CrosshairMode.Normal,
-          //       horzLine: {
-          //         labelBackgroundColor: pallete.background,
-          //         color: pallete.foreground,
-          //         width: 1,
-          //         style: LineStyle.Dotted
-          //       },
-          //       vertLine: {
-          //         labelBackgroundColor: pallete.background,
-          //         color: pallete.foreground,
-          //         width: 1,
-          //         style: LineStyle.Dotted,
-          //       }
-          //     }
-          //   },
-          // })({
-          //   // crosshairMove: sampleChartCrosshair(),
-          //   // click: sampleClick()
-          // })
-
-
+              rightPriceScale: {
+                visible: false,
+                scaleMargins: {
+                  top: .45,
+                  bottom: 0
+                },
+              },
+              handleScroll: false,
+              timeScale: {
+                // rightOffset: 110,
+                secondsVisible: false,
+                timeVisible: true,
+                // visible: false,
+                rightBarStaysOnScroll: true,
+              }
+            },
+            containerOp: style({
+              display: 'flex',
+              // position: 'absolute', left: 0, top: 0, right: 0, bottom: 0
+            }),
+          })({
+            crosshairMove: pnlCrosshairMoveTether(
+              skipRepeatsWith((a, b) => a.point?.x === b.point?.x)
+            )
+          }), combineObject({})))
         ),
 
 
@@ -454,120 +391,125 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
         fadeIn(
           $column(layoutSheet.spacingBig, style({ flex: 1 }))(
 
-            $title('Open Positions'),
-            $CardTable({
-              dataSource: openPositionList,
-              columns: [
-                {
-                  $head: $text('Time'),
-                  columnOp: style({ maxWidth: '60px' }),
-                  $$body: map((pos) => {
+            join(map(logs => {
 
-                    const timestamp = pos.increaseList[0].blockTimestamp
+              return $text(JSON.stringify(logs))
+            }, openPositionList))
 
-                    return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
-                      $text(timeSince(timestamp) + ' ago'),
-                      $text(readableDate(timestamp)),
-                    )
-                  })
-                },
-                {
-                  $head: $text('Entry'),
-                  columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
-                  $$body: map((pos) => {
-                    return $Index(pos)
-                  })
-                },
-                {
-                  $head: $column(style({ textAlign: 'right' }))(
-                    $text(style({ fontSize: '.75em' }))('Collateral'),
-                    $text('Size'),
-                  ),
-                  columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
-                  $$body: map(pos => {
-                    const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
+            // $title('Open Positions'),
+            // $CardTable({
+            //   dataSource: openPositionList,
+            //   columns: [
+            //     {
+            //       $head: $text('Open Time'),
+            //       columnOp: style({ maxWidth: '80px' }),
+            //       $$body: map((pos) => {
 
-                    return $riskLiquidator(pos, positionMarkPrice)
-                  })
-                },
-                {
-                  $head: $text('PnL'),
-                  columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
-                  $$body: map((pos) => {
-                    const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
-                    const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
+            //         const timestamp = pos.increaseList[0].blockTimestamp
 
-                    return $infoTooltipLabel(
-                      $openPositionPnlBreakdown(pos, cumulativeFee, positionMarkPrice),
-                      $TradePnl(pos, cumulativeFee, positionMarkPrice)
-                    )
-                  })
-                },
-              ],
-            })({}),
+            //         return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
+            //           $text(timeSince(timestamp) + ' ago'),
+            //           $text(readableDate(timestamp)),
+            //         )
+            //       })
+            //     },
+            //     {
+            //       $head: $text('Entry'),
+            //       columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
+            //       $$body: map((pos) => {
+            //         return $Index(pos)
+            //       })
+            //     },
+            //     {
+            //       $head: $column(style({ textAlign: 'right' }))(
+            //         $text(style({ fontSize: '.75em' }))('Collateral'),
+            //         $text('Size'),
+            //       ),
+            //       columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
+            //       $$body: map(pos => {
+            //         const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
 
-            $title('Settled Positions'),
-            $CardTable({
-              dataSource: settledPositionList,
-              columns: [
-                {
-                  $head: $text('Time'),
-                  columnOp: O(style({ maxWidth: '60px' })),
+            //         return $riskLiquidator(pos, positionMarkPrice)
+            //       })
+            //     },
+            //     {
+            //       $head: $text('PnL'),
+            //       columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
+            //       $$body: map((pos) => {
+            //         const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
+            //         const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
 
-                  $$body: map((req) => {
-                    const isKeeperReq = 'ctx' in req
+            //         return $infoTooltipLabel(
+            //           $openPositionPnlBreakdown(pos, cumulativeFee, positionMarkPrice),
+            //           $TradePnl(pos, cumulativeFee, positionMarkPrice)
+            //         )
+            //       })
+            //     },
+            //   ],
+            // })({}),
 
-                    const timestamp = isKeeperReq ? unixTimestampNow() : req.settlement.blockTimestamp
+            // $title('Settled Positions'),
+            // $CardTable({
+            //   dataSource: settledPositionList,
+            //   columns: [
+            //     {
+            //       $head: $text('Settle Time'),
+            //       columnOp: O(style({ maxWidth: '80px' })),
 
-                    return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
-                      $text(timeSince(timestamp) + ' ago'),
-                      $text(readableDate(timestamp)),
-                    )
-                  })
-                },
-                {
-                  $head: $text('Entry'),
-                  columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
-                  $$body: map((pos) => {
-                    return $Index(pos)
-                  })
-                },
-                {
-                  $head: $column(style({ textAlign: 'right' }))(
-                    $text(style({ fontSize: '.75em' }))('Max Size'),
-                    $text('Max Size'),
-                  ),
-                  columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
-                  $$body: map(pos => {
-                    return $sizeDisplay(pos)
-                  })
-                },
-                {
-                  $head: $text('PnL'),
-                  columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
-                  $$body: map((pos) => {
-                    return $PnlValue(pos.settlement.realisedPnl - getTradeTotalFee(pos))
-                  })
-                },
-              ],
-            })({
-              // scrollIndex: requestAccountTradeListTether(
-              //   zip((wallet, pageIndex) => {
-              //     if (!wallet || wallet.chain === null) {
-              //       return null
-              //     }
+            //       $$body: map((req) => {
+            //         const isKeeperReq = 'ctx' in req
 
-              //     return {
-              //       status: TradeStatus.CLOSED,
-              //       account: wallet.account.address,
-              //       chain: wallet.chain.id,
-              //       offset: pageIndex * 20,
-              //       pageSize: 20,
-              //     }
-              //   }, walletLink.wallet),
-              //   filterNull
-              // )
-            }),
+            //         const timestamp = isKeeperReq ? unixTimestampNow() : req.settlement.blockTimestamp
+
+            //         return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
+            //           $text(timeSince(timestamp) + ' ago'),
+            //           $text(readableDate(timestamp)),
+            //         )
+            //       })
+            //     },
+            //     {
+            //       $head: $text('Entry'),
+            //       columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
+            //       $$body: map((pos) => {
+            //         return $Index(pos)
+            //       })
+            //     },
+            //     {
+            //       $head: $column(style({ textAlign: 'right' }))(
+            //         $text(style({ fontSize: '.75em' }))('Max Size'),
+            //         $text('Max Size'),
+            //       ),
+            //       columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
+            //       $$body: map(pos => {
+            //         return $sizeDisplay(pos)
+            //       })
+            //     },
+            //     {
+            //       $head: $text('PnL'),
+            //       columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
+            //       $$body: map((pos) => {
+            //         return $PnlValue(pos.settlement.realisedPnl - getTradeTotalFee(pos))
+            //       })
+            //     },
+            //   ],
+            // })({
+            //   // scrollIndex: requestAccountTradeListTether(
+            //   //   zip((wallet, pageIndex) => {
+            //   //     if (!wallet || wallet.chain === null) {
+            //   //       return null
+            //   //     }
+
+            //   //     return {
+            //   //       status: TradeStatus.CLOSED,
+            //   //       account: wallet.account.address,
+            //   //       chain: wallet.chain.id,
+            //   //       offset: pageIndex * 20,
+            //   //       pageSize: 20,
+            //   //     }
+            //   //   }, walletLink.wallet),
+            //   //   filterNull
+            //   // )
+            // }),
           ),
         ),
       )

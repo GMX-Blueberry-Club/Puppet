@@ -24,21 +24,20 @@ import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
 import * as GMX from "gmx-middleware-const"
-import { $ButtonToggle, $IntermediatePromise, $infoLabel, $infoLabeledValue, $infoTooltip, $spinner, $target, $txHashRef } from "gmx-middleware-ui-components"
+import { $ButtonToggle, $CandleSticks, $IntermediatePromise, $infoLabel, $infoLabeledValue, $infoTooltip, $spinner, $target, $txHashRef } from "gmx-middleware-ui-components"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
 import { getRouteKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $CardTable } from "../components/$common"
-import { $CandleSticks, IInitCandlesticksChart } from "../components/chart/$CandleSticks"
 import { $ButtonSecondary } from "../components/form/$Button"
 import { $Dropdown } from "../components/form/$Dropdown"
 import { $TradeBox, IRequestTrade, IRequestTradeParams, ITradeBoxParams, ITradeFocusMode } from "../components/trade/$TradeBox"
 import { rootStoreScope } from "../data"
 import { $card } from "../elements/$common"
 import { $caretDown } from "../elements/$icons"
-import { createStoreScope, writeStoreReplayScope } from "../logic/browserDatabaseScope"
+import { storeScope, replayWriteStoreScope } from "../logic/browserDatabaseScope"
 import { connectContract } from "../logic/common"
 import * as tradeReader from "../logic/trade"
 import { connectTrade, getErc20Balance, latestPriceFromExchanges } from "../logic/trade"
@@ -106,7 +105,6 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   // [focusPriceAxisPoint, focusPriceAxisPointTether]: Behavior<Coordinate | null>,
-  [IInitCandlesticksChart, IInitCandlesticksChartTether]: Behavior<IInitCandlesticksChart>,
   [chartClick, chartClickTether]: Behavior<MouseEventParams>,
   // [chartCrosshairMove, chartCrosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
 
@@ -137,18 +135,31 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const executionFee = replayLatest(multicast(positionRouter.read('minExecutionFee')))
 
-  const tradingStore = createStoreScope(rootStoreScope, 'tradeBox' as const)
+  const tradingStore = storeScope(rootStoreScope, 'tradeBox' as const)
 
-  const timeframe = writeStoreReplayScope(tradingStore, GMX.TIME_INTERVAL_MAP.MIN60, selectTimeFrame)
-  const isTradingEnabled = writeStoreReplayScope(timeframe, false, enableTrading)
-  const isLong = writeStoreReplayScope(isTradingEnabled, true, switchIsLong)
-  const isIncrease = writeStoreReplayScope(isLong, true, switchIsIncrease)
-  const focusMode = writeStoreReplayScope(isIncrease, ITradeFocusMode.collateral, switchFocusMode)
-  const slippage = writeStoreReplayScope(focusMode, '0.35', changeSlippage)
-  const inputToken = writeStoreReplayScope(slippage, GMX.AddressZero, changeInputToken)
-  const indexToken = writeStoreReplayScope(inputToken, nativeToken, changeIndexToken)
-  const shortCollateralToken = writeStoreReplayScope(indexToken, null as viem.Address | null, changeShortCollateralToken)
-  const leverage = writeStoreReplayScope(shortCollateralToken, GMX.LIMIT_LEVERAGE / 4n, changeLeverage) 
+  // const tradingStore = storeScope(rootStoreScope, {
+  //   timeframe: GMX.TIME_INTERVAL_MAP.MIN60,
+  //   isTradingEnabled: true,
+  //   isLong: true,
+  //   isIncrease: true,
+  //   focusMode: ITradeFocusMode.collateral,
+  //   slippage: '0.35',
+  //   inputToken: GMX.AddressZero,
+  //   indexToken: nativeToken,
+  //   shortCollateralToken: null as viem.Address | null,
+  //   leverage: GMX.LIMIT_LEVERAGE / 4n,
+  // })
+
+  const timeframe = replayWriteStoreScope(tradingStore, GMX.TIME_INTERVAL_MAP.MIN60, selectTimeFrame)
+  const isTradingEnabled = replayWriteStoreScope(timeframe, false, enableTrading)
+  const isLong = replayWriteStoreScope(isTradingEnabled, true, switchIsLong)
+  const isIncrease = replayWriteStoreScope(isLong, true, switchIsIncrease)
+  const focusMode = replayWriteStoreScope(isIncrease, ITradeFocusMode.collateral, switchFocusMode)
+  const slippage = replayWriteStoreScope(focusMode, '0.35', changeSlippage)
+  const inputToken = replayWriteStoreScope(slippage, GMX.AddressZero, changeInputToken)
+  const indexToken = replayWriteStoreScope(inputToken, nativeToken, changeIndexToken)
+  const shortCollateralToken = replayWriteStoreScope(indexToken, null as viem.Address | null, changeShortCollateralToken)
+  const leverage = replayWriteStoreScope(shortCollateralToken, GMX.LIMIT_LEVERAGE / 4n, changeLeverage) 
 
 
   const collateralDeltaUsd = replayLatest(changeCollateralDeltaUsd, 0n)
@@ -771,110 +782,108 @@ export const $Trade = (config: ITradeComponent) => component((
                       }, filterNull(focusPrice)))
                     )
                   ),
-                  series: {
-                    data: params.pricefeed.map(({ o, h, l, c, timestamp }) => {
-                      const open = formatFixed(o, 30)
-                      const high = formatFixed(h, 30)
-                      const low = formatFixed(l, 30)
-                      const close = formatFixed(c, 30)
+                  data: params.pricefeed.map(({ o, h, l, c, timestamp }) => {
+                    const open = formatFixed(o, 30)
+                    const high = formatFixed(h, 30)
+                    const low = formatFixed(l, 30)
+                    const close = formatFixed(c, 30)
 
-                      return { open, high, low, close, time: timestamp as Time }
-                    }),
-                    seriesConfig: {
-                      // priceFormat: {
-                      //   type: 'custom',
-                      //   formatter: (priceValue: BarPrice) => readableNumber(priceValue.valueOf())
-                      // },
-                      // lastValueVisible: false,
-                      // autoscaleInfoProvider: original => {
-                      //   debugger
-                      //   const res = original();
-                      //   if (res !== null) {
-                      //     res.priceRange.minValue -= 10;
-                      //     res.priceRange.maxValue += 10;
-                      //   }
-                      //   return res;
-                      // },
+                    return { open, high, low, close, time: timestamp as Time }
+                  }),
+                  seriesConfig: {
+                    // priceFormat: {
+                    //   type: 'custom',
+                    //   formatter: (priceValue: BarPrice) => readableNumber(priceValue.valueOf())
+                    // },
+                    // lastValueVisible: false,
+                    // autoscaleInfoProvider: original => {
+                    //   debugger
+                    //   const res = original();
+                    //   if (res !== null) {
+                    //     res.priceRange.minValue -= 10;
+                    //     res.priceRange.maxValue += 10;
+                    //   }
+                    //   return res;
+                    // },
 
-                      priceLineColor: pallete.foreground,
-                      baseLineStyle: LineStyle.SparseDotted,
+                    priceLineColor: pallete.foreground,
+                    baseLineStyle: LineStyle.SparseDotted,
 
-                      upColor: pallete.middleground,
-                      borderUpColor: pallete.middleground,
-                      wickUpColor: pallete.middleground,
+                    upColor: pallete.middleground,
+                    borderUpColor: pallete.middleground,
+                    wickUpColor: pallete.middleground,
 
-                      downColor: 'transparent',
-                      borderDownColor: colorAlpha(pallete.middleground, .5),
-                      wickDownColor: colorAlpha(pallete.middleground, .5),
-                    },
-                    priceLines: [
-                      map(val => {
-                        if (val === 0n) {
-                          return null
-                        }
-
-                        return {
-                          price: formatFixed(val, 30),
-                          color: pallete.middleground,
-                          lineVisible: true,
-                          // axisLabelColor: '#fff',
-                          // axisLabelTextColor: 'red',
-                          // axisLabelVisible: true,
-                          lineWidth: 1,
-                          title: `Entry`,
-                          lineStyle: LineStyle.SparseDotted,
-                        }
-                      }, averagePrice),
-                      map(val => {
-                        if (val === 0n) {
-                          return null
-                        }
-
-                        return {
-                          price: formatFixed(val, 30),
-                          color: pallete.negative,
-                          lineVisible: true,
-                          // axisLabelColor: 'red',
-                          // axisLabelVisible: true,
-                          // axisLabelTextColor: 'red',
-                          lineWidth: 1,
-                          title: `Liquidation`,
-                          lineStyle: LineStyle.SparseDotted,
-                        }
-                      }, liquidationPrice)
-
-                    ],
-                    appendData: scan((prev: CandlestickData, next): CandlestickData => {
-                      const marketPrice = formatFixed(next.indexTokenPrice, 30)
-                      const timeNow = unixTimestampNow()
-
-                      const prevTimeSlot = Math.floor(prev.time as number / tf)
-                      const nextTimeSlot = Math.floor(timeNow / tf)
-                      const time = nextTimeSlot * tf as Time
-
-                      const isNext = nextTimeSlot > prevTimeSlot
-
-                      document.title = `${next.indexTokenDescription.symbol} ${readableNumber(marketPrice)}`
-
-                      if (isNext) {
-                        return {
-                          open: marketPrice,
-                          high: marketPrice,
-                          low: marketPrice,
-                          close: marketPrice,
-                          time
-                        }
+                    downColor: 'transparent',
+                    borderDownColor: colorAlpha(pallete.middleground, .5),
+                    wickDownColor: colorAlpha(pallete.middleground, .5),
+                  },
+                  priceLines: [
+                    map(val => {
+                      if (val === 0n) {
+                        return null
                       }
 
                       return {
-                        open: prev.open,
-                        high: marketPrice > prev.high ? marketPrice : prev.high,
-                        low: marketPrice < prev.low ? marketPrice : prev.low,
+                        price: formatFixed(val, 30),
+                        color: pallete.middleground,
+                        lineVisible: true,
+                        // axisLabelColor: '#fff',
+                        // axisLabelTextColor: 'red',
+                        // axisLabelVisible: true,
+                        lineWidth: 1,
+                        title: `Entry`,
+                        lineStyle: LineStyle.SparseDotted,
+                      }
+                    }, averagePrice),
+                    map(val => {
+                      if (val === 0n) {
+                        return null
+                      }
+
+                      return {
+                        price: formatFixed(val, 30),
+                        color: pallete.negative,
+                        lineVisible: true,
+                        // axisLabelColor: 'red',
+                        // axisLabelVisible: true,
+                        // axisLabelTextColor: 'red',
+                        lineWidth: 1,
+                        title: `Liquidation`,
+                        lineStyle: LineStyle.SparseDotted,
+                      }
+                    }, liquidationPrice)
+
+                  ],
+                  appendData: scan((prev: CandlestickData, next): CandlestickData => {
+                    const marketPrice = formatFixed(next.indexTokenPrice, 30)
+                    const timeNow = unixTimestampNow()
+
+                    const prevTimeSlot = Math.floor(prev.time as number / tf)
+                    const nextTimeSlot = Math.floor(timeNow / tf)
+                    const time = nextTimeSlot * tf as Time
+
+                    const isNext = nextTimeSlot > prevTimeSlot
+
+                    document.title = `${next.indexTokenDescription.symbol} ${readableNumber(marketPrice)}`
+
+                    if (isNext) {
+                      return {
+                        open: marketPrice,
+                        high: marketPrice,
+                        low: marketPrice,
                         close: marketPrice,
                         time
                       }
-                    }, initialTick, combineObject({ indexTokenPrice, indexTokenDescription })),
-                  },
+                    }
+
+                    return {
+                      open: prev.open,
+                      high: marketPrice > prev.high ? marketPrice : prev.high,
+                      low: marketPrice < prev.low ? marketPrice : prev.low,
+                      close: marketPrice,
+                      time
+                    }
+                  }, initialTick, combineObject({ indexTokenPrice, indexTokenDescription })),
                   containerOp: style({ position: 'absolute', inset: 0, borderRadius: '20px', overflow: 'hidden' }),
                   chartConfig: {
                     rightPriceScale: {
@@ -905,7 +914,6 @@ export const $Trade = (config: ITradeComponent) => component((
                   focusPrice: changefocusPriceTether(),
                   isFocused: changeIsFocusedTether(),
                   // crosshairMove: chartCrosshairMoveTether(),
-                  initChart: IInitCandlesticksChartTether(),
                   click: chartClickTether(),
                   visibleLogicalRangeChange: chartVisibleLogicalRangeChangeTether(),
                 })

@@ -1,4 +1,4 @@
-import { concatMap, constant, continueWith, empty, fromPromise, map, switchLatest } from "@most/core"
+import { concatMap, constant, continueWith, fromPromise, map, switchLatest } from "@most/core"
 import { curry2, curry3 } from '@most/prelude'
 import { Stream } from "@most/types"
 import { sha256 } from '@noble/hashes/sha256'
@@ -9,28 +9,37 @@ import { unixTimestampNow } from "gmx-middleware-utils"
 // @ts-ignore
 BigInt.prototype.toJSON = function () { return this.toString() + 'n' }
 
-
-export function initDbStore<TName extends string>(dbName: TName): Stream<IDBDatabase> {
-  return fromPromise(new Promise<IDBDatabase>((resolve, reject) => {
-    const indexedDB = window.indexedDB
-    const request = indexedDB.open(dbName, 1)
-
-    request.onerror = event => reject(event)
-    request.onsuccess = () => resolve(request.result)
-
-    request.onupgradeneeded = (event) => {
-      const db = request.result
-      db.createObjectStore(dbName, { keyPath: 'id' })
-    }
-
-    return () => {
-      request.onsuccess = null
-      request.onerror = null
-    }
-  }))
+interface IStorePutTransaction<TData> {
+  lastUpdateTimestamp: number,
+  key: string,
+  data: TData
 }
 
-export function transact<TResult>(db: IDBDatabase, action: (store: IDBObjectStore) => IDBRequest<TResult>): Stream<TResult> {
+const dbName = '_BROWSER_SCOPE'
+const indexedDB = window.indexedDB
+const request = indexedDB.open(dbName, 1)
+
+const indexDb = fromPromise(new Promise<IDBDatabase>((resolve, reject) => {
+  request.onerror = event => reject(event)
+  request.onsuccess = () => resolve(request.result)
+
+  request.onupgradeneeded = (event) => {
+    const db = request.result
+    db.createObjectStore(dbName, { keyPath: 'key' })
+  }
+
+  return () => {
+    request.onsuccess = null
+    request.onerror = null
+  }
+}))
+
+
+export function createGenesisStore<TData>(genesisSeed: TData): IStoreScope<TData> {
+  return storeScope({ key: '0' }, genesisSeed)
+}
+
+function transact<TResult>(db: IDBDatabase, action: (store: IDBObjectStore) => IDBRequest<TResult>): Stream<TResult> {
   return fromPromise(new Promise((resolve, reject) => {
     const transaction = db.transaction(db.name, 'readwrite')
     const store = transaction.objectStore(db.name)
@@ -41,100 +50,85 @@ export function transact<TResult>(db: IDBDatabase, action: (store: IDBObjectStor
   }))
 }
 
-export function getStore<TData>(scope: IStoreScope<TData>): Stream<{ key: string, data: TData } | undefined> {
-  return switchLatest(map(db => {
-    return transact(db, store => store.get(scope.key))
-  }, scope.db))
+export function getStoreKey<TData>(parentScope: IParentScope, seed: TData): string {
+  const newKey = hashData(JSON.stringify(seed))
+  const nextKey = hashData(`${parentScope.key}.${newKey}`)
+
+  return nextKey
 }
 
-export function streamSaveStore<TData>(scope: IStoreScope<TData>, write: Stream<TData>): Stream<TData> {
+export function getStoredSeedData<TData>(key: string, seed: TData): Stream<TData> {
+  return switchLatest(map(ev => {
+    const dataTx = transact<IStorePutTransaction<TData> | undefined>(ev, store => store.get(key))
+    return map((storeData) => {
+      return storeData === undefined ? seed : storeData.data
+    }, dataTx)
+  }, indexDb))
+}
+
+function writeStoreData<TData>(key: string, write: Stream<TData>): Stream<TData> {
   return switchLatest(map(db => {
     return concatMap(data => {
-      return constant(data, transact(db, store => store.put({ lasteUpdate: unixTimestampNow(), id: scope.key, data })))
+      return constant(data, transact(db, store => {
+        const tx = { lastUpdateTimestamp: unixTimestampNow(), key: key, data } as IStorePutTransaction<TData>
+
+        return store.put(tx)
+      }))
     }, write)
-  }, scope.db))
+  }, indexDb))
 }
 
 
-export interface IStoreConfig {
-  db: Stream<IDBDatabase>
+interface IParentScope {
   key: string
 }
-export interface IStoreScope<TData> extends IStoreConfig, Stream<TData> {
-}
 
-export interface IWriteStoreScope<TData> extends IStoreScope<TData> {
-  write: Stream<TData>
-}
+export interface IStoreScope<TData> extends IParentScope, Stream<TData> { }
 
+export interface IReplayWriteStoreScope<TData> extends IStoreScope<TData> { }
 
-export type ICreateScopeFn<TData> = (write: Stream<TData>) => IStoreScope<TData>
 
 export interface ICreateScopeCurry2 {
-  <TData>(initialState: TData, write: Stream<TData>): IStoreScope<TData>
-  <TData>(initialState: TData): (write: Stream<TData>) => IStoreScope<TData>
+  <TData>(genesisSeed: TData, write: Stream<TData>): IStoreScope<TData>
+  <TData>(genesisSeed: TData): (write: Stream<TData>) => IStoreScope<TData>
 }
 
 export interface IWriteScopeCurry3 {
-  <TData>(parentScope: IStoreConfig, initialState: TData, write: Stream<TData>): IStoreScope<TData>
-  <TData>(parentScope: IStoreConfig, initialState: TData): (write: Stream<TData>) => IStoreScope<TData>
-  (parentScope: IStoreConfig): ICreateScopeCurry2
+  <TData>(parentScope: IParentScope, genesisSeed: TData, write: Stream<TData>): IReplayWriteStoreScope<TData>
+  <TData>(parentScope: IParentScope, genesisSeed: TData): (write: Stream<TData>) => IReplayWriteStoreScope<TData>
+  (parentScope: IParentScope): ICreateScopeCurry2
 }
 
 export interface IScopeCurry2 {
-  <TData>(parentScope: IStoreConfig, initialState: TData): IStoreScope<TData>
-  <TData>(parentScope: IStoreConfig): (initialState: TData) => IStoreScope<TData>
+  <TData>(parentScope: IParentScope, genesisSeed: TData): IStoreScope<TData>
+  <TData>(parentScope: IParentScope): (genesisSeed: TData) => IStoreScope<TData>
 }
 
 
 
-export const createStoreScope: IScopeCurry2 = curry2(<TData>(parentScope: IStoreConfig, initialState: TData): IStoreScope<TData> => {
-  const newKey = hashData(JSON.stringify(initialState))
-  const nextKey = hashData(`${parentScope.key}.${newKey}`)
-
-  const newScope: IStoreScope<TData> = {
-    run(sink, scheduler) {
-      return state.run(sink, scheduler)
-    },
-    db: parentScope.db,
-    key: nextKey,
-  }
-
-  const currentState = getStore(newScope)
-  const state: Stream<TData> = map(res => {
-    return res === undefined ? initialState : res.data
-  }, currentState)
-
-  return newScope
-})
-
-
-export const writeStoreReplayScope: IWriteScopeCurry3 = curry3(<TData>(parentScope: IStoreConfig, initialState: TData, write: Stream<TData>): IWriteStoreScope<TData> => {
-  const scope = createStoreScope(parentScope, initialState)
-  const doWrite = streamSaveStore(scope, write)
-  const state = continueWith(() => doWrite, scope)
+export const storeScope: IScopeCurry2 = curry2(<TData>(parentScope: IParentScope, genesisSeed: TData): IStoreScope<TData> => {
+  const key = getStoreKey(parentScope, genesisSeed)
+  const currentSeed = getStoredSeedData(key, genesisSeed)
 
   return {
+    key,
     run(sink, scheduler) {
-      return state.run(sink, scheduler)
+      return currentSeed.run(sink, scheduler)
     },
-    db: scope.db,
-    key: scope.key,
-    write,
   }
 })
 
-export const writeStoreScope: IWriteScopeCurry3 = curry3(<TData>(parentScope: IStoreConfig, initialState: TData, write: Stream<TData>): IWriteStoreScope<TData> => {
-  const scope = createStoreScope(parentScope, initialState)
-  const doWrite = streamSaveStore(scope, write)
+
+export const replayWriteStoreScope: IWriteScopeCurry3 = curry3(<TData>(parentScope: IParentScope, genesisSeed: TData, writeSource: Stream<TData>): IReplayWriteStoreScope<TData> => {
+  const scope = storeScope(parentScope, genesisSeed)
+  const write = writeStoreData(scope.key, writeSource)
+  const replayWrite = continueWith(() => write, scope)
 
   return {
+    ...scope,
     run(sink, scheduler) {
-      return doWrite.run(sink, scheduler)
-    },
-    db: scope.db,
-    key: scope.key,
-    write,
+      return replayWrite.run(sink, scheduler)
+    }
   }
 })
 

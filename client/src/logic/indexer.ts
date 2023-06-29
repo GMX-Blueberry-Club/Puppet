@@ -61,7 +61,7 @@ export function syncEvent<
     logHistory: [] as viem.Log[],
     syncedBlock: 0n,
   }
-  const store = database.createStoreScope(config.parentStoreScope, storeParams)
+  const store = database.storeScope(config.parentStoreScope, storeParams)
 
   const sss = switchLatest(awaitPromises(map(async params => {
     const history = params.store.logHistory
@@ -166,7 +166,7 @@ export function syncEvent<
     }, history, combineObject({ newEvent, newLogsFilter, latestPendingBlock }))
 
 
-    const storedNewEvents = map(ev => ev.logHistory[ev.logHistory.length - 1], database.streamSaveStore(store, syncNewEvents))
+    const storedNewEvents = map(ev => ev.logHistory[ev.logHistory.length - 1], database.writeStore(store, syncNewEvents))
 
 
 
@@ -222,7 +222,7 @@ export function replaySubgraphEvent<
     throw new Error(`No event ${config.eventName} found in abi`)
   }
 
-  const storeParams: IIndexerState<TAbi, TEventName> = {
+  const genesisSeed: IIndexerState<TAbi, TEventName> = {
     eventName: config.eventName,
     address: config.address,
     args: config.args,
@@ -231,18 +231,17 @@ export function replaySubgraphEvent<
     syncedBlock: 0n,
   }
 
+
+  const currentStoreKey = database.getStoreKey(config.parentStoreScope, genesisSeed)
+  const seedStoredData = database.getStoredSeedData(currentStoreKey, genesisSeed)
+
   const graphDocumentIdentifier = `${config.eventName.charAt(0).toLowerCase() + config.eventName.slice(1)}s`
 
-
-
-  const store = database.createStoreScope(config.parentStoreScope, storeParams)
-
-  const sss = switchLatest(map(params => {
-
+  const syncLogs = switchLatest(map(params => {
     const startBlock = config.startBlock
-      ? config.startBlock > params.store.syncedBlock ? config.startBlock : params.store.syncedBlock
-      : params.store.syncedBlock
-    const history = params.store.logHistory
+      ? config.startBlock > params.seedStoredData.syncedBlock ? config.startBlock : params.seedStoredData.syncedBlock
+      : params.seedStoredData.syncedBlock
+    const history = params.seedStoredData.logHistory
 
     const getEventParams = {
       abi: config.abi,
@@ -285,16 +284,15 @@ export function replaySubgraphEvent<
       const logHistory = [...history, ...newLogs]
       const latestAddedBatchCount = newLogs.length
 
-      return { ...storeParams, logHistory, lastStoredCount: latestAddedBatchCount, syncedBlock: latestFinalizedBlockNumber - 1n }
-    }, combineObject({ db: store.db, newLogsFilter, latestPendingBlock }))
+      return { ...params.seedStoredData, logHistory, lastStoredCount: latestAddedBatchCount, syncedBlock: latestFinalizedBlockNumber - 1n }
+    }, combineObject({ newLogsFilter, latestPendingBlock }))
 
 
     return newHistoricLogs
-  }, combineObject({ publicClient, store })))
+  }, combineObject({ publicClient, seedStoredData })))
 
-  const storeWrite = database.writeStoreScope(config.parentStoreScope, storeParams, sss)
 
-  return storeWrite
+  return database.replayWriteStoreScope(config.parentStoreScope, genesisSeed, syncLogs)
 }
 
 
@@ -345,24 +343,24 @@ export function processSources<
   process3?: IProcessConfig<TReturn, TAbi3, TEventName3, TEvent3>,
   process4?: IProcessConfig<TReturn, TAbi4, TEventName4, TEvent4>,
   process5?: IProcessConfig<TReturn, TAbi5, TEventName5, TEvent5>,
-): Stream<TReturn> {
+): database.IStoreScope<IProcessStep<TReturn>> {
 
 
   // eslint-disable-next-line prefer-rest-params
   const processList: IProcessConfig<TReturn, any, any, any>[] = [...arguments].slice(2)
   const sourceEventList = processList.map(x => x.source as database.IStoreScope<IIndexerState<viem.Abi, string>>)
 
-  const scopeStoreData = sourceEventList.reduce((seed, next) => {
+  const storeScopeSeed = sourceEventList.reduce((seed, next) => {
     seed.indexedCountMap[next.key] = 0
     return seed
   }, { indexedCountMap: {}, data: scopeState } as IProcessStep<TReturn>)
 
-  const storeScope = database.createStoreScope(parentStoreScope, scopeStoreData)
+  const currentStoreKey = database.getStoreKey(parentStoreScope, storeScopeSeed)
+  const seedStoredData = database.getStoredSeedData(currentStoreKey, storeScopeSeed)
 
-
-  const combinedSources = switchMap(storeState => {
+  const processWriteSources = switchMap(storeState => {
     const nextSeed = storeState
-    const stepState = filterNull(zipArray((...nextLogEvents) => {
+    const stepState = zipArray((...nextLogEvents) => {
 
       const orderedEvents = orderEvents(nextLogEvents.flatMap((state, processIdx) => {
         const processKey = processList[processIdx].source.key
@@ -376,9 +374,6 @@ export function processSources<
           : []
       }))
 
-      if (orderedEvents.length === 0) {
-        return null
-      }
 
       for (let index = 0; index < orderedEvents.length; index++) {
         const sourceConfig = orderedEvents[index]
@@ -394,14 +389,14 @@ export function processSources<
       }
 
       return nextSeed
-    }, ...sourceEventList))
+    }, ...sourceEventList)
 
-    const stepWrite = database.streamSaveStore(storeScope, stepState)
+    return stepState
+  }, seedStoredData)
 
-    return mergeArray([stepWrite, now(nextSeed)])
-  }, storeScope)
+  const store = database.replayWriteStoreScope(parentStoreScope, storeScopeSeed, processWriteSources)
 
-  return map(state => state.data, combinedSources)
+  return store
 }
 
 

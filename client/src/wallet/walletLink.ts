@@ -1,6 +1,6 @@
 import { combineObject, fromCallback, replayLatest } from "@aelea/core"
 import { pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, delay, map, mergeArray, multicast, now } from "@most/core"
+import { awaitPromises, delay, map, mergeArray, multicast, now, tap } from "@most/core"
 import { Stream } from "@most/types"
 import { Address, GetAccountResult, GetNetworkResult, InjectedConnector, WalletClient, configureChains, createConfig, createStorage, getAccount, getNetwork, getPublicClient, getWalletClient, getWebSocketPublicClient, multicall, watchAccount, watchNetwork } from '@wagmi/core'
 import { WalletConnectConnector } from '@wagmi/core/connectors/walletConnect'
@@ -123,6 +123,7 @@ export const publicClient: Stream<PublicClient<Transport, ISupportedChain>> = ma
 export const wallet = awaitPromises(map(async params => {
 
   const clientAvaialble = await getWalletClient({ chainId: params.chain.id })
+
 
   return clientAvaialble
 }, combineObject({ chain, account })))

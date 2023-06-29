@@ -24,7 +24,7 @@
   },
   "include": [
     "src"
-  ],
+, "../ui-components/src/chart"  ],
   "references": [
     {
       "path": "../middleware"

@@ -32,6 +32,7 @@ import {
 import {
   abs, bnDiv, div, filterNull, formatFixed, formatReadableUSD, formatToBasis, getAdjustedDelta, getDenominator,
   getNativeTokenDescription, getPnL, getTokenAmount, getTokenDescription, getTokenUsd,
+  getTradeTotalFee,
   IIndexedLogType,
   IPricefeed, ITokenDescription,
   ITrade, parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, zipState
@@ -165,7 +166,7 @@ export const $TradeBox = (config: ITradeBox) => component((
 
   [changeInputToken, changeInputTokenTether]: Behavior<viem.Address, viem.Address>,
   [changeIndexToken, changeIndexTokenTether]: Behavior<viem.Address, viem.Address>,
-  [changeCollateralToken, changeCollateralTokenTether]: Behavior<GMX.ARBITRUM_ADDRESS_STABLE | GMX.AVALANCHE_ADDRESS_STABLE>,
+  [changeCollateralToken, changeCollateralTokenTether]: Behavior<viem.Address>,
 
   [switchIsIncrease, switchisIncreaseTether]: Behavior<boolean, boolean>,
   [slideLeverage, slideLeverageTether]: Behavior<number, bigint>,
@@ -978,7 +979,7 @@ export const $TradeBox = (config: ITradeBox) => component((
               select: switchIsLongTether()
             }),
 
-            $Dropdown<IIndexedLogType>({
+            $Dropdown({
               $container: $row(style({ position: 'relative', alignSelf: 'center' })),
               $selection: switchLatest(map(option => {
                 const tokenDesc = getTokenDescription(option)
@@ -1448,9 +1449,12 @@ export const $TradeBox = (config: ITradeBox) => component((
                         return now(chartCxChange)
                       }
 
+                      const lastUpdate = trade.updateList[trade.updateList.length - 1]
+                      const totalFee = getTradeTotalFee(trade)
+
                       return map(price => {
-                        const delta = getPnL(trade.isLong, trade.averagePrice, price, trade.size)
-                        const val = formatFixed(delta + trade.realisedPnl - trade.fee, 30)
+                        const delta = getPnL(trade.isLong, lastUpdate.averagePrice, price, lastUpdate.size)
+                        const val = formatFixed(delta + lastUpdate.realisedPnl - totalFee, 30)
 
                         return val
                       }, config.tradeState.indexTokenPrice)
@@ -1538,9 +1542,10 @@ export const $TradeBox = (config: ITradeBox) => component((
                       const positionMarkPrice = tradeReader.getLatestPrice(now(trade.indexToken))
                       const cumulativeFee = vault.read('cumulativeFundingRates', trade.collateralToken)
                       const pnl = map(params => {
-                        const delta = getPnL(trade.isLong, trade.averagePrice, params.positionMarkPrice, trade.size)
+                        const lastUpdate = trade.updateList[trade.updateList.length - 1]
+                        const delta = getPnL(trade.isLong, lastUpdate.averagePrice, params.positionMarkPrice, lastUpdate.size)
 
-                        return trade.realisedPnl + delta - trade.fee
+                        return lastUpdate.realisedPnl + delta - getTradeTotalFee(trade)
                       }, combineObject({ positionMarkPrice, cumulativeFee }))
 
 

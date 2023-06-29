@@ -69,6 +69,7 @@ export const $VirtualScroll = ({
 
   const $itemLoader = loop((seed, state) => {
     const itemCount = Array.isArray(state.data) ? state.data.length : state.data.$items.length
+    console.log(itemCount)
 
     if (state.scrollIndex === 0 && itemCount === 0) {
       return { seed, value: $defaultEmptyMessage }
