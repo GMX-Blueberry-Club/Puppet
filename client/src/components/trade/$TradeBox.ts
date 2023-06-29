@@ -27,7 +27,7 @@ import * as GMX from "gmx-middleware-const"
 import {
   $alert, $alertTooltip, $anchor, $bear, $bull,
   $hintNumChange, $infoLabel, $infoLabeledValue, $infoTooltipLabel, $IntermediatePromise,
-  $openPositionPnlBreakdown, $PnlValue, $riskLiquidator, $spinner, $tokenIconMap, $tokenLabelFromSummary
+  $spinner, $tokenIconMap, $tokenLabelFromSummary
 } from "gmx-middleware-ui-components"
 import {
   abs, bnDiv, div, filterNull, formatFixed, formatReadableUSD, formatToBasis, getAdjustedDelta, getDenominator,
@@ -49,11 +49,11 @@ import { $caretDown } from "../../elements/$icons"
 import { connectContract, wagmiWriteContract } from "../../logic/common"
 import { connectTrade, getErc20Balance, IPositionGetter, ITokenPoolInfo } from "../../logic/trade"
 import { resolveAddress } from "../../logic/utils"
-import { $Index } from "../../pages/competition/$Leaderboard"
 import { account, IWalletClient } from "../../wallet/walletLink"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultButtonPrimary, $defaultMiniButtonSecondary } from "../form/$Button"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown"
 import { $TradePnlHistory } from "./$TradePnlHistory"
+import { $entry, $openPositionPnlBreakdown, $PnlValue, $riskLiquidator } from "../../common/$common"
 
 
 
@@ -1492,7 +1492,6 @@ export const $TradeBox = (config: ITradeBox) => component((
                               fontSize: '1.25em',
                               fontWeight: 'bold',
                             },
-                            // background: `radial-gradient(${colorAlpha(invertColor(pallete.message), .7)} 9%, transparent 63%)`,
                             value$: map(hoverValue => {
                               const newLocal2 = readableNumber(hoverValue)
                               const newLocal = parseReadableNumber(newLocal2)
@@ -1561,7 +1560,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                           })
                         )(
                           $ButtonPrimary({
-                            $content: $Index(trade),
+                            $content: $entry(trade),
                             $container: $defaultMiniButtonSecondary
                           })({
                             click: switchTradeTether(

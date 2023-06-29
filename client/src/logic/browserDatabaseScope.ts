@@ -66,7 +66,7 @@ export function getStoredSeedData<TData>(key: string, seed: TData): Stream<TData
   }, indexDb))
 }
 
-function writeStoreData<TData>(key: string, write: Stream<TData>): Stream<TData> {
+export function writeStoreData<TData>(key: string, write: Stream<TData>): Stream<TData> {
   return switchLatest(map(db => {
     return concatMap(data => {
       return constant(data, transact(db, store => {

@@ -4,7 +4,6 @@ import { $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { constant, map, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { invertColor } from "./common.js"
 
 export interface IButtonToggle<T> {
   options: T[]

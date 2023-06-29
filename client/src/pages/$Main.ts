@@ -19,7 +19,7 @@ import { $Profile } from "./$Profile"
 import { $ProfileConnected } from "./$ProfileConnected"
 import { $Trade } from "./$Trade"
 import { $Leaderboard } from "./competition/$Leaderboard"
-import { $PuppetPortfolio } from "./$Puppet"
+import { $PuppetPortfolio } from "./$PuppetPortfolio"
 
 
 

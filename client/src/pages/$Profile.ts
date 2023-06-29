@@ -3,20 +3,20 @@ import { $Node, $text, component, style } from "@aelea/dom"
 import { Route } from "@aelea/router"
 import { $column, layoutSheet } from "@aelea/ui-components"
 import { awaitPromises, combine, map, mergeArray, now } from "@most/core"
-import { $ButtonToggle, $defaulButtonToggleContainer, $infoTooltipLabel, $openPositionPnlBreakdown, $PnlValue, $riskLiquidator, $sizeDisplay, $Table, $TradePnl } from "gmx-middleware-ui-components"
+import { $ButtonToggle, $Table, $defaulButtonToggleContainer, $infoTooltipLabel } from "gmx-middleware-ui-components"
 import {
-  gmxSubgraph,
   IRequestAccountTradeListApi,
+  gmxSubgraph,
   readableDate, timeSince,
   unixTimestampNow
 } from "gmx-middleware-utils"
 import { Address } from "viem"
+import { $PnlValue, $TradePnl, $entry, $openPositionPnlBreakdown, $riskLiquidator, $sizeDisplay } from "../common/$common"
 import { $CardTable } from "../components/$common"
 import { $card } from "../elements/$common"
 import * as tradeReader from "../logic/trade"
 import { fadeIn } from "../transitions/enter"
 import { walletLink } from "../wallet"
-import { $Index } from "./competition/$Leaderboard"
 
 
 
@@ -99,7 +99,7 @@ export const $Profile = (config: IProfile) => component((
                   $head: $text('Entry'),
                   columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
                   $$body: map((pos) => {
-                    return $Index(pos)
+                    return $Entry(pos)
                   })
                 },
                 {
@@ -152,7 +152,7 @@ export const $Profile = (config: IProfile) => component((
                   $head: $text('Entry'),
                   columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
                   $$body: map((pos) => {
-                    return $Index(pos)
+                    return $entry(pos)
                   })
                 },
                 {

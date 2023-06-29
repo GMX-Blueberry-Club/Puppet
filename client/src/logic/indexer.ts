@@ -186,10 +186,8 @@ export function syncEvent<
 export type ISubgraphConfig<
   TAbi extends viem.Abi,
   TEventName extends string,
-  TArgs extends viem.GetEventArgs<TAbi, TEventName, { EnableUnion: true }>,
 > = IIndexerConfig<TAbi, TEventName> & {
   subgraph: string
-  args?: TArgs
 }
 
 type IIndexerState<
@@ -198,7 +196,7 @@ type IIndexerState<
 > = {
   eventName: viem.InferEventName<TAbi, TEventName>
   address: `0x${string}`
-  args: string
+  args: viem.GetEventArgs<TAbi, TEventName, { EnableUnion: true }>
   syncedBlock: bigint
   logHistory: ILogIndexEvent<TAbi, TEventName>[]
   lastStoredCount: number
@@ -208,49 +206,51 @@ export function replaySubgraphEvent<
   TAbi extends viem.Abi,
   TEventName extends string,
   TArgs extends viem.GetEventArgs<TAbi, TEventName, { EnableUnion: true }>,
-  TReturn extends viem.GetEventArgs<TAbi, TEventName, { Required: true }> & IIndexedLogType<TEventName>
->(config: ISubgraphConfig<TAbi, TEventName, TArgs>): database.IStoreScope<IIndexerState<TAbi, TEventName>> {
-  const eventAbiManifest = config.abi.find((x): x is AbiEvent => {
-    if ('name' in x && x.type === 'event' && x.name === config.eventName) {
-      return true
+  TReturn extends viem.GetEventArgs<TAbi, TEventName, { Required: true }> & IIndexedLogType<TEventName>,
+>(config: ISubgraphConfig<TAbi, TEventName>): <TExtendArgs>(args: TArgs, extendArgs?: TExtendArgs) => database.IStoreScope<IIndexerState<TAbi, TEventName>> {
+
+  return (args: TArgs) => {
+    const eventAbiManifest = config.abi.find((x): x is AbiEvent => {
+      if ('name' in x && x.type === 'event' && x.name === config.eventName) {
+        return true
+      }
+
+      return false
+    })
+
+    if (!eventAbiManifest) {
+      throw new Error(`No event ${config.eventName} found in abi`)
     }
 
-    return false
-  })
-
-  if (!eventAbiManifest) {
-    throw new Error(`No event ${config.eventName} found in abi`)
-  }
-
-  const genesisSeed: IIndexerState<TAbi, TEventName> = {
-    eventName: config.eventName,
-    address: config.address,
-    args: config.args,
-    logHistory: [],
-    lastStoredCount: 0,
-    syncedBlock: 0n,
-  }
-
-
-  const currentStoreKey = database.getStoreKey(config.parentStoreScope, genesisSeed)
-  const seedStoredData = database.getStoredSeedData(currentStoreKey, genesisSeed)
-
-  const graphDocumentIdentifier = `${config.eventName.charAt(0).toLowerCase() + config.eventName.slice(1)}s`
-
-  const syncLogs = switchLatest(map(params => {
-    const startBlock = config.startBlock
-      ? config.startBlock > params.seedStoredData.syncedBlock ? config.startBlock : params.seedStoredData.syncedBlock
-      : params.seedStoredData.syncedBlock
-    const history = params.seedStoredData.logHistory
-
-    const getEventParams = {
-      abi: config.abi,
-      address: config.address,
+    const genesisSeed: IIndexerState<TAbi, TEventName> = {
       eventName: config.eventName,
-      args: config.args,
+      address: config.address,
+      args: args,
+      logHistory: [],
+      lastStoredCount: 0,
+      syncedBlock: 0n,
     }
 
-    const document = gql`{
+
+    const currentStoreKey = database.getStoreKey(config.parentStoreScope, genesisSeed)
+    const seedStoredData = database.getStoredSeedData(currentStoreKey, genesisSeed)
+
+    const graphDocumentIdentifier = `${config.eventName.charAt(0).toLowerCase() + config.eventName.slice(1)}s`
+
+    const syncLogs = switchLatest(map(params => {
+      const startBlock = config.startBlock
+        ? config.startBlock > params.seedStoredData.syncedBlock ? config.startBlock : params.seedStoredData.syncedBlock
+        : params.seedStoredData.syncedBlock
+      const history = params.seedStoredData.logHistory
+
+      const getEventParams = {
+        abi: config.abi,
+        address: config.address,
+        eventName: config.eventName,
+        args: args,
+      }
+
+      const document = gql`{
       ${graphDocumentIdentifier} ( where: { _change_block: { number_gte: ${startBlock} }, ${objectToGraphql(getEventParams.args || {})} } ) {
         ${eventAbiManifest.inputs.map(x => x.name).join('\n')}
         transactionIndex
@@ -262,37 +262,38 @@ export function replaySubgraphEvent<
 }`
 
 
-    const newLogsFilter: Stream<TReturn[]> = fromPromise(request({
-      document,
-      url: config.subgraph
-    }).then((x: any) => {
+      const newLogsFilter: Stream<TReturn[]> = fromPromise(request({
+        document,
+        url: config.subgraph
+      }).then((x: any) => {
 
-      if (!(graphDocumentIdentifier in x)) {
-        throw new Error(`No ${graphDocumentIdentifier} found in subgraph response`)
-      }
+        if (!(graphDocumentIdentifier in x)) {
+          throw new Error(`No ${graphDocumentIdentifier} found in subgraph response`)
+        }
 
-      const list: any[] = x[graphDocumentIdentifier]
-      return list.map(obj => parseGqlRespone(eventAbiManifest, obj))
-    }))
+        const list: any[] = x[graphDocumentIdentifier]
+        return list.map(obj => parseGqlRespone(eventAbiManifest, obj))
+      }))
 
-    const latestPendingBlock = fromPromise(params.publicClient.getBlock({ blockTag: 'pending' }))
-
-
-    const newHistoricLogs = map((syncParams): IIndexerState<TAbi, TEventName> => {
-      const newLogs = orderEvents(syncParams.newLogsFilter as any) as TReturn[]
-      const latestFinalizedBlockNumber = syncParams.latestPendingBlock.number || 1n
-      const logHistory = [...history, ...newLogs]
-      const latestAddedBatchCount = newLogs.length
-
-      return { ...params.seedStoredData, logHistory, lastStoredCount: latestAddedBatchCount, syncedBlock: latestFinalizedBlockNumber - 1n }
-    }, combineObject({ newLogsFilter, latestPendingBlock }))
+      const latestPendingBlock = fromPromise(params.publicClient.getBlock({ blockTag: 'pending' }))
 
 
-    return newHistoricLogs
-  }, combineObject({ publicClient, seedStoredData })))
+      const newHistoricLogs = map((syncParams): IIndexerState<TAbi, TEventName> => {
+        const newLogs = orderEvents(syncParams.newLogsFilter as any) as TReturn[]
+        const latestFinalizedBlockNumber = syncParams.latestPendingBlock.number || 1n
+        const logHistory = [...history, ...newLogs]
+        const latestAddedBatchCount = newLogs.length
+
+        return { ...params.seedStoredData, logHistory, lastStoredCount: latestAddedBatchCount, syncedBlock: latestFinalizedBlockNumber - 1n }
+      }, combineObject({ newLogsFilter, latestPendingBlock }))
 
 
-  return database.replayWriteStoreScope(config.parentStoreScope, genesisSeed, syncLogs)
+      return newHistoricLogs
+    }, combineObject({ publicClient, seedStoredData })))
+
+
+    return database.replayWriteStoreScope(config.parentStoreScope, genesisSeed, syncLogs)
+  }
 }
 
 
@@ -343,7 +344,7 @@ export function processSources<
   process3?: IProcessConfig<TReturn, TAbi3, TEventName3, TEvent3>,
   process4?: IProcessConfig<TReturn, TAbi4, TEventName4, TEvent4>,
   process5?: IProcessConfig<TReturn, TAbi5, TEventName5, TEvent5>,
-): database.IStoreScope<IProcessStep<TReturn>> {
+): Stream<TReturn> {
 
 
   // eslint-disable-next-line prefer-rest-params
@@ -362,7 +363,7 @@ export function processSources<
     const nextSeed = storeState
     const stepState = zipArray((...nextLogEvents) => {
 
-      const orderedEvents = orderEvents(nextLogEvents.flatMap((state, processIdx) => {
+      const nextEvents = nextLogEvents.flatMap((state, processIdx) => {
         const processKey = processList[processIdx].source.key
         const totalLogCount = state.logHistory.length
         const deltaStoreCount = state.logHistory.length - nextSeed.indexedCountMap[processKey]
@@ -372,11 +373,11 @@ export function processSources<
         return deltaStoreCount
           ? state.logHistory.slice(-deltaStoreCount)
           : []
-      }))
+      })
+      const orderedNextEvents = orderEvents(nextEvents)
 
-
-      for (let index = 0; index < orderedEvents.length; index++) {
-        const sourceConfig = orderedEvents[index]
+      for (let index = 0; index < orderedNextEvents.length; index++) {
+        const sourceConfig = orderedNextEvents[index]
 
         for (let processIdx = 0; processIdx < processList.length; processIdx++) {
           const processState = nextLogEvents[processIdx]
@@ -394,9 +395,9 @@ export function processSources<
     return stepState
   }, seedStoredData)
 
-  const store = database.replayWriteStoreScope(parentStoreScope, storeScopeSeed, processWriteSources)
+  const store = database.writeStoreData(currentStoreKey, processWriteSources)
 
-  return store
+  return map(s => s.data, store)
 }
 
 

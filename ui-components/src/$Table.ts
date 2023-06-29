@@ -2,13 +2,13 @@ import { Behavior, combineObject, O, Op } from "@aelea/core"
 import { $Node, $svg, attr, component, INode, NodeComposeFn, nodeEvent, style } from '@aelea/dom'
 import { $column, $icon, $row, designSheet, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { constant, empty, map, now, snapshot, switchLatest } from "@most/core"
+import { constant, empty, map, never, now, snapshot, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { $VirtualScroll, IScrollPagableReponse, QuantumScroll, ScrollRequest, ScrollResponse } from "./$VirtualScroll.js"
+import { $QuantumScroll, IScrollPagable, QuantumScroll, ScrollRequest } from "./$QuantumScroll.js"
 
 
 
-export type TablePageResponse<T> = T[] | Omit<IScrollPagableReponse, '$items'> & { page: T[] }
+export type TablePageResponse<T> = T[] | Omit<IScrollPagable, '$items'> & { page: T[] }
 
 export interface TableOption<T, FilterState> {
 
@@ -123,9 +123,9 @@ export const $Table = <T, FilterState = never>({
   const filterState = combineObject({ sortBy, filter })
 
   const $body = switchLatest(map(() => {
-    return $VirtualScroll({
+    return  $QuantumScroll({
       ...scrollConfig,
-      dataSource: map((res): ScrollResponse => {
+      dataSource: map((res) => {
         const $items = (Array.isArray(res) ? res : res.page).map(rowData => {
 
           return $bodyRowContainer(
@@ -136,7 +136,6 @@ export const $Table = <T, FilterState = never>({
             })
           )
         })
-
 
         if (Array.isArray(res)) {
           return $items

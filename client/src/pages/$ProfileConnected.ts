@@ -1,31 +1,23 @@
-import { Behavior, O, nullSink } from "@aelea/core"
+import { Behavior, O } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import { Route } from "@aelea/router"
-import { $column, $icon, $row, layoutSheet } from "@aelea/ui-components"
+import { $column, layoutSheet } from "@aelea/ui-components"
 
-import { pallete } from "@aelea/ui-components-theme"
-import { IAccountStakingStore } from "@gambitdao/gbc-middleware"
 import { awaitPromises, map, mergeArray, now, zip } from "@most/core"
-import { newDefaultScheduler } from "@most/scheduler"
 import { CHAIN } from "gmx-middleware-const"
-import { $ButtonToggle, $Link, $PnlValue, $TradePnl, $anchor, $defaulButtonToggleContainer, $infoTooltipLabel, $openPositionPnlBreakdown, $riskLiquidator, $sizeDisplay } from "gmx-middleware-ui-components"
+import { $ButtonToggle, $defaulButtonToggleContainer, $infoTooltipLabel  } from "gmx-middleware-ui-components"
 import { IRequestAccountTradeListApi, TradeStatus, filterNull, gmxSubgraph, readableDate, timeSince, unixTimestampNow } from "gmx-middleware-utils"
-import { $labLogo } from "../common/$icons"
+import * as PUPPET from "puppet-middleware-const"
 import { $CardTable } from "../components/$common"
-import { $ButtonSecondary, $defaultButtonSecondary } from "../components/form/$Button"
 import { $responsiveFlex } from "../elements/$common"
 import * as tradeReader from "../logic/trade"
 import { fadeIn } from "../transitions/enter"
 import { walletLink } from "../wallet"
 import { IProfileActiveTab } from "./$Profile"
-import { $Index } from "./competition/$Leaderboard"
-import * as PUPPET from "puppet-middleware-const"
 
 import { JSProcessor, fromJSProcessor } from "ethereum-indexer-js-processor"
 import { createIndexerState, keepStateOnIndexedDB } from "gmx-middleware-browser-indexer"
-import { connect } from "@wagmi/core"
-import { publicClient } from "../wallet/walletLink"
-import { parseAbiItem, toHex } from "viem"
+import { $entry, $riskLiquidator, $openPositionPnlBreakdown, $TradePnl, $sizeDisplay, $PnlValue } from "../common/$common"
 
 
 // we need the contract info
@@ -185,7 +177,7 @@ export const $ProfileConnected = (config: IAccount) => component((
                   $head: $text('Entry'),
                   columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
                   $$body: map((pos) => {
-                    return $Index(pos)
+                    return $entry(pos)
                   })
                 },
                 {
@@ -239,7 +231,7 @@ export const $ProfileConnected = (config: IAccount) => component((
                   $head: $text('Entry'),
                   columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
                   $$body: map((pos) => {
-                    return $Index(pos)
+                    return $entry(pos)
                   })
                 },
                 {

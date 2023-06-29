@@ -18,7 +18,7 @@ import { resolveAddress } from "./utils"
 import * as viem from "viem"
 
 
-export type IPositionGetter = IVaultPosition & IAbstractPositionKey & IAbstractPositionIdentity
+export type IPositionGetter = IVaultPosition & IAbstractPositionKey & IAbstractPositionIdentity & { averagePrice: bigint }
 
 export interface ITokenPoolInfo {
   rate: bigint

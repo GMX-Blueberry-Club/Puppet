@@ -3,13 +3,14 @@ import { $row, $column, $icon } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { empty, map, periodic } from "@most/core"
 import { formatReadableUSD, unixTimestampNow } from "gmx-middleware-utils"
-import { $alertIcon, $defaultDropContainer, $PnlValue, $Tooltip } from "gmx-middleware-ui-components"
+import { $alertIcon, $defaultDropContainer, $Tooltip } from "gmx-middleware-ui-components"
+import { $PnlValue } from "../../common/$common"
 
 
 export const $alertTooltip = ($content: $Branch) => {
   return $Tooltip({
     $content,
-    $dropContainer: $defaultDropContainer(style({  })),
+    $dropContainer: $defaultDropContainer(style({})),
     $anchor: $icon({ $content: $alertIcon, viewBox: '0 0 24 24', width: '18px', fill: pallete.indeterminate, svgOps: style({ minWidth: '18px' }) }),
   })({})
 }

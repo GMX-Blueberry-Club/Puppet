@@ -1,11 +1,11 @@
-import { isStream, O } from "@aelea/core"
-import { $element, $Node, $text, attr, style, styleBehavior, styleInline, stylePseudo } from "@aelea/dom"
-import { $column, $icon, $row, $seperator, layoutSheet } from "@aelea/ui-components"
+import { isStream } from "@aelea/core"
+import { $element, $Node, $text, attr, style, styleBehavior, stylePseudo } from "@aelea/dom"
+import { $column, $icon, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map, now, skipRepeats } from "@most/core"
+import { empty, map } from "@most/core"
 import { Stream } from "@most/types"
 import { CHAIN } from "gmx-middleware-const"
-import { bnDiv, formatReadableUSD, getFundingFee, getMarginFees, getNextLiquidationPrice, getPnL, getTradeTotalFee, getTxExplorerUrl, IAbstractPositionStake, ITokenDescription, ITrade, ITradeSettled, liquidationWeight, shortenTxAddress } from "gmx-middleware-utils"
+import { getTxExplorerUrl, ITokenDescription, shortenTxAddress } from "gmx-middleware-utils"
 import { $alertIcon, $arrowRight, $caretDblDown, $info, $tokenIconMap } from "./$icons.js"
 import { $defaultDropContainer, $Tooltip } from "./$Tooltip.js"
 
@@ -84,141 +84,17 @@ export const $txHashRef = (txHash: string, chain: CHAIN, label?: $Node) => {
 }
 
 
-export const $sizeDisplay = (size: bigint, collateral: bigint) => {
 
-  return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
-    $text(style({ fontSize: '.75em' }))(formatReadableUSD(collateral)),
-    $seperator,
-    $text(formatReadableUSD(size)),
-  )
-}
+// $text(style({ fontSize: '.65em' }))(formatReadableUSD(pos.averagePrice)),
+// $column(style({ marginLeft: '-5px', borderRadius: '50%', padding: '6px', alignItems: 'center', backgroundColor: pallete.horizon }))(
+//   $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
 
-
-export const $settledSizeDisplay = (pos: ITradeSettled) => $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
-  $text(style({ fontSize: '.75em' }))(formatReadableUSD(pos.maxSize)),
-  $seperator,
-  $text(formatReadableUSD(pos.settlement.size)),
-)
-
-export const $riskLiquidator = (trade: ITrade, markPrice: Stream<bigint>) => {
-  const lastUpdate = trade.updateList[trade.updateList.length - 1]
-
-  return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
-    $text(style({ fontSize: '.75em' }))(formatReadableUSD(trade.updateList[trade.updateList.length - 1].collateral)),
-    $liquidationSeparator(trade, markPrice),
-    $text(formatReadableUSD(lastUpdate.size)),
-  )
-}
-
-export const $leverage = (pos: IAbstractPositionStake) =>
-  $text(style({ fontWeight: 'bold' }))(`${Math.round(bnDiv(pos.size, pos.collateral))}x`)
-
-export const $PnlValue = (pnl: Stream<bigint> | bigint, colorful = true) => {
-  const pnls = isStream(pnl) ? pnl : now(pnl)
-
-  const display = map((n: bigint) => {
-    return formatReadableUSD(n)
-  }, pnls)
-
-  const displayColor = skipRepeats(map((n: bigint) => {
-    return n > 0n ? pallete.positive : n === 0n ? pallete.foreground : pallete.negative
-  }, pnls))
-
-  const colorStyle = colorful
-    ? styleBehavior(map(color => {
-      return { color }
-    }, displayColor))
-    : O()
-
-  // @ts-ignore
-  return $text(colorStyle)(display)
-}
-
-export const $TradePnl = (trade: ITrade, cumulativeFee: Stream<bigint>, positionMarkPrice: Stream<bigint> | bigint, colorful = true) => {
-  const lastUpdate = trade.updateList[trade.updateList.length - 1]
-
-  const pnl = isStream(positionMarkPrice)
-    ? map((markPrice: bigint) => {
-      const delta = getPnL(trade.isLong, lastUpdate.averagePrice, markPrice, lastUpdate.size)
-      return lastUpdate.realisedPnl + delta - getTradeTotalFee(trade)
-    }, positionMarkPrice)
-    : positionMarkPrice
-
-  return $PnlValue(pnl, colorful)
-}
-
-export function $liquidationSeparator(trade: ITrade, markPrice: Stream<bigint>) {
-  const lastUpdate = trade.updateList[trade.updateList.length - 1]
-
-  const liquidationPrice = getNextLiquidationPrice(trade.isLong, lastUpdate.size, lastUpdate.collateral, lastUpdate.averagePrice)
-  const liqWeight = map(price => liquidationWeight(trade.isLong, liquidationPrice, price), markPrice)
-
-  return styleInline(map((weight) => {
-    return { width: '100%', background: `linear-gradient(90deg, ${pallete.negative} ${`${weight * 100}%`}, ${pallete.foreground} 0)` }
-  }, liqWeight))(
-    $seperator
-  )
-}
-
-export const $openPositionPnlBreakdown = (trade: ITrade, cumulativeFee: Stream<bigint>, price: Stream<bigint>) => {
-  const totalMarginFee = [...trade.increaseList, ...trade.decreaseList].reduce((seed, next) => seed + getMarginFees(next.sizeDelta), 0n)
-  const totalFee = [...trade.increaseList, ...trade.decreaseList].reduce((seed, next) => next.fee, 0n)
-  const lastUpdate = trade.updateList[trade.updateList.length - 1]
+//     $leverage(pos)
+//   ),
+// )
 
 
-  return $column(layoutSheet.spacing)(
-    $row(style({ placeContent: 'space-between' }))(
-      $text('Net PnL breakdown'),
-      $row(layoutSheet.spacingTiny)(
-        $text(style({ color: pallete.foreground, flex: 1 }))('Deposit'),
-        $text(map(cumFee => {
-          const entryFundingRate = lastUpdate.entryFundingRate
-          const fee = getFundingFee(entryFundingRate, cumFee, lastUpdate.size)
-          const realisedLoss = lastUpdate.realisedPnl < 0n ? -lastUpdate.realisedPnl : 0n
 
-          return formatReadableUSD(lastUpdate.collateral + fee + realisedLoss + totalMarginFee)
-        }, cumulativeFee))
-      )
-    ),
-    $column(layoutSheet.spacingSmall)(
-
-      $row(layoutSheet.spacingTiny)(
-        $text(style({ color: pallete.foreground, flex: 1 }))('Margin Fee'),
-        $PnlValue(-totalMarginFee)
-      ),
-      $row(layoutSheet.spacingTiny)(
-        $text(style({ color: pallete.foreground, flex: 1 }))('Borrow Fee'),
-        $PnlValue(
-          map(cumFee => {
-            const entryFundingRate = lastUpdate.entryFundingRate
-            // const historicBorrowingFee = totalFee - trade.fee
-
-            const fee = getFundingFee(entryFundingRate, cumFee, lastUpdate.size) // + historicBorrowingFee
-            
-            return -fee
-          }, cumulativeFee)
-        )
-      ),
-      $seperator,
-      // $row(layoutSheet.spacingTiny)(
-      //   $text(style({ color: pallete.foreground, flex: 1 }))('Total Fees'),
-      //   $PnlValue(map(cumFee => {
-      //     const fstUpdate = trade.updateList[0]
-      //     const entryFundingRate = fstUpdate.entryFundingRate
-
-      //     const fee = getFundingFee(entryFundingRate, cumFee, trade.size) + trade.fee
-
-      //     return -fee
-      //   }, cumulativeFee))
-      // ),
-      $row(layoutSheet.spacingTiny)(
-        $text(style({ color: pallete.foreground, flex: 1 }))('Realised Pnl'),
-        $PnlValue(now(lastUpdate.realisedPnl))
-      ),
-      
-    )
-  )
-}
 
 
 export const $labeledDivider = (label: string) => {
@@ -232,9 +108,9 @@ export const $labeledDivider = (label: string) => {
   )
 }
 
-export const $tokenLabel = (token: ITokenDescription, $iconG: $Node, $label?: $Node) => {
+export const $tokenLabel = (token: ITokenDescription, $iconPath: $Node, $label?: $Node) => {
   return $row(layoutSheet.spacing, style({ cursor: 'pointer', alignItems: 'center' }))(
-    $icon({ $content: $iconG, width: '34px', viewBox: '0 0 32 32' }),
+    $icon({ $content: $iconPath, width: '34px', viewBox: '0 0 32 32' }),
     $column(layoutSheet.flex)(
       $text(style({ fontWeight: 'bold' }))(token.symbol),
       $text(style({ fontSize: '75%', color: pallete.foreground }))(token.symbol)

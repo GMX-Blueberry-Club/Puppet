@@ -1,26 +1,26 @@
 
-import { Behavior } from '@aelea/core'
+import { Behavior, combineObject } from '@aelea/core'
 import { $Branch, $custom, $Node, $text, component, IBranch, NodeComposeFn, style } from '@aelea/dom'
 import { $column, layoutSheet, observer } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { zipState } from "gmx-middleware-utils"
-import { filter, join, loop, map, mergeArray, multicast, scan, until } from "@most/core"
+import { filterNull, switchMap, zipState } from "gmx-middleware-utils"
+import { constant, continueWith, empty, filter, join, loop, map, mergeArray, multicast, now, scan, snapshot, switchLatest, until } from "@most/core"
 import { Stream } from '@most/types'
 
 
 export type ScrollRequest = number
 
-export type IScrollPagableReponse = {
+export type IScrollPagable = {
   $items: $Branch[]
   pageSize: number
   offset: number
 }
 
-export type ScrollResponse = $Branch[] | IScrollPagableReponse
 
 export interface QuantumScroll {
+  scrollIndex?: Stream<number>
   insertAscending?: boolean
-  dataSource: Stream<ScrollResponse>
+  dataSource: Stream<IScrollPagable | $Branch[]>
   $container?: NodeComposeFn<$Node>
   $loader?: $Node
   $emptyMessage?: $Node
@@ -34,18 +34,16 @@ const $defaultEmptyMessage = $column(layoutSheet.spacing, style({ padding: '20px
 )
 
 
-export const $VirtualScroll = ({
+export const $QuantumScroll = ({
   dataSource,
   $container = $defaultVScrollContainer,
   $emptyMessage = $defaultEmptyMessage,
   $loader = $defaultVScrollLoader,
-  insertAscending = false
+  insertAscending = false,
+  scrollIndex = now(0)
 }: QuantumScroll) => component((
   [intersecting, intersectingTether]: Behavior<IBranch, IntersectionObserverEntry>,
 ) => {
-
-  const scrollIndex: Stream<ScrollRequest> = scan(seed => seed + 1, 0, intersecting)
-
 
 
   const intersectedLoader = intersectingTether(
@@ -60,45 +58,43 @@ export const $VirtualScroll = ({
     $loader
   )
 
-  const dataSourceMc = multicast(dataSource)
-  const loadState = zipState({ data: dataSourceMc, scrollIndex })
 
-  const displayState = {
-    isLoading: true
-  }
+  const $itemLoader = multicast(map((state) => {
+    const itemCount = Array.isArray(state.dataSource) ? state.dataSource.length : state.dataSource.$items.length
 
-  const $itemLoader = loop((seed, state) => {
-    const itemCount = Array.isArray(state.data) ? state.data.length : state.data.$items.length
-    console.log(itemCount)
+    if (Array.isArray(state.dataSource)) {
+      return mergeArray(state.dataSource)
+    }
 
     if (state.scrollIndex === 0 && itemCount === 0) {
-      return { seed, value: $defaultEmptyMessage }
+      return $emptyMessage
     }
 
-    if (Array.isArray(state.data)) {
-      return { seed, value: mergeArray(state.data) }
-    }
-
-
-
-    const hasMoreItems = state.data.pageSize === itemCount
+    const hasMoreItems = state.dataSource.pageSize === itemCount
 
     const $items = hasMoreItems
-      ? [...state.data.$items, $observerloader]
-      : state.data.$items
+      ? [...state.dataSource.$items, $observerloader]
+      : state.dataSource.$items
 
 
-    return { seed, value: mergeArray($items) }
-  }, displayState, loadState)
+    return mergeArray($items)
+  }, zipState({ dataSource, scrollIndex })))
 
   return [
     $container(
       map(node => ({ ...node, insertAscending })),
     )(
-      until(dataSourceMc, $loader),
+      switchLatest(
+        mergeArray([
+          constant(empty(), $itemLoader),
+          constant($loader, scrollIndex),
+        ])
+      ),
       join($itemLoader)
     ),
 
-    { scrollIndex }
+    {
+      scrollIndex: snapshot(index => index + 1, scrollIndex, intersecting)
+    }
   ]
 })
