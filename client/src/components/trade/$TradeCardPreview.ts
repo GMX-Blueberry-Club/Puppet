@@ -5,7 +5,7 @@
 // import { map, merge, multicast, now, skip, skipRepeats, startWith, switchLatest } from "@most/core"
 // import { Stream } from "@most/types"
 // import {
-//   formatFixed, formatReadableUSD, isTradeSettled, readableNumber,
+//   formatFixed, readableUSD, isTradeSettled, readableNumber,
 //   isTradeLiquidated, CHAIN_TOKEN_ADDRESS_TO_SYMBOL, ITrade, IPricefeedParamApi, IChainParamApi, getDeltaPercentage, bnDiv, getPnL
 // } from "gmx-middleware-utils"
 // import { ChartOptions, DeepPartial, MouseEventParams } from "lightweight-charts"
@@ -132,7 +132,7 @@
 //                     viewBox: '0 0 32 32',
 //                     width: '18px'
 //                   }),
-//                   $text(formatReadableUSD(trade.averagePrice))
+//                   $text(readableUSD(trade.averagePrice))
 //                 ),
 //                 $row(layoutSheet.spacingSmall, style({ color: isSettled ? '' : pallete.indeterminate, fontSize: '.65em' }))(
 //                   $text(tradeTitle(trade)),
@@ -162,7 +162,7 @@
 //           !isSettled
 //             ? $RiskLiquidator(trade, latestPrice)({})
 //             : $column(layoutSheet.spacingTiny, style({ textAlign: 'center' }))(
-//               $text(formatReadableUSD(trade.size)),
+//               $text(readableUSD(trade.size)),
 //               $seperator,
 //               style({ textAlign: 'center', fontSize: '.65em' }, $text(style({ fontWeight: 'bold' }))(`${readableNumber(bnDiv(trade.size, trade.collateral))}x`)),
 //             ),

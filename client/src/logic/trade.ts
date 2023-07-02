@@ -7,7 +7,7 @@ import { fetchBalance, readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
 import * as GMX from "gmx-middleware-const"
 import {
-  IAbstractPositionIdentity, IAbstractPositionKey, ITokenSymbol, IVaultPosition,
+  IAbstractPositionIdentity, IAbstractPositionKey, IPricefeed, IRequestPricefeedApi, ITokenSymbol, IVaultPosition,
   div, filterNull, getMappedValue, getSafeMappedValue, getTokenDescription, parseFixed, periodicRun, periodicSample, safeDiv, switchFailedSources
 } from "gmx-middleware-utils"
 import { Address, Chain } from "viem"
@@ -18,7 +18,7 @@ import { resolveAddress } from "./utils"
 import * as viem from "viem"
 
 
-export type IPositionGetter = IVaultPosition & IAbstractPositionKey & IAbstractPositionIdentity & { averagePrice: bigint }
+export type IPositionGetter = IVaultPosition & IAbstractPositionKey & IAbstractPositionIdentity
 
 export interface ITokenPoolInfo {
   rate: bigint
@@ -52,6 +52,14 @@ const derievedSymbolMapping: { [k: string]: ITokenSymbol } = {
   [GMX.TOKEN_SYMBOL.BTCB]: GMX.TOKEN_SYMBOL.BTC,
   [GMX.TOKEN_SYMBOL.WBTCE]: GMX.TOKEN_SYMBOL.BTC,
   [GMX.TOKEN_SYMBOL.WAVAX]: GMX.TOKEN_SYMBOL.AVAX,
+}
+
+const gmxIoPricefeedIntervalLabel = {
+  [GMX.TIME_INTERVAL_MAP.MIN5]: '5m',
+  [GMX.TIME_INTERVAL_MAP.MIN15]: '15m',
+  [GMX.TIME_INTERVAL_MAP.MIN60]: '1h',
+  [GMX.TIME_INTERVAL_MAP.HR4]: '4h',
+  [GMX.TIME_INTERVAL_MAP.HR24]: '1d',
 }
 
 
@@ -169,6 +177,7 @@ export function connectTrade(chain: ISupportedChain) {
   const pricefeed = connectContract(contract.VaultPriceFeed)
   const router = connectContract(contract.Router)
   const vault = connectContract(contract.Vault)
+
 
 
 
@@ -298,7 +307,7 @@ export function connectTrade(chain: ISupportedChain) {
     getAvailableLiquidityUsd,
 
     // contract readers
-    router, vault, pricefeed, positionRouter, 
+    router, vault, pricefeed, positionRouter,
   }
 }
 
@@ -329,6 +338,17 @@ export async function getGmxIoOrders(network: typeof arbitrum | typeof avalanche
 
 
 
+export const getGmxIoPricefeed = async (queryParams: IRequestPricefeedApi): Promise<IPricefeed[]> => {
+  const tokenDesc = getTokenDescription(queryParams.tokenAddress)
+  const intervalLabel = getMappedValue(gmxIoPricefeedIntervalLabel, queryParams.interval)
+  const symbol = derievedSymbolMapping[tokenDesc.symbol] || tokenDesc.symbol
+  const res = fetch(`https://stats.gmx.io/api/candles/${symbol}?preferableChainId=${queryParams.chain}&period=${intervalLabel}&from=${queryParams.from}&preferableSource=fast`)
+    .then(async res => {
+      const parsed = await res.json()
+      return parsed.prices.map((json: any) => ({ o: parseFixed(json.o, 30), h: parseFixed(json.h, 30), l: parseFixed(json.l, 30), c: parseFixed(json.c, 30), timestamp: json.t }))
+    })
+  return res
+}
 
 
 

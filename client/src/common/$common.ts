@@ -6,7 +6,8 @@ import { map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
 import { $bear, $bull, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
-import { bnDiv, formatReadableUSD, getAveragePrice, getFundingFee, getLiquidationPrice, getMappedValue, getMarginFees, getNextLiquidationPrice, getPnL, getTradeTotalFee, IAbstractPositionStake, ITokenSymbol, ITrade, ITradeSettled, liquidationWeight } from "gmx-middleware-utils"
+import { bnDiv, formatReadableUSD, getAveragePrice, getFundingFee, getLiquidationPrice, getMappedValue, getMarginFees, getNextLiquidationPrice, getPnL, getTradeTotalFee, IAbstractPositionStake, ITokenSymbol, ITrade, ITradeSettled, liquidationWeight, streamOf } from "gmx-middleware-utils"
+import { $seperator2 } from "../pages/common"
 
 
 export const $sizeDisplay = (size: bigint, collateral: bigint) => {
@@ -33,21 +34,26 @@ export const $entry = (pos: ITrade | ITradeSettled) => {
   )
 }
 
-export const $settledSizeDisplay = (pos: ITradeSettled) => $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
-  $text(formatReadableUSD(pos.settlement.size)),
-  $seperator,
-  $row(layoutSheet.spacingSmall, style({ fontSize: '.65em', placeContent: 'center' }))(
-    $leverage(pos.maxSize, pos.maxCollateral),
-    $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
-      $icon({
-        $content: $skull,
-        viewBox: '0 0 32 32',
-        width: '12px'
-      }),
-      $text(formatReadableUSD(getLiquidationPrice(pos.isLong, pos.settlement.collateral, pos.settlement.size, pos.settlement.averagePrice))),
-    ),
+export const $settledSizeDisplay = (pos: ITradeSettled) => {
+  const liquidationPrice = 'markPrice' in pos.settlement ? pos.settlement.markPrice : getLiquidationPrice(pos.isLong, pos.settlement.collateral, pos.settlement.size, pos.settlement.averagePrice)
+
+  return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
+    $text(formatReadableUSD(pos.settlement.size)),
+    $seperator2,
+    $row(layoutSheet.spacingSmall, style({ fontSize: '.65em', placeContent: 'center' }))(
+      $leverage(pos.maxSize, pos.maxCollateral),
+      $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+        $icon({
+          fill: pos.isLiquidated ? pallete.negative : undefined,
+          $content: $skull,
+          viewBox: '0 0 32 32',
+          width: '12px'
+        }),
+        $text(formatReadableUSD(liquidationPrice)),
+      ),
+    )
   )
-)
+}
 
 
 export const $TokenIcon = (indexToken: ITokenSymbol, IIcon?: { width?: string }) => {
@@ -99,6 +105,13 @@ export const $PnlValue = (pnl: Stream<bigint> | bigint, colorful = true) => {
 
   // @ts-ignore
   return $text(colorStyle)(display)
+}
+
+export const $PnlPercentageValue = (pnl: Stream<bigint> | bigint, collateral: bigint, colorful = true) => {
+  return $column(
+    $PnlValue(pnl, colorful),
+    $PnlValue(pnl, colorful),
+  )
 }
 
 export const $TradePnl = (trade: ITrade, cumulativeFee: Stream<bigint>, positionMarkPrice: Stream<bigint> | bigint, colorful = true) => {

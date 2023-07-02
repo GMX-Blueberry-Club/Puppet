@@ -85,7 +85,7 @@ export const $txHashRef = (txHash: string, chain: CHAIN, label?: $Node) => {
 
 
 
-// $text(style({ fontSize: '.65em' }))(formatReadableUSD(pos.averagePrice)),
+// $text(style({ fontSize: '.65em' }))(readableUSD(pos.averagePrice)),
 // $column(style({ marginLeft: '-5px', borderRadius: '50%', padding: '6px', alignItems: 'center', backgroundColor: pallete.horizon }))(
 //   $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
 

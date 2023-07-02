@@ -5,34 +5,36 @@ import { rootStoreScope } from "../data"
 import { processSources, replaySubgraphEvent } from "../logic/indexer"
 
 
+const subgraph = `https://gateway-arbitrum.network.thegraph.com/api/${import.meta.env.THE_GRAPH}/subgraphs/id/DJ4SBqiG8A8ytcsNJSuUU2gDTLFXxxPrAN8Aags84JH2`
+
+const replayConfig = {
+  ...GMX.CONTRACT[42161].Vault,
+  subgraph,
+  parentStoreScope: rootStoreScope,
+}
 
 export const increaseEvents = replaySubgraphEvent({
-  ...GMX.CONTRACT[42161].Vault,
   eventName: 'IncreasePosition',
-  parentStoreScope: rootStoreScope,
+  ...replayConfig
 })
 
 export const decreaseEvents = replaySubgraphEvent({
-  ...GMX.CONTRACT[42161].Vault,
+  ...replayConfig,
   eventName: 'DecreasePosition',
-  parentStoreScope: rootStoreScope
 })
 
 export const closeEvents = replaySubgraphEvent({
-  ...GMX.CONTRACT[42161].Vault,
+  ...replayConfig,
   eventName: 'ClosePosition',
-  parentStoreScope: rootStoreScope,
 })
 export const liquidateEvents = replaySubgraphEvent({
-  ...GMX.CONTRACT[42161].Vault,
+  ...replayConfig,
   eventName: 'LiquidatePosition',
-  parentStoreScope: rootStoreScope,
 })
 
 export const updateEvents = replaySubgraphEvent({
-  ...GMX.CONTRACT[42161].Vault,
+  ...replayConfig,
   eventName: 'UpdatePosition',
-  parentStoreScope: rootStoreScope,
 })
 
 

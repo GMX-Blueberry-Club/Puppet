@@ -6,7 +6,7 @@ import { $column, layoutSheet } from "@aelea/ui-components"
 import { awaitPromises, map, mergeArray, now, zip } from "@most/core"
 import { CHAIN } from "gmx-middleware-const"
 import { $ButtonToggle, $defaulButtonToggleContainer, $infoTooltipLabel  } from "gmx-middleware-ui-components"
-import { IRequestAccountTradeListApi, TradeStatus, filterNull, gmxSubgraph, readableDate, timeSince, unixTimestampNow } from "gmx-middleware-utils"
+import { IRequestAccountTradeListApi, TradeStatus, filterNull, gmxSubgraph, readableDate, formatReadableUSD, timeSince, unixTimestampNow } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { $CardTable } from "../components/$common"
 import { $responsiveFlex } from "../elements/$common"
@@ -223,7 +223,7 @@ export const $ProfileConnected = (config: IAccount) => component((
 
                     return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
                       $text(timeSince(timestamp) + ' ago'),
-                      $text(readableDate(timestamp)),
+                      $text(formatReadableUSD(timestamp)),
                     )
                   })
                 },

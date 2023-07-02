@@ -1,16 +1,12 @@
-import { combineArray, combineObject, fromCallback } from "@aelea/core"
-import { at, awaitPromises, combine, concatMap, constant, empty, fromPromise, loop, map, mergeArray, now, scan, switchLatest, tap } from "@most/core"
+import { combineObject, fromCallback } from "@aelea/core"
+import { awaitPromises, fromPromise, loop, map, mergeArray, now, switchLatest } from "@most/core"
+import { Stream } from "@most/types"
 import { AbiEvent, ExtractAbiEvent } from "abitype"
+import { ILogEvent, ILogIndexIdentifier, ILogType, switchMap } from "gmx-middleware-utils"
+import { gql, request } from 'graphql-request'
 import * as viem from "viem"
 import { publicClient } from "../wallet/walletLink"
-import { listenContract } from "./common"
 import * as database from "./browserDatabaseScope"
-import { IEntityIndexed, IIndexedLogType, createSubgraphClient, filterNull, switchMap } from "gmx-middleware-utils"
-import * as GMX from "gmx-middleware-const"
-import * as PUPPET from "puppet-middleware-const"
-import { Stream } from "@most/types"
-import { SeedValue } from "@most/core/dist/combinator/loop"
-import { request, gql } from 'graphql-request'
 import { zipArray } from "./utils"
 
 type MaybeExtractEventArgsFromAbi<
@@ -19,11 +15,6 @@ type MaybeExtractEventArgsFromAbi<
 > = TEventName extends string ? viem.GetEventArgs<TAbi, TEventName> : undefined
 
 
-
-export type ILogIndexEvent<
-  TAbi extends viem.Abi,
-  TEventName extends string
-> = IIndexedLogType<TEventName> & viem.GetEventArgs<TAbi, TEventName, { Required: true }>
 
 
 export type IIndexerConfig<
@@ -46,142 +37,6 @@ export type IEventIndexerConfig<
   : { args?: never })
 
 
-export function syncEvent<
-  TAbi extends viem.Abi,
-  TEventName extends string,
-  TArgs extends MaybeExtractEventArgsFromAbi<TAbi, TEventName>,
->(config: IEventIndexerConfig<TAbi, TEventName, TArgs>): Stream<viem.Log<bigint, number, ExtractAbiEvent<TAbi, TEventName>, true>> {
-
-
-  const storeParams = {
-    abi: config.abi,
-    eventName: config.eventName,
-    address: config.address,
-    args: config.args,
-    logHistory: [] as viem.Log[],
-    syncedBlock: 0n,
-  }
-  const store = database.storeScope(config.parentStoreScope, storeParams)
-
-  const sss = switchLatest(awaitPromises(map(async params => {
-    const history = params.store.logHistory
-
-    const getEventParams = {
-      abi: config.abi,
-      address: config.address,
-      eventName: config.eventName,
-      args: config.args,
-    }
-
-    const startBlock = !config.startBlock || params.store.syncedBlock > config.startBlock ? params.store.syncedBlock : config.startBlock
-
-    // const newLogsFilter = fromPromise(params.publicClient.getLogs({
-    //   address: '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266',
-    //   event: parseAbiItem('event Transfer(address indexed, address indexed, uint256)'),
-    //   args: {
-    //     from: '0xd8da6bf26964af9d7eed9e03e53415d37aa96045',
-    //     to: '0xa5cc3c03994db5b0d9a5eedd10cabab0813678ac'
-    //   },
-    //   fromBlock: 16330000n,
-    //   toBlock: 16330050n
-    // }))
-    // listenContract({
-    //   address: '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266',
-    //   args: {
-    //     from: '0xd8da6bf26964af9d7eed9e03e53415d37aa96045',
-    //     to: '0xa5cc3c03994db5b0d9a5eedd10cabab0813678ac'
-    //   },
-    //   fromBlock: 16330000n,
-    //   toBlock: 16330050n
-    // })(getEventParams.eventName, {})
-    const newLogsFilter = fromPromise(params.publicClient.createContractEventFilter({
-      ...getEventParams as any,
-      fromBlock: startBlock,
-      strict: true,
-    }).then(filter => params.publicClient.getFilterLogs({ filter })))
-
-    const latestPendingBlock = fromPromise(params.publicClient.getBlock({ blockTag: 'pending' }))
-
-
-    const fullSyncedLog = switchMap(syncParams => {
-      const latestPendingBlockNumber = syncParams.latestPendingBlock.number || 1n
-      const logs = [...history, ...syncParams.newLogsFilter]
-      const data = { logHistory: logs, syncedBlock: latestPendingBlockNumber - 1n }
-
-      const storedLogs = database.transact(syncParams.db, storeObj => storeObj.put({ id: store.key, data }))
-
-      return switchMap(storeKey => mergeArray(syncParams.newLogsFilter.map(x => now(x))), storedLogs)
-    }, combineObject({ db: store.db, newLogsFilter, latestPendingBlock }))
-
-
-    // publicClient.watchContractEvent({
-    //   address: '0xFBA3912Ca04dd458c843e2EE08967fC04f3579c2',
-    //   abi: wagmiAbi,
-    //   eventName: 'Transfer',
-    //   args: { from: '0xc961145a54C96E3aE9bAA048c4F4D6b04C13916b' },
-    //   onLogs: logs => console.log(logs)
-    // })
-
-
-
-    const newEvent: Stream<viem.Log> = fromCallback(emitCb => {
-      console.log(getEventParams)
-
-      const listener = params.publicClient.watchContractEvent<TAbi, TEventName>({
-        ...getEventParams,
-        onLogs: (logs: any) => {
-          for (const key in logs) {
-            if (Object.prototype.hasOwnProperty.call(logs, key)) {
-
-              const failFilter = Object.entries(getEventParams.args || {}).some(([argKey, argValue]) => {
-                return logs[key].args[argKey] !== argValue
-              })
-
-              if (!failFilter) {
-                emitCb(logs[key])
-              }
-
-            }
-          }
-        }
-      } as any)
-
-      return listener
-    })
-
-
-
-    // const eventStream = listenContract({ ...getEventParams })(getEventParams.eventName, getEventParams.args as any)
-
-    const syncNewEvents = loop((seed, syncParams) => {
-      const logs = [...seed, ...syncParams.newLogsFilter]
-      const latestPendingBlockNumber = syncParams.latestPendingBlock.number || 1n
-
-      const syncedBlock = latestPendingBlockNumber > params.store.syncedBlock ? latestPendingBlockNumber - 1n : params.store.syncedBlock
-      const logHistory = [...logs, syncParams.newEvent]
-
-      const value = { syncedBlock, logHistory }
-
-      return { seed: logHistory, value }
-    }, history, combineObject({ newEvent, newLogsFilter, latestPendingBlock }))
-
-
-    const storedNewEvents = map(ev => ev.logHistory[ev.logHistory.length - 1], database.writeStore(store, syncNewEvents))
-
-
-
-    return mergeArray([
-      mergeArray(history.map(x => now(x))),
-      fullSyncedLog,
-      storedNewEvents
-    ])
-  }, combineObject({ publicClient, store }))))
-
-
-  return sss
-}
-
-
 
 export type ISubgraphConfig<
   TAbi extends viem.Abi,
@@ -198,15 +53,14 @@ type IIndexerState<
   address: `0x${string}`
   args: viem.GetEventArgs<TAbi, TEventName, { EnableUnion: true }>
   syncedBlock: bigint
-  logHistory: ILogIndexEvent<TAbi, TEventName>[]
-  lastStoredCount: number
+  logHistory: ILogEvent<TAbi, TEventName>[]
 }
 
 export function replaySubgraphEvent<
   TAbi extends viem.Abi,
   TEventName extends string,
   TArgs extends viem.GetEventArgs<TAbi, TEventName, { EnableUnion: true }>,
-  TReturn extends viem.GetEventArgs<TAbi, TEventName, { Required: true }> & IIndexedLogType<TEventName>,
+  TReturn extends ILogEvent<TAbi, TEventName>,
 >(config: ISubgraphConfig<TAbi, TEventName>): <TExtendArgs>(args: TArgs, extendArgs?: TExtendArgs) => database.IStoreScope<IIndexerState<TAbi, TEventName>> {
 
   return (args: TArgs) => {
@@ -227,7 +81,6 @@ export function replaySubgraphEvent<
       address: config.address,
       args: args,
       logHistory: [],
-      lastStoredCount: 0,
       syncedBlock: 0n,
     }
 
@@ -282,9 +135,101 @@ export function replaySubgraphEvent<
         const newLogs = orderEvents(syncParams.newLogsFilter as any) as TReturn[]
         const latestFinalizedBlockNumber = syncParams.latestPendingBlock.number || 1n
         const logHistory = [...history, ...newLogs]
-        const latestAddedBatchCount = newLogs.length
 
-        return { ...params.seedStoredData, logHistory, lastStoredCount: latestAddedBatchCount, syncedBlock: latestFinalizedBlockNumber - 1n }
+        return { ...params.seedStoredData, logHistory, syncedBlock: latestFinalizedBlockNumber - 1n }
+      }, combineObject({ newLogsFilter, latestPendingBlock }))
+
+
+      return newHistoricLogs
+    }, combineObject({ publicClient, seedStoredData })))
+
+
+    return database.replayWriteStoreScope(config.parentStoreScope, genesisSeed, syncLogs)
+  }
+}
+
+
+type IDefineSchema<TEntity, TSchema> = {
+  [P in keyof TSchema]: P extends keyof TEntity ? TEntity[P] : never;
+}
+
+export type ISchemaDefinition<T> = { [P in keyof T]: T[P] extends any[] ? ISchemaDefinition<T[P]>[0] : T[P] extends object ? ISchemaDefinition<T[P]> : ISchemaDefinition<T[P]> | null }
+export type ISchemaReturn<TEntity, TSchema> = { [P in keyof TSchema]: TSchema[P] extends any[] ? IDefineSchema<TEntity[P], TSchema[P]> : TEntity[P] extends object ? ISchemaDefinition<TEntity[P]> : ISchemaDefinition<TEntity[P]> }
+
+
+
+
+type MyType = IDefineSchema<{ aaa: number; bbbo: number }, { aaa: null }> // { aaa: number;}
+
+
+export interface IReplaySubgraphConfig {
+  subgraph: string
+  parentStoreScope: database.IStoreScope<any>
+  startBlock?: bigint
+}
+
+
+
+export function replaySubgraphQuery(config: IReplaySubgraphConfig) {
+
+  return <
+    TType extends ILogType<string>,
+    Schema extends ISchemaDefinition<TType>,
+    TTypeName = TType extends ILogType<infer Z> ? Z : never,
+  >(schema: Schema): database.IStoreScope<ISchemaReturn<TType, Schema>> => {
+
+
+    const genesisSeed = {
+      subgraph: config.subgraph,
+      schema,
+      logHistory: [],
+      syncedBlock: 0n,
+    }
+
+
+    const currentStoreKey = database.getStoreKey(config.parentStoreScope, genesisSeed)
+    const seedStoredData = database.getStoredSeedData(currentStoreKey, genesisSeed)
+
+    const graphDocumentIdentifier = `${config.name.charAt(0).toLowerCase() + config.name.slice(1)}s`
+
+    const syncLogs = switchLatest(map(params => {
+      const startBlock = config.startBlock
+        ? config.startBlock > params.seedStoredData.syncedBlock ? config.startBlock : params.seedStoredData.syncedBlock
+        : params.seedStoredData.syncedBlock
+      const history = params.seedStoredData.logHistory
+
+
+
+      const document = gql`{
+      ${graphDocumentIdentifier} ( where: { _change_block: { number_gte: ${startBlock} }, ${objectToGraphql(filter || {})} } ) {
+        ${config.props.map(x => x).join('\n')}
+        __typename
+      }
+}`
+
+
+      const newLogsFilter: Stream<ILogType<TTypeName>[]> = fromPromise(request({
+        document,
+        url: config.subgraph
+      }).then((x: any) => {
+
+        if (!(graphDocumentIdentifier in x)) {
+          throw new Error(`No ${graphDocumentIdentifier} found in subgraph response`)
+        }
+
+        const list: any[] = x[graphDocumentIdentifier]
+        return list.map(obj => parseGqlRespone(eventAbiManifest, obj))
+      }))
+
+      const latestPendingBlock = fromPromise(params.publicClient.getBlock({ blockTag: 'pending' }))
+
+
+      const newHistoricLogs = map((syncParams): IIndexerState<TAbi, TEventName> => {
+        const newLogs = orderEvents(syncParams.newLogsFilter as any) as TReturn[]
+        const latestFinalizedBlockNumber = syncParams.latestPendingBlock.number || 1n
+        const logHistory = [...history, ...newLogs]
+
+        return { ...params.seedStoredData, logHistory, syncedBlock: latestFinalizedBlockNumber - 1n }
       }, combineObject({ newLogsFilter, latestPendingBlock }))
 
 
@@ -302,7 +247,7 @@ export interface IProcessConfig<
   TReturn,
   TAbi extends viem.Abi,
   TEventName extends string,
-  TEvent extends ILogIndexEvent<TAbi, TEventName>,
+  TEvent extends ILogEvent<TAbi, TEventName>,
 > {
   source: database.IStoreScope<IIndexerState<TAbi, TEventName>>
   step: (seed: TReturn, value: TEvent) => TReturn
@@ -318,23 +263,23 @@ export function processSources<
 
   TAbi1 extends viem.Abi,
   TEventName1 extends string,
-  TEvent1 extends ILogIndexEvent<TAbi1, TEventName1>,
+  TEvent1 extends ILogEvent<TAbi1, TEventName1>,
 
   TAbi2 extends viem.Abi,
   TEventName2 extends string,
-  TEvent2 extends ILogIndexEvent<TAbi2, TEventName2>,
+  TEvent2 extends ILogEvent<TAbi2, TEventName2>,
 
   TAbi3 extends viem.Abi,
   TEventName3 extends string,
-  TEvent3 extends ILogIndexEvent<TAbi3, TEventName3>,
+  TEvent3 extends ILogEvent<TAbi3, TEventName3>,
 
   TAbi4 extends viem.Abi,
   TEventName4 extends string,
-  TEvent4 extends ILogIndexEvent<TAbi4, TEventName4>,
+  TEvent4 extends ILogEvent<TAbi4, TEventName4>,
 
   TAbi5 extends viem.Abi,
   TEventName5 extends string,
-  TEvent5 extends ILogIndexEvent<TAbi5, TEventName5>,
+  TEvent5 extends ILogEvent<TAbi5, TEventName5>,
 >(
   parentStoreScope: database.IStoreScope<any>,
   scopeState: TReturn,
@@ -401,7 +346,7 @@ export function processSources<
 }
 
 
-function orderEvents<T extends IIndexedLogType<any>>(arr: T[]): T[] {
+function orderEvents<T extends ILogIndexIdentifier>(arr: T[]): T[] {
   return arr.sort((a, b) => {
 
     if (a.blockNumber === null || b.blockNumber === null) throw new Error('blockNumber is null')
@@ -420,7 +365,7 @@ function orderEvents<T extends IIndexedLogType<any>>(arr: T[]): T[] {
 const CONTRACTS_PER_BLOCK_PRECISION = 10_000n
 const EVENTS_PER_TRANSACTION_PRECISION = 1_000n
 
-export function getEventOrderIdentifier<T extends IIndexedLogType<any>>(logMetric: T): bigint {
+export function getEventOrderIdentifier<T extends ILogIndexIdentifier>(logMetric: T): bigint {
   const paddedBlockNumber = logMetric.blockNumber * CONTRACTS_PER_BLOCK_PRECISION
   const paddedTxIndex = BigInt(logMetric.transactionIndex) * EVENTS_PER_TRANSACTION_PRECISION
   return paddedBlockNumber + paddedTxIndex + BigInt(logMetric.logIndex)

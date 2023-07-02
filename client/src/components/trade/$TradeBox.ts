@@ -30,12 +30,10 @@ import {
   $spinner, $tokenIconMap, $tokenLabelFromSummary
 } from "gmx-middleware-ui-components"
 import {
-  abs, bnDiv, div, filterNull, formatFixed, formatReadableUSD, formatToBasis, getAdjustedDelta, getDenominator,
+  abs, bnDiv, div, filterNull, formatFixed, formatReadableUSD, formatBps, getAdjustedDelta, getDenominator,
   getNativeTokenDescription, getPnL, getTokenAmount, getTokenDescription, getTokenUsd,
-  getTradeTotalFee,
-  IIndexedLogType,
-  IPricefeed, ITokenDescription,
-  ITrade, parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, zipState
+  getTradeTotalFee, IPricefeed, ITokenDescription,
+  ITrade, parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, zipState, readablePercentage, readableTokenAmount
 } from "gmx-middleware-utils"
 import { MouseEventParams } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
@@ -144,8 +142,8 @@ export type IRequestTrade = IRequestTradeParams & {
 }
 
 const BOX_SPACING = 20
-const LIMIT_LEVERAGE_NORMAL = formatToBasis(GMX.LIMIT_LEVERAGE)
-const MIN_LEVERAGE_NORMAL = formatToBasis(GMX.MIN_LEVERAGE) / LIMIT_LEVERAGE_NORMAL
+const LIMIT_LEVERAGE_NORMAL = formatBps(GMX.LIMIT_LEVERAGE)
+const MIN_LEVERAGE_NORMAL = formatBps(GMX.MIN_LEVERAGE) / LIMIT_LEVERAGE_NORMAL
 
 export const $TradeBox = (config: ITradeBox) => component((
   [openEnableTradingPopover, openEnableTradingPopoverTether]: Behavior<any, any>,
@@ -215,7 +213,7 @@ export const $TradeBox = (config: ITradeBox) => component((
   const validationError = skipRepeats(map((state) => {
 
     if (state.leverage > GMX.LIMIT_LEVERAGE) {
-      return `Leverage exceeds ${formatToBasis(GMX.LIMIT_LEVERAGE)}x`
+      return `Leverage exceeds ${formatBps(GMX.LIMIT_LEVERAGE)}x`
     }
 
     if (state.isIncrease) {
@@ -624,7 +622,10 @@ export const $TradeBox = (config: ITradeBox) => component((
               $infoLabel(`Wallet`),
               $text(
                 map(params => {
-                  return readableNumber(formatFixed(params.walletBalance, params.inputTokenDescription.decimals)) + ' ' + params.inputTokenDescription.symbol
+                  const newLocal = formatFixed(params.walletBalance, params.inputTokenDescription.decimals)
+                  const newLocal_1 = readableNumber({})(newLocal)
+                  
+                  return newLocal_1 + ' ' + params.inputTokenDescription.symbol
                 }, combineObject({ inputToken, walletBalance, inputTokenDescription }))
               ),
             ),
@@ -1003,7 +1004,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                     $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end', placeContent: 'center' }))(
                       $text(map(amountUsd => formatReadableUSD(amountUsd), liquidity)),
                       $row(style({ whiteSpace: 'pre' }))(
-                        $text(map(info => readableNumber(formatToBasis(info.rate)) + '%', poolInfo)),
+                        $text(map(info => readablePercentage(formatBps(info.rate)), poolInfo)),
                         $text(style({ color: pallete.foreground }))(' / hr')
                       ),
                     )
@@ -1114,7 +1115,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                           $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end', placeContent: 'center' }))(
                             $text(map(amountUsd => formatReadableUSD(amountUsd), liquidity)),
                             $row(style({ whiteSpace: 'pre' }))(
-                              $text(map(info => readableNumber(formatToBasis(info.rate)) + '%', poolInfo)),
+                              $text(map(info => readablePercentage(formatBps(info.rate)), poolInfo)),
                               $text(style({ color: pallete.foreground }))(' / hr')
                             ),
                           )

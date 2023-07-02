@@ -4,19 +4,17 @@ import { Route } from "@aelea/router"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { map, mergeArray, now } from "@most/core"
 import { CHAIN } from "gmx-middleware-const"
-import { IRequestAccountTradeListApi, ITrade, ITradeSettled, getTradeTotalFee, readableDate, timeSince, unixTimestampNow } from "gmx-middleware-utils"
-import * as viem from "viem"
+import { $infoTooltipLabel } from "gmx-middleware-ui-components"
+import { IRequestAccountTradeListApi, getTradeTotalFee, readableDate, timeSince, unixTimestampNow } from "gmx-middleware-utils"
+import { $PnlValue, $TradePnl, $entry, $openPositionPnlBreakdown, $riskLiquidator, $settledSizeDisplay } from "../common/$common"
 import { $discoverIdentityDisplay } from "../components/$AccountProfile"
 import { $CardTable } from "../components/$common"
-import { rootStoreScope } from "../data"
+import { getTraderData } from "../data/tradeList"
 import { $responsiveFlex } from "../elements/$common"
-import { processSources, replaySubgraphEvent } from "../logic/indexer"
 import { connectTrade } from "../logic/trade"
 import { fadeIn } from "../transitions/enter"
 import { IWalletClient } from "../wallet/walletLink"
 import { IProfileActiveTab } from "./$Profile"
-import { $entry, $sizeDisplay, $PnlValue, $settledSizeDisplay, $TradePnl, $openPositionPnlBreakdown, $riskLiquidator } from "../common/$common"
-import { $infoTooltipLabel } from "gmx-middleware-ui-components"
 
 const logs = [
   {
@@ -114,6 +112,8 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
 
 
 
+
+  const positions = getTraderData('0x30fd54c890f250d260c4d7daead65925492936e0')
 
 
 
@@ -286,16 +286,16 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
               columns: [
                 {
                   $head: $text('Settle Time'),
-                  columnOp: O(style({ maxWidth: '80px' })),
+                  columnOp: O(style({ maxWidth: '100px' })),
 
                   $$body: map((req) => {
                     const isKeeperReq = 'ctx' in req
 
                     const timestamp = isKeeperReq ? unixTimestampNow() : req.settlement.blockTimestamp
 
-                    return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
+                    return $column(layoutSheet.spacingTiny)(
                       $text(timeSince(timestamp) + ' ago'),
-                      $text(readableDate(timestamp)),
+                      $text(style({ fontSize: '.65em' }))(readableDate(timestamp)),
                     )
                   })
                 },

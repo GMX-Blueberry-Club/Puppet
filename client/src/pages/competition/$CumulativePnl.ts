@@ -4,7 +4,7 @@ import { Route } from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { colorAlpha, pallete } from '@aelea/ui-components-theme'
 import { BLUEBERRY_REFFERAL_CODE, COMPETITION_METRIC_LIST, IBlueberryLadder, IRequestCompetitionLadderApi, TOURNAMENT_DURATION, TOURNAMENT_NEXT, TOURNAMENT_START, TOURNAMENT_TIME_ELAPSED, blueberrySubgraph } from '@gambitdao/gbc-middleware'
-import { formatReadableUSD, formatToBasis, readableNumber, invertColor } from "gmx-middleware-utils"
+import { formatReadableUSD, invertColor, readablePercentage, formatBps } from "gmx-middleware-utils"
 import { $Link, $anchor, $infoLabeledValue, $infoTooltipLabel, ISortBy,  } from "gmx-middleware-ui-components"
 import { awaitPromises, empty, map, mergeArray, now, snapshot } from '@most/core'
 import { Stream } from '@most/types'
@@ -116,7 +116,7 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
                 //   ? $infoLabeledValue(
                 //     'Current Floor Max Collateral',
                 //     $text(style({ color: pallete.positive }))(map(res => {
-                //       return formatReadableUSD(res.averageMaxCollateral)
+                //       return readableUSD(res.averageMaxCollateral)
                 //     }, competitionLeaderboard))
                 //   )
                 //   : empty(),
@@ -332,10 +332,10 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
                 sortBy: 'pnl',
                 columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
                 $$body: map((pos) => {
-                  const val = formatReadableUSD(pos.cumSize, false)
+                  const val = formatReadableUSD(pos.cumSize)
 
                   return $column(style({ gap: '3px', textAlign: 'right' }))(
-                    $text(style({ fontSize: '.75em' }))(formatReadableUSD(pos.cumCollateral, false)),
+                    $text(style({ fontSize: '.75em' }))(formatReadableUSD(pos.cumCollateral)),
                     $seperator2,
                     $text(
                       val
@@ -353,9 +353,9 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
                 $$body: map((pos) => {
 
                   return $column(layoutSheet.spacingTiny, style({ gap: '3px', textAlign: 'right' }))(
-                    $text(style({ fontSize: '.75em' }))(formatReadableUSD(pos.pnl, false)),
+                    $text(style({ fontSize: '.75em' }))(formatReadableUSD(pos.pnl)),
                     $seperator2,
-                    $text(formatReadableUSD(pos.maxCollateral, false))
+                    $text(formatReadableUSD(pos.maxCollateral))
                   )
                 })
               },
@@ -369,14 +369,13 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
               $$body: map(pos => {
                 const metricVal = pos.score
 
-                const newLocal = readableNumber(formatToBasis(metricVal) * 100)
-                const pnl = currentMetric === 'pnl' ? formatReadableUSD(metricVal, false) : `${Number(newLocal)} %`
+                const pnl = currentMetric === 'pnl' ? formatReadableUSD(metricVal) : `${readablePercentage(formatBps(metricVal) * 100) } %`
 
                 return $column(layoutSheet.spacingTiny, style({ gap: '3px', textAlign: 'right' }))(
                   $text(style({ fontSize: '.75em' }))(pnl),
                   $seperator2,
                   pos.prize > 0n
-                    ? $text(style({ color: pallete.positive }))(formatReadableUSD(pos.prize, false))
+                    ? $text(style({ color: pallete.positive }))(formatReadableUSD(pos.prize))
                     : empty(),
                 )
               }),

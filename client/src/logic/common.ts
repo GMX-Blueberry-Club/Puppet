@@ -89,10 +89,6 @@ export const connectContract = <
 }
 
 
-function fromStream<T>(maybeStream: T | Stream<T>): Stream<T> {
-  return isStream(maybeStream) ? maybeStream : now(maybeStream)
-}
-
 
 export function combineState<A extends object, K extends keyof A>(state: StreamInput<A>): Stream<A> {
   const entries = Object.entries(state) as [keyof A, Stream<A[K] | A[K]>][]

@@ -2,6 +2,7 @@
   publish="./client/.dist/"
   base = "."
   command = "pnpm build"
+  edge_functions = "./client/.dist/functions"
 
 [[redirects]]
   from = "/*"

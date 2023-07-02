@@ -7,7 +7,8 @@ import { $ButtonToggle, $Table, $defaulButtonToggleContainer, $infoTooltipLabel 
 import {
   IRequestAccountTradeListApi,
   gmxSubgraph,
-  readableDate, timeSince,
+  readableDate,
+  formatReadableUSD, timeSince,
   unixTimestampNow
 } from "gmx-middleware-utils"
 import { Address } from "viem"
@@ -91,7 +92,7 @@ export const $Profile = (config: IProfile) => component((
 
                     return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
                       $text(timeSince(timestamp) + ' ago'),
-                      $text(readableDate(timestamp)),
+                      $text(formatReadableUSD(timestamp)),
                     )
                   })
                 },

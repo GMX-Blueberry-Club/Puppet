@@ -166,7 +166,7 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
             //   //       //       position: "aboveBar",
             //   //       //       shape: "arrowUp",
             //   //       //       time: unixTimeTzOffset(ip.timestamp),
-            //   //       //       text: formatReadableUSD(ip.collateralDelta)
+            //   //       //       text: readableUSD(ip.collateralDelta)
             //   //       //     }
             //   //       //   })
             //   //       // const decreaseList = isTradeSettled(trade) ? trade.decreaseList.slice(0, -1) : trade.decreaseList
@@ -177,7 +177,7 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
             //   //       //       position: 'belowBar',
             //   //       //       shape: "arrowDown",
             //   //       //       time: unixTimeTzOffset(ip.timestamp),
-            //   //       //       text: formatReadableUSD(ip.collateralDelta)
+            //   //       //       text: readableUSD(ip.collateralDelta)
             //   //       //     }
             //   //       //   })
 

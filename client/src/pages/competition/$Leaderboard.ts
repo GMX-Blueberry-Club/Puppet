@@ -1,24 +1,118 @@
 import { Behavior, O } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
-import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { $CumulativePnl, ICompetitonCumulativeRoi } from "./$CumulativePnl"
-import { processSources } from "../../logic/indexer"
-import { rootStoreScope } from "../../data"
+import { $row, layoutSheet, screenUtils } from "@aelea/ui-components"
+import { map } from "@most/core"
+import { $Link } from "gmx-middleware-ui-components"
 import * as viem from "viem"
-import { ITradeSettled, formatReadableUSD, formatToBasis, invertColor, readableNumber } from "gmx-middleware-utils"
-import { closeEvents, decreaseEvents, increaseEvents, liquidateEvents, updateEvents } from "../../data/tradeList"
-import { pallete, colorAlpha } from "@aelea/ui-components-theme"
-import { snapshot, empty, map } from "@most/core"
-import { $alertTooltip, $Link } from "gmx-middleware-ui-components"
 import { IProfileActiveTab } from "../$Profile"
-import { IBlueberryLadder } from "../../../../@gambitdao-gbc-middleware/src"
 import { $defaultProfileContainer } from "../../common/$avatar"
-import { $accountPreview, $profilePreview } from "../../components/$AccountProfile"
-import { $defaultBerry } from "../../components/$DisplayBerry"
+import { $accountPreview } from "../../components/$AccountProfile"
 import { $CardTable } from "../../components/$common"
-import { walletLink } from "../../wallet"
-import { $seperator2 } from "../common"
+import { rootStoreScope } from "../../data"
+import { closeEvents, liquidateEvents } from "../../data/tradeList"
+import { ISchemaDefinition as ISubgraphSchema, processSources, replaySubgraphQuery } from "../../logic/indexer"
+import { ICompetitonCumulativeRoi } from "./$CumulativePnl"
+import { IPositionDecrease, IPositionIncrease, IPositionSettled, ITradeLink } from "gmx-middleware-utils"
 
+
+const gmxTradingSubgraph = replaySubgraphQuery({
+  subgraph: `https://gateway-arbitrum.network.thegraph.com/api/${import.meta.env.THE_GRAPH}/subgraphs/id/DJ4SBqiG8A8ytcsNJSuUU2gDTLFXxxPrAN8Aags84JH2`,
+  parentStoreScope: rootStoreScope,
+
+})
+// ISubgraphSchema<IPositionIncrease | IPositionDecrease>
+const adjustEntity = {
+  __typename: null,
+  blockNumber: null,
+  blockTimestamp: null,
+  collateralDelta: null,
+  collateralToken: null,
+  fee: null,
+  id: null,
+  indexToken: null,
+  isLong: null,
+  key: null,
+  account: null,
+  logIndex: null,
+  price: null,
+  sizeDelta: null,
+  transactionHash: null,
+  transactionIndex: null
+}
+
+const linkSchema: ISubgraphSchema<ITradeLink> = {
+  id: null,
+  __typename: null,
+  account: null,
+  blockTimestamp: null,
+  collateralToken: null,
+  indexToken: null,
+  isLong: null,
+  key: null,
+  logIndex: null,
+  transactionHash: null,
+  transactionIndex: null,
+  updateList: {
+    __typename: null,
+    averagePrice: null,
+    blockNumber: null,
+    blockTimestamp: null,
+    collateral: null,
+    entryFundingRate: null,
+    id: null,
+    key: null,
+    logIndex: null,
+    realisedPnl: null,
+    reserveAmount: null,
+    size: null,
+    transactionHash: null,
+    transactionIndex: null
+  },
+  blockNumber: null,
+  increaseList: adjustEntity,
+  decreaseList: adjustEntity
+}
+
+const schemaPositionSettled: ISubgraphSchema<IPositionSettled> = {
+  link: linkSchema,
+  account: null,
+  averagePrice: null,
+  collateral: null,
+  collateralToken: null,
+  cumulativeCollateral: null,
+  cumulativeFee: null,
+  cumulativeSize: null,
+  entryFundingRate: null,
+  id: null,
+  indexToken: null,
+  isCount: null,
+  isLiquidated: null,
+  isLong: null,
+  logIndex: null,
+  markPrice: null,
+  maxCollateral: null,
+  maxSize: null,
+  realisedPnl: null,
+  reserveAmount: null,
+  size: null,
+  transactionHash: null,
+  transactionIndex: null,
+  __typename: 'PositionSettled',
+  blockNumber: null,
+  blockTimestamp: null
+}
+
+const queryww = gmxTradingSubgraph(schemaPositionSettled)
+
+
+declare function querySubgraph<TSchema, TResult extends keyof TSchema>(queryProperties: Pick<TSchema, TResult>): Pick<TSchema, TResult>
+
+type MyType = { aaa: number; bbbo: number };
+
+const result = querySubgraph<MyType, 'aaa'>({ aaa: 111 })
+
+
+// result has the type => { aaa: number }
 
 const datass = processSources(
   rootStoreScope,
@@ -34,7 +128,7 @@ const datass = processSources(
     countId: number
   },
   {
-    source: closeEvents({  }),
+    source: closeEvents({}),
     step(seed, value) {
 
 
@@ -52,13 +146,13 @@ const datass = processSources(
       if (value.realisedPnl < 0n) {
         seed.positionsSettled[value.account].lossCount++
       }
- 
+
 
       return seed
     },
   },
   {
-    source: liquidateEvents({  }),
+    source: liquidateEvents({}),
     step(seed, value) {
 
       seed.positionsSettled[value.account] ??= {
@@ -186,10 +280,10 @@ export const $Leaderboard = (config: ILeaderboard) => component((
           //   sortBy: 'pnl',
           //   columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
           //   $$body: map((pos) => {
-          //     const val = formatReadableUSD(pos.cumSize, false)
+          //     const val = readableUSD(pos.cumSize, false)
 
           //     return $column(style({ gap: '3px', textAlign: 'right' }))(
-          //       $text(style({ fontSize: '.75em' }))(formatReadableUSD(pos.cumCollateral, false)),
+          //       $text(style({ fontSize: '.75em' }))(readableUSD(pos.cumCollateral, false)),
           //       $seperator2,
           //       $text(
           //         val
@@ -208,13 +302,13 @@ export const $Leaderboard = (config: ILeaderboard) => component((
           //     const metricVal = pos.score
 
           //     const newLocal = readableNumber(formatToBasis(metricVal) * 100)
-          //     const pnl = currentMetric === 'pnl' ? formatReadableUSD(metricVal, false) : `${Number(newLocal)} %`
+          //     const pnl = currentMetric === 'pnl' ? readableUSD(metricVal, false) : `${Number(newLocal)} %`
 
           //     return $column(layoutSheet.spacingTiny, style({ gap: '3px', textAlign: 'right' }))(
           //       $text(style({ fontSize: '.75em' }))(pnl),
           //       $seperator2,
           //       pos.prize > 0n
-          //         ? $text(style({ color: pallete.positive }))(formatReadableUSD(pos.prize, false))
+          //         ? $text(style({ color: pallete.positive }))(readableUSD(pos.prize, false))
           //         : empty(),
           //     )
           //   }),

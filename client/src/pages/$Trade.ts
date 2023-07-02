@@ -9,13 +9,13 @@ import {
   abs,
   filterNull,
   formatFixed,
-  formatReadableUSD, formatToBasis, getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getLiquidationPrice, getMappedValue, getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getPnL, getPositionKey,
+  formatReadableUSD, formatBps, getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getLiquidationPrice, getMappedValue, getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getPnL, getPositionKey,
   getTokenAmount, getTokenDescription, gmxSubgraph,
-  readableAccountingNumber,
-  readableDate, readableNumber,
+  readableAccountingNumber, readableNumber,
   switchMap,
   timeSince,
-  unixTimestampNow
+  unixTimestampNow,
+  readablePercentage
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
@@ -48,6 +48,14 @@ import { wallet } from "../wallet/walletLink"
 
 export type ITradeComponent = ITradeBoxParams
 
+
+const res = readContract({
+  address: '0x33',
+  
+  abi: GMX.abi.vault,
+  functionName: 'positions',
+  args: ['0xA0Cf798816D4b9b9866b5330EEa46a18382f251e'],
+})
 
 
 // type RequestTrade = {
@@ -553,13 +561,14 @@ export const $Trade = (config: ITradeComponent) => component((
   }, awaitPromises(openTradeListQuery), positionKey)
 
 
-  const pricefeed = gmxSubgraph.pricefeed(map(params => {
+
+  const pricefeed = map(params => {
     const range = params.timeframe * 1000
     const to = unixTimestampNow()
     const from = to - range
 
     return { chain: config.chain.id, interval: params.timeframe, tokenAddress: params.indexToken, from, to }
-  }, combineObject({ timeframe, indexToken })))
+  }, combineObject({ timeframe, indexToken }))
 
 
   const focusPrice = replayLatest(multicast(changefocusPrice), null)
@@ -723,7 +732,7 @@ export const $Trade = (config: ITradeComponent) => component((
               $column(layoutSheet.spacingSmall)(
                 $infoLabel('Borrow Rate'),
                 $row(style({ whiteSpace: 'pre' }))(
-                  $text(map(poolInfo => readableNumber(formatToBasis(poolInfo.rate)) + '%', collateralTokenPoolInfo)),
+                  $text(map(poolInfo => readablePercentage(formatBps(poolInfo.rate)), collateralTokenPoolInfo)),
                   $text(style({ color: pallete.foreground }))(' / hr')
                 )
               ),
@@ -972,7 +981,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
                       return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
                         $text(timeSince(timestamp) + ' ago'),
-                        $text(readableDate(timestamp)),
+                        $text(formatReadableUSD(timestamp)),
                       )
                     })
                   },
