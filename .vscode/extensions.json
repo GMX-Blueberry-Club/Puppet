@@ -1,5 +1,12 @@
 {
+  
   "recommendations": [
-    "nomic.foundation"
+    "nomic.foundation",
+    "dbaeumer.vscode-eslint",
+    "NomicFoundation.hardhat-solidity",
+    "GitHub.copilot",
+    "mikestead.dotenv",
+    "wmaurer.vscode-jumpy",
+    "akamud.vscode-theme-onedark",
   ]
 }

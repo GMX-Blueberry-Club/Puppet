@@ -32,8 +32,8 @@ import {
 import {
   abs, bnDiv, div, filterNull, formatFixed, formatReadableUSD, formatBps, getAdjustedDelta, getDenominator,
   getNativeTokenDescription, getPnL, getTokenAmount, getTokenDescription, getTokenUsd,
-  getTradeTotalFee, IPricefeed, ITokenDescription,
-  ITrade, parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, zipState, readablePercentage, readableTokenAmount
+  IPricefeed, ITokenDescription,
+  parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, zipState, readablePercentage, readableUnitAmount, IPositionSlot
 } from "gmx-middleware-utils"
 import { MouseEventParams } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
@@ -123,13 +123,13 @@ export interface ITradeBoxParams {
 }
 
 interface ITradeBox extends ITradeBoxParams {
-  openTradeListQuery: Stream<Promise<ITrade[]>>
+  openTradeListQuery: Stream<Promise<IPositionSlot[]>>
 
   pricefeed: Stream<Promise<IPricefeed[]>>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>
 
-  trade: Stream<Promise<ITrade | null>>
+  trade: Stream<Promise<IPositionSlot | null>>
 }
 
 export type IRequestTradeParams = ITradeConfig & { wallet: IWalletClient }
@@ -178,7 +178,7 @@ export const $TradeBox = (config: ITradeBox) => component((
   [clickClose, clickCloseTether]: Behavior<PointerEvent, bigint>,
   [changeRoute, changeRouteTether]: Behavior<string, string>,
 
-  [switchTrade, switchTradeTether]: Behavior<any, ITrade>,
+  [switchTrade, switchTradeTether]: Behavior<any, IPositionSlot>,
 
 
 ) => {
@@ -727,7 +727,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                     return $row(style({ placeContent: 'space-between', flex: 1 }))(
                       $tokenLabelFromSummary(tokenDesc),
                       $column(style({ alignItems: 'flex-end' }))(
-                        $text(style({ whiteSpace: 'nowrap' }))(map(bn => readableNumber(formatFixed(bn, tokenDesc.decimals)) + ` ${tokenDesc.symbol}`, balanceAmount)),
+                        $text(style({ whiteSpace: 'nowrap' }))(map(bn => readableUnitAmount(formatFixed(bn, tokenDesc.decimals)) + ` ${tokenDesc.symbol}`, balanceAmount)),
                         $text(style({}))(combineArray((bn, price) => {
                           return formatReadableUSD(getTokenUsd(bn, price, tokenDesc.decimals))
                         }, balanceAmount, price)),
@@ -812,7 +812,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                       } else {
                         const formatted = formatFixed(val, state.inputTokenDescription.decimals)
 
-                        node.element.value = readableNumber(formatted)
+                        node.element.value = readableUnitAmount(formatted)
                       }
 
                       return null
@@ -1026,7 +1026,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                       if (value === 0n) {
                         node.element.value = ''
                       } else {
-                        node.element.value = readableNumber(formatFixed(value, state.indexTokenDescription.decimals))
+                        node.element.value = readableUnitAmount(formatFixed(value, state.indexTokenDescription.decimals))
                       }
 
                       return null
@@ -1305,7 +1305,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                         const totalOut = total > 0n ? total : 0n
                         const tokenAmount = getTokenAmount(totalOut, params.inputTokenPrice, params.inputTokenDescription.decimals)
 
-                        return `${readableNumber(formatFixed(tokenAmount, params.inputTokenDescription.decimals))} ${params.inputTokenDescription.symbol} (${formatReadableUSD(totalOut)})`
+                        return `${readableUnitAmount(formatFixed(tokenAmount, params.inputTokenDescription.decimals))} ${params.inputTokenDescription.symbol} (${formatReadableUSD(totalOut)})`
                       }, combineObject({ sizeDeltaUsd, position, collateralDeltaUsd, inputTokenDescription, inputTokenPrice, marginFee, swapFee, indexTokenPrice, isLong, fundingFee })))
                     )
                   }, config.tradeConfig.isIncrease))
@@ -1435,8 +1435,8 @@ export const $TradeBox = (config: ITradeBox) => component((
                     $spinner
                   ),
                   query: combineArray((a, b) => Promise.all([a, b]), config.pricefeed, config.trade),
-                  $$done: zip((params, [pricefeed, trade]) => {
-                    if (trade === null) {
+                  $$done: zip((params, [pricefeed, pos]) => {
+                    if (pos === null) {
                       const tokenDesc = getTokenDescription(params.position.indexToken)
                       const route = params.position.isLong ? `Long-${tokenDesc.symbol}` : `Short-${tokenDesc.symbol}/${getTokenDescription(params.position.collateralToken).symbol}`
 
@@ -1450,12 +1450,10 @@ export const $TradeBox = (config: ITradeBox) => component((
                         return now(chartCxChange)
                       }
 
-                      const lastUpdate = trade.updateList[trade.updateList.length - 1]
-                      const totalFee = getTradeTotalFee(trade)
 
                       return map(price => {
-                        const delta = getPnL(trade.isLong, lastUpdate.averagePrice, price, lastUpdate.size)
-                        const val = formatFixed(delta + lastUpdate.realisedPnl - totalFee, 30)
+                        const delta = getPnL(pos.isLong, pos.averagePrice, price, pos.size)
+                        const val = formatFixed(delta + pos.realisedPnl - pos.cumulativeFee, 30)
 
                         return val
                       }, config.tradeState.indexTokenPrice)
@@ -1487,14 +1485,14 @@ export const $TradeBox = (config: ITradeBox) => component((
                           )
                         ),
                         $infoTooltipLabel(
-                          $openPositionPnlBreakdown(trade, now(params.collateralTokenPoolInfo.cumulativeRate), indexTokenPrice),
+                          $openPositionPnlBreakdown(pos, now(params.collateralTokenPoolInfo.cumulativeRate), indexTokenPrice),
                           $NumberTicker({
                             textStyle: {
                               fontSize: '1.25em',
                               fontWeight: 'bold',
                             },
                             value$: map(hoverValue => {
-                              const newLocal2 = readableNumber(hoverValue)
+                              const newLocal2 = readableUnitAmount(hoverValue)
                               const newLocal = parseReadableNumber(newLocal2)
                               return newLocal
                             }, motion({ ...MOTION_NO_WOBBLE, precision: 15, stiffness: 210 }, 0, hoverChartPnl)),
@@ -1505,7 +1503,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                       ),
                       $TradePnlHistory({
                         $container: $column(style({ flex: 1, overflow: 'hidden', borderRadius: '20px' })),
-                        trade: trade,
+                        trade: pos,
                         chain: config.chain.id,
                         pricefeed,
                         chartConfig: {
@@ -1537,20 +1535,19 @@ export const $TradeBox = (config: ITradeBox) => component((
                   }
 
                   return $column(style({ flex: 1 }))(
-                    ...res.map(trade => {
+                    ...res.map(pos => {
 
-                      const positionMarkPrice = tradeReader.getLatestPrice(now(trade.indexToken))
-                      const cumulativeFee = vault.read('cumulativeFundingRates', trade.collateralToken)
+                      const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
+                      const cumulativeFee = vault.read('cumulativeFundingRates', pos.collateralToken)
                       const pnl = map(params => {
-                        const lastUpdate = trade.updateList[trade.updateList.length - 1]
-                        const delta = getPnL(trade.isLong, lastUpdate.averagePrice, params.positionMarkPrice, lastUpdate.size)
+                        const delta = getPnL(pos.isLong, pos.averagePrice, params.positionMarkPrice, pos.size)
 
-                        return lastUpdate.realisedPnl + delta - getTradeTotalFee(trade)
+                        return pos.realisedPnl + delta - pos.cumulativeFee
                       }, combineObject({ positionMarkPrice, cumulativeFee }))
 
 
                       return switchLatest(map(vpos => {
-                        if (vpos.key === trade.key) {
+                        if (vpos.key === pos.key) {
                           return empty()
                         }
 
@@ -1561,16 +1558,16 @@ export const $TradeBox = (config: ITradeBox) => component((
                           })
                         )(
                           $ButtonPrimary({
-                            $content: $entry(trade),
+                            $content: $entry(pos),
                             $container: $defaultMiniButtonSecondary
                           })({
                             click: switchTradeTether(
-                              constant(trade)
+                              constant(pos)
                             )
                           }),
-                          $riskLiquidator(trade, positionMarkPrice),
+                          $riskLiquidator(pos, positionMarkPrice),
                           $infoTooltipLabel(
-                            $openPositionPnlBreakdown(trade, cumulativeFee, positionMarkPrice),
+                            $openPositionPnlBreakdown(pos, cumulativeFee, positionMarkPrice),
                             $PnlValue(pnl)
                           ),
                         )

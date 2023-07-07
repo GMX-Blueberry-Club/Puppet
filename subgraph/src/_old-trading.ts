@@ -10,7 +10,7 @@ import {
   PositionSettled,
   PositionSlot,
   PositionUpdate,
-  TradeLink,
+  PositionLink,
 } from "../generated/schema"
 
 import { getEventOrderIdentifier, getUniqueEventId, ZERO_BI } from "./helpers"
@@ -21,8 +21,8 @@ const vaultPricefeedAddress = Address.fromString("0x2d68011bcA022ed0E474264145F4
 
 
 
-const getTradeLinkId = (id: i32, key: Bytes): Bytes => {
-  return Bytes.fromUTF8('TradeLink')
+const getPositionLinkId = (id: i32, key: Bytes): Bytes => {
+  return Bytes.fromUTF8('PositionLink')
     .concatI32(id)
     .concat(key)
 }
@@ -50,9 +50,9 @@ export function handleIncreasePosition(event: vault.IncreasePosition): void {
   }
 
   const countId = positionSlot.size.equals(ZERO_BI) ? positionSlot.idCount + 1 : positionSlot.idCount
-  const tradeLinkId = getTradeLinkId(countId, event.params.key)
+  const PositionLinkId = getPositionLinkId(countId, event.params.key)
 
-  // positionSlot.link = tradeLinkId
+  // positionSlot.link = PositionLinkId
   positionSlot.idCount = countId
   positionSlot.collateral = positionSlot.collateral.plus(event.params.collateralDelta)
   positionSlot.size = positionSlot.size.plus(event.params.sizeDelta)
@@ -61,17 +61,17 @@ export function handleIncreasePosition(event: vault.IncreasePosition): void {
   positionSlot.cumulativeFee = positionSlot.cumulativeFee.plus(event.params.fee)
 
 
-  const tradeLink = new TradeLink(tradeLinkId)
+  const PositionLink = new PositionLink(PositionLinkId)
 
-  tradeLink.account = event.params.account
-  tradeLink.collateralToken = event.params.collateralToken
-  tradeLink.indexToken = event.params.indexToken
-  tradeLink.isLong = event.params.isLong
-  tradeLink.key = key
+  PositionLink.account = event.params.account
+  PositionLink.collateralToken = event.params.collateralToken
+  PositionLink.indexToken = event.params.indexToken
+  PositionLink.isLong = event.params.isLong
+  PositionLink.key = key
 
-  tradeLink.blockTimestamp = event.block.timestamp
-  tradeLink.blockNumber = event.block.number
-  tradeLink.transactionHash = event.transaction.hash
+  PositionLink.blockTimestamp = event.block.timestamp
+  PositionLink.blockNumber = event.block.number
+  PositionLink.transactionHash = event.transaction.hash
 
 
   const positionAdjustment = new PositionAdjustment(getUniqueEventId(event))
@@ -91,10 +91,10 @@ export function handleIncreasePosition(event: vault.IncreasePosition): void {
   positionAdjustment.sizeDelta = event.params.sizeDelta
   positionAdjustment.price = event.params.price
   positionAdjustment.fee = event.params.fee
-  positionAdjustment.trade = tradeLinkId
+  positionAdjustment.trade = PositionLinkId
 
 
-  tradeLink.save()
+  PositionLink.save()
   positionAdjustment.save()
   positionSlot.save()
 }
@@ -104,12 +104,12 @@ export function handleDecreasePosition(event: vault.DecreasePosition): void {
 
   if (positionSlot === null) {
     return
-    // throw new Error("TradeLink is null")
+    // throw new Error("PositionLink is null")
   }
 
-  const tradeLinkId = getTradeLinkId(positionSlot.idCount, event.params.key)
+  const PositionLinkId = getPositionLinkId(positionSlot.idCount, event.params.key)
   const adjustPosition = new PositionAdjustment(getUniqueEventId(event))
-  adjustPosition.trade = tradeLinkId
+  adjustPosition.trade = PositionLinkId
   adjustPosition.account = event.params.account
 
   adjustPosition.collateralToken = event.params.collateralToken
@@ -138,10 +138,10 @@ export function handleUpdatePosition(event: vault.UpdatePosition): void {
     return
   }
 
-  const tradeLinkId = getTradeLinkId(positionSlot.idCount, event.params.key)
+  const PositionLinkId = getPositionLinkId(positionSlot.idCount, event.params.key)
 
   const positionUpdate = new PositionUpdate(getUniqueEventId(event))
-  positionUpdate.trade = tradeLinkId
+  positionUpdate.trade = PositionLinkId
 
   positionUpdate.key = event.params.key
 
@@ -176,7 +176,7 @@ export function handleClosePosition(event: vault.ClosePosition): void {
 
   if (positionSlot === null) {
     return
-    // throw new Error("TradeLink is null")
+    // throw new Error("PositionLink is null")
   }
 
 
@@ -222,7 +222,7 @@ export function handleLiquidatePosition(event: vault.LiquidatePosition): void {
 
   if (positionSlot === null) {
     return
-    // throw new Error("TradeLink is null")
+    // throw new Error("PositionLink is null")
   }
 
 

@@ -5,7 +5,7 @@ import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { map, mergeArray, now } from "@most/core"
 import { CHAIN } from "gmx-middleware-const"
 import { $infoTooltipLabel } from "gmx-middleware-ui-components"
-import { IRequestAccountTradeListApi, getTradeTotalFee, readableDate, timeSince, unixTimestampNow } from "gmx-middleware-utils"
+import { IRequestAccountTradeListApi, readableDate, timeSince, unixTimestampNow } from "gmx-middleware-utils"
 import { $PnlValue, $TradePnl, $entry, $openPositionPnlBreakdown, $riskLiquidator, $settledSizeDisplay } from "../common/$common"
 import { $discoverIdentityDisplay } from "../components/$AccountProfile"
 import { $CardTable } from "../components/$common"
@@ -273,7 +273,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
 
                     return $infoTooltipLabel(
                       $openPositionPnlBreakdown(pos, cumulativeFee, positionMarkPrice),
-                      $TradePnl(pos, cumulativeFee, positionMarkPrice)
+                      $TradePnl(pos, positionMarkPrice)
                     )
                   })
                 },
@@ -323,7 +323,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
                   $head: $text('PnL'),
                   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
                   $$body: map((pos) => {
-                    return $PnlValue(pos.settlement.realisedPnl - getTradeTotalFee(pos))
+                    return $PnlValue(pos.settlement.realisedPnl - pos.cumulativeFee)
                   })
                 },
               ],

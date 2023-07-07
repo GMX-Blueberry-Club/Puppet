@@ -1,11 +1,11 @@
 import * as GMX from "gmx-middleware-const"
-import { ITrade, ITradeSettled } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { rootStoreScope } from "../data"
 import { processSources, replaySubgraphEvent } from "../logic/indexer"
+import { IPositionSettled, IPositionSlot } from "gmx-middleware-utils"
 
 
-const subgraph = `https://gateway-arbitrum.network.thegraph.com/api/${import.meta.env.THE_GRAPH}/subgraphs/id/DJ4SBqiG8A8ytcsNJSuUU2gDTLFXxxPrAN8Aags84JH2`
+const subgraph = `https://api.studio.thegraph.com/query/112/gmx-house/v0.0.10`
 
 const replayConfig = {
   ...GMX.CONTRACT[42161].Vault,
@@ -39,8 +39,8 @@ export const updateEvents = replaySubgraphEvent({
 
 
 export interface IStoredPositionMap {
-  positions: Record<viem.Hex, ITrade>
-  positionsSettled: Record<viem.Hex, ITradeSettled>
+  positions: Record<viem.Hex, IPositionSlot>
+  positionsSettled: Record<viem.Hex, IPositionSettled>
   countId: number
 }
 
@@ -60,14 +60,15 @@ export const getTraderData = (trader: viem.Address) => {
         const key = getStoredPositionCounterId(seed, value.key)
 
         seed.positions[key] ??= {
+          
           key: value.key,
           account: value.account,
           collateralToken: value.collateralToken,
           indexToken: value.indexToken,
           isLong: value.isLong,
-          updateList: [],
-          decreaseList: [],
-          increaseList: [],
+          // updateList: [],
+          // decreaseList: [],
+          // increaseList: [],
           maxCollateral: value.collateralDelta,
           maxSize: value.sizeDelta,
         }

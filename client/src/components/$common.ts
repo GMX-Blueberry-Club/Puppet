@@ -7,25 +7,27 @@ import { $berry } from "./$DisplayBerry"
 
 
 
-export const $CardTable = <T, FilterState>(config: TableOption<T, FilterState>) => $Table({
-  $container: $card(style({ padding: "0", gap: 0 })),
-  scrollConfig: {
-    $container: $defaultVScrollContainer(style({ gap: '1px' })),
-    $loader: style({ placeContent: 'center', borderRadius: '0 0 20px 20px', borderBottom: `1px solid ${pallete.background}`, margin: '0 1px', background: pallete.background, flexDirection: 'row-reverse', padding: '16px 0' })(
-      $infoLabeledValue(
-        'Loading',
-        style({ margin: '' })(
-          $spinner
+export const $CardTable = <T, FilterState>(config: TableOption<T, FilterState>) => {
+  return $Table({
+    $container: $card(style({ padding: "0", gap: 0 })),
+    scrollConfig: {
+      $container: $defaultVScrollContainer(style({ gap: '1px' })),
+      $loader: style({ placeContent: 'center', borderRadius: '0 0 20px 20px', borderBottom: `1px solid ${pallete.background}`, margin: '0 1px', background: pallete.background, flexDirection: 'row-reverse', padding: '16px 0' })(
+        $infoLabeledValue(
+          'Loading',
+          style({ margin: '' })(
+            $spinner
+          )
         )
       )
-    )
-  },
-  $bodyRowContainer: $defaultTableRowContainer(
-    stylePseudo(':last-child', { borderRadius: '0 0 20px 20px' }),
-    style({ background: pallete.background, margin: '0 1px', borderBottom: `1px solid ${pallete.horizon}` })
-  ),
-  ...config
-})
+    },
+    $bodyRowContainer: $defaultTableRowContainer(
+      stylePseudo(':last-child', { borderRadius: '0 0 20px 20px' }),
+      style({ background: pallete.background, margin: '0 1px', borderBottom: `1px solid ${pallete.horizon}` })
+    ),
+    ...config
+  })
+}
 
 
 

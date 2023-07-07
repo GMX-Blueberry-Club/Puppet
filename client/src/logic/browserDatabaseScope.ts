@@ -1,4 +1,4 @@
-import { concatMap, constant, continueWith, fromPromise, map, switchLatest } from "@most/core"
+import { concatMap, constant, continueWith, fromPromise, map, mergeArray, switchLatest } from "@most/core"
 import { curry2, curry3 } from '@most/prelude'
 import { Stream } from "@most/types"
 import { sha256 } from '@noble/hashes/sha256'
@@ -122,7 +122,7 @@ export const storeScope: IScopeCurry2 = curry2(<TData>(parentScope: IParentScope
 export const replayWriteStoreScope: IWriteScopeCurry3 = curry3(<TData>(parentScope: IParentScope, genesisSeed: TData, writeSource: Stream<TData>): IReplayWriteStoreScope<TData> => {
   const scope = storeScope(parentScope, genesisSeed)
   const write = writeStoreData(scope.key, writeSource)
-  const replayWrite = continueWith(() => write, scope)
+  const replayWrite = mergeArray([write, scope])
 
   return {
     ...scope,

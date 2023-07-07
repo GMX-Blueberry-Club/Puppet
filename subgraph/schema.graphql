@@ -74,7 +74,7 @@
 # type MirrorPositionAdjustment @entity(immutable: true) {
 #   # adjustList: [MirrorPositionAdjustment!] @derivedFrom(field: "link")
 #   id: Bytes!
-#   tradeLink: TradeLink!
+#   PositionLink: PositionLink!
 #   route: Bytes!
 
 #   blockNumber: BigInt!
@@ -85,7 +85,7 @@
 # type MirrorPositionLink @entity(immutable: true) {
 #   # adjustList: [MirrorPositionAdjustment!] @derivedFrom(field: "link")
 #   id: Bytes!
-#   tradeLink: TradeLink!
+#   PositionLink: PositionLink!
 #   route: Bytes!
 # }
 

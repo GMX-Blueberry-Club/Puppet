@@ -1,5 +1,6 @@
 {
   "npm.packageManager": "pnpm",
+  "typescript.format.enable": false,
   "search.exclude": {
     "**/.dist": true,
     "**/node_modules": true,

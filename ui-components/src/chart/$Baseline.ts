@@ -8,7 +8,7 @@ import {
   LineStyle
 } from 'lightweight-charts'
 import { $Chart, IChartConfig } from "./$Chart.js"
-import { readableNumber } from 'gmx-middleware-utils'
+import { readableNumber, readableUnitAmount } from 'gmx-middleware-utils'
 
 
 export interface IBaselineChart extends IChartConfig<'Baseline'> {
@@ -66,7 +66,7 @@ export const $Baseline = (config: IBaselineChart) => {
       // topFillColor2: pallete.positive,
       priceFormat: {
         type: 'custom',
-        formatter: (priceValue: BarPrice) => readableNumber(priceValue.valueOf())
+        formatter: (priceValue: BarPrice) => readableUnitAmount(priceValue.valueOf())
       },
       topLineColor: pallete.positive,
       bottomLineColor: pallete.negative,

@@ -1,12 +1,11 @@
-import { combineObject, fromCallback, replayLatest } from "@aelea/core"
+import { combineObject, fromCallback } from "@aelea/core"
 import { pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, delay, map, mergeArray, multicast, now, tap } from "@most/core"
+import { awaitPromises, map, mergeArray, now } from "@most/core"
 import { Stream } from "@most/types"
-import { Address, GetAccountResult, GetNetworkResult, InjectedConnector, WalletClient, configureChains, createConfig, createStorage, getAccount, getNetwork, getPublicClient, getWalletClient, getWebSocketPublicClient, multicall, watchAccount, watchNetwork } from '@wagmi/core'
+import { Address, GetAccountResult, GetNetworkResult, InjectedConnector, WalletClient, configureChains, createConfig, createStorage, getAccount, getNetwork, getPublicClient, getWalletClient, getWebSocketPublicClient, watchAccount, watchNetwork } from '@wagmi/core'
 import { WalletConnectConnector } from '@wagmi/core/connectors/walletConnect'
 import { alchemyProvider } from "@wagmi/core/providers/alchemy"
-import { jsonRpcProvider } from '@wagmi/core/providers/jsonRpc'
-import { EthereumClient, w3mProvider, w3mConnectors } from '@web3modal/ethereum'
+import { EthereumClient, w3mConnectors, w3mProvider } from '@web3modal/ethereum'
 import { Web3Modal } from '@web3modal/html'
 import { PublicClient, Transport } from "viem"
 import { arbitrum, avalanche } from "viem/chains"
@@ -91,13 +90,12 @@ export const chain: Stream<ISupportedChain> = map(getNetworkResult => {
     throw new Error('network is null')
   }
 
+  const defChain = chains.find(chain => chain.id == getNetworkResult.chain?.id) || arbitrum
 
-  const chain = chains.find(chain => chain.id == getNetworkResult.chain?.id) || arbitrum
-
-  return chain
+  return defChain
 }, mergeArray([
   map(() => getNetwork(), now(null)),
-  // networkChange
+  networkChange
 ]))
 
 
@@ -123,7 +121,6 @@ export const publicClient: Stream<PublicClient<Transport, ISupportedChain>> = ma
 export const wallet = awaitPromises(map(async params => {
 
   const clientAvaialble = await getWalletClient({ chainId: params.chain.id })
-
 
   return clientAvaialble
 }, combineObject({ chain, account })))

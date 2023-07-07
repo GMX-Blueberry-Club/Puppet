@@ -1,10 +1,9 @@
 
-import { Behavior, combineObject } from '@aelea/core'
-import { $Branch, $custom, $Node, $text, component, IBranch, NodeComposeFn, style } from '@aelea/dom'
+import { Behavior } from '@aelea/core'
+import { $Branch, $Node, $custom, $text, IBranch, NodeComposeFn, component, style } from '@aelea/dom'
 import { $column, layoutSheet, observer } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { filterNull, switchMap, zipState } from "gmx-middleware-utils"
-import { constant, continueWith, empty, filter, join, loop, map, mergeArray, multicast, now, scan, snapshot, switchLatest, until } from "@most/core"
+import { filter, join, map, mergeArray, now, snapshot } from "@most/core"
 import { Stream } from '@most/types'
 
 
@@ -59,38 +58,33 @@ export const $QuantumScroll = ({
   )
 
 
-  const $itemLoader = multicast(map((state) => {
-    const itemCount = Array.isArray(state.dataSource) ? state.dataSource.length : state.dataSource.$items.length
+  const $itemLoader = snapshot((sidx, nextResponse) => {
+    const itemCount = Array.isArray(nextResponse) ? nextResponse.length : nextResponse.$items.length
 
-    if (Array.isArray(state.dataSource)) {
-      return mergeArray(state.dataSource)
+    if (Array.isArray(nextResponse)) {
+      return mergeArray(nextResponse)
     }
 
-    if (state.scrollIndex === 0 && itemCount === 0) {
+    if (itemCount === 0) {
       return $emptyMessage
     }
 
-    const hasMoreItems = state.dataSource.pageSize === itemCount
+    const hasMoreItems = nextResponse.pageSize === itemCount
 
     const $items = hasMoreItems
-      ? [...state.dataSource.$items, $observerloader]
-      : state.dataSource.$items
+      ? [...nextResponse.$items, $observerloader]
+      : nextResponse.$items
 
 
     return mergeArray($items)
-  }, zipState({ dataSource, scrollIndex })))
+  }, scrollIndex, dataSource)
+
 
   return [
     $container(
       map(node => ({ ...node, insertAscending })),
     )(
-      switchLatest(
-        mergeArray([
-          constant(empty(), $itemLoader),
-          constant($loader, scrollIndex),
-        ])
-      ),
-      join($itemLoader)
+      join($itemLoader),
     ),
 
     {

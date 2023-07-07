@@ -1,12 +1,13 @@
-import { combineObject, fromCallback } from "@aelea/core"
-import { awaitPromises, fromPromise, loop, map, mergeArray, now, switchLatest } from "@most/core"
+import { combineObject } from "@aelea/core"
+import { fromPromise, map, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { AbiEvent, ExtractAbiEvent } from "abitype"
-import { ILogEvent, ILogIndexIdentifier, ILogType, switchMap } from "gmx-middleware-utils"
+import { AbiEvent } from "abitype"
+import { ILogEvent, ILogIndexIdentifier, ILogType, getMappedValue, orderEvents, switchMap } from "gmx-middleware-utils"
 import { gql, request } from 'graphql-request'
 import * as viem from "viem"
 import { publicClient } from "../wallet/walletLink"
 import * as database from "./browserDatabaseScope"
+import { IQuerySubgraphConfig, ISchema, ISchemaQuery, PrettifyReturn, parseTypeFnMap, querySubgraph } from "./querySubgraph"
 import { zipArray } from "./utils"
 
 type MaybeExtractEventArgsFromAbi<
@@ -125,7 +126,7 @@ export function replaySubgraphEvent<
         }
 
         const list: any[] = x[graphDocumentIdentifier]
-        return list.map(obj => parseGqlRespone(eventAbiManifest, obj))
+        return list.map(obj => parseJsonAbiEvent(eventAbiManifest, obj))
       }))
 
       const latestPendingBlock = fromPromise(params.publicClient.getBlock({ blockTag: 'pending' }))
@@ -149,96 +150,60 @@ export function replaySubgraphEvent<
 }
 
 
-type IDefineSchema<TEntity, TSchema> = {
-  [P in keyof TSchema]: P extends keyof TEntity ? TEntity[P] : never;
-}
-
-export type ISchemaDefinition<T> = { [P in keyof T]: T[P] extends any[] ? ISchemaDefinition<T[P]>[0] : T[P] extends object ? ISchemaDefinition<T[P]> : ISchemaDefinition<T[P]> | null }
-export type ISchemaReturn<TEntity, TSchema> = { [P in keyof TSchema]: TSchema[P] extends any[] ? IDefineSchema<TEntity[P], TSchema[P]> : TEntity[P] extends object ? ISchemaDefinition<TEntity[P]> : ISchemaDefinition<TEntity[P]> }
-
-
-
-
-type MyType = IDefineSchema<{ aaa: number; bbbo: number }, { aaa: null }> // { aaa: number;}
-
-
-export interface IReplaySubgraphConfig {
-  subgraph: string
+export interface IReplaySubgraphConfig extends IQuerySubgraphConfig {
   parentStoreScope: database.IStoreScope<any>
-  startBlock?: bigint
 }
 
 
-
-export function replaySubgraphQuery(config: IReplaySubgraphConfig) {
-
-  return <
-    TType extends ILogType<string>,
-    Schema extends ISchemaDefinition<TType>,
-    TTypeName = TType extends ILogType<infer Z> ? Z : never,
-  >(schema: Schema): database.IStoreScope<ISchemaReturn<TType, Schema>> => {
+export interface IReplaySubgraphQueryState<Type extends ILogType<any>, TQuery> {
+  subgraph: string;
+  schema: ISchema<Type>
+  logHistory: PrettifyReturn<ISchemaQuery<Type, TQuery>[]>
+  syncedBlock: bigint
+}
 
 
-    const genesisSeed = {
-      subgraph: config.subgraph,
-      schema,
-      logHistory: [],
-      syncedBlock: 0n,
-    }
+export const replaySubgraphQuery = <Type extends ILogType<any>, TQuery>(
+  config: IReplaySubgraphConfig,
+  schema: ISchema<Type>,
+  query: TQuery
+): database.IStoreScope<IReplaySubgraphQueryState<Type, TQuery>> => {
 
-
-    const currentStoreKey = database.getStoreKey(config.parentStoreScope, genesisSeed)
-    const seedStoredData = database.getStoredSeedData(currentStoreKey, genesisSeed)
-
-    const graphDocumentIdentifier = `${config.name.charAt(0).toLowerCase() + config.name.slice(1)}s`
-
-    const syncLogs = switchLatest(map(params => {
-      const startBlock = config.startBlock
-        ? config.startBlock > params.seedStoredData.syncedBlock ? config.startBlock : params.seedStoredData.syncedBlock
-        : params.seedStoredData.syncedBlock
-      const history = params.seedStoredData.logHistory
-
-
-
-      const document = gql`{
-      ${graphDocumentIdentifier} ( where: { _change_block: { number_gte: ${startBlock} }, ${objectToGraphql(filter || {})} } ) {
-        ${config.props.map(x => x).join('\n')}
-        __typename
-      }
-}`
-
-
-      const newLogsFilter: Stream<ILogType<TTypeName>[]> = fromPromise(request({
-        document,
-        url: config.subgraph
-      }).then((x: any) => {
-
-        if (!(graphDocumentIdentifier in x)) {
-          throw new Error(`No ${graphDocumentIdentifier} found in subgraph response`)
-        }
-
-        const list: any[] = x[graphDocumentIdentifier]
-        return list.map(obj => parseGqlRespone(eventAbiManifest, obj))
-      }))
-
-      const latestPendingBlock = fromPromise(params.publicClient.getBlock({ blockTag: 'pending' }))
-
-
-      const newHistoricLogs = map((syncParams): IIndexerState<TAbi, TEventName> => {
-        const newLogs = orderEvents(syncParams.newLogsFilter as any) as TReturn[]
-        const latestFinalizedBlockNumber = syncParams.latestPendingBlock.number || 1n
-        const logHistory = [...history, ...newLogs]
-
-        return { ...params.seedStoredData, logHistory, syncedBlock: latestFinalizedBlockNumber - 1n }
-      }, combineObject({ newLogsFilter, latestPendingBlock }))
-
-
-      return newHistoricLogs
-    }, combineObject({ publicClient, seedStoredData })))
-
-
-    return database.replayWriteStoreScope(config.parentStoreScope, genesisSeed, syncLogs)
+  const genesisSeed = {
+    subgraph: config.subgraph,
+    schema,
+    logHistory: [],
+    syncedBlock: 0n,
   }
+
+
+  const currentStoreKey = database.getStoreKey(config.parentStoreScope, genesisSeed)
+  const seedStoredData = database.getStoredSeedData(currentStoreKey, genesisSeed)
+  
+  const syncLogs = switchLatest(map(params => {
+    const startBlock = config.startBlock
+      ? config.startBlock > params.seedStoredData.syncedBlock ? config.startBlock : params.seedStoredData.syncedBlock
+      : params.seedStoredData.syncedBlock
+    const history = params.seedStoredData.logHistory
+    const newLogsFilter = querySubgraph({ ...config, startBlock }, schema, query)
+
+    const latestPendingBlock = fromPromise(params.publicClient.getBlock({ blockTag: 'pending' }))
+
+    const newHistoricLogs = map((syncParams) => {
+      const newLogs = orderEvents(syncParams.newLogsFilter as any) as ISchemaQuery<Type, TQuery>[]
+      const latestFinalizedBlockNumber = syncParams.latestPendingBlock.number || 1n
+      const logHistory = [...history, ...newLogs]
+
+      return { ...params.seedStoredData, logHistory, syncedBlock: latestFinalizedBlockNumber - 1n }
+    }, combineObject({ newLogsFilter, latestPendingBlock }))
+
+
+    return newHistoricLogs
+  }, combineObject({ publicClient, seedStoredData })))
+
+
+  const newLocal = database.replayWriteStoreScope(config.parentStoreScope, genesisSeed, syncLogs)
+  return newLocal
 }
 
 
@@ -346,22 +311,6 @@ export function processSources<
 }
 
 
-function orderEvents<T extends ILogIndexIdentifier>(arr: T[]): T[] {
-  return arr.sort((a, b) => {
-
-    if (a.blockNumber === null || b.blockNumber === null) throw new Error('blockNumber is null')
-
-    const order = a.blockNumber === b.blockNumber // same block?, compare transaction index
-      ? a.transactionIndex === b.transactionIndex //same transaction?, compare log index
-        ? Number(a.logIndex) - Number(b.logIndex)
-        : Number(a.transactionIndex) - Number(b.transactionIndex)
-      : Number(a.blockNumber - b.blockNumber) // compare block number
-
-    return order
-  }
-  )
-}
-
 const CONTRACTS_PER_BLOCK_PRECISION = 10_000n
 const EVENTS_PER_TRANSACTION_PRECISION = 1_000n
 
@@ -394,7 +343,7 @@ function objectToGraphql<T extends object>(obj: T): string {
 }
 
 
-function parseGqlRespone(abiEvent: AbiEvent, obj: any) {
+function parseJsonAbiEvent(abiEvent: AbiEvent, obj: any) {
   const bigIntKeys = [
     'blockNumber', 'transactionIndex', 'logIndex',
     ...abiEvent.inputs.filter(x => x.type === 'uint256' || x.type === 'int256').map(x => x.name)
@@ -403,7 +352,10 @@ function parseGqlRespone(abiEvent: AbiEvent, obj: any) {
   const jsonObj: any = {}
 
   for (const key in obj) {
-    const value = bigIntKeys.includes(key) ? BigInt(obj[key]) : obj[key]
+    const jsonValue = obj[key]
+    const value = bigIntKeys.includes(key)
+      ? getMappedValue(parseTypeFnMap, jsonValue)(jsonValue)
+      : obj[key]
     jsonObj[key] = value
 
   }

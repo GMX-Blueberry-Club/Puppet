@@ -6,7 +6,10 @@ import { map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
 import { $bear, $bull, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
-import { bnDiv, formatReadableUSD, getAveragePrice, getFundingFee, getLiquidationPrice, getMappedValue, getMarginFees, getNextLiquidationPrice, getPnL, getTradeTotalFee, IAbstractPositionStake, ITokenSymbol, ITrade, ITradeSettled, liquidationWeight, streamOf } from "gmx-middleware-utils"
+import { 
+  bnDiv, formatReadableUSD, getFundingFee, getMappedValue, getMarginFees, getNextLiquidationPrice, getPnL,
+  IPosition, IPositionSettled, IPositionSlot, ITokenSymbol, liquidationWeight
+} from "gmx-middleware-utils"
 import { $seperator2 } from "../pages/common"
 
 
@@ -19,7 +22,7 @@ export const $sizeDisplay = (size: bigint, collateral: bigint) => {
   )
 }
 
-export const $entry = (pos: ITrade | ITradeSettled) => {
+export const $entry = (pos: IPosition) => {
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'center', placeContent: 'center', fontSize: '.65em' }))(
     $row(
       $icon({
@@ -30,15 +33,14 @@ export const $entry = (pos: ITrade | ITradeSettled) => {
       }),
       $TokenIcon(getMappedValue(GMX.TOKEN_ADDRESS_TO_SYMBOL, pos.indexToken), { width: '28px' }),
     ),
-    $text(formatReadableUSD(getAveragePrice(pos)))
+    $text(formatReadableUSD(pos.averagePrice))
   )
 }
 
-export const $settledSizeDisplay = (pos: ITradeSettled) => {
-  const liquidationPrice = 'markPrice' in pos.settlement ? pos.settlement.markPrice : getLiquidationPrice(pos.isLong, pos.settlement.collateral, pos.settlement.size, pos.settlement.averagePrice)
+export const $settledSizeDisplay = (pos: IPositionSettled) => {
 
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
-    $text(formatReadableUSD(pos.settlement.size)),
+    $text(formatReadableUSD(pos.maxSize)),
     $seperator2,
     $row(layoutSheet.spacingSmall, style({ fontSize: '.65em', placeContent: 'center' }))(
       $leverage(pos.maxSize, pos.maxCollateral),
@@ -49,7 +51,7 @@ export const $settledSizeDisplay = (pos: ITradeSettled) => {
           viewBox: '0 0 32 32',
           width: '12px'
         }),
-        $text(formatReadableUSD(liquidationPrice)),
+        $text(formatReadableUSD(pos.averagePrice)),
       ),
     )
   )
@@ -73,13 +75,12 @@ export const $TokenIcon = (indexToken: ITokenSymbol, IIcon?: { width?: string })
 }
 
 
-export const $riskLiquidator = (trade: ITrade, markPrice: Stream<bigint>) => {
-  const lastUpdate = trade.updateList[trade.updateList.length - 1]
+export const $riskLiquidator = (pos: IPositionSlot, markPrice: Stream<bigint>) => {
 
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
-    $text(style({ fontSize: '.75em' }))(formatReadableUSD(trade.updateList[trade.updateList.length - 1].collateral)),
-    $liquidationSeparator(trade, markPrice),
-    $text(formatReadableUSD(lastUpdate.size)),
+    $text(style({ fontSize: '.75em' }))(formatReadableUSD(pos.size)),
+    $liquidationSeparator(pos, markPrice),
+    $text(formatReadableUSD(pos.size)),
   )
 }
 
@@ -114,24 +115,22 @@ export const $PnlPercentageValue = (pnl: Stream<bigint> | bigint, collateral: bi
   )
 }
 
-export const $TradePnl = (trade: ITrade, cumulativeFee: Stream<bigint>, positionMarkPrice: Stream<bigint> | bigint, colorful = true) => {
-  const lastUpdate = trade.updateList[trade.updateList.length - 1]
+export const $TradePnl = (pos: IPositionSlot, positionMarkPrice: Stream<bigint> | bigint, colorful = true) => {
 
   const pnl = isStream(positionMarkPrice)
     ? map((markPrice: bigint) => {
-      const delta = getPnL(trade.isLong, lastUpdate.averagePrice, markPrice, lastUpdate.size)
-      return lastUpdate.realisedPnl + delta - getTradeTotalFee(trade)
+      const delta = getPnL(pos.isLong, pos.averagePrice, markPrice, pos.size)
+      return pos.realisedPnl + delta - pos.cumulativeFee
     }, positionMarkPrice)
     : positionMarkPrice
 
   return $PnlValue(pnl, colorful)
 }
 
-export function $liquidationSeparator(trade: ITrade, markPrice: Stream<bigint>) {
-  const lastUpdate = trade.updateList[trade.updateList.length - 1]
+export function $liquidationSeparator(pos: IPositionSlot, markPrice: Stream<bigint>) {
 
-  const liquidationPrice = getNextLiquidationPrice(trade.isLong, lastUpdate.size, lastUpdate.collateral, lastUpdate.averagePrice)
-  const liqWeight = map(price => liquidationWeight(trade.isLong, liquidationPrice, price), markPrice)
+  const liquidationPrice = getNextLiquidationPrice(pos.isLong, pos.size, pos.collateral, pos.averagePrice)
+  const liqWeight = map(price => liquidationWeight(pos.isLong, liquidationPrice, price), markPrice)
 
   return styleInline(map((weight) => {
     return { width: '100%', background: `linear-gradient(90deg, ${pallete.negative} ${`${weight * 100}%`}, ${pallete.foreground} 0)` }
@@ -140,10 +139,8 @@ export function $liquidationSeparator(trade: ITrade, markPrice: Stream<bigint>) 
   )
 }
 
-export const $openPositionPnlBreakdown = (trade: ITrade, cumulativeFee: Stream<bigint>, price: Stream<bigint>) => {
-  const totalMarginFee = [...trade.increaseList, ...trade.decreaseList].reduce((seed, next) => seed + getMarginFees(next.sizeDelta), 0n)
-  const totalFee = [...trade.increaseList, ...trade.decreaseList].reduce((seed, next) => next.fee, 0n)
-  const lastUpdate = trade.updateList[trade.updateList.length - 1]
+export const $openPositionPnlBreakdown = (pos: IPositionSlot, cumulativeFee: Stream<bigint>, price: Stream<bigint>) => {
+  const totalMarginFee = [...pos.link.increaseList, ...pos.link.decreaseList].reduce((seed, next) => seed + getMarginFees(next.sizeDelta), 0n)
 
 
   return $column(layoutSheet.spacing)(
@@ -152,11 +149,11 @@ export const $openPositionPnlBreakdown = (trade: ITrade, cumulativeFee: Stream<b
       $row(layoutSheet.spacingTiny)(
         $text(style({ color: pallete.foreground, flex: 1 }))('Deposit'),
         $text(map(cumFee => {
-          const entryFundingRate = lastUpdate.entryFundingRate
-          const fee = getFundingFee(entryFundingRate, cumFee, lastUpdate.size)
-          const realisedLoss = lastUpdate.realisedPnl < 0n ? -lastUpdate.realisedPnl : 0n
+          const entryFundingRate = pos.entryFundingRate
+          const fee = getFundingFee(entryFundingRate, cumFee, pos.size)
+          const realisedLoss = pos.realisedPnl < 0n ? -pos.realisedPnl : 0n
 
-          return formatReadableUSD(lastUpdate.collateral + fee + realisedLoss + totalMarginFee)
+          return formatReadableUSD(pos.collateral + fee + realisedLoss + totalMarginFee)
         }, cumulativeFee))
       )
     ),
@@ -170,10 +167,10 @@ export const $openPositionPnlBreakdown = (trade: ITrade, cumulativeFee: Stream<b
         $text(style({ color: pallete.foreground, flex: 1 }))('Borrow Fee'),
         $PnlValue(
           map(cumFee => {
-            const entryFundingRate = lastUpdate.entryFundingRate
+            const entryFundingRate = pos.entryFundingRate
             // const historicBorrowingFee = totalFee - trade.fee
 
-            const fee = getFundingFee(entryFundingRate, cumFee, lastUpdate.size) // + historicBorrowingFee
+            const fee = getFundingFee(entryFundingRate, cumFee, pos.size) // + historicBorrowingFee
 
             return -fee
           }, cumulativeFee)
@@ -193,7 +190,7 @@ export const $openPositionPnlBreakdown = (trade: ITrade, cumulativeFee: Stream<b
       // ),
       $row(layoutSheet.spacingTiny)(
         $text(style({ color: pallete.foreground, flex: 1 }))('Realised Pnl'),
-        $PnlValue(now(lastUpdate.realisedPnl))
+        $PnlValue(now(pos.realisedPnl))
       ),
 
     )

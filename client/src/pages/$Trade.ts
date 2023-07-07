@@ -49,13 +49,13 @@ import { wallet } from "../wallet/walletLink"
 export type ITradeComponent = ITradeBoxParams
 
 
-const res = readContract({
-  address: '0x33',
+// const res = readContract({
+//   address: '0x33',
   
-  abi: GMX.abi.vault,
-  functionName: 'positions',
-  args: ['0xA0Cf798816D4b9b9866b5330EEa46a18382f251e'],
-})
+//   abi: GMX.abi.vault,
+//   functionName: 'positions',
+//   args: ['0xA0Cf798816D4b9b9866b5330EEa46a18382f251e'],
+// })
 
 
 // type RequestTrade = {

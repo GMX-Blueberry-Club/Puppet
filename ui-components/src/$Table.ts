@@ -2,7 +2,7 @@ import { Behavior, combineObject, O, Op } from "@aelea/core"
 import { $Node, $svg, attr, component, INode, NodeComposeFn, nodeEvent, style } from '@aelea/dom'
 import { $column, $icon, $row, designSheet, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { constant, empty, map, never, now, snapshot, switchLatest } from "@most/core"
+import { constant, empty, map, never, now, recoverWith, snapshot, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { $QuantumScroll, IScrollPagable, QuantumScroll, ScrollRequest } from "./$QuantumScroll.js"
 
