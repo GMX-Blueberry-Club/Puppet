@@ -6,19 +6,6 @@ export const getUniqueEventId = (ev: ethereum.Event): Bytes => {
   return ev.transaction.hash.concatI32(ev.logIndex.toI32())
 }
 
-
-const CONTRACTS_PER_BLOCK = BigInt.fromI32(100_000)
-const EVENTS_PER_TRANSACTION = BigInt.fromI32(10_000)
-
-export function getEventOrderIdentifier(event: ethereum.Event): string {
-  const blockMult = event.block.number.times(CONTRACTS_PER_BLOCK).times(EVENTS_PER_TRANSACTION)
-  const transactionMult = event.transaction.index.times(EVENTS_PER_TRANSACTION)
-
-  const eventOrderIdentifier = blockMult.plus(transactionMult).plus(event.logIndex)
-  return eventOrderIdentifier.toString()
-}
-
-
 export const getPositionKey = (collateralToken: Bytes, indexToken: Bytes, isLong: boolean): Bytes =>
   collateralToken.concat(indexToken).concatI32(isLong ? 1 : 0)
 

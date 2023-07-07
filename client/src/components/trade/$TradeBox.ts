@@ -30,10 +30,10 @@ import {
   $spinner, $tokenIconMap, $tokenLabelFromSummary
 } from "gmx-middleware-ui-components"
 import {
-  abs, bnDiv, div, filterNull, formatFixed, formatReadableUSD, formatBps, getAdjustedDelta, getDenominator,
+  abs, bnDiv, div, filterNull, formatFixed, readableFixedUSD30, formatBps, getAdjustedDelta, getDenominator,
   getNativeTokenDescription, getPnL, getTokenAmount, getTokenDescription, getTokenUsd,
   IPricefeed, ITokenDescription,
-  parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, zipState, readablePercentage, readableUnitAmount, IPositionSlot
+  parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, zipState, readableFixed10kBsp, readableUnitAmount, IPositionSlot
 } from "gmx-middleware-utils"
 import { MouseEventParams } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
@@ -51,7 +51,7 @@ import { account, IWalletClient } from "../../wallet/walletLink"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultButtonPrimary, $defaultMiniButtonSecondary } from "../form/$Button"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown"
 import { $TradePnlHistory } from "./$TradePnlHistory"
-import { $entry, $openPositionPnlBreakdown, $PnlValue, $riskLiquidator } from "../../common/$common"
+import { $entry, $openPositionPnlBreakdown, $pnlValue, $riskLiquidator } from "../../common/$common"
 
 
 
@@ -218,7 +218,7 @@ export const $TradeBox = (config: ITradeBox) => component((
 
     if (state.isIncrease) {
       if (state.sizeDeltaUsd > state.availableIndexLiquidityUsd) {
-        return `Not enough liquidity. current capcity ${formatReadableUSD(state.availableIndexLiquidityUsd)}`
+        return `Not enough liquidity. current capcity ${readableFixedUSD30(state.availableIndexLiquidityUsd)}`
       }
 
       if (state.isIncrease ? state.collateralDelta > state.walletBalance : state.collateralDeltaUsd > state.walletBalanceUsd) {
@@ -636,11 +636,11 @@ export const $TradeBox = (config: ITradeBox) => component((
                 const totalCollateral = posCollateral + state.collateralDeltaUsd - state.swapFee - state.marginFee
 
                 if (state.isIncrease) {
-                  return formatReadableUSD(totalCollateral)
+                  return readableFixedUSD30(totalCollateral)
                 }
 
                 if (state.position.averagePrice === 0n) {
-                  return formatReadableUSD(0n)
+                  return readableFixedUSD30(0n)
                 }
 
                 const pnl = getPnL(state.isLong, state.position.averagePrice, state.indexTokenPrice, state.position.size)
@@ -655,11 +655,11 @@ export const $TradeBox = (config: ITradeBox) => component((
 
                 const netCollateral = totalCollateral + adjustedPnlDelta
 
-                return formatReadableUSD(netCollateral)
+                return readableFixedUSD30(netCollateral)
               }, combineObject({ sizeDeltaUsd, position, indexTokenPrice, isIncrease, collateralDeltaUsd, swapFee, marginFee, isLong, fundingFee })),
               isIncrease: config.tradeConfig.isIncrease,
               tooltip: 'The amount deposited to maintain a leverage position',
-              val: combineArray((pos, fundingFee) => formatReadableUSD(pos.collateral - fundingFee), config.tradeState.position, config.tradeState.fundingFee),
+              val: combineArray((pos, fundingFee) => readableFixedUSD30(pos.collateral - fundingFee), config.tradeState.position, config.tradeState.fundingFee),
             }),
           ),
           $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
@@ -729,7 +729,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                       $column(style({ alignItems: 'flex-end' }))(
                         $text(style({ whiteSpace: 'nowrap' }))(map(bn => readableUnitAmount(formatFixed(bn, tokenDesc.decimals)) + ` ${tokenDesc.symbol}`, balanceAmount)),
                         $text(style({}))(combineArray((bn, price) => {
-                          return formatReadableUSD(getTokenUsd(bn, price, tokenDesc.decimals))
+                          return readableFixedUSD30(getTokenUsd(bn, price, tokenDesc.decimals))
                         }, balanceAmount, price)),
                       )
                     )
@@ -1002,9 +1002,9 @@ export const $TradeBox = (config: ITradeBox) => component((
                     $tokenLabelFromSummary(tokenDesc),
 
                     $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end', placeContent: 'center' }))(
-                      $text(map(amountUsd => formatReadableUSD(amountUsd), liquidity)),
+                      $text(map(amountUsd => readableFixedUSD30(amountUsd), liquidity)),
                       $row(style({ whiteSpace: 'pre' }))(
-                        $text(map(info => readablePercentage(formatBps(info.rate)), poolInfo)),
+                        $text(map(info => readableFixed10kBsp(formatBps(info.rate)), poolInfo)),
                         $text(style({ color: pallete.foreground }))(' / hr')
                       ),
                     )
@@ -1113,9 +1113,9 @@ export const $TradeBox = (config: ITradeBox) => component((
                           $tokenLabelFromSummary(tokenDesc),
 
                           $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end', placeContent: 'center' }))(
-                            $text(map(amountUsd => formatReadableUSD(amountUsd), liquidity)),
+                            $text(map(amountUsd => readableFixedUSD30(amountUsd), liquidity)),
                             $row(style({ whiteSpace: 'pre' }))(
-                              $text(map(info => readablePercentage(formatBps(info.rate)), poolInfo)),
+                              $text(map(info => readableFixed10kBsp(formatBps(info.rate)), poolInfo)),
                               $text(style({ color: pallete.foreground }))(' / hr')
                             ),
                           )
@@ -1136,14 +1136,14 @@ export const $TradeBox = (config: ITradeBox) => component((
               change: map((params) => {
                 const totalSize = params.sizeDeltaUsd + (params.position.size)
 
-                return formatReadableUSD(totalSize)
+                return readableFixedUSD30(totalSize)
               }, combineObject({ sizeDeltaUsd, position })),
               isIncrease: config.tradeConfig.isIncrease,
               tooltip: $column(layoutSheet.spacingSmall)(
                 $text('Size amplified by deposited Collateral and Leverage chosen'),
                 $text('Higher Leverage increases Liquidation Risk'),
               ),
-              val: map(pos => formatReadableUSD(pos ? pos.size : 0n), config.tradeState.position)
+              val: map(pos => readableFixedUSD30(pos ? pos.size : 0n), config.tradeState.position)
             }),
           ),
         ),
@@ -1234,13 +1234,13 @@ export const $TradeBox = (config: ITradeBox) => component((
                           return $column(
                             depositTokenNorm !== outputToken ? $row(layoutSheet.spacingTiny)(
                               $text(style({ color: pallete.foreground }))('Swap'),
-                              $text(style({ color: pallete.indeterminate }))(formatReadableUSD(params.swapFee))
+                              $text(style({ color: pallete.indeterminate }))(readableFixedUSD30(params.swapFee))
                             ) : empty(),
-                            $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate }))(formatReadableUSD(params.marginFee))),
+                            $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate }))(readableFixedUSD30(params.marginFee))),
                             $infoLabeledValue(
                               'Borrow Fee',
                               $row(layoutSheet.spacingTiny)(
-                                $text(style({ color: pallete.indeterminate }))(formatReadableUSD(nextSize) + ' '),
+                                $text(style({ color: pallete.indeterminate }))(readableFixedUSD30(nextSize) + ' '),
                                 $text(` / 1hr`)
                               )
                             )
@@ -1250,7 +1250,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                       ),
                       'Fees'
                     ),
-                    $text(style({ color: pallete.indeterminate }))(map(params => formatReadableUSD(params.marginFee + params.swapFee), combineObject({ swapFee, marginFee }))),
+                    $text(style({ color: pallete.indeterminate }))(map(params => readableFixedUSD30(params.marginFee + params.swapFee), combineObject({ swapFee, marginFee }))),
                   ),
                   switchLatest(map(isIncrease => {
 
@@ -1262,7 +1262,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                             $text('Payback accumulates every time you trade and is distributed once every week back to your account in ETH or AVAX.'),
                             $row(layoutSheet.spacingTiny)(
                               $text(style({ color: pallete.foreground }))('Open + Close Payback'),
-                              $text(style({ color: pallete.positive }))(map(params => formatReadableUSD(params.marginFee * 2000n / GMX.BASIS_POINTS_DIVISOR), combineObject({ marginFee })))
+                              $text(style({ color: pallete.positive }))(map(params => readableFixedUSD30(params.marginFee * 2000n / GMX.BASIS_POINTS_DIVISOR), combineObject({ marginFee })))
                             ),
                             $text(style({ color: pallete.positive }))('Trading Competition'),
                             $node(
@@ -1271,12 +1271,12 @@ export const $TradeBox = (config: ITradeBox) => component((
                             ),
                             $row(layoutSheet.spacingTiny)(
                               $text(style({ color: pallete.foreground }))('Your added contribution'),
-                              $text(style({ color: pallete.positive }))(map(params => formatReadableUSD(params.marginFee * 2500n / GMX.BASIS_POINTS_DIVISOR), combineObject({ marginFee })))
+                              $text(style({ color: pallete.positive }))(map(params => readableFixedUSD30(params.marginFee * 2500n / GMX.BASIS_POINTS_DIVISOR), combineObject({ marginFee })))
                             ),
                           ),
                           'Payback'
                         ),
-                        $text(style({ color: pallete.positive }))(map(params => formatReadableUSD(params.marginFee * 1000n / GMX.BASIS_POINTS_DIVISOR), combineObject({ marginFee })))
+                        $text(style({ color: pallete.positive }))(map(params => readableFixedUSD30(params.marginFee * 1000n / GMX.BASIS_POINTS_DIVISOR), combineObject({ marginFee })))
                       )
                     }
 
@@ -1305,7 +1305,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                         const totalOut = total > 0n ? total : 0n
                         const tokenAmount = getTokenAmount(totalOut, params.inputTokenPrice, params.inputTokenDescription.decimals)
 
-                        return `${readableUnitAmount(formatFixed(tokenAmount, params.inputTokenDescription.decimals))} ${params.inputTokenDescription.symbol} (${formatReadableUSD(totalOut)})`
+                        return `${readableUnitAmount(formatFixed(tokenAmount, params.inputTokenDescription.decimals))} ${params.inputTokenDescription.symbol} (${readableFixedUSD30(totalOut)})`
                       }, combineObject({ sizeDeltaUsd, position, collateralDeltaUsd, inputTokenDescription, inputTokenPrice, marginFee, swapFee, indexTokenPrice, isLong, fundingFee })))
                     )
                   }, config.tradeConfig.isIncrease))
@@ -1480,7 +1480,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                         $infoLabeledValue(
                           'Borrow Fee',
                           $row(layoutSheet.spacingTiny)(
-                            $text(style({ color: pallete.indeterminate }))(formatReadableUSD(nextSize) + ' '),
+                            $text(style({ color: pallete.indeterminate }))(readableFixedUSD30(nextSize) + ' '),
                             $text(` / 1hr`)
                           )
                         ),
@@ -1568,7 +1568,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                           $riskLiquidator(pos, positionMarkPrice),
                           $infoTooltipLabel(
                             $openPositionPnlBreakdown(pos, cumulativeFee, positionMarkPrice),
-                            $PnlValue(pnl)
+                            $pnlValue(pnl)
                           ),
                         )
                       }, position))

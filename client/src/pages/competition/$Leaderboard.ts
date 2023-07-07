@@ -1,17 +1,21 @@
 import { Behavior, O } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { map, now, recoverWith } from "@most/core"
-import { $Link } from "gmx-middleware-ui-components"
-import { IPositionLink, IPositionSettled, toAccountSummaryList } from "gmx-middleware-utils"
+import { map, now, recoverWith, switchLatest } from "@most/core"
+import { $Baseline, $ButtonToggle, $Link } from "gmx-middleware-ui-components"
+import { IAccountSummary, IPositionLink, IPositionSettled, div, formatFixed, intervalListFillOrderMap, pagingQuery, readableFixed10kBsp, readableFixedUSD30, readableUSD, toAccountSummaryList } from "gmx-middleware-utils"
 import { IProfileActiveTab } from "../$Profile"
 import { $defaultProfileContainer } from "../../common/$avatar"
 import { $accountPreview } from "../../components/$AccountProfile"
 import { $CardTable } from "../../components/$common"
 import { rootStoreScope } from "../../data"
-import { replaySubgraphQuery } from "../../logic/indexer"
-import { ISchema } from "../../logic/querySubgraph"
+import { replaySubgraphQuery } from "../../indexer/indexer"
+import { ISchema } from "../../indexer/subgraph"
 import { ICompetitonCumulativeRoi } from "./$CumulativePnl"
+import { $pnlValue, $sizeDisplay } from "../../common/$common"
+import { $seperator2 } from "../common"
+import { BaselineData, Time } from "lightweight-charts"
+import { processSources } from "../../indexer/processor"
 
 
 
@@ -110,35 +114,50 @@ const schemaPositionSettled: ISchema<IPositionSettled> = {
 }
 
 
-function fullQuery(obj: any){
+function fillQuery(obj: any){
   return Object.keys(obj).reduce((acc, key) => {
     const value = obj[key]
-    acc[key] = value instanceof Object ? fullQuery(value) : null
+    acc[key] = value instanceof Object ? fillQuery(value) : null
     return acc
   }, {} as any)
 }
 
-const newLocal: IPositionSettled = {
-  ...fullQuery(schemaPositionSettled)
+const processSeed: IPositionSettled = {
+  ...fillQuery(schemaPositionSettled)
 }
 
 const gmxTradingSubgraph = replaySubgraphQuery(
   {
-    subgraph: `https://api.studio.thegraph.com/query/112/gmx-house/v0.0.10`,
+    subgraph: `https://gateway-arbitrum.network.thegraph.com/api/${import.meta.env.THE_GRAPH}/subgraphs/id/DJ4SBqiG8A8ytcsNJSuUU2gDTLFXxxPrAN8Aags84JH2`,
     parentStoreScope: rootStoreScope,
   },
   schemaPositionSettled,
-  newLocal
+  processSeed
 )
 
 
+const newLocal = {
+  summaryList: [] as IAccountSummary[]
+}
+
+const data = processSources(
+  rootStoreScope,
+  processSeed,
+  {
+    source: gmxTradingSubgraph,
+    step(seed, value) {
+
+
+      return seed
+    },
+  },
+)
 
 
 const datass = map(trades => {
+  const summaryList = toAccountSummaryList(trades.logHistory)
 
-
-  const newLocal = toAccountSummaryList(trades.logHistory)
-  return newLocal
+  return pagingQuery({ offset: 0, pageSize: 20, selector: 'pnl', direction: "desc" }, summaryList)
 }, gmxTradingSubgraph)
 
 
@@ -164,7 +183,54 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
 
   return [
-    $column(
+    $column(layoutSheet.spacingBig)(
+
+      $column(style({ alignItems: 'center' }))(
+        $ButtonToggle({
+          options: ['Settled', 'Open', 'Competition'],
+          selected: now('Settled'),
+          $$option: map(option => $text(option)),
+        })({
+
+        })
+      ),
+
+      switchLatest(
+        map(list => {
+
+          const fst = list.logHistory[0]
+          const lst = list.logHistory[list.logHistory.length - 1]
+
+          const initialTick = {
+            time: Number(fst.blockTimestamp),
+            value: 0
+          }
+
+          
+
+          const timeRange = Number(lst.blockTimestamp - fst.blockTimestamp)
+
+          const data = intervalListFillOrderMap({
+            source: list.logHistory,
+            // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
+            interval: timeRange / 100,
+            seed: initialTick,
+            getTime: x => Number(x.blockTimestamp),
+            fillMap: (prev, next) => {
+
+              const time = Number(next.blockTimestamp)
+              const value = prev.value + formatFixed(next.realisedPnl, 30)
+      
+              return { time, value }
+            }
+          })
+ 
+          
+          return $Baseline({
+            data: data,
+          })({})
+        }, gmxTradingSubgraph)
+      ),
       containerStyle(
         $CardTable({
           dataSource: datass,
@@ -244,31 +310,39 @@ export const $Leaderboard = (config: ILeaderboard) => component((
               })
             },
 
-            // {
-            //   $head: $column(style({ textAlign: 'right' }))(
-            //     $text(style({ fontSize: '.75em' }))('Cum. Collateral'),
-            //     $text('Cum. Size'),
-            //   ),
-            //   sortBy: 'pnl',
-            //   columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
-            //   $$body: map((pos) => {
-            //     const val = readableUSD(pos.cumSize, false)
+            {
+              $head: $column(style({ textAlign: 'right' }))(
+                $text('Cum. Size $'),
+                $text(style({ fontSize: '.75em' }))('Avg. Leverage'),
+              ),
+              sortBy: 'pnl',
+              columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
+              $$body: map((pos) => {
+                return $sizeDisplay(pos.size, pos.collateral)
+              })
+            },
+            {
+              $head: $column(style({ textAlign: 'right' }))(
+                $text('PnL $'),
+                $text(style({ fontSize: '.75em' }))('Return %'),
+              ),
+              sortBy: 'pnl',
+              columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
+              $$body: map((pos) => {
 
-            //     return $column(style({ gap: '3px', textAlign: 'right' }))(
-            //       $text(style({ fontSize: '.75em' }))(readableUSD(pos.cumCollateral, false)),
-            //       $seperator2,
-            //       $text(
-            //         val
-            //       ),
-            //     )
-            //   })
-            // },
+                return $column(style({ gap: '3px', textAlign: 'right' }))(
+                  $pnlValue(pos.pnl),
+                  $seperator2,
+                  $text(style({ fontSize: '.75em' }))(readableFixed10kBsp(div(pos.pnl, pos.collateral))),
+                )
+              })
+            },
             // {
             //   $head: $column(style({ textAlign: 'right' }))(
-            //     $text(style({ fontSize: '.75em' }))(currentMetricLabel),
-            //     $text('Prize'),
+            //     // $text(style({ fontSize: '.75em' }))(currentMetricLabel),
+            //     $text('PnL $'),
             //   ),
-            //   sortBy: 'score',
+            //   // sortBy: 'score',
             //   columnOp: style({ minWidth: '90px', alignItems: 'center', placeContent: 'flex-end' }),
             //   $$body: map(pos => {
             //     const metricVal = pos.score
@@ -276,15 +350,15 @@ export const $Leaderboard = (config: ILeaderboard) => component((
             //     const newLocal = readableNumber(formatToBasis(metricVal) * 100)
             //     const pnl = currentMetric === 'pnl' ? readableUSD(metricVal, false) : `${Number(newLocal)} %`
 
-          //     return $column(layoutSheet.spacingTiny, style({ gap: '3px', textAlign: 'right' }))(
-          //       $text(style({ fontSize: '.75em' }))(pnl),
-          //       $seperator2,
-          //       pos.prize > 0n
-          //         ? $text(style({ color: pallete.positive }))(readableUSD(pos.prize, false))
-          //         : empty(),
-          //     )
-          //   }),
-          // }
+            //     return $column(layoutSheet.spacingTiny, style({ gap: '3px', textAlign: 'right' }))(
+            //       $text(style({ fontSize: '.75em' }))(pnl),
+            //       $seperator2,
+            //       pos.prize > 0n
+            //         ? $text(style({ color: pallete.positive }))(readableUSD(pos.prize, false))
+            //         : empty(),
+            //     )
+            //   }),
+            // }
           ],
         })({
         // sortBy: sortByChangeTether(),

@@ -2,13 +2,12 @@ import { combineObject } from "@aelea/core"
 import { fromPromise, map, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { AbiEvent } from "abitype"
-import { ILogEvent, ILogIndexIdentifier, ILogType, getMappedValue, orderEvents, switchMap } from "gmx-middleware-utils"
+import { ILogEvent, ILogSubgraphType, ILogType, getMappedValue, orderEvents } from "gmx-middleware-utils"
 import { gql, request } from 'graphql-request'
 import * as viem from "viem"
+import * as database from "../logic/browserDatabaseScope"
 import { publicClient } from "../wallet/walletLink"
-import * as database from "./browserDatabaseScope"
-import { IQuerySubgraphConfig, ISchema, ISchemaQuery, PrettifyReturn, parseTypeFnMap, querySubgraph } from "./querySubgraph"
-import { zipArray } from "./utils"
+import { IQuerySubgraphConfig, ISchema, ISchemaQuery, PrettifyReturn, parseTypeFnMap, querySubgraph } from "./subgraph"
 
 type MaybeExtractEventArgsFromAbi<
   TAbi extends viem.Abi,
@@ -163,11 +162,11 @@ export interface IReplaySubgraphQueryState<Type extends ILogType<any>, TQuery> {
 }
 
 
-export const replaySubgraphQuery = <Type extends ILogType<any>, TQuery>(
+export const replaySubgraphQuery = <Type extends ILogSubgraphType<any>, TQuery>(
   config: IReplaySubgraphConfig,
   schema: ISchema<Type>,
   query: TQuery
-): database.IStoreScope<IReplaySubgraphQueryState<Type, TQuery>> => {
+): database.IStoreScope<Type[]> => {
 
   const genesisSeed = {
     subgraph: config.subgraph,
@@ -207,118 +206,6 @@ export const replaySubgraphQuery = <Type extends ILogType<any>, TQuery>(
 }
 
 
-
-export interface IProcessConfig<
-  TReturn,
-  TAbi extends viem.Abi,
-  TEventName extends string,
-  TEvent extends ILogEvent<TAbi, TEventName>,
-> {
-  source: database.IStoreScope<IIndexerState<TAbi, TEventName>>
-  step: (seed: TReturn, value: TEvent) => TReturn
-}
-
-interface IProcessStep<T> {
-  data: T
-  indexedCountMap: Record<string, number>
-}
-
-export function processSources<
-  TReturn,
-
-  TAbi1 extends viem.Abi,
-  TEventName1 extends string,
-  TEvent1 extends ILogEvent<TAbi1, TEventName1>,
-
-  TAbi2 extends viem.Abi,
-  TEventName2 extends string,
-  TEvent2 extends ILogEvent<TAbi2, TEventName2>,
-
-  TAbi3 extends viem.Abi,
-  TEventName3 extends string,
-  TEvent3 extends ILogEvent<TAbi3, TEventName3>,
-
-  TAbi4 extends viem.Abi,
-  TEventName4 extends string,
-  TEvent4 extends ILogEvent<TAbi4, TEventName4>,
-
-  TAbi5 extends viem.Abi,
-  TEventName5 extends string,
-  TEvent5 extends ILogEvent<TAbi5, TEventName5>,
->(
-  parentStoreScope: database.IStoreScope<any>,
-  scopeState: TReturn,
-  // the rest is used for type inference
-  process1: IProcessConfig<TReturn, TAbi1, TEventName1, TEvent1>,
-  process2?: IProcessConfig<TReturn, TAbi2, TEventName2, TEvent2>,
-  process3?: IProcessConfig<TReturn, TAbi3, TEventName3, TEvent3>,
-  process4?: IProcessConfig<TReturn, TAbi4, TEventName4, TEvent4>,
-  process5?: IProcessConfig<TReturn, TAbi5, TEventName5, TEvent5>,
-): Stream<TReturn> {
-
-
-  // eslint-disable-next-line prefer-rest-params
-  const processList: IProcessConfig<TReturn, any, any, any>[] = [...arguments].slice(2)
-  const sourceEventList = processList.map(x => x.source as database.IStoreScope<IIndexerState<viem.Abi, string>>)
-
-  const storeScopeSeed = sourceEventList.reduce((seed, next) => {
-    seed.indexedCountMap[next.key] = 0
-    return seed
-  }, { indexedCountMap: {}, data: scopeState } as IProcessStep<TReturn>)
-
-  const currentStoreKey = database.getStoreKey(parentStoreScope, storeScopeSeed)
-  const seedStoredData = database.getStoredSeedData(currentStoreKey, storeScopeSeed)
-
-  const processWriteSources = switchMap(storeState => {
-    const nextSeed = storeState
-    const stepState = zipArray((...nextLogEvents) => {
-
-      const nextEvents = nextLogEvents.flatMap((state, processIdx) => {
-        const processKey = processList[processIdx].source.key
-        const totalLogCount = state.logHistory.length
-        const deltaStoreCount = state.logHistory.length - nextSeed.indexedCountMap[processKey]
-
-        nextSeed.indexedCountMap[processKey] = totalLogCount
-
-        return deltaStoreCount
-          ? state.logHistory.slice(-deltaStoreCount)
-          : []
-      })
-      const orderedNextEvents = orderEvents(nextEvents)
-
-      for (let index = 0; index < orderedNextEvents.length; index++) {
-        const sourceConfig = orderedNextEvents[index]
-
-        for (let processIdx = 0; processIdx < processList.length; processIdx++) {
-          const processState = nextLogEvents[processIdx]
-
-          if (processState.logHistory.includes(sourceConfig)) {
-            const processSrc = processList[processIdx]
-            nextSeed.data = processSrc.step(nextSeed.data, sourceConfig)
-          }
-        }
-      }
-
-      return nextSeed
-    }, ...sourceEventList)
-
-    return stepState
-  }, seedStoredData)
-
-  const store = database.writeStoreData(currentStoreKey, processWriteSources)
-
-  return map(s => s.data, store)
-}
-
-
-const CONTRACTS_PER_BLOCK_PRECISION = 10_000n
-const EVENTS_PER_TRANSACTION_PRECISION = 1_000n
-
-export function getEventOrderIdentifier<T extends ILogIndexIdentifier>(logMetric: T): bigint {
-  const paddedBlockNumber = logMetric.blockNumber * CONTRACTS_PER_BLOCK_PRECISION
-  const paddedTxIndex = BigInt(logMetric.transactionIndex) * EVENTS_PER_TRANSACTION_PRECISION
-  return paddedBlockNumber + paddedTxIndex + BigInt(logMetric.logIndex)
-}
 
 
 function objectToGraphql<T extends object>(obj: T): string {

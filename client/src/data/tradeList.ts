@@ -1,11 +1,12 @@
 import * as GMX from "gmx-middleware-const"
 import * as viem from "viem"
 import { rootStoreScope } from "../data"
-import { processSources, replaySubgraphEvent } from "../logic/indexer"
+import { replaySubgraphEvent } from "../indexer/indexer"
 import { IPositionSettled, IPositionSlot } from "gmx-middleware-utils"
+import { processSources } from "../indexer/processor"
 
 
-const subgraph = `https://api.studio.thegraph.com/query/112/gmx-house/v0.0.10`
+const subgraph = `https://gateway-arbitrum.network.thegraph.com/api/${import.meta.env.THE_GRAPH}/subgraphs/id/DJ4SBqiG8A8ytcsNJSuUU2gDTLFXxxPrAN8Aags84JH2`
 
 const replayConfig = {
   ...GMX.CONTRACT[42161].Vault,

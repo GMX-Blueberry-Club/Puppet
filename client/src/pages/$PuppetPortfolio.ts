@@ -6,7 +6,7 @@ import { map, mergeArray, now } from "@most/core"
 import { CHAIN } from "gmx-middleware-const"
 import { $infoTooltipLabel } from "gmx-middleware-ui-components"
 import { IRequestAccountTradeListApi, readableDate, timeSince, unixTimestampNow } from "gmx-middleware-utils"
-import { $PnlValue, $TradePnl, $entry, $openPositionPnlBreakdown, $riskLiquidator, $settledSizeDisplay } from "../common/$common"
+import { $pnlValue, $TradePnl, $entry, $openPositionPnlBreakdown, $riskLiquidator, $settledSizeDisplay } from "../common/$common"
 import { $discoverIdentityDisplay } from "../components/$AccountProfile"
 import { $CardTable } from "../components/$common"
 import { getTraderData } from "../data/tradeList"
@@ -323,7 +323,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
                   $head: $text('PnL'),
                   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
                   $$body: map((pos) => {
-                    return $PnlValue(pos.settlement.realisedPnl - pos.cumulativeFee)
+                    return $pnlValue(pos.settlement.realisedPnl - pos.cumulativeFee)
                   })
                 },
               ],

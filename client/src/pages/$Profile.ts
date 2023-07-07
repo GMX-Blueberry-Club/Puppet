@@ -8,11 +8,11 @@ import {
   IRequestAccountTradeListApi,
   gmxSubgraph,
   readableDate,
-  formatReadableUSD, timeSince,
+  readableFixedUSD30, timeSince,
   unixTimestampNow
 } from "gmx-middleware-utils"
 import { Address } from "viem"
-import { $PnlValue, $TradePnl, $entry, $openPositionPnlBreakdown, $riskLiquidator, $sizeDisplay } from "../common/$common"
+import { $pnlValue, $TradePnl, $entry, $openPositionPnlBreakdown, $riskLiquidator, $sizeDisplay } from "../common/$common"
 import { $CardTable } from "../components/$common"
 import { $card } from "../elements/$common"
 import * as tradeReader from "../logic/trade"
@@ -92,7 +92,7 @@ export const $Profile = (config: IProfile) => component((
 
                     return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
                       $text(timeSince(timestamp) + ' ago'),
-                      $text(formatReadableUSD(timestamp)),
+                      $text(readableFixedUSD30(timestamp)),
                     )
                   })
                 },
@@ -170,7 +170,7 @@ export const $Profile = (config: IProfile) => component((
                   $head: $text('PnL'),
                   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
                   $$body: map((pos) => {
-                    return $PnlValue(pos.realisedPnl - pos.fee)
+                    return $pnlValue(pos.realisedPnl - pos.fee)
                   })
                 },
               ],

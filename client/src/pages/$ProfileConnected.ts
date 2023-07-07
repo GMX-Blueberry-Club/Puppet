@@ -6,7 +6,7 @@ import { $column, layoutSheet } from "@aelea/ui-components"
 import { awaitPromises, map, mergeArray, now, zip } from "@most/core"
 import { CHAIN } from "gmx-middleware-const"
 import { $ButtonToggle, $defaulButtonToggleContainer, $infoTooltipLabel  } from "gmx-middleware-ui-components"
-import { IRequestAccountTradeListApi, TradeStatus, filterNull, gmxSubgraph, readableDate, formatReadableUSD, timeSince, unixTimestampNow } from "gmx-middleware-utils"
+import { IRequestAccountTradeListApi, TradeStatus, filterNull, gmxSubgraph, readableDate, readableFixedUSD30, timeSince, unixTimestampNow } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { $CardTable } from "../components/$common"
 import { $responsiveFlex } from "../elements/$common"
@@ -17,7 +17,7 @@ import { IProfileActiveTab } from "./$Profile"
 
 import { JSProcessor, fromJSProcessor } from "ethereum-indexer-js-processor"
 import { createIndexerState, keepStateOnIndexedDB } from "gmx-middleware-browser-indexer"
-import { $entry, $riskLiquidator, $openPositionPnlBreakdown, $TradePnl, $sizeDisplay, $PnlValue } from "../common/$common"
+import { $entry, $riskLiquidator, $openPositionPnlBreakdown, $TradePnl, $sizeDisplay, $pnlValue } from "../common/$common"
 
 
 // we need the contract info
@@ -223,7 +223,7 @@ export const $ProfileConnected = (config: IAccount) => component((
 
                     return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
                       $text(timeSince(timestamp) + ' ago'),
-                      $text(formatReadableUSD(timestamp)),
+                      $text(readableFixedUSD30(timestamp)),
                     )
                   })
                 },
@@ -248,7 +248,7 @@ export const $ProfileConnected = (config: IAccount) => component((
                   $head: $text('PnL'),
                   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
                   $$body: map((pos) => {
-                    return $PnlValue(pos.realisedPnl - pos.fee)
+                    return $pnlValue(pos.realisedPnl - pos.fee)
                   })
                 },
               ],

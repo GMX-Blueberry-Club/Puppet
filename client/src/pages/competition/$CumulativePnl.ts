@@ -4,7 +4,7 @@ import { Route } from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { colorAlpha, pallete } from '@aelea/ui-components-theme'
 import { BLUEBERRY_REFFERAL_CODE, COMPETITION_METRIC_LIST, IBlueberryLadder, IRequestCompetitionLadderApi, TOURNAMENT_DURATION, TOURNAMENT_NEXT, TOURNAMENT_START, TOURNAMENT_TIME_ELAPSED, blueberrySubgraph } from '@gambitdao/gbc-middleware'
-import { formatReadableUSD, invertColor, readablePercentage, formatBps } from "gmx-middleware-utils"
+import { readableFixedUSD30, invertColor, readableFixed10kBsp, formatBps } from "gmx-middleware-utils"
 import { $Link, $anchor, $infoLabeledValue, $infoTooltipLabel, ISortBy,  } from "gmx-middleware-ui-components"
 import { awaitPromises, empty, map, mergeArray, now, snapshot } from '@most/core'
 import { Stream } from '@most/types'
@@ -100,7 +100,7 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
                 $text(style({ fontSize: '.75em', fontStyle: 'italic' }))(`Prize = Prize Pool * ${currentMetricLabel} of participant / sum ${currentMetricLabel} of all winners`),
                 currentMetric === COMPETITION_METRIC_LIST[1]
                   ? $text(style({ fontSize: '.75em', fontStyle: 'italic' }))(map(res => {
-                    return `ROI = (Total PnL / Max Collateral [Min ${formatReadableUSD(res.averageMaxCollateral)}]) * 100`
+                    return `ROI = (Total PnL / Max Collateral [Min ${readableFixedUSD30(res.averageMaxCollateral)}]) * 100`
                   }, competitionLeaderboard))
                   : empty(),
                 currentMetric === COMPETITION_METRIC_LIST[1]
@@ -108,7 +108,7 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
                   : empty(),
                 currentMetric === COMPETITION_METRIC_LIST[1]
                   ? $text(style({ fontSize: '.75em', fontStyle: 'italic' }))(map(res => {
-                    return `The Minimum Max Collateral is the average for all winners, currently ${formatReadableUSD(res.averageMaxCollateral)}. Winners prizes are always calculated using a Max Collateral above the minimum.`
+                    return `The Minimum Max Collateral is the average for all winners, currently ${readableFixedUSD30(res.averageMaxCollateral)}. Winners prizes are always calculated using a Max Collateral above the minimum.`
                   }, competitionLeaderboard))
                   : empty(),
 
@@ -194,13 +194,13 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
                   $infoLabeledValue(
                     'Current Traded Volume',
                     $text(style({ color: pallete.positive }))(map(res => {
-                      return formatReadableUSD(res.size)
+                      return readableFixedUSD30(res.size)
                     }, competitionLeaderboard))
                   )
                 )
               ), 'Traded Volume'),
               $text(map(res => {
-                return '~' + formatReadableUSD(res.estSize)
+                return '~' + readableFixedUSD30(res.estSize)
               }, competitionLeaderboard))
             ),
           ),
@@ -214,7 +214,7 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
                   $infoLabeledValue(
                     'Current Prize Pool',
                     $text(style({ color: pallete.positive }))(map(res => {
-                      return formatReadableUSD(res.prizePool)
+                      return readableFixedUSD30(res.prizePool)
                     }, competitionLeaderboard))
                   ),
 
@@ -237,7 +237,7 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
               color: pallete.positive,
               fontSize: '1.65em',
               textShadow: `${pallete.positive} 1px 1px 15px`
-            }))(map(params => '~' + formatReadableUSD(params.estPrizePool), competitionLeaderboard))
+            }))(map(params => '~' + readableFixedUSD30(params.estPrizePool), competitionLeaderboard))
           ),
         ),
 
@@ -332,10 +332,10 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
                 sortBy: 'pnl',
                 columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
                 $$body: map((pos) => {
-                  const val = formatReadableUSD(pos.cumSize)
+                  const val = readableFixedUSD30(pos.cumSize)
 
                   return $column(style({ gap: '3px', textAlign: 'right' }))(
-                    $text(style({ fontSize: '.75em' }))(formatReadableUSD(pos.cumCollateral)),
+                    $text(style({ fontSize: '.75em' }))(readableFixedUSD30(pos.cumCollateral)),
                     $seperator2,
                     $text(
                       val
@@ -353,9 +353,9 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
                 $$body: map((pos) => {
 
                   return $column(layoutSheet.spacingTiny, style({ gap: '3px', textAlign: 'right' }))(
-                    $text(style({ fontSize: '.75em' }))(formatReadableUSD(pos.pnl)),
+                    $text(style({ fontSize: '.75em' }))(readableFixedUSD30(pos.pnl)),
                     $seperator2,
-                    $text(formatReadableUSD(pos.maxCollateral))
+                    $text(readableFixedUSD30(pos.maxCollateral))
                   )
                 })
               },
@@ -369,13 +369,13 @@ export const $CumulativePnl = (config: ICompetitonCumulativeRoi) => component((
               $$body: map(pos => {
                 const metricVal = pos.score
 
-                const pnl = currentMetric === 'pnl' ? formatReadableUSD(metricVal) : `${readablePercentage(formatBps(metricVal) * 100) } %`
+                const pnl = currentMetric === 'pnl' ? readableFixedUSD30(metricVal) : `${readableFixed10kBsp(formatBps(metricVal) * 100) } %`
 
                 return $column(layoutSheet.spacingTiny, style({ gap: '3px', textAlign: 'right' }))(
                   $text(style({ fontSize: '.75em' }))(pnl),
                   $seperator2,
                   pos.prize > 0n
-                    ? $text(style({ color: pallete.positive }))(formatReadableUSD(pos.prize))
+                    ? $text(style({ color: pallete.positive }))(readableFixedUSD30(pos.prize))
                     : empty(),
                 )
               }),

@@ -22,7 +22,6 @@ export const $CardTable = <T, FilterState>(config: TableOption<T, FilterState>) 
       )
     },
     $bodyRowContainer: $defaultTableRowContainer(
-      stylePseudo(':last-child', { borderRadius: '0 0 20px 20px' }),
       style({ background: pallete.background, margin: '0 1px', borderBottom: `1px solid ${pallete.horizon}` })
     ),
     ...config

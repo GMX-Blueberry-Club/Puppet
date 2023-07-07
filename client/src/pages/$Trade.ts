@@ -9,13 +9,13 @@ import {
   abs,
   filterNull,
   formatFixed,
-  formatReadableUSD, formatBps, getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getLiquidationPrice, getMappedValue, getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getPnL, getPositionKey,
+  readableFixedUSD30, formatBps, getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getLiquidationPrice, getMappedValue, getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getPnL, getPositionKey,
   getTokenAmount, getTokenDescription, gmxSubgraph,
   readableAccountingNumber, readableNumber,
   switchMap,
   timeSince,
   unixTimestampNow,
-  readablePercentage
+  readableFixed10kBsp
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
@@ -732,13 +732,13 @@ export const $Trade = (config: ITradeComponent) => component((
               $column(layoutSheet.spacingSmall)(
                 $infoLabel('Borrow Rate'),
                 $row(style({ whiteSpace: 'pre' }))(
-                  $text(map(poolInfo => readablePercentage(formatBps(poolInfo.rate)), collateralTokenPoolInfo)),
+                  $text(map(poolInfo => readableFixed10kBsp(formatBps(poolInfo.rate)), collateralTokenPoolInfo)),
                   $text(style({ color: pallete.foreground }))(' / hr')
                 )
               ),
               $column(layoutSheet.spacingSmall)(
                 $infoLabel('Available Liquidity'),
-                $text(map(amountUsd => formatReadableUSD(amountUsd), availableIndexLiquidityUsd))
+                $text(map(amountUsd => readableFixedUSD30(amountUsd), availableIndexLiquidityUsd))
               ),
             ),
 
@@ -780,8 +780,8 @@ export const $Trade = (config: ITradeComponent) => component((
                         }
 
                         return $row(layoutSheet.spacingSmall)(
-                          $infoLabeledValue('Size', $text(map(value => `${formatReadableUSD(value)}`, sizeDeltaUsd))),
-                          $infoLabeledValue('Collateral', $text(map(value => `${formatReadableUSD(value)}`, collateralDeltaUsd))),
+                          $infoLabeledValue('Size', $text(map(value => `${readableFixedUSD30(value)}`, sizeDeltaUsd))),
+                          $infoLabeledValue('Collateral', $text(map(value => `${readableFixedUSD30(value)}`, collateralDeltaUsd))),
                         )
                       }, isFocused),
                       $icon({ $content: $target, width: '16px', svgOps: style({ margin: '0 6px' }), viewBox: '0 0 32 32' }),
@@ -981,7 +981,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
                       return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
                         $text(timeSince(timestamp) + ' ago'),
-                        $text(formatReadableUSD(timestamp)),
+                        $text(readableFixedUSD30(timestamp)),
                       )
                     })
                   },
@@ -996,7 +996,7 @@ export const $Trade = (config: ITradeComponent) => component((
                         const direction = pos.__typename === 'IncreasePosition' ? '↑' : '↓'
                         const txHash = pos.id.split(':').slice(-1)[0]
                         return $row(layoutSheet.spacingSmall)(
-                          $txHashRef(txHash, w3p.chain.id, $text(`${direction} ${formatReadableUSD(pos.price)}`))
+                          $txHashRef(txHash, w3p.chain.id, $text(`${direction} ${readableFixedUSD30(pos.price)}`))
                         )
                       }
 
@@ -1009,7 +1009,7 @@ export const $Trade = (config: ITradeComponent) => component((
                       return $row(layoutSheet.spacingSmall)(
                         $txHashRef(
                           pos.ctx.transactionHash, w3p.chain.id,
-                          $text(`${isIncrease ? '↑' : '↓'} ${formatReadableUSD(pos.acceptablePrice)} ${isIncrease ? '<' : '>'}`)
+                          $text(`${isIncrease ? '↑' : '↓'} ${readableFixedUSD30(pos.acceptablePrice)} ${isIncrease ? '<' : '>'}`)
                         ),
 
                         switchLatest(mergeArray([
@@ -1017,7 +1017,7 @@ export const $Trade = (config: ITradeComponent) => component((
                           map(req => {
                             const isRejected = req.eventName === 'CancelIncreasePosition' // || req.eventName === 'CancelDecreasePosition'
 
-                            const message = $text(`${isRejected ? `✖ ${formatReadableUSD(req.args.acceptablePrice)}` : `✔ ${formatReadableUSD(req.args.acceptablePrice)}`}`)
+                            const message = $text(`${isRejected ? `✖ ${readableFixedUSD30(req.args.acceptablePrice)}` : `✔ ${readableFixedUSD30(req.args.acceptablePrice)}`}`)
 
                             return $requestRow(
                               $txHashRef(req.transactionHash!, w3p.chain.id, message),
@@ -1038,10 +1038,10 @@ export const $Trade = (config: ITradeComponent) => component((
                           const fee = -getMarginFees('ctx' in req ? req.state.sizeDeltaUsd : req.fee)
 
                           if ('ctx' in req) {
-                            return $text(formatReadableUSD(fee))
+                            return $text(readableFixedUSD30(fee))
                           }
 
-                          return $text(formatReadableUSD(-req.fee))
+                          return $text(readableFixedUSD30(-req.fee))
                         })
                       }
                     ] : [],
@@ -1056,7 +1056,7 @@ export const $Trade = (config: ITradeComponent) => component((
                           ? req.state.collateralDeltaUsd : -req.state.collateralDeltaUsd : req.__typename === 'IncreasePosition'
                           ? req.collateralDelta : -req.collateralDelta
 
-                      return $text(formatReadableUSD(delta))
+                      return $text(readableFixedUSD30(delta))
                     })
                   },
                   {
@@ -1069,7 +1069,7 @@ export const $Trade = (config: ITradeComponent) => component((
                           ? req.state.sizeDeltaUsd : -req.state.sizeDeltaUsd : req.__typename === 'IncreasePosition'
                           ? req.sizeDelta : -req.sizeDelta
 
-                      return $text(formatReadableUSD(delta))
+                      return $text(readableFixedUSD30(delta))
                     })
                   },
                 ]
