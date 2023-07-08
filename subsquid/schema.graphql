@@ -1,0 +1,727 @@
+type Block @entity {
+    id: ID!
+    number: Int! @index
+    timestamp: DateTime! @index
+}
+
+type Transaction @entity {
+    id: ID!
+    blockNumber: Int @index
+    blockTimestamp: DateTime! @index
+    hash: String! @index
+    to: String @index
+    from: String @index
+    status: Int @index
+}
+
+type ContractEventBuyUsdg @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    account: String!
+    token: String!
+    tokenAmount: BigInt!
+    usdgAmount: BigInt!
+    feeBasisPoints: BigInt!
+}
+
+type ContractEventClosePosition @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    key: String!
+    size: BigInt!
+    collateral: BigInt!
+    averagePrice: BigInt!
+    entryFundingRate: BigInt!
+    reserveAmount: BigInt!
+    realisedPnl: BigInt!
+}
+
+type ContractEventCollectMarginFees @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    token: String!
+    feeUsd: BigInt!
+    feeTokens: BigInt!
+}
+
+type ContractEventCollectSwapFees @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    token: String!
+    feeUsd: BigInt!
+    feeTokens: BigInt!
+}
+
+type ContractEventDecreaseGuaranteedUsd @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    token: String!
+    amount: BigInt!
+}
+
+type ContractEventDecreasePoolAmount @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    token: String!
+    amount: BigInt!
+}
+
+type ContractEventDecreasePosition @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    key: String!
+    account: String!
+    collateralToken: String!
+    indexToken: String!
+    collateralDelta: BigInt!
+    sizeDelta: BigInt!
+    isLong: Boolean!
+    price: BigInt!
+    fee: BigInt!
+}
+
+type ContractEventDecreaseReservedAmount @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    token: String!
+    amount: BigInt!
+}
+
+type ContractEventDecreaseUsdgAmount @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    token: String!
+    amount: BigInt!
+}
+
+type ContractEventDirectPoolDeposit @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    token: String!
+    amount: BigInt!
+}
+
+type ContractEventIncreaseGuaranteedUsd @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    token: String!
+    amount: BigInt!
+}
+
+type ContractEventIncreasePoolAmount @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    token: String!
+    amount: BigInt!
+}
+
+type ContractEventIncreasePosition @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    key: String!
+    account: String!
+    collateralToken: String!
+    indexToken: String!
+    collateralDelta: BigInt!
+    sizeDelta: BigInt!
+    isLong: Boolean!
+    price: BigInt!
+    fee: BigInt!
+}
+
+type ContractEventIncreaseReservedAmount @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    token: String!
+    amount: BigInt!
+}
+
+type ContractEventIncreaseUsdgAmount @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    token: String!
+    amount: BigInt!
+}
+
+type ContractEventLiquidatePosition @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    key: String!
+    account: String!
+    collateralToken: String!
+    indexToken: String!
+    isLong: Boolean!
+    size: BigInt!
+    collateral: BigInt!
+    reserveAmount: BigInt!
+    realisedPnl: BigInt!
+    markPrice: BigInt!
+}
+
+type ContractEventSellUsdg @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    account: String!
+    token: String!
+    usdgAmount: BigInt!
+    tokenAmount: BigInt!
+    feeBasisPoints: BigInt!
+}
+
+type ContractEventSwap @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    account: String!
+    tokenIn: String!
+    tokenOut: String!
+    amountIn: BigInt!
+    amountOut: BigInt!
+    amountOutAfterFees: BigInt!
+    feeBasisPoints: BigInt!
+}
+
+type ContractEventUpdateFundingRate @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    token: String!
+    fundingRate: BigInt!
+}
+
+type ContractEventUpdatePnl @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    key: String!
+    hasProfit: Boolean!
+    delta: BigInt!
+}
+
+type ContractEventUpdatePosition @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    eventName: String! @index
+    key: String!
+    size: BigInt!
+    collateral: BigInt!
+    averagePrice: BigInt!
+    entryFundingRate: BigInt!
+    reserveAmount: BigInt!
+    realisedPnl: BigInt!
+}
+
+type ContractFunctionAddRouter @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    router: String!
+}
+
+type ContractFunctionBuyUsdg @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    token: String!
+    receiver: String!
+}
+
+type ContractFunctionClearTokenConfig @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    token: String!
+}
+
+type ContractFunctionDecreasePosition @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    account: String!
+    collateralToken: String!
+    indexToken: String!
+    collateralDelta: BigInt!
+    sizeDelta: BigInt!
+    isLong: Boolean!
+    receiver: String!
+}
+
+type ContractFunctionDirectPoolDeposit @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    token: String!
+}
+
+type ContractFunctionGetPositionKey @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    account: String!
+    collateralToken: String!
+    indexToken: String!
+    isLong: Boolean!
+}
+
+type ContractFunctionIncreasePosition @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    account: String!
+    collateralToken: String!
+    indexToken: String!
+    sizeDelta: BigInt!
+    isLong: Boolean!
+}
+
+type ContractFunctionInitialize @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    router: String!
+    usdg: String!
+    priceFeed: String!
+    liquidationFeeUsd: BigInt!
+    fundingRateFactor: BigInt!
+    stableFundingRateFactor: BigInt!
+}
+
+type ContractFunctionLiquidatePosition @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    account: String!
+    collateralToken: String!
+    indexToken: String!
+    isLong: Boolean!
+    feeReceiver: String!
+}
+
+type ContractFunctionRemoveRouter @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    router: String!
+}
+
+type ContractFunctionSellUsdg @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    token: String!
+    receiver: String!
+}
+
+type ContractFunctionSetBufferAmount @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    token: String!
+    amount: BigInt!
+}
+
+type ContractFunctionSetError @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    errorCode: BigInt!
+    error: String!
+}
+
+type ContractFunctionSetErrorController @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    errorController: String!
+}
+
+type ContractFunctionSetFees @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    taxBasisPoints: BigInt!
+    stableTaxBasisPoints: BigInt!
+    mintBurnFeeBasisPoints: BigInt!
+    swapFeeBasisPoints: BigInt!
+    stableSwapFeeBasisPoints: BigInt!
+    marginFeeBasisPoints: BigInt!
+    liquidationFeeUsd: BigInt!
+    minProfitTime: BigInt!
+    hasDynamicFees: Boolean!
+}
+
+type ContractFunctionSetFundingRate @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    fundingInterval: BigInt!
+    fundingRateFactor: BigInt!
+    stableFundingRateFactor: BigInt!
+}
+
+type ContractFunctionSetGov @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    gov: String!
+}
+
+type ContractFunctionSetInManagerMode @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    inManagerMode: Boolean!
+}
+
+type ContractFunctionSetInPrivateLiquidationMode @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    inPrivateLiquidationMode: Boolean!
+}
+
+type ContractFunctionSetIsLeverageEnabled @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    isLeverageEnabled: Boolean!
+}
+
+type ContractFunctionSetIsSwapEnabled @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    isSwapEnabled: Boolean!
+}
+
+type ContractFunctionSetLiquidator @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    liquidator: String!
+    isActive: Boolean!
+}
+
+type ContractFunctionSetManager @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    manager: String!
+    isManager: Boolean!
+}
+
+type ContractFunctionSetMaxGasPrice @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    maxGasPrice: BigInt!
+}
+
+type ContractFunctionSetMaxLeverage @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    maxLeverage: BigInt!
+}
+
+type ContractFunctionSetPriceFeed @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    priceFeed: String!
+}
+
+type ContractFunctionSetTokenConfig @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    token: String!
+    tokenDecimals: BigInt!
+    tokenWeight: BigInt!
+    minProfitBps: BigInt!
+    maxUsdgAmount: BigInt!
+    isStable: Boolean!
+    isShortable: Boolean!
+}
+
+type ContractFunctionSetUsdgAmount @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    token: String!
+    amount: BigInt!
+}
+
+type ContractFunctionSwap @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    tokenIn: String!
+    tokenOut: String!
+    receiver: String!
+}
+
+type ContractFunctionUpdateCumulativeFundingRate @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    token: String!
+}
+
+type ContractFunctionUpgradeVault @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    newVault: String!
+    token: String!
+    amount: BigInt!
+}
+
+type ContractFunctionWithdrawFees @entity {
+    id: ID!
+    blockNumber: Int! @index
+    blockTimestamp: DateTime! @index
+    transactionHash: String! @index
+    contract: String! @index
+    functionName: String! @index
+    functionValue: BigInt
+    functionSuccess: Boolean @index
+    token: String!
+    receiver: String!
+}
+

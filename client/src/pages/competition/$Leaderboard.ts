@@ -1,129 +1,30 @@
-import { Behavior, O } from "@aelea/core"
-import { $text, component, style } from "@aelea/dom"
-import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { map, now, recoverWith, switchLatest } from "@most/core"
-import { $Baseline, $ButtonToggle, $Link } from "gmx-middleware-ui-components"
-import { IAccountSummary, IPositionLink, IPositionSettled, div, formatFixed, intervalListFillOrderMap, pagingQuery, readableFixed10kBsp, readableFixedUSD30, readableUSD, toAccountSummaryList } from "gmx-middleware-utils"
+import { Behavior, O, replayLatest } from "@aelea/core"
+import { $text, INode, StyleCSS, component, nodeEvent, style, styleBehavior } from "@aelea/dom"
+import { $Popover, $column, $icon, $row, layoutSheet } from "@aelea/ui-components"
+import { constant, map, multicast, now, startWith, switchLatest } from "@most/core"
+import { $Baseline, $ButtonToggle, $Link, $anchor, $caretDown } from "gmx-middleware-ui-components"
+import { IAccountSummary, IPositionSettled, div, formatFixed, intervalListFillOrderMap, pagingQuery, readableFixed10kBsp, toAccountSummaryList } from "gmx-middleware-utils"
 import { IProfileActiveTab } from "../$Profile"
 import { $defaultProfileContainer } from "../../common/$avatar"
+import { $pnlValue, $sizeDisplay } from "../../common/$common"
 import { $accountPreview } from "../../components/$AccountProfile"
 import { $CardTable } from "../../components/$common"
 import { rootStoreScope } from "../../data"
-import { replaySubgraphQuery } from "../../indexer/indexer"
-import { ISchema } from "../../indexer/subgraph"
-import { ICompetitonCumulativeRoi } from "./$CumulativePnl"
-import { $pnlValue, $sizeDisplay } from "../../common/$common"
-import { $seperator2 } from "../common"
-import { BaselineData, Time } from "lightweight-charts"
+import { schema } from "../../data/schema"
+import { fillQuery, replaySubgraphQuery } from "../../indexer/indexer"
 import { processSources } from "../../indexer/processor"
+import { $seperator2 } from "../common"
+import { ICompetitonCumulativeRoi } from "./$CumulativePnl"
+import { pallete } from "@aelea/ui-components-theme"
+import { IntervalTime, TIME_INTERVAL_MAP } from "gmx-middleware-const"
+import * as database from "../../logic/browserDatabaseScope"
 
 
 
-// ISubgraphSchema<IPositionIncrease | IPositionDecrease>
-const adjustEntity = {
-  collateralDelta: 'uint256',
-  collateralToken: 'uint256',
-  fee: 'uint256',
-  id: 'uint256',
-  indexToken: 'uint256',
-  isLong: 'bool',
-  key: 'uint256',
-  account: 'uint256',
-  price: 'uint256',
-  sizeDelta: 'uint256',
 
-  blockNumber: 'int',
-  blockTimestamp: 'uint256',
-  transactionHash: 'uint256',
-  transactionIndex: 'uint256',
-  logIndex: 'uint256',
-} as const
-
-const linkSchema: ISchema<IPositionLink> = {
-  id: 'uint256',
-  account: 'uint256',
-  collateralToken: 'uint256',
-  indexToken: 'uint256',
-  isLong: 'bool',
-  key: 'uint256',
-  updateList: {
-    id: 'uint256',
-
-    averagePrice: 'uint256',
-    collateral: 'uint256',
-    entryFundingRate: 'uint256',
-    key: 'uint256',
-    realisedPnl: 'uint256',
-    reserveAmount: 'uint256',
-    size: 'uint256',
-
-    blockNumber: 'int',
-    blockTimestamp: 'uint256',
-    transactionHash: 'uint256',
-    transactionIndex: 'uint256',
-    logIndex: 'uint256',
-    __typename: 'UpdatePosition',
-  },
-  increaseList: { ...adjustEntity, __typename: 'IncreasePosition' },
-  decreaseList: { ...adjustEntity, __typename: 'DecreasePosition' },
-
-  blockNumber: 'int',
-  blockTimestamp: 'uint256',
-  transactionHash: 'uint256',
-  transactionIndex: 'uint256',
-  logIndex: 'uint256',
-
-  __typename: 'PositionLink',
-}
-
-const schemaPositionSettled: ISchema<IPositionSettled> = {
-  link: linkSchema,
-  id: 'string',
-  key: 'uint256',
-  idCount: 'int',
-
-  account: 'string',
-  collateralToken: 'string',
-  indexToken: 'string',
-  isLong: 'bool',
-
-  size: 'uint256',
-  collateral: 'uint256',
-  averagePrice: 'uint256',
-  entryFundingRate: 'uint256',
-  reserveAmount: 'uint256',
-  realisedPnl: 'int256',
-
-  cumulativeSize: 'uint256',
-  cumulativeCollateral: 'uint256',
-  cumulativeFee: 'uint256',
-
-  maxSize: 'uint256',
-  maxCollateral: 'uint256',
-
-  settlePrice: 'uint256',
-  isLiquidated: 'bool',
-
-  blockNumber: 'int',
-  blockTimestamp: 'uint256',
-  transactionHash: 'uint256',
-  transactionIndex: 'uint256',
-  logIndex: 'uint256',
-
-  __typename: 'PositionSettled',
-}
-
-
-function fillQuery(obj: any){
-  return Object.keys(obj).reduce((acc, key) => {
-    const value = obj[key]
-    acc[key] = value instanceof Object ? fillQuery(value) : null
-    return acc
-  }, {} as any)
-}
 
 const processSeed: IPositionSettled = {
-  ...fillQuery(schemaPositionSettled)
+  ...fillQuery(schema.positionSettled)
 }
 
 const gmxTradingSubgraph = replaySubgraphQuery(
@@ -131,7 +32,7 @@ const gmxTradingSubgraph = replaySubgraphQuery(
     subgraph: `https://gateway-arbitrum.network.thegraph.com/api/${import.meta.env.THE_GRAPH}/subgraphs/id/DJ4SBqiG8A8ytcsNJSuUU2gDTLFXxxPrAN8Aags84JH2`,
     parentStoreScope: rootStoreScope,
   },
-  schemaPositionSettled,
+  schema.positionSettled,
   processSeed
 )
 
@@ -142,7 +43,7 @@ const newLocal = {
 
 const data = processSources(
   rootStoreScope,
-  processSeed,
+  newLocal,
   {
     source: gmxTradingSubgraph,
     step(seed, value) {
@@ -165,6 +66,8 @@ export type ILeaderboard = ICompetitonCumulativeRoi
 
 export const $Leaderboard = (config: ILeaderboard) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
+  [topPnlTimeframeChange, topPnlTimeframeChangeTether]: Behavior<any, ILeaderboardRequest['timeInterval']>,
+
 ) => {
 
 
@@ -174,13 +77,12 @@ export const $Leaderboard = (config: ILeaderboard) => component((
       display: 'flex',
       fontFeatureSettings: '"tnum" on,"lnum" on',
       fontFamily: `-apple-system,BlinkMacSystemFont,Trebuchet MS,Roboto,Ubuntu,sans-serif`,
-    }),
-    screenUtils.isDesktopScreen
-      ? style({ width: '780px', alignSelf: 'center' })
-      : style({ width: '100%' })
+    })
   )
 
+  const timeframe = database.replayWriteStoreScope(rootStoreScope, TIME_INTERVAL_MAP.HR24, topPnlTimeframeChange)
 
+  const activeTimeframe: StyleCSS = { color: pallete.primary, pointerEvents: 'none' }
 
   return [
     $column(layoutSheet.spacingBig)(
@@ -231,6 +133,37 @@ export const $Leaderboard = (config: ILeaderboard) => component((
           })({})
         }, gmxTradingSubgraph)
       ),
+
+      $column(
+        $row(layoutSheet.spacing)(
+          $text(style({ color: pallete.foreground }))('Period:'),
+          $anchor(
+            styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.HR24 ? activeTimeframe : null, timeframe)),
+            topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.HR24))
+          )(
+            $text('Day')
+          ),
+          $anchor(
+            styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.DAY7 ? activeTimeframe : null, timeframe)),
+            topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.DAY7))
+          )(
+            $text('Week')
+          ),
+          $anchor(
+            styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.MONTH ? activeTimeframe : null, timeframe)),
+            topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.MONTH))
+          )(
+            $text('Month')
+          ),
+          $anchor(
+            styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.MONTH ? activeTimeframe : null, timeframe)),
+            topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.MONTH))
+          )(
+            $text('Year')
+          )
+        )
+      ),
+
       containerStyle(
         $CardTable({
           dataSource: datass,

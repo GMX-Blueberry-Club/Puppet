@@ -1,12 +1,12 @@
 import { map } from "@most/core"
 import { Stream } from "@most/types"
-import { ILogIndexIdentifier, orderEvents, switchMap } from "gmx-middleware-utils"
+import { ILogIndex, orderEvents, switchMap } from "gmx-middleware-utils"
 import * as database from "../logic/browserDatabaseScope"
 import { zipArray } from "../logic/utils"
 import { IStoreScope } from "../logic/browserDatabaseScope"
 
 export interface IProcessConfig<
-  TSource extends ILogIndexIdentifier[],
+  TSource extends ILogIndex[],
   TReturn
 > {
   source: IStoreScope<TSource>
@@ -21,11 +21,11 @@ interface IProcessStep<T> {
 export function processSources<
   TReturn,
 
-  TSource1 extends ILogIndexIdentifier[],
-  TSource2 extends ILogIndexIdentifier[],
-  TSource3 extends ILogIndexIdentifier[],
-  TSource4 extends ILogIndexIdentifier[],
-  TSource5 extends ILogIndexIdentifier[],
+  TSource1 extends ILogIndex[],
+  TSource2 extends ILogIndex[],
+  TSource3 extends ILogIndex[],
+  TSource4 extends ILogIndex[],
+  TSource5 extends ILogIndex[],
 >(
   parentStoreScope: database.IStoreScope<any>,
   scopeState: TReturn,

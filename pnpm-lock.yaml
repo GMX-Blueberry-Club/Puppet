@@ -397,8 +397,14 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
       '@subsquid/evm-processor':
-        specifier: ^1.5.1
-        version: 1.5.1
+        specifier: ^1.7.1
+        version: 1.7.1
+      '@subsquid/file-store':
+        specifier: ^0.3.2
+        version: 0.3.2
+      '@subsquid/file-store-json':
+        specifier: ^0.0.2
+        version: 0.0.2(@subsquid/file-store@0.3.2)
       '@subsquid/graphql-server':
         specifier: ^4.2.0
         version: 4.2.0(typeorm@0.3.16)
@@ -406,8 +412,8 @@ importers:
         specifier: ^1.2.0
         version: 1.2.0(typeorm@0.3.16)
       '@subsquid/typeorm-store':
-        specifier: ^1.2.0
-        version: 1.2.0(typeorm@0.3.16)
+        specifier: ^1.2.1
+        version: 1.2.1(typeorm@0.3.16)
       '@subsquid/util-internal-json':
         specifier: ^1.2.0
         version: 1.2.0
@@ -429,7 +435,7 @@ importers:
         version: 3.2.0(ethers@6.5.1)
       '@subsquid/squid-gen-evm':
         specifier: ^1.1.0
-        version: 1.1.0(@subsquid/archive-registry@3.0.0)(@subsquid/evm-processor@1.5.1)(@subsquid/evm-typegen@3.2.0)(@subsquid/file-store@1.1.0)(@subsquid/typeorm-codegen@1.2.0)(@subsquid/util-internal-json@1.2.0)(@types/node@18.16.17)(ethers@6.5.1)(typescript@5.1.3)
+        version: 1.1.0(@subsquid/archive-registry@3.0.0)(@subsquid/evm-processor@1.7.1)(@subsquid/evm-typegen@3.2.0)(@subsquid/file-store@0.3.2)(@subsquid/typeorm-codegen@1.2.0)(@subsquid/util-internal-json@1.2.0)(@types/node@18.16.17)(ethers@6.5.1)(typescript@5.1.3)
       '@subsquid/typeorm-codegen':
         specifier: ^1.2.0
         version: 1.2.0
@@ -2257,8 +2263,8 @@ packages:
     transitivePeerDependencies:
       - encoding
 
-  /@subsquid/evm-processor@1.5.1:
-    resolution: {integrity: sha512-ueZZzx/mo2duh+KSH2zDZNuYvAQ/MTraE+jvqleMj0QGT8r5Oup21SmNsasGBnZyso9DBNH2oJKOP4KZbxsPLA==}
+  /@subsquid/evm-processor@1.7.1:
+    resolution: {integrity: sha512-wi/uJ1+Y3X6vAOUO3X5xQkRxDTNPah7gcdObFPSu0Sd/hqMA5LHMFivWcvju3OZEpL1PpvtiIErSh4pHjvg3Og==}
     dependencies:
       '@subsquid/http-client': 1.2.0
       '@subsquid/logger': 1.2.0
@@ -2284,15 +2290,21 @@ packages:
       ethers: 6.5.1
     dev: true
 
-  /@subsquid/file-store@1.1.0(@subsquid/util-internal-processor-tools@1.2.3):
-    resolution: {integrity: sha512-u0jzFCZm66KY0dXsWxcAY9DxP+hOgXuOX9EbIU6FtBOnzEIVjza66n5mbKOUFGlp+DXPcyks4Ivs0xjpwOuYSA==}
+  /@subsquid/file-store-json@0.0.2(@subsquid/file-store@0.3.2):
+    resolution: {integrity: sha512-1Y7z8bPp37QRVNezGa3x5hkBgQeZTMUolffbDJAEJiV+h+4IriVsoe9WwjQ+vD2/J0qR7xTi3WvdAgXy1fG86A==}
     peerDependencies:
-      '@subsquid/util-internal-processor-tools': ^1.2.0
+      '@subsquid/file-store': ^0.3.0
     dependencies:
-      '@subsquid/util-internal': 2.3.1
-      '@subsquid/util-internal-processor-tools': 1.2.3
+      '@subsquid/file-store': 0.3.2
+      '@subsquid/util-internal-json': 0.2.1
+      '@subsquid/util-naming': 0.0.0
+    dev: false
+
+  /@subsquid/file-store@0.3.2:
+    resolution: {integrity: sha512-LPzL4EjstyrvLCd5UmadHZXXUwpln+dUefmKqFcoM2cYCOZKlsOHWt/Scx7sUbDkQAKomB/FjVL53oSo9tkzwg==}
+    dependencies:
+      '@subsquid/util-internal': 1.1.0
       upath: 2.0.1
-    dev: true
 
   /@subsquid/graphiql-console@0.3.0:
     resolution: {integrity: sha512-C89mus6IXnNi0xMQrZqUFBZwLj8tbuq9lye8Gq/lHmmERAUpi6UsWEyLdJLx2mneZzF3JtY8eNiiZ16jmjtvfw==}
@@ -2414,7 +2426,7 @@ packages:
     transitivePeerDependencies:
       - supports-color
 
-  /@subsquid/squid-gen-evm@1.1.0(@subsquid/archive-registry@3.0.0)(@subsquid/evm-processor@1.5.1)(@subsquid/evm-typegen@3.2.0)(@subsquid/file-store@1.1.0)(@subsquid/typeorm-codegen@1.2.0)(@subsquid/util-internal-json@1.2.0)(@types/node@18.16.17)(ethers@6.5.1)(typescript@5.1.3):
+  /@subsquid/squid-gen-evm@1.1.0(@subsquid/archive-registry@3.0.0)(@subsquid/evm-processor@1.7.1)(@subsquid/evm-typegen@3.2.0)(@subsquid/file-store@0.3.2)(@subsquid/typeorm-codegen@1.2.0)(@subsquid/util-internal-json@1.2.0)(@types/node@18.16.17)(ethers@6.5.1)(typescript@5.1.3):
     resolution: {integrity: sha512-icTyH11zI4wqBhNNRK0isDlK61HBNGydt6iWlo2v08foh7Y8m6O27n0Wxm/LweyqIz0zh3prt2RjujSlSnklkg==}
     hasBin: true
     peerDependencies:
@@ -2425,10 +2437,10 @@ packages:
       ethers: ^6.5.1
     dependencies:
       '@subsquid/archive-registry': 3.0.0
-      '@subsquid/evm-processor': 1.5.1
+      '@subsquid/evm-processor': 1.7.1
       '@subsquid/evm-typegen': 3.2.0(ethers@6.5.1)
       '@subsquid/logger': 1.2.0
-      '@subsquid/squid-gen-targets': 1.0.1(@subsquid/file-store@1.1.0)(@subsquid/typeorm-codegen@1.2.0)(commander@10.0.1)
+      '@subsquid/squid-gen-targets': 1.0.1(@subsquid/file-store@0.3.2)(@subsquid/typeorm-codegen@1.2.0)(commander@10.0.1)
       '@subsquid/squid-gen-utils': 1.0.0
       '@subsquid/util-internal': 2.3.1
       '@subsquid/util-internal-code-printer': 1.2.0
@@ -2449,13 +2461,13 @@ packages:
       - typescript
     dev: true
 
-  /@subsquid/squid-gen-targets@1.0.1(@subsquid/file-store@1.1.0)(@subsquid/typeorm-codegen@1.2.0)(commander@10.0.1):
+  /@subsquid/squid-gen-targets@1.0.1(@subsquid/file-store@0.3.2)(@subsquid/typeorm-codegen@1.2.0)(commander@10.0.1):
     resolution: {integrity: sha512-qRIy71KcjjKX0LUp93gS51rPoUTfwYu3R9r6/dhYgW2Rko1DUbR9ydRXs+dXrCHeJwtVS+ofo4SLKG0JGl+B3Q==}
     peerDependencies:
       '@subsquid/file-store': ^1.0.0
       '@subsquid/typeorm-codegen': ^1.0.0
     dependencies:
-      '@subsquid/file-store': 1.1.0(@subsquid/util-internal-processor-tools@1.2.3)
+      '@subsquid/file-store': 0.3.2
       '@subsquid/logger': 1.2.0
       '@subsquid/squid-gen-utils': 1.0.0
       '@subsquid/typeorm-codegen': 1.2.0
@@ -2518,8 +2530,8 @@ packages:
       typeorm: 0.3.16(pg@8.11.0)(ts-node@10.9.1)
     dev: false
 
-  /@subsquid/typeorm-store@1.2.0(typeorm@0.3.16):
-    resolution: {integrity: sha512-W31v5p0fs0dfzjh6Te6uArQiISlML0yCqIk+lB0wLO/V57SKkRsLQCMI//7TwKM9JjHOoHJg1t8WILAAMhN9RQ==}
+  /@subsquid/typeorm-store@1.2.1(typeorm@0.3.16):
+    resolution: {integrity: sha512-pRTztUUUQ7y0f6iTlPBGI/DZ7wnSaKX/0CP76S5d+TAzhtTTAht6PS8CoTmO2zM/bQSDvLfIMssitAQx2r9QTA==}
     peerDependencies:
       typeorm: ^0.3.16
     dependencies:
@@ -2603,6 +2615,13 @@ packages:
 
   /@subsquid/util-internal@2.3.1:
     resolution: {integrity: sha512-eNjkaZB9IrqHF1K8mv3zeiJH+q8fvttfe10VPO9W4nethHxDIwDVQ4IpBmkSwza2YazwTxGu83I1g9n9PqjCJw==}
+
+  /@subsquid/util-naming@0.0.0:
+    resolution: {integrity: sha512-eLBYghpQy835sDNi00yGO96HXN9BLNpzQAY7giZYTiniF0Xb4VwsneWlLb4SqNMJC5dEHIgSeM3zyTWJd0ooWw==}
+    dependencies:
+      camelcase: 6.3.0
+      inflected: 2.1.0
+    dev: false
 
   /@subsquid/util-naming@1.2.0:
     resolution: {integrity: sha512-mFFFh3CLd4IOm5OIl0tyhGvL6s+LQqtGgq8mD4oCZuzC2IhRNJ7D1KAv8JTZsxzOhHfLeibF2xvdN5jBwSLEyg==}
@@ -10011,7 +10030,6 @@ packages:
   /upath@2.0.1:
     resolution: {integrity: sha512-1uEe95xksV1O0CYKXo8vQvN1JEbtJp7lb7C5U9HMsIp6IVwntkH/oNUzyVNQSd4S1sYk2FpSSW44FqMc8qee5w==}
     engines: {node: '>=4'}
-    dev: true
 
   /upper-case-first@2.0.2:
     resolution: {integrity: sha512-514ppYHBaKwfJRK/pNC6c/OxfGa0obSnAl106u97Ed0I625Nin96KAjttZF6ZL3e1XLtphxnqrOi9iWgm+u+bg==}

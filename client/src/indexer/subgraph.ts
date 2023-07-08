@@ -2,6 +2,8 @@ import { fromPromise } from "@most/core"
 import { Stream } from "@most/types"
 import { AbiType } from "abitype"
 import { request } from "graphql-request"
+import { parseTypeFnMap } from "./indexer"
+import { getMappedValue } from "gmx-middleware-utils"
 
 export type GqlType<T extends string> = { __typename: T }
 
@@ -76,17 +78,14 @@ function parseResults(json: any, schema: any) {
 
     if (typeof value === 'string') {
       const abiType = schemaField
-      const parseType = parseTypeFnMap[abiType]
+      const parseFn = getMappedValue(parseTypeFnMap, abiType)
 
-      if (!parseType) {
-        if (key === '__typename') {
-          entity[key] = value
-          return
-        }
-        throw new Error(`No parser found for abi type ${abiType}`)
+      if (key === '__typename') {
+        entity[key] = value
+        return
       }
 
-      entity[key] = parseType(value)
+      entity[key] = parseFn(value)
     } else if(value instanceof Array) {
       entity[key] = value.map((item, i) => parseResults(item, schemaField))
     } else if(value instanceof Object) {
@@ -123,11 +122,3 @@ function parseWhereClause(query: any) {
   return where.join(', ')
 }
 
-export const parseTypeFnMap: { [type: string]: Function } = {
-  uint256: BigInt,
-  uint: BigInt,
-  string: String,
-  'int': Number,
-  bool: Boolean,
-  int256: BigInt,
-}

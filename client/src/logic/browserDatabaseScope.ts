@@ -1,4 +1,4 @@
-import { concatMap, constant, continueWith, fromPromise, map, mergeArray, switchLatest } from "@most/core"
+import { concatMap, constant, fromPromise, map, mergeArray, switchLatest } from "@most/core"
 import { curry2, curry3 } from '@most/prelude'
 import { Stream } from "@most/types"
 import { sha256 } from '@noble/hashes/sha256'
