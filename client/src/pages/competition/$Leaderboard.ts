@@ -11,13 +11,14 @@ import { $accountPreview } from "../../components/$AccountProfile"
 import { $CardTable } from "../../components/$common"
 import { rootStoreScope } from "../../data"
 import { schema } from "../../data/schema"
-import { fillQuery, replaySubgraphQuery } from "../../indexer/indexer"
-import { processSources } from "../../indexer/processor"
+// import { fillQuery, replaySubgraphQuery } from "../../utils/indexer/indexer"
+import { processSources } from "../../utils/indexer/processor"
 import { $seperator2 } from "../common"
 import { ICompetitonCumulativeRoi } from "./$CumulativePnl"
 import { pallete } from "@aelea/ui-components-theme"
 import { IntervalTime, TIME_INTERVAL_MAP } from "gmx-middleware-const"
-import * as database from "../../logic/browserDatabaseScope"
+import * as database from "../../utils/storage/browserDatabaseScope"
+import * as indexDB from "../../utils/storage/indexDB"
 
 
 
@@ -27,14 +28,16 @@ const processSeed: IPositionSettled = {
   ...fillQuery(schema.positionSettled)
 }
 
-const gmxTradingSubgraph = replaySubgraphQuery(
-  {
-    subgraph: `https://gateway-arbitrum.network.thegraph.com/api/${import.meta.env.THE_GRAPH}/subgraphs/id/DJ4SBqiG8A8ytcsNJSuUU2gDTLFXxxPrAN8Aags84JH2`,
-    parentStoreScope: rootStoreScope,
-  },
-  schema.positionSettled,
-  processSeed
-)
+const indexDbParams = indexDB.openDb('_BROWSER_SCOPE')
+
+// const gmxTradingSubgraph = replaySubgraphQuery(
+//   {
+//     subgraph: `https://gateway-arbitrum.network.thegraph.com/api/${import.meta.env.THE_GRAPH}/subgraphs/id/DJ4SBqiG8A8ytcsNJSuUU2gDTLFXxxPrAN8Aags84JH2`,
+//     parentStoreScope: rootStoreScope,
+//   },
+//   schema.positionSettled,
+//   processSeed
+// )
 
 
 const newLocal = {

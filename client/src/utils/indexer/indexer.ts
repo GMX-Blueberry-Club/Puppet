@@ -1,13 +1,14 @@
 import { combineObject } from "@aelea/core"
 import { fromPromise, map, switchLatest } from "@most/core"
 import { ILogSubgraphType, ILogType, orderEvents } from "gmx-middleware-utils"
-import * as database from "../logic/browserDatabaseScope"
-import { publicClient } from "../wallet/walletLink"
+import * as database from "../storage/browserDatabaseScope"
+import { publicClient } from "../../wallet/walletLink"
 import { IQuerySubgraphConfig, ISchema, ISchemaQuery, PrettifyReturn, querySubgraph } from "./subgraph"
+import * as indexDB from "../storage/indexDB"
 
 
 export interface IReplaySubgraphConfig extends IQuerySubgraphConfig {
-  parentStoreScope: database.IStoreScope<any>
+  parentStoreScope: database.IStoreScopeConfig<any>
 }
 
 
@@ -31,10 +32,11 @@ export const replaySubgraphQuery = <Type extends ILogSubgraphType<any>, TQuery>(
     logHistory: [],
     syncedBlock: 0n,
   }
+  const indexDbParams = indexDB.openDb(schema.__typename + ':' + config.subgraph)
 
 
-  const currentStoreKey = database.getStoreKey(config.parentStoreScope, genesisSeed)
-  const seedStoredData = database.getStoredSeedData(currentStoreKey, genesisSeed)
+  const currentStoreKey = database.createStoreScope(config.parentStoreScope, schema.__typename as any, genesisSeed)
+  const seedStoredData = database.getStoredData(currentStoreKey, genesisSeed)
   
   const syncLogs = switchLatest(map(params => {
     const startBlock = config.startBlock

@@ -1,10 +1,11 @@
 import { combineObject } from "@aelea/core"
 import { fromPromise, map, switchLatest } from "@most/core"
-import { AbiEvent } from "abitype"
-import { ILogEvent, ILogIndex, orderEvents, parseJsonAbiEvent } from "gmx-middleware-utils"
+import { AbiEvent, ExtractAbiEvent } from "abitype"
+import { ILogEvent, ILogIndex, getEventOrderIdentifier, orderEvents, parseJsonAbiEvent } from "gmx-middleware-utils"
 import * as viem from "viem"
-import * as database from "../logic/browserDatabaseScope"
-import { publicClient } from "../wallet/walletLink"
+import * as database from "../storage/browserDatabaseScope"
+import { publicClient } from "../../wallet/walletLink"
+import * as indexDB from "../storage/indexDB"
 
 
 type MaybeExtractEventArgsFromAbi<
@@ -66,15 +67,11 @@ export function replayRpcEvent<
     address: config.address,
     args: config.args as any,
     log: [],
-    head: {
-      blockNumber: 0n,
-      logIndex: 0n,
-      transactionIndex: 0n,
-    },
+    orderIdentifier: 0,
   }
 
   const currentStoreKey = database.getStoreKey(config.parentStoreScope, genesisSeed)
-  const seedStoredData = database.getStoredSeedData(currentStoreKey, genesisSeed)
+  const seedStoredData = database.getStoredData(currentStoreKey, genesisSeed)
 
 
   
@@ -92,9 +89,9 @@ export function replayRpcEvent<
     // const latestPendingBlock = fromPromise(params.publicClient.getBlock({ blockTag: 'pending' }))
 
     const newHistoricLogs = map((syncParams): IIndexerState<TAbi, TEventName> => {
-      const newLogs = orderEvents(syncParams.newLogsQuery as any).map(ev => parseJsonAbiEvent(eventAbiManifest, ev)) as ILogEvent<TAbi, TEventName>[]
+      const newLogs = orderEvents(syncParams.newLogsQuery as any).map(ev => parseJsonAbiEvent(eventAbiManifest, ev)) as viem.Log<bigint, number, ExtractAbiEvent<TAbi, TEventName>, true>[]
       const lst = newLogs[newLogs.length - 1]
-      const { blockNumber, logIndex, transactionIndex } = lst
+      const orderIdentifier = getEventOrderIdentifier(lst)
       const head: ILogIndex = { blockNumber, logIndex, transactionIndex }
 
       const log = [...history, ...newLogs]
@@ -111,5 +108,4 @@ export function replayRpcEvent<
   return scope
   // return map(ev => ev.log, newLocal)
 }
-
 

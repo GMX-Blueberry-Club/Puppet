@@ -1,9 +1,9 @@
 import { map } from "@most/core"
 import { Stream } from "@most/types"
 import { ILogIndex, orderEvents, switchMap } from "gmx-middleware-utils"
-import * as database from "../logic/browserDatabaseScope"
-import { zipArray } from "../logic/utils"
-import { IStoreScope } from "../logic/browserDatabaseScope"
+import * as database from "../storage/browserDatabaseScope"
+import { zipArray } from "../../logic/utils"
+import { IStoreScope } from "../storage/browserDatabaseScope"
 
 export interface IProcessConfig<
   TSource extends ILogIndex[],
@@ -48,7 +48,7 @@ export function processSources<
   }, { indexedCountMap: {}, data: scopeState } as IProcessStep<TReturn>)
 
   const currentStoreKey = database.getStoreKey(parentStoreScope, storeScopeSeed)
-  const seedStoredData = database.getStoredSeedData(currentStoreKey, storeScopeSeed)
+  const seedStoredData = database.getStoredData(currentStoreKey, storeScopeSeed)
 
   const processWriteSources = switchMap(storeState => {
     const nextSeed = storeState

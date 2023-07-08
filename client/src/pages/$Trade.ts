@@ -1,21 +1,12 @@
 import { Behavior, O, combineArray, combineObject, replayLatest } from "@aelea/core"
 import { $node, $text, component, style, styleBehavior } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, observer, screenUtils } from "@aelea/ui-components"
-import {
-  IPositionDecrease, IPositionIncrease,
-  IPositionUpdate,
-  ITrade,
-  TradeStatus,
-  abs,
-  filterNull,
-  formatFixed,
-  readableFixedUSD30, formatBps, getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getLiquidationPrice, getMappedValue, getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getPnL, getPositionKey,
+import { 
+  IPositionDecrease, IPositionIncrease, IPositionUpdate, TradeStatus, abs, filterNull, formatFixed,
+  readableFixedUSD30, formatBps, getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getLiquidationPrice, getMappedValue,
+  getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getPnL, getPositionKey,
   getTokenAmount, getTokenDescription, gmxSubgraph,
-  readableAccountingNumber, readableNumber,
-  switchMap,
-  timeSince,
-  unixTimestampNow,
-  readableFixed10kBsp
+  readableAccountingNumber, readableNumber, switchMap, timeSince, unixTimestampNow, readableFixed10kBsp, IPositionSlot
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
@@ -37,7 +28,7 @@ import { $TradeBox, IRequestTrade, IRequestTradeParams, ITradeBoxParams, ITradeF
 import { rootStoreScope } from "../data"
 import { $card } from "../elements/$common"
 import { $caretDown } from "../elements/$icons"
-import { storeScope, replayWriteStoreScope } from "../logic/browserDatabaseScope"
+import { createReplayWriteStoreScope, createStoreScope } from "../utils/storage/browserDatabaseScope"
 import { connectContract } from "../logic/common"
 import * as tradeReader from "../logic/trade"
 import { connectTrade, getErc20Balance, latestPriceFromExchanges } from "../logic/trade"
@@ -108,9 +99,8 @@ export const $Trade = (config: ITradeComponent) => component((
 
   [enableTrading, enableTradingTether]: Behavior<boolean>,
 
-  [switchTrade, switchTradeTether]: Behavior<ITrade>,
+  [switchTrade, switchTradeTether]: Behavior<IPositionSlot>,
   [requestTrade, requestTradeTether]: Behavior<IRequestTrade>,
-
 
   // [focusPriceAxisPoint, focusPriceAxisPointTether]: Behavior<Coordinate | null>,
   [chartClick, chartClickTether]: Behavior<MouseEventParams>,
@@ -143,31 +133,19 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const executionFee = replayLatest(multicast(positionRouter.read('minExecutionFee')))
 
-  const tradingStore = storeScope(rootStoreScope, 'tradeBox' as const)
+  const tradingStore = createStoreScope(rootStoreScope, 'tradeBox' as const, '1' as const)
 
-  // const tradingStore = storeScope(rootStoreScope, {
-  //   timeframe: GMX.TIME_INTERVAL_MAP.MIN60,
-  //   isTradingEnabled: true,
-  //   isLong: true,
-  //   isIncrease: true,
-  //   focusMode: ITradeFocusMode.collateral,
-  //   slippage: '0.35',
-  //   inputToken: GMX.AddressZero,
-  //   indexToken: nativeToken,
-  //   shortCollateralToken: null as viem.Address | null,
-  //   leverage: GMX.LIMIT_LEVERAGE / 4n,
-  // })
 
-  const timeframe = replayWriteStoreScope(tradingStore, GMX.TIME_INTERVAL_MAP.MIN60, selectTimeFrame)
-  const isTradingEnabled = replayWriteStoreScope(timeframe, false, enableTrading)
-  const isLong = replayWriteStoreScope(isTradingEnabled, true, switchIsLong)
-  const isIncrease = replayWriteStoreScope(isLong, true, switchIsIncrease)
-  const focusMode = replayWriteStoreScope(isIncrease, ITradeFocusMode.collateral, switchFocusMode)
-  const slippage = replayWriteStoreScope(focusMode, '0.35', changeSlippage)
-  const inputToken = replayWriteStoreScope(slippage, GMX.AddressZero, changeInputToken)
-  const indexToken = replayWriteStoreScope(inputToken, nativeToken, changeIndexToken)
-  const shortCollateralToken = replayWriteStoreScope(indexToken, null as viem.Address | null, changeShortCollateralToken)
-  const leverage = replayWriteStoreScope(shortCollateralToken, GMX.LIMIT_LEVERAGE / 4n, changeLeverage) 
+  const timeframe = createReplayWriteStoreScope(tradingStore, 'timeframe', GMX.TIME_INTERVAL_MAP.MIN60, selectTimeFrame)
+  const isTradingEnabled = createReplayWriteStoreScope(tradingStore, 'isTradingEnabled', false, enableTrading)
+  const isLong = createReplayWriteStoreScope(tradingStore, 'isLong', true, switchIsLong)
+  const isIncrease = createReplayWriteStoreScope(tradingStore, 'isIncrease', true, switchIsIncrease)
+  const focusMode = createReplayWriteStoreScope(tradingStore, 'focusMode', ITradeFocusMode.collateral, switchFocusMode)
+  const slippage = createReplayWriteStoreScope(tradingStore, 'slippage', '0.35', changeSlippage)
+  const inputToken = createReplayWriteStoreScope(tradingStore, 'inputToken', GMX.AddressZero, changeInputToken)
+  const indexToken = createReplayWriteStoreScope(tradingStore, 'indexToken', nativeToken, changeIndexToken)
+  const shortCollateralToken = createReplayWriteStoreScope(tradingStore, 'shortCollateralToken', null as viem.Address | null, changeShortCollateralToken)
+  const leverage = createReplayWriteStoreScope(tradingStore, 'leverage', GMX.LIMIT_LEVERAGE / 4n, changeLeverage) 
 
 
   const collateralDeltaUsd = replayLatest(changeCollateralDeltaUsd, 0n)

@@ -1,7 +1,10 @@
-import * as database from './logic/browserDatabaseScope'
+import * as database from './utils/storage/browserDatabaseScope'
+import * as indexDB from './utils/storage/indexDB'
 
-export const rootStoreScope = database.createGenesisStore({
-  version: '0.0.1-alpha',
-})
+
+export const rootStoreScope: database.IStoreScopeConfig<'_BROWSER_SCOPE'> = {
+  dbParams: indexDB.openDb('_BROWSER_SCOPE'),
+  key: '_BROWSER_SCOPE',
+}
 
 

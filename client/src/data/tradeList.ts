@@ -1,10 +1,9 @@
 import * as GMX from "gmx-middleware-const"
 import * as viem from "viem"
 import { rootStoreScope } from "../data"
-import { replaySubgraphEvent } from "../indexer/indexer"
 import { IPositionSettled, IPositionSlot } from "gmx-middleware-utils"
-import { processSources } from "../indexer/processor"
-
+import { processSources } from "../utils/indexer/processor"
+import * as database from "../utils/indexer/rpc"
 
 const subgraph = `https://gateway-arbitrum.network.thegraph.com/api/${import.meta.env.THE_GRAPH}/subgraphs/id/DJ4SBqiG8A8ytcsNJSuUU2gDTLFXxxPrAN8Aags84JH2`
 
@@ -14,26 +13,27 @@ const replayConfig = {
   parentStoreScope: rootStoreScope,
 }
 
-export const increaseEvents = replaySubgraphEvent({
+export const increaseEvents = database.replayRpcEvent({
   eventName: 'IncreasePosition',
   ...replayConfig
 })
 
-export const decreaseEvents = replaySubgraphEvent({
+export const decreaseEvents = database.replayRpcEvent({
   ...replayConfig,
   eventName: 'DecreasePosition',
 })
 
-export const closeEvents = replaySubgraphEvent({
+export const closeEvents = database.replayRpcEvent({
   ...replayConfig,
   eventName: 'ClosePosition',
 })
-export const liquidateEvents = replaySubgraphEvent({
+
+export const liquidateEvents = database.replayRpcEvent({
   ...replayConfig,
   eventName: 'LiquidatePosition',
 })
 
-export const updateEvents = replaySubgraphEvent({
+export const updateEvents = database.replayRpcEvent({
   ...replayConfig,
   eventName: 'UpdatePosition',
 })

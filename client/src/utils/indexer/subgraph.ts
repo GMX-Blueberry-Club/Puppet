@@ -2,8 +2,7 @@ import { fromPromise } from "@most/core"
 import { Stream } from "@most/types"
 import { AbiType } from "abitype"
 import { request } from "graphql-request"
-import { parseTypeFnMap } from "./indexer"
-import { getMappedValue } from "gmx-middleware-utils"
+import { getMappedValue, parseTypeFnMap } from "gmx-middleware-utils"
 
 export type GqlType<T extends string> = { __typename: T }
 
