@@ -25,10 +25,10 @@ import { $CardTable } from "../components/$common"
 import { $ButtonSecondary } from "../components/form/$Button"
 import { $Dropdown } from "../components/form/$Dropdown"
 import { $TradeBox, IRequestTrade, IRequestTradeParams, ITradeBoxParams, ITradeFocusMode } from "../components/trade/$TradeBox"
-import { rootStoreScope } from "../data"
+import { rootStoreScope } from "../rootStore"
 import { $card } from "../elements/$common"
 import { $caretDown } from "../elements/$icons"
-import { createReplayWriteStoreScope, createStoreScope } from "../utils/storage/browserDatabaseScope"
+import * as store from "../utils/storage/storeScope"
 import { connectContract } from "../logic/common"
 import * as tradeReader from "../logic/trade"
 import { connectTrade, getErc20Balance, latestPriceFromExchanges } from "../logic/trade"
@@ -133,19 +133,19 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const executionFee = replayLatest(multicast(positionRouter.read('minExecutionFee')))
 
-  const tradingStore = createStoreScope(rootStoreScope, 'tradeBox' as const, '1' as const)
+  const tradingStore = store.createStoreScope(rootStoreScope, 'tradeBox' as const)
 
 
-  const timeframe = createReplayWriteStoreScope(tradingStore, 'timeframe', GMX.TIME_INTERVAL_MAP.MIN60, selectTimeFrame)
-  const isTradingEnabled = createReplayWriteStoreScope(tradingStore, 'isTradingEnabled', false, enableTrading)
-  const isLong = createReplayWriteStoreScope(tradingStore, 'isLong', true, switchIsLong)
-  const isIncrease = createReplayWriteStoreScope(tradingStore, 'isIncrease', true, switchIsIncrease)
-  const focusMode = createReplayWriteStoreScope(tradingStore, 'focusMode', ITradeFocusMode.collateral, switchFocusMode)
-  const slippage = createReplayWriteStoreScope(tradingStore, 'slippage', '0.35', changeSlippage)
-  const inputToken = createReplayWriteStoreScope(tradingStore, 'inputToken', GMX.AddressZero, changeInputToken)
-  const indexToken = createReplayWriteStoreScope(tradingStore, 'indexToken', nativeToken, changeIndexToken)
-  const shortCollateralToken = createReplayWriteStoreScope(tradingStore, 'shortCollateralToken', null as viem.Address | null, changeShortCollateralToken)
-  const leverage = createReplayWriteStoreScope(tradingStore, 'leverage', GMX.LIMIT_LEVERAGE / 4n, changeLeverage) 
+  const timeframe = store.replayWrite(tradingStore, 'timeframe', GMX.TIME_INTERVAL_MAP.MIN60, selectTimeFrame)
+  const isTradingEnabled = store.replayWrite(tradingStore, 'isTradingEnabled', false, enableTrading)
+  const isLong = store.replayWrite(tradingStore, 'isLong', true, switchIsLong)
+  const isIncrease = store.replayWrite(tradingStore, 'isIncrease', true, switchIsIncrease)
+  const focusMode = store.replayWrite(tradingStore, 'focusMode', ITradeFocusMode.collateral, switchFocusMode)
+  const slippage = store.replayWrite(tradingStore, 'slippage', '0.35', changeSlippage)
+  const inputToken = store.replayWrite(tradingStore, 'inputToken', GMX.AddressZero, changeInputToken)
+  const indexToken = store.replayWrite(tradingStore, 'indexToken', nativeToken, changeIndexToken)
+  const shortCollateralToken = store.replayWrite(tradingStore, 'shortCollateralToken', null as viem.Address | null, changeShortCollateralToken)
+  const leverage = store.replayWrite(tradingStore, 'leverage', GMX.LIMIT_LEVERAGE / 4n, changeLeverage) 
 
 
   const collateralDeltaUsd = replayLatest(changeCollateralDeltaUsd, 0n)

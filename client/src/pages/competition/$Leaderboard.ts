@@ -9,7 +9,7 @@ import { $defaultProfileContainer } from "../../common/$avatar"
 import { $pnlValue, $sizeDisplay } from "../../common/$common"
 import { $accountPreview } from "../../components/$AccountProfile"
 import { $CardTable } from "../../components/$common"
-import { rootStoreScope } from "../../data"
+import { rootStoreScope } from "../../rootStore"
 import { schema } from "../../data/schema"
 // import { fillQuery, replaySubgraphQuery } from "../../utils/indexer/indexer"
 import { processSources } from "../../utils/indexer/processor"
@@ -17,8 +17,11 @@ import { $seperator2 } from "../common"
 import { ICompetitonCumulativeRoi } from "./$CumulativePnl"
 import { pallete } from "@aelea/ui-components-theme"
 import { IntervalTime, TIME_INTERVAL_MAP } from "gmx-middleware-const"
-import * as database from "../../utils/storage/browserDatabaseScope"
+import * as store from "../../utils/storage/storeScope"
 import * as indexDB from "../../utils/storage/indexDB"
+import { fillQuery } from "../../utils/indexer/indexer"
+import { replayRpcLog } from "../../utils/indexer/rpc"
+import { rpcTradeList } from "../../data/tradeList"
 
 
 
@@ -28,7 +31,6 @@ const processSeed: IPositionSettled = {
   ...fillQuery(schema.positionSettled)
 }
 
-const indexDbParams = indexDB.openDb('_BROWSER_SCOPE')
 
 // const gmxTradingSubgraph = replaySubgraphQuery(
 //   {
@@ -40,36 +42,41 @@ const indexDbParams = indexDB.openDb('_BROWSER_SCOPE')
 // )
 
 
+
+const tradeList = rpcTradeList
+
+
+
 const newLocal = {
   summaryList: [] as IAccountSummary[]
 }
 
-const data = processSources(
-  rootStoreScope,
-  newLocal,
-  {
-    source: gmxTradingSubgraph,
-    step(seed, value) {
+// const data = processSources(
+//   rootStoreScope,
+//   newLocal,
+//   {
+//     source: gmxTradingSubgraph,
+//     step(seed, value) {
 
 
-      return seed
-    },
-  },
-)
+//       return seed
+//     },
+//   },
+// )
 
 
 const datass = map(trades => {
-  const summaryList = toAccountSummaryList(trades.logHistory)
+  const summaryList = Object.values(trades.positionsSettled)
 
   return pagingQuery({ offset: 0, pageSize: 20, selector: 'pnl', direction: "desc" }, summaryList)
-}, gmxTradingSubgraph)
+}, tradeList)
 
 
 export type ILeaderboard = ICompetitonCumulativeRoi
 
 export const $Leaderboard = (config: ILeaderboard) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
-  [topPnlTimeframeChange, topPnlTimeframeChangeTether]: Behavior<any, ILeaderboardRequest['timeInterval']>,
+  // [topPnlTimeframeChange, topPnlTimeframeChangeTether]: Behavior<any, ILeaderboardRequest['timeInterval']>,
 
 ) => {
 
@@ -83,7 +90,8 @@ export const $Leaderboard = (config: ILeaderboard) => component((
     })
   )
 
-  const timeframe = database.replayWriteStoreScope(rootStoreScope, TIME_INTERVAL_MAP.HR24, topPnlTimeframeChange)
+  const timeframe = store.createStoreScope(rootStoreScope, 'leaderboard')
+  // const timeframe = store.createStoreScope(rootStoreScope, TIME_INTERVAL_MAP.HR24, topPnlTimeframeChange)
 
   const activeTimeframe: StyleCSS = { color: pallete.primary, pointerEvents: 'none' }
 
@@ -95,77 +103,75 @@ export const $Leaderboard = (config: ILeaderboard) => component((
           options: ['Settled', 'Open', 'Competition'],
           selected: now('Settled'),
           $$option: map(option => $text(option)),
-        })({
-
-        })
+        })({ })
       ),
 
-      switchLatest(
-        map(list => {
+      // switchLatest(
+      //   map(list => {
 
-          const fst = list.logHistory[0]
-          const lst = list.logHistory[list.logHistory.length - 1]
+      //     const fst = list.logHistory[0]
+      //     const lst = list.logHistory[list.logHistory.length - 1]
 
-          const initialTick = {
-            time: Number(fst.blockTimestamp),
-            value: 0
-          }
+      //     const initialTick = {
+      //       time: Number(fst.blockTimestamp),
+      //       value: 0
+      //     }
 
           
 
-          const timeRange = Number(lst.blockTimestamp - fst.blockTimestamp)
+      //     const timeRange = Number(lst.blockTimestamp - fst.blockTimestamp)
 
-          const data = intervalListFillOrderMap({
-            source: list.logHistory,
-            // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
-            interval: timeRange / 100,
-            seed: initialTick,
-            getTime: x => Number(x.blockTimestamp),
-            fillMap: (prev, next) => {
+      //     const data = intervalListFillOrderMap({
+      //       source: list.logHistory,
+      //       // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
+      //       interval: timeRange / 100,
+      //       seed: initialTick,
+      //       getTime: x => Number(x.blockTimestamp),
+      //       fillMap: (prev, next) => {
 
-              const time = Number(next.blockTimestamp)
-              const value = prev.value + formatFixed(next.realisedPnl, 30)
+      //         const time = Number(next.blockTimestamp)
+      //         const value = prev.value + formatFixed(next.realisedPnl, 30)
       
-              return { time, value }
-            }
-          })
+      //         return { time, value }
+      //       }
+      //     })
  
           
-          return $Baseline({
-            data: data,
-          })({})
-        }, gmxTradingSubgraph)
-      ),
+      //     return $Baseline({
+      //       data: data,
+      //     })({})
+      //   }, gmxTradingSubgraph)
+      // ),
 
-      $column(
-        $row(layoutSheet.spacing)(
-          $text(style({ color: pallete.foreground }))('Period:'),
-          $anchor(
-            styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.HR24 ? activeTimeframe : null, timeframe)),
-            topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.HR24))
-          )(
-            $text('Day')
-          ),
-          $anchor(
-            styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.DAY7 ? activeTimeframe : null, timeframe)),
-            topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.DAY7))
-          )(
-            $text('Week')
-          ),
-          $anchor(
-            styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.MONTH ? activeTimeframe : null, timeframe)),
-            topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.MONTH))
-          )(
-            $text('Month')
-          ),
-          $anchor(
-            styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.MONTH ? activeTimeframe : null, timeframe)),
-            topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.MONTH))
-          )(
-            $text('Year')
-          )
-        )
-      ),
+      // $column(
+      //   $row(layoutSheet.spacing)(
+      //     $text(style({ color: pallete.foreground }))('Period:'),
+      //     $anchor(
+      //       styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.HR24 ? activeTimeframe : null, timeframe)),
+      //       topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.HR24))
+      //     )(
+      //       $text('Day')
+      //     ),
+      //     $anchor(
+      //       styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.DAY7 ? activeTimeframe : null, timeframe)),
+      //       topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.DAY7))
+      //     )(
+      //       $text('Week')
+      //     ),
+      //     $anchor(
+      //       styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.MONTH ? activeTimeframe : null, timeframe)),
+      //       topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.MONTH))
+      //     )(
+      //       $text('Month')
+      //     ),
+      //     $anchor(
+      //       styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.MONTH ? activeTimeframe : null, timeframe)),
+      //       topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.MONTH))
+      //     )(
+      //       $text('Year')
+      //     )
+      //   )
+      // ),
 
       containerStyle(
         $CardTable({

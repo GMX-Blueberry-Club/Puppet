@@ -1,14 +1,14 @@
 import { combineObject } from "@aelea/core"
 import { fromPromise, map, switchLatest } from "@most/core"
 import { ILogSubgraphType, ILogType, orderEvents } from "gmx-middleware-utils"
-import * as database from "../storage/browserDatabaseScope"
+import * as store from "../storage/storeScope"
 import { publicClient } from "../../wallet/walletLink"
 import { IQuerySubgraphConfig, ISchema, ISchemaQuery, PrettifyReturn, querySubgraph } from "./subgraph"
 import * as indexDB from "../storage/indexDB"
 
 
 export interface IReplaySubgraphConfig extends IQuerySubgraphConfig {
-  parentStoreScope: database.IStoreScopeConfig<any>
+  parentStoreScope: store.IStoreconfig<any>
 }
 
 
@@ -24,7 +24,7 @@ export const replaySubgraphQuery = <Type extends ILogSubgraphType<any>, TQuery>(
   config: IReplaySubgraphConfig,
   schema: ISchema<Type>,
   query: TQuery
-): database.IStoreScope<Type[]> => {
+): store.IStoreScope<Type[]> => {
 
   const genesisSeed = {
     subgraph: config.subgraph,
@@ -32,11 +32,11 @@ export const replaySubgraphQuery = <Type extends ILogSubgraphType<any>, TQuery>(
     logHistory: [],
     syncedBlock: 0n,
   }
-  const indexDbParams = indexDB.openDb(schema.__typename + ':' + config.subgraph)
+  const indexDbParams = indexDB.createDb(schema.__typename + ':' + config.subgraph)
 
 
-  const currentStoreKey = database.createStoreScope(config.parentStoreScope, schema.__typename as any, genesisSeed)
-  const seedStoredData = database.getStoredData(currentStoreKey, genesisSeed)
+  const currentStoreKey = store.createStoreScope(config.parentStoreScope, schema.__typename as any, genesisSeed)
+  const seedStoredData = store.read(currentStoreKey, genesisSeed)
   
   const syncLogs = switchLatest(map(params => {
     const startBlock = config.startBlock
@@ -60,7 +60,7 @@ export const replaySubgraphQuery = <Type extends ILogSubgraphType<any>, TQuery>(
   }, combineObject({ publicClient, seedStoredData })))
 
 
-  const newLocal = database.replayWriteStoreScope(config.parentStoreScope, genesisSeed, syncLogs)
+  const newLocal = store.replayWriteStoreScope(config.parentStoreScope, genesisSeed, syncLogs)
   return newLocal
 }
 

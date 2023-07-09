@@ -11,7 +11,7 @@ import { Address } from "viem"
 import { $discoverIdentityDisplay } from "../components/$AccountProfile"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu'
-import * as database from "../utils/storage/browserDatabaseScope"
+import * as store from "../utils/storage/storeScope"
 import { helloBackend } from '../logic/websocket'
 import { fadeIn } from "../transitions/enter"
 import { $Home } from "./$Home"

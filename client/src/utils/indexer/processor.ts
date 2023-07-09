@@ -1,16 +1,20 @@
 import { map } from "@most/core"
 import { Stream } from "@most/types"
-import { ILogIndex, orderEvents, switchMap } from "gmx-middleware-utils"
-import * as database from "../storage/browserDatabaseScope"
+import { ILogIndex, ILogOrdered, orderEvents, switchMap } from "gmx-middleware-utils"
+import * as store from "../storage/storeScope"
+import * as indexDB from "../storage/indexDB"
 import { zipArray } from "../../logic/utils"
-import { IStoreScope } from "../storage/browserDatabaseScope"
+import { IReplayRpcStore } from "./rpc"
+import * as viem from "viem"
+
+
 
 export interface IProcessConfig<
-  TSource extends ILogIndex[],
+  TValue extends ILogOrdered,
   TReturn
 > {
-  source: IStoreScope<TSource>
-  step: (seed: TReturn, value: TSource[number]) => TReturn
+  source: IReplayRpcStore<TValue>
+  step: (seed: TReturn, value: TValue) => TReturn
 }
 
 interface IProcessStep<T> {
@@ -21,13 +25,13 @@ interface IProcessStep<T> {
 export function processSources<
   TReturn,
 
-  TSource1 extends ILogIndex[],
-  TSource2 extends ILogIndex[],
-  TSource3 extends ILogIndex[],
-  TSource4 extends ILogIndex[],
-  TSource5 extends ILogIndex[],
+  TSource1 extends ILogOrdered,
+  TSource2 extends ILogOrdered,
+  TSource3 extends ILogOrdered,
+  TSource4 extends ILogOrdered,
+  TSource5 extends ILogOrdered,
 >(
-  parentStoreScope: database.IStoreScope<any>,
+  parentStoreScope: store.IStoreconfig<'root'>,
   scopeState: TReturn,
   // the rest is used for type inference
   process1: IProcessConfig<TSource1, TReturn>,
@@ -38,33 +42,37 @@ export function processSources<
 ): Stream<TReturn> {
 
 
+
+
   // eslint-disable-next-line prefer-rest-params
   const processList: IProcessConfig<any, TReturn>[] = [...arguments].slice(2)
-  const sourceEventList = processList.map(x => x.source)
-
-  const storeScopeSeed = sourceEventList.reduce((seed, next) => {
-    seed.indexedCountMap[next.key] = 0
+  const sourceEventList = processList.map(x => x.source.log)
+  const storeScopeSeed = processList.reduce((seed, next) => {
+    seed.indexedCountMap[next.source.scope.name] = 0
     return seed
   }, { indexedCountMap: {}, data: scopeState } as IProcessStep<TReturn>)
+  const scope = store.createStoreScope(parentStoreScope, 'proc')
+  const storedData = store.read(scope, 'proc', storeScopeSeed)
 
-  const currentStoreKey = database.getStoreKey(parentStoreScope, storeScopeSeed)
-  const seedStoredData = database.getStoredData(currentStoreKey, storeScopeSeed)
 
+
+  
   const processWriteSources = switchMap(storeState => {
     const nextSeed = storeState
     const stepState = zipArray((...nextLogEvents) => {
 
       const nextEvents = nextLogEvents.flatMap((state, processIdx) => {
-        const processKey = processList[processIdx].source.key
-        const totalLogCount = state.logHistory.length
-        const deltaStoreCount = state.logHistory.length - nextSeed.indexedCountMap[processKey]
+        const dbProcessName = processList[processIdx].source.scope.name
+        const totalLogCount = state.length
+        const deltaStoreCount = state.length - nextSeed.indexedCountMap[dbProcessName]
 
-        nextSeed.indexedCountMap[processKey] = totalLogCount
+        nextSeed.indexedCountMap[dbProcessName] = totalLogCount
 
         return deltaStoreCount
-          ? state.logHistory.slice(-deltaStoreCount)
+          ? state.slice(-deltaStoreCount)
           : []
       })
+
       const orderedNextEvents = orderEvents(nextEvents)
 
       for (let evIdx = 0; evIdx < orderedNextEvents.length; evIdx++) {
@@ -73,7 +81,7 @@ export function processSources<
         for (let processIdx = 0; processIdx < processList.length; processIdx++) {
           const processState = nextLogEvents[processIdx]
 
-          if (!processState.logHistory.includes(nextEvent)) {
+          if (!processState.includes(nextEvent)) {
             throw new Error(`Event ${nextEvent.event} not found in log`)
           }
 
@@ -86,9 +94,9 @@ export function processSources<
     }, ...sourceEventList)
 
     return stepState
-  }, seedStoredData)
+  }, storedData)
 
-  const store = database.writeStoreData(currentStoreKey, processWriteSources)
+  // const storeReplayWrite = store.replayWrite(scope, currentStoreKey, processWriteSources)
 
-  return map(s => s.data, store)
+  return map(x => x.data, processWriteSources)
 }

@@ -1,11 +1,11 @@
-import { concatMap, constant } from "@most/core"
+import { concatMap, constant, join, map } from "@most/core"
 import { disposeNone } from "@most/disposable"
 import { Stream } from "@most/types"
 import { switchMap } from "gmx-middleware-utils"
 
-export interface IDbParams<TName extends string = string, TKeypath extends string | string[] = string> {
+export interface IDbParams<TName extends string = string, TOptions extends IDBObjectStoreParameters | undefined = undefined> {
   name: TName
-  keyPath: TKeypath
+  options?: TOptions
   db: Stream<IDBDatabase>
 }
 
@@ -16,37 +16,25 @@ export type UseStore = <T>(
 ) => Promise<T>;
 
 
-export function get<TResult, TName extends string, TKeypath extends string | string[]>(
-  params: IDbParams<TName, TKeypath>,
-  key: TName
+export function read<TResult, TKey extends string = string, TName extends string = string, TOptions extends IDBObjectStoreParameters | undefined = undefined>(
+  params: IDbParams<TName, TOptions>,
+  key: TKey
 ): Stream<TResult | null> {
   return switchMap(db => {
-    return transact(db, 'readonly', params.name, store => store.get(key))
+    return action(db, params.name, 'readonly', store => store.get(key))
   }, params.db)
 }
 
-export function getRange<TResult, TName extends string, TKeypath extends string | string[]>(
-  params: IDbParams<TName, TKeypath>,
-  range: [number, number]
-): Stream<TResult | null> {
-  return switchMap(db => {
-    const newLocal = transact<TResult, TName, TKeypath>(db, 'readonly', params.name, store => {
-      const keyRange = IDBKeyRange.bound(...range, true, true)
-      const dbReq = store.openCursor(keyRange)
-      return dbReq
-    })
-    return newLocal
-  }, params.db)
-}
-
-export function write<TResult, TName extends string, TKeypath extends string | string[]>(
-  params: IDbParams<TName, TKeypath>,
+export function put<TResult, TKey extends string = string, TName extends string = string, TOptions extends IDBObjectStoreParameters | undefined = undefined>(
+  params: IDbParams<TName, TOptions>,
+  key: TKey,
   writeEvent: Stream<TResult>
 ): Stream<TResult> {
   return switchMap(db => {
+    // write to db in order in which events were emitted
     return concatMap(data => {
-      const reqEvent = transact(db, 'readwrite', params.name, store => {
-        const dbTx = store.put(data)
+      const reqEvent = action(db, key, 'readwrite', store => {
+        const dbTx = store.put(data, key)
         return dbTx
       })
       return constant(data, reqEvent)
@@ -54,19 +42,51 @@ export function write<TResult, TName extends string, TKeypath extends string | s
   }, params.db)
 }
 
-export function openDb<TName extends string, TKeypath extends string | string[] = 'id'>(
-  name: TName,
-  keyPath: TKeypath = 'id' as TKeypath,
+
+export function add<TResult, TName extends string = string, TOptions extends IDBObjectStoreParameters | undefined = undefined>(
+  params: IDbParams<TName, TOptions>,
+  list: TResult[]
+): Stream<TResult[]> {
+  return join(map(db => {
+    const reqEvent = actionAsync(db, params.name, 'readwrite', store => {
+      for (const item of list) {
+        store.add(item)
+      }
+      return request(store.transaction)
+    })
+    return constant(list, reqEvent)
+  }, params.db))
+}
+
+export function getRange<TResult, TName extends string = string, TOptions extends IDBObjectStoreParameters | undefined = undefined>(
+  params: IDbParams<TName, TOptions>,
+  keyRange: [number, number]
+): Stream<TResult | null> {
+  return switchMap(db => {
+    const newLocal = action(db, params.name, 'readonly', store => {
+      const range = IDBKeyRange.bound(...keyRange, true, true)
+      const dbReq = store.openCursor(range)
+      return dbReq
+    })
+    return newLocal
+  }, params.db)
+}
+
+
+
+export function openDb<TName extends string, TOptions extends IDBObjectStoreParameters | undefined = undefined>(
+  dbName: TName,
+  options?: TOptions,
   version = 1,
-): IDbParams<TName, TKeypath> {
+): IDbParams<TName, TOptions> {
 
   const db: Stream<IDBDatabase> = {
     run(sink, scheduler) {
-      const openDbRequest = indexedDB.open(name, version)
+      const openDbRequest = indexedDB.open(dbName, version)
 
       openDbRequest.onupgradeneeded = event => {
         try {
-          openDbRequest.result.createObjectStore(name, { keyPath })
+          openDbRequest.result.createObjectStore(dbName, options)
         } catch (e) {
           sink.error(scheduler.currentTime(), e instanceof Error ? e : new Error('Unknown error'))
         }
@@ -74,7 +94,7 @@ export function openDb<TName extends string, TKeypath extends string | string[] 
   
       openDbRequest.onsuccess = () => sink.event(scheduler.currentTime(), openDbRequest.result)
       openDbRequest.onerror = (e) => {
-        const target = e.target as IDBRequest<IDbParams<TName, TKeypath>>
+        const target = e.target as IDBRequest<IDbParams<TName, TOptions>>
         sink.error(scheduler.currentTime(), target.error || new Error('Unknown error'))
       }
       openDbRequest.onblocked = () => sink.error(scheduler.currentTime(), new Error('Database transaction blocked'))
@@ -87,21 +107,42 @@ export function openDb<TName extends string, TKeypath extends string | string[] 
     },
   }
 
-  return { db, name, keyPath }
+  return { db, name: dbName, options: options }
 }
 
 
-function transact<TResult, TName extends string, TKeypath extends string | string[]>(
+function action<TResult, TName extends string>(
   dbInstance: IDBDatabase,
+  storeName: TName,
   txMode: IDBTransactionMode,
-  name: TName,
-  actionCb: (store: IDBObjectStore) => IDBRequest<IDBCursorWithValue | null> | IDBRequest<TResult>
+  actionCb: (store: IDBObjectStore) => IDBRequest<any>
 ): Stream<TResult | null> {
+  const store = dbInstance.transaction(storeName, txMode).objectStore(storeName)
+  const req = actionCb(store)
+  return request<TResult>(req)
+}
+
+function actionAsync<TResult, TName extends string>(
+  dbInstance: IDBDatabase,
+  storeName: TName,
+  txMode: IDBTransactionMode,
+  actionCb: (store: IDBObjectStore) => Stream<IDBRequest<any>>
+): Stream<TResult | null> {
+  const store = dbInstance.transaction(storeName, txMode).objectStore(storeName)
+  const req = actionCb(store)
+  return join(map(r => request<TResult>(r), req))
+}
+
+
+function request<TResult>(req: IDBRequest<any> | IDBTransaction): Stream<TResult | null> {
   return {
     run(sink, scheduler) {
-      const tx = dbInstance.transaction(name, txMode)
-      const store = tx.objectStore(name)
-      const req = actionCb(store)
+
+      if (req instanceof IDBTransaction) {
+        req.oncomplete = () => sink.end(scheduler.currentTime())
+        req.onerror = () => sink.error(scheduler.currentTime(), req.error || new Error('Unknown error'))
+        return disposeNone()
+      }
 
       req.onsuccess = () => {
         // if (req.result === null) {
@@ -109,8 +150,9 @@ function transact<TResult, TName extends string, TKeypath extends string | strin
         // }
 
         if (req.result instanceof IDBCursorWithValue) {
-          return sink.event(scheduler.currentTime(), req.result.value)
-          // req.result.continue()
+          sink.event(scheduler.currentTime(), req.result.value)
+          req.result.continue()
+          return
         }
 
         sink.event(scheduler.currentTime(), req.result)

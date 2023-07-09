@@ -9,7 +9,6 @@ import { IRequestAccountTradeListApi, readableDate, timeSince, unixTimestampNow 
 import { $pnlValue, $TradePnl, $entry, $openPositionPnlBreakdown, $riskLiquidator, $settledSizeDisplay } from "../common/$common"
 import { $discoverIdentityDisplay } from "../components/$AccountProfile"
 import { $CardTable } from "../components/$common"
-import { getTraderData } from "../data/tradeList"
 import { $responsiveFlex } from "../elements/$common"
 import { connectTrade } from "../logic/trade"
 import { fadeIn } from "../transitions/enter"
