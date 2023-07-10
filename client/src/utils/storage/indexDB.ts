@@ -1,4 +1,4 @@
-import { concatMap, constant, join, map } from "@most/core"
+import { concatMap, constant, join, map, take } from "@most/core"
 import { disposeNone } from "@most/disposable"
 import { Stream } from "@most/types"
 import { switchMap } from "gmx-middleware-utils"
@@ -33,8 +33,9 @@ export function put<TResult, TKey extends string = string, TName extends string 
   return switchMap(db => {
     // write to db in order in which events were emitted
     return concatMap(data => {
-      const reqEvent = action(db, key, 'readwrite', store => {
+      const reqEvent = action(db, params.name, 'readwrite', store => {
         const dbTx = store.put(data, key)
+
         return dbTx
       })
       return constant(data, reqEvent)
@@ -48,12 +49,13 @@ export function add<TResult, TName extends string = string, TOptions extends IDB
   list: TResult[]
 ): Stream<TResult[]> {
   return join(map(db => {
-    const reqEvent = actionAsync(db, params.name, 'readwrite', store => {
+    const reqEvent = action(db, params.name, 'readwrite', store => {
       for (const item of list) {
         store.add(item)
       }
-      return request(store.transaction)
+      return store.transaction
     })
+
     return constant(list, reqEvent)
   }, params.db))
 }
@@ -92,7 +94,12 @@ export function openDb<TName extends string, TOptions extends IDBObjectStorePara
         }
       }
   
-      openDbRequest.onsuccess = () => sink.event(scheduler.currentTime(), openDbRequest.result)
+      openDbRequest.onsuccess = () => {
+        const time = scheduler.currentTime()
+        sink.event(time, openDbRequest.result)
+        sink.end(time)
+      }
+
       openDbRequest.onerror = (e) => {
         const target = e.target as IDBRequest<IDbParams<TName, TOptions>>
         sink.error(scheduler.currentTime(), target.error || new Error('Unknown error'))
@@ -115,32 +122,20 @@ function action<TResult, TName extends string>(
   dbInstance: IDBDatabase,
   storeName: TName,
   txMode: IDBTransactionMode,
-  actionCb: (store: IDBObjectStore) => IDBRequest<any>
+  actionCb: (store: IDBObjectStore) => IDBRequest<any>| IDBTransaction
 ): Stream<TResult | null> {
   const store = dbInstance.transaction(storeName, txMode).objectStore(storeName)
   const req = actionCb(store)
   return request<TResult>(req)
 }
 
-function actionAsync<TResult, TName extends string>(
-  dbInstance: IDBDatabase,
-  storeName: TName,
-  txMode: IDBTransactionMode,
-  actionCb: (store: IDBObjectStore) => Stream<IDBRequest<any>>
-): Stream<TResult | null> {
-  const store = dbInstance.transaction(storeName, txMode).objectStore(storeName)
-  const req = actionCb(store)
-  return join(map(r => request<TResult>(r), req))
-}
-
 
 function request<TResult>(req: IDBRequest<any> | IDBTransaction): Stream<TResult | null> {
   return {
     run(sink, scheduler) {
-
       if (req instanceof IDBTransaction) {
-        req.oncomplete = () => sink.end(scheduler.currentTime())
-        req.onerror = () => sink.error(scheduler.currentTime(), req.error || new Error('Unknown error'))
+        req.oncomplete = () => sink.event(scheduler.currentTime(), req)
+        req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error('Unknown error'))
         return disposeNone()
       }
 
@@ -148,16 +143,19 @@ function request<TResult>(req: IDBRequest<any> | IDBTransaction): Stream<TResult
         // if (req.result === null) {
         //   return sink.error(scheduler.currentTime(), new Error(`name: ${name} keypath: ${keyPath} Not found, resulted in null`))
         // }
+        const time = scheduler.currentTime()
 
         if (req.result instanceof IDBCursorWithValue) {
-          sink.event(scheduler.currentTime(), req.result.value)
+          sink.event(time, req.result.value)
           req.result.continue()
-          return
+        } else {
+          sink.event(scheduler.currentTime(), req.result)
         }
 
-        sink.event(scheduler.currentTime(), req.result)
+        sink.end(time)
       }
-      req.onerror = () => sink.error(scheduler.currentTime(), req.error || new Error('Unknown error'))
+
+      req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error('Unknown error'))
 
       return disposeNone()
     }

@@ -2,7 +2,7 @@ import { fromPromise } from "@most/core"
 import { Stream } from "@most/types"
 import { AbiType } from "abitype"
 import { request } from "graphql-request"
-import { getMappedValue, parseTypeFnMap } from "gmx-middleware-utils"
+import { abiParamParseMap, getMappedValue } from "gmx-middleware-utils"
 
 export type GqlType<T extends string> = { __typename: T }
 
@@ -77,7 +77,7 @@ function parseResults(json: any, schema: any) {
 
     if (typeof value === 'string') {
       const abiType = schemaField
-      const parseFn = getMappedValue(parseTypeFnMap, abiType)
+      const parseFn = getMappedValue(abiParamParseMap, abiType)
 
       if (key === '__typename') {
         entity[key] = value

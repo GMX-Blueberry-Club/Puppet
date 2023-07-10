@@ -1,10 +1,10 @@
-import { map } from "@most/core"
+import { continueWith, join, map, now, tap } from "@most/core"
 import { Stream } from "@most/types"
-import { ILogIndex, ILogOrdered, orderEvents, switchMap } from "gmx-middleware-utils"
+import { ILogIndex, ILogOrdered, getEventOrderIdentifier, orderEvents, switchMap } from "gmx-middleware-utils"
 import * as store from "../storage/storeScope"
 import * as indexDB from "../storage/indexDB"
 import { zipArray } from "../../logic/utils"
-import { IReplayRpcStore } from "./rpc"
+import { IFilterLogsParams, filterLogs, replayRpcLog } from "./rpc"
 import * as viem from "viem"
 
 
@@ -13,13 +13,23 @@ export interface IProcessConfig<
   TValue extends ILogOrdered,
   TReturn
 > {
-  source: IReplayRpcStore<TValue>
+  source: IFilterLogsParams<TValue, any, any>
   step: (seed: TReturn, value: TValue) => TReturn
 }
 
-interface IProcessStep<T> {
+interface IProcessStore<T, TIdentifier extends ILogOrdered & ILogIndex> {
   data: T
-  indexedCountMap: Record<string, number>
+  indexedOrderIdMap: Record<`${string}:${string}:0x${string}:${number}`, number | null>
+
+  event: TIdentifier
+
+  syncedBlockNumber: bigint
+
+  syncedOrderId: number
+  syncedEvent: TIdentifier | null
+
+  syncedProcessedOrderId: number
+  syncedProcessedEvent: TIdentifier | null
 }
 
 export function processSources<
@@ -33,6 +43,7 @@ export function processSources<
 >(
   parentStoreScope: store.IStoreconfig<'root'>,
   scopeState: TReturn,
+  blockNumber: number,
   // the rest is used for type inference
   process1: IProcessConfig<TSource1, TReturn>,
   process2?: IProcessConfig<TSource2, TReturn>,
@@ -45,35 +56,37 @@ export function processSources<
 
 
   // eslint-disable-next-line prefer-rest-params
-  const processList: IProcessConfig<any, TReturn>[] = [...arguments].slice(2)
-  const sourceEventList = processList.map(x => x.source.log)
-  const storeScopeSeed = processList.reduce((seed, next) => {
-    seed.indexedCountMap[next.source.scope.name] = 0
-    return seed
-  }, { indexedCountMap: {}, data: scopeState } as IProcessStep<TReturn>)
+  const processList: IProcessConfig<any, TReturn>[] = [...arguments].slice(3)
   const scope = store.createStoreScope(parentStoreScope, 'proc')
-  const storedData = store.read(scope, 'proc', storeScopeSeed)
+  const seed = { indexedOrderIdMap: {}, data: scopeState, syncedProcessedOrderId: 0, syncedOrderId: 0, syncedProcessedEvent: null, syncedEvent: null, syncedBlockNumber: BigInt(blockNumber) } as IProcessStore<TReturn, ILogOrdered & ILogIndex>
+  const storedData = store.read(scope, 'proc', seed)
+ 
+  const processWriteSources = switchMap(storeState => { 
+    let nextSeed = storeState
 
+    const initalStoredEvents = processList.map((pcf, processIdx) => {
+      const processScope = processList[processIdx].source.scope
+      const seedStoredData: Stream<(ILogOrdered & ILogIndex)[]> = map(res => res === null ? [] : res, indexDB.getRange(processScope, [nextSeed.syncedOrderId, Number(1000000000000000000n)]))
+      const newLogs = filterLogs({ ...pcf.source, startBlock: Number(nextSeed.syncedBlockNumber) })
+      return continueWith(() => newLogs, seedStoredData)
+    })
 
-
-  
-  const processWriteSources = switchMap(storeState => {
-    const nextSeed = storeState
     const stepState = zipArray((...nextLogEvents) => {
 
-      const nextEvents = nextLogEvents.flatMap((state, processIdx) => {
-        const dbProcessName = processList[processIdx].source.scope.name
-        const totalLogCount = state.length
-        const deltaStoreCount = state.length - nextSeed.indexedCountMap[dbProcessName]
+      nextSeed = nextLogEvents.reduce((prev, nextLogList) => {
+        if (nextLogList.length) {
+          const lst = nextLogList[nextLogList.length - 1]
 
-        nextSeed.indexedCountMap[dbProcessName] = totalLogCount
+          if (lst.orderIdentifier > prev.syncedOrderId) {
+            return { ...prev, syncedOrderId: lst.orderIdentifier, syncedEvent: lst, syncedBlockNumber: lst.blockNumber }
+          }
+        }
 
-        return deltaStoreCount
-          ? state.slice(-deltaStoreCount)
-          : []
-      })
+        return prev
+      }, storeState)
 
-      const orderedNextEvents = orderEvents(nextEvents)
+
+      const orderedNextEvents = orderEvents(nextLogEvents.flat())
 
       for (let evIdx = 0; evIdx < orderedNextEvents.length; evIdx++) {
         const nextEvent = orderedNextEvents[evIdx]
@@ -81,22 +94,33 @@ export function processSources<
         for (let processIdx = 0; processIdx < processList.length; processIdx++) {
           const processState = nextLogEvents[processIdx]
 
-          if (!processState.includes(nextEvent)) {
-            throw new Error(`Event ${nextEvent.event} not found in log`)
-          }
-
           const processSrc = processList[processIdx]
-          nextSeed.data = processSrc.step(nextSeed.data, nextEvent)
+          try {
+            if (!processState.includes(nextEvent)) {
+              throw new Error(`Event ${nextEvent.event} not found in log`)
+            }
+
+            nextSeed.data = processSrc.step(nextSeed.data, nextEvent)
+            nextSeed.syncedProcessedEvent = nextEvent
+
+          } catch (err){
+            // reset
+            nextSeed.data = scopeState
+            console.error('Error processing event ', nextEvent, err)
+          }
         }
       }
 
+
       return nextSeed
-    }, ...sourceEventList)
+    }, ...initalStoredEvents)
 
     return stepState
   }, storedData)
 
-  // const storeReplayWrite = store.replayWrite(scope, currentStoreKey, processWriteSources)
+  // return store.replayWrite(scope, currentStoreKey, processWriteSources)
 
-  return map(x => x.data, processWriteSources)
+  const process = indexDB.put(scope, 'proc', processWriteSources)
+
+  return map(x => x.data, process)
 }

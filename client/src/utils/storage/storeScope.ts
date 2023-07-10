@@ -20,23 +20,23 @@ export interface IStoreconfig<TName extends string = string> {
 }
 
 
-export interface ICreateScopeCurry2 {
-  <TData, TName extends string, TParentName extends string>(key: TName, genesisSeed: TData): IStoreScope<`${TParentName}.${TName}`>
-  <TData, TName extends string, TParentName extends string>(key: TName): (genesisSeed: TData) => IStoreScope<`${TParentName}.${TName}`>
-}
+// export interface ICreateScopeCurry2 {
+//   <TData, TName extends string, TParentName extends string>(key: TName, genesisSeed: TData): IStoreScope<`${TParentName}.${TName}`>
+//   <TData, TName extends string, TParentName extends string>(key: TName): (genesisSeed: TData) => IStoreScope<`${TParentName}.${TName}`>
+// }
 
-export interface ICreateScopeCurry3 {
-  <TData, TName extends string, TParentName extends string>(parentScope: IStoreScope<TParentName>, key: TName, genesisSeed: TData): IStoreScope<`${TParentName}.${TName}`>
-  <TData, TName extends string, TParentName extends string>(parentScope: IStoreScope<TParentName>, key: TName): (genesisSeed: TData) => IStoreScope<`${TParentName}.${TName}`>
-  <TParentName extends string>(parentScope: IStoreScope<TParentName>): ICreateScopeCurry2
-}
+// export interface ICreateScopeCurry3 {
+//   <TData, TName extends string, TParentName extends string>(parentScope: IStoreScope<TParentName>, key: TName, genesisSeed: TData): IStoreScope<`${TParentName}.${TName}`>
+//   <TData, TName extends string, TParentName extends string>(parentScope: IStoreScope<TParentName>, key: TName): (genesisSeed: TData) => IStoreScope<`${TParentName}.${TName}`>
+//   <TParentName extends string>(parentScope: IStoreScope<TParentName>): ICreateScopeCurry2
+// }
 
 
 
 export const createStoreScope = <TParentName extends string, TName extends string, TOptions extends IDBObjectStoreParameters>(
-  parentScope: IStoreconfig<TParentName>, newName: TName, options?: TOptions,
+  parentScope: IStoreconfig<TParentName>, storeName: TName, options?: TOptions,
 ): IStoreScope<`${TParentName}.${TName}`, TOptions> => {
-  const name = `${parentScope.name as TParentName}.${newName}` as const
+  const name = `${parentScope.name as TParentName}.${storeName}` as const
   const dbParams = indexDB.openDb(name, options)
 
 

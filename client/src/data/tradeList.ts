@@ -10,9 +10,9 @@ const subgraph = `https://gateway-arbitrum.network.thegraph.com/api/${import.met
 const replayConfig = {
   ...GMX.CONTRACT[42161].Vault,
   subgraph,
-  startBlock: 108793808n,
+  startBlock: 108793808,
   parentStoreScope: rootStoreScope,
-}
+} as const
 
 export const increaseEvents = store.replayRpcLog({
   eventName: 'IncreasePosition',
@@ -34,6 +34,7 @@ export const liquidateEvents = store.replayRpcLog({
   eventName: 'LiquidatePosition',
 })
 
+
 export const updateEvents = store.replayRpcLog({
   ...replayConfig,
   eventName: 'UpdatePosition',
@@ -54,87 +55,88 @@ export const rpcTradeList = processSources(
     positions: {},
     positionsSettled: {},
   } as IStoredPositionMap,
-  {
-    source: increaseEvents,
-    step(seed, value) {
-      const key = getStoredPositionCounterId(seed, value.key)
+  108793808,
+  // {
+  //   source: increaseEvents,
+  //   step(seed, value) {
+  //     const key = getStoredPositionCounterId(seed, value.key)
       
 
-      seed.positions[key] ??= {
+  //     seed.positions[key] ??= {
         
-        key: value.key,
-        account: value.account,
-        collateralToken: value.collateralToken,
-        indexToken: value.indexToken,
-        isLong: value.isLong,
-        // updateList: [],
-        // decreaseList: [],
-        // increaseList: [],
-        maxCollateral: value.collateralDelta,
-        maxSize: value.sizeDelta,
-      }
+  //       key: value.key,
+  //       account: value.account,
+  //       collateralToken: value.collateralToken,
+  //       indexToken: value.indexToken,
+  //       isLong: value.isLong,
+  //       // updateList: [],
+  //       // decreaseList: [],
+  //       // increaseList: [],
+  //       maxCollateral: value.collateralDelta,
+  //       maxSize: value.sizeDelta,
+  //     }
 
-      seed.positions[key].increaseList.push(value)
+  //     seed.positions[key].increaseList.push(value)
 
-      return seed
-    },
-  },
-  {
-    source: decreaseEvents,
-    step(seed, value) {
-      const key = getStoredPositionCounterId(seed, value.key)
-      if (!seed.positions[key]) {
-        throw new Error('position not found')
-      }
+  //     return seed
+  //   },
+  // },
+  // {
+  //   source: decreaseEvents,
+  //   step(seed, value) {
+  //     const key = getStoredPositionCounterId(seed, value.key)
+  //     if (!seed.positions[key]) {
+  //       throw new Error('position not found')
+  //     }
 
-      seed.positions[key].decreaseList.push(value)
+  //     seed.positions[key].decreaseList.push(value)
 
-      return seed
-    },
-  },
-  {
-    source: updateEvents,
-    step(seed, value) {
-      const key = getStoredPositionCounterId(seed, value.key)
+  //     return seed
+  //   },
+  // },
+  // {
+  //   source: updateEvents,
+  //   step(seed, value) {
+  //     const key = getStoredPositionCounterId(seed, value.key)
 
-      if (!seed.positions[key]) {
-        throw new Error('position not found')
-      }
+  //     if (!seed.positions[key]) {
+  //       throw new Error('position not found')
+  //     }
 
-      const trade = seed.positions[key]
+  //     const trade = seed.positions[key]
 
-      trade.updateList.push(value as any)
-      trade.maxCollateral = value.collateral > trade.maxCollateral ? value.collateral : trade.maxCollateral
-      trade.maxSize = value.size > trade.maxSize ? value.size : trade.maxSize
+  //     trade.updateList.push(value as any)
+  //     trade.maxCollateral = value.collateral > trade.maxCollateral ? value.collateral : trade.maxCollateral
+  //     trade.maxSize = value.size > trade.maxSize ? value.size : trade.maxSize
 
-      return seed
-    },
-  },
-  {
-    source: closeEvents,
-    step(seed, value) {
-      const key = getStoredPositionCounterId(seed, value.key)
+  //     return seed
+  //   },
+  // },
+  // {
+  //   source: closeEvents,
+  //   step(seed, value) {
+  //     const key = getStoredPositionCounterId(seed, value.key)
 
-      if (!seed.positions[key]) {
-        throw new Error('position not found')
-      }
+  //     if (!seed.positions[key]) {
+  //       throw new Error('position not found')
+  //     }
 
-      const trade = seed.positions[key]
+  //     const trade = seed.positions[key]
 
-      delete seed.positions[key]
+  //     delete seed.positions[key]
 
 
-      seed.positionsSettled[key] = {
-        ...trade,
-        isLiquidated: false,
-        settlement: value
-      }
+  //     seed.positionsSettled[key] = {
+  //       ...trade,
+  //       isLiquidated: false,
+  //       settlement: value
+  //     }
 
-      seed.countId++
+  //     seed.countId++
 
-      return seed
-    },
-  },
+  //     return seed
+  //   },
+  // },
   {
     source: liquidateEvents,
     step(seed, value) {
