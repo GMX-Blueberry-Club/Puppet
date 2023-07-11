@@ -1,4 +1,4 @@
-import { concatMap, constant, join, map, take } from "@most/core"
+import { concatMap, constant, join, map } from "@most/core"
 import { disposeNone } from "@most/disposable"
 import { Stream } from "@most/types"
 import { switchMap } from "gmx-middleware-utils"
@@ -67,7 +67,7 @@ export function getRange<TResult, TName extends string = string, TOptions extend
   return switchMap(db => {
     const newLocal = action(db, params.name, 'readonly', store => {
       const range = IDBKeyRange.bound(...keyRange, true, true)
-      const dbReq = store.openCursor(range)
+      const dbReq = store.getAll(range)
       return dbReq
     })
     return newLocal
@@ -134,7 +134,7 @@ function request<TResult>(req: IDBRequest<any> | IDBTransaction): Stream<TResult
   return {
     run(sink, scheduler) {
       if (req instanceof IDBTransaction) {
-        req.oncomplete = () => sink.event(scheduler.currentTime(), req)
+        req.oncomplete = () => sink.event(scheduler.currentTime(), null)
         req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error('Unknown error'))
         return disposeNone()
       }
@@ -146,7 +146,8 @@ function request<TResult>(req: IDBRequest<any> | IDBTransaction): Stream<TResult
         const time = scheduler.currentTime()
 
         if (req.result instanceof IDBCursorWithValue) {
-          sink.event(time, req.result.value)
+          const value = req.result.value === null ? [] : req.result.value
+          sink.event(time, value)
           req.result.continue()
         } else {
           sink.event(scheduler.currentTime(), req.result)

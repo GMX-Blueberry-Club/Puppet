@@ -52,7 +52,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
   const rootRoute = router.create({ fragment: baseRoute, title: 'GMX Blueberry Club', fragmentsChange })
   const appRoute = rootRoute.create({ fragment: 'app', title: '' })
-  const profileRoute = appRoute.create({ fragment: 'profile', title: 'Berry Account' }).create({ fragment: ETH_ADDRESS_REGEXP })
+  // const profileRoute = appRoute.create({ fragment: 'profile', title: 'Berry Account' }).create({ fragment: ETH_ADDRESS_REGEXP })
   const profileWalletRoute = appRoute.create({ fragment: 'wallet', title: 'Wallet Account' })
   const leaderboardRoute = appRoute.create({ fragment: 'leaderboard', title: 'Leaderboard' })
   const TRADEURL = 'trade'
@@ -145,19 +145,19 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               layoutSheet.spacingBig, style({ flex: 1, paddingTop: screenUtils.isDesktopScreen ? '55px' : '', }),
             )(
 
-              router.match(appRoute)(
-                $IntermediateConnectButton({
-                  $$display: map(wallet => {
-                    return $PuppetPortfolio({
-                      wallet,
-                      parentRoute: profileWalletRoute,
-                      chainList: [CHAIN.ARBITRUM]
-                    })({
-                      changeRoute: linkClickTether(),
-                    })
-                  })
-                })({})
-              ),
+              // router.match(appRoute)(
+              //   $IntermediateConnectButton({
+              //     $$display: map(wallet => {
+              //       return $PuppetPortfolio({
+              //         wallet,
+              //         parentRoute: profileWalletRoute,
+              //         chainList: [CHAIN.ARBITRUM]
+              //       })({
+              //         changeRoute: linkClickTether(),
+              //       })
+              //     })
+              //   })({})
+              // ),
 
               // switchMap(isMobile => {
               //   if (isMobile) {
@@ -171,27 +171,25 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               //   })
               // }, isMobileScreen),
 
-              router.contains(profileRoute)(
-                {
-                  run(sink, scheduler) {
-                    const urlFragments = document.location.pathname.split('/')
-                    const account = urlFragments[urlFragments.length - 2].toLowerCase() as Address
-
+              router.contains(appRoute)(
+                $IntermediateConnectButton({
+                  $$display: map(wallet => {
                     return $Profile({
                       $accountDisplay: $row(layoutSheet.spacing, style({ flex: 1, alignItems: 'center', placeContent: 'center', zIndex: 1 }))(
                         $discoverIdentityDisplay({
-                          address: account,
+                          address: wallet.account.address,
                         // labelSize: '1.5em'
                         }),
                       ),
-                      account: account,
-                      parentUrl: `/app/profile/${account}/`,
-                      parentRoute: profileRoute
+                      chain: wallet.chain,
+                      account: wallet.account.address,
+                      parentUrl: `/app/profile/${wallet.account.address}/`,
+                      parentRoute: appRoute
                     })({
                       changeRoute: linkClickTether(),
-                    }).run(sink, scheduler)
-                  },
-                }
+                    })
+                  })
+                })({})
               ),
               router.contains(profileWalletRoute)(
                 fadeIn($ProfileConnected({

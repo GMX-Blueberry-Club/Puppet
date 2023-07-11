@@ -20,8 +20,8 @@ import { IntervalTime, TIME_INTERVAL_MAP } from "gmx-middleware-const"
 import * as store from "../../utils/storage/storeScope"
 import * as indexDB from "../../utils/storage/indexDB"
 import { fillQuery } from "../../utils/indexer/indexer"
-import { replayRpcLog } from "../../utils/indexer/rpc"
-import { rpcTradeList } from "../../data/tradeList"
+import { createRpcLogEventScope } from "../../utils/indexer/rpc"
+import { positionList } from "../../data/tradeList"
 
 
 
@@ -43,7 +43,7 @@ const processSeed: IPositionSettled = {
 
 
 
-const tradeList = rpcTradeList
+const tradeList = positionList
 
 
 
@@ -66,7 +66,7 @@ const newLocal = {
 
 
 const datass = map(trades => {
-  const summaryList = Object.values(trades.positionsSettled)
+  const summaryList = toAccountSummaryList(Object.values(trades.positionsSettled))
 
   return pagingQuery({ offset: 0, pageSize: 20, selector: 'pnl', direction: "desc" }, summaryList)
 }, tradeList)

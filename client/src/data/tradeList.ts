@@ -1,7 +1,7 @@
 import * as GMX from "gmx-middleware-const"
 import * as viem from "viem"
 import { rootStoreScope } from "../rootStore"
-import { IPositionSettled, IPositionSlot } from "gmx-middleware-utils"
+import { IAccountSummary, IPositionSettled, IPositionSlot } from "gmx-middleware-utils"
 import { processSources } from "../utils/indexer/processor"
 import * as store from "../utils/indexer/rpc"
 
@@ -10,151 +10,196 @@ const subgraph = `https://gateway-arbitrum.network.thegraph.com/api/${import.met
 const replayConfig = {
   ...GMX.CONTRACT[42161].Vault,
   subgraph,
-  startBlock: 108793808,
-  parentStoreScope: rootStoreScope,
+  startBlock: 108193808n,
+  parentScope: rootStoreScope,
 } as const
 
-export const increaseEvents = store.replayRpcLog({
+export const increaseEvents = store.createRpcLogEventScope({
   eventName: 'IncreasePosition',
   ...replayConfig
 })
 
-export const decreaseEvents = store.replayRpcLog({
+export const decreaseEvents = store.createRpcLogEventScope({
   ...replayConfig,
   eventName: 'DecreasePosition',
 })
 
-export const closeEvents = store.replayRpcLog({
+export const closeEvents = store.createRpcLogEventScope({
   ...replayConfig,
   eventName: 'ClosePosition',
 })
 
-export const liquidateEvents = store.replayRpcLog({
+export const liquidateEvents = store.createRpcLogEventScope({
   ...replayConfig,
   eventName: 'LiquidatePosition',
 })
 
 
-export const updateEvents = store.replayRpcLog({
+export const updateEvents = store.createRpcLogEventScope({
   ...replayConfig,
   eventName: 'UpdatePosition',
 })
 
 
 export interface IStoredPositionMap {
-  positions: Record<viem.Hex, IPositionSlot>
-  positionsSettled: Record<viem.Hex, IPositionSettled>
+  positionSlots: Record<viem.Hex, IPositionSlot>
+  positionsSettled: Record<`0x${string}:${number}`, IPositionSettled>
+  leaderboard: Record<viem.Address, IAccountSummary>
   countId: number
 }
 
 
-export const rpcTradeList = processSources(
+export const positionList = processSources(
   rootStoreScope,
   {
     countId: 0,
-    positions: {},
+    positionSlots: {},
     positionsSettled: {},
+    leaderboard: {}
   } as IStoredPositionMap,
-  108793808,
-  // {
-  //   source: increaseEvents,
-  //   step(seed, value) {
-  //     const key = getStoredPositionCounterId(seed, value.key)
-      
+  108193808n,
+  {
+    source: increaseEvents,
+    step(seed, value) {
 
-  //     seed.positions[key] ??= {
-        
-  //       key: value.key,
-  //       account: value.account,
-  //       collateralToken: value.collateralToken,
-  //       indexToken: value.indexToken,
-  //       isLong: value.isLong,
-  //       // updateList: [],
-  //       // decreaseList: [],
-  //       // increaseList: [],
-  //       maxCollateral: value.collateralDelta,
-  //       maxSize: value.sizeDelta,
-  //     }
+      const args = value.args
 
-  //     seed.positions[key].increaseList.push(value)
+      const positionSlot = seed.positionSlots[args.key] ??= {
+        // id: args.key,
+        idCount: 0,
+        key: args.key,
+        account: args.account,
+        collateralToken: args.collateralToken,
+        indexToken: args.indexToken,
+        isLong: args.isLong,
 
-  //     return seed
-  //   },
-  // },
-  // {
-  //   source: decreaseEvents,
-  //   step(seed, value) {
-  //     const key = getStoredPositionCounterId(seed, value.key)
-  //     if (!seed.positions[key]) {
-  //       throw new Error('position not found')
-  //     }
+        averagePrice: 0n,
+        collateral: 0n,
+        cumulativeCollateral: 0n,
+        cumulativeFee: 0n,
+        cumulativeSize: 0n,
+        entryFundingRate: 0n,
+        maxCollateral: 0n,
+        reserveAmount: 0n,
+        size: 0n,
+        maxSize: 0n,
+        realisedPnl: 0n,
+        __typename: 'PositionSlot',
+        link: {
+          __typename: 'PositionLink',
+          // id: args.key,
+          decreaseList: [],
+          increaseList: [],
+          updateList: [],
+        }
+      }
 
-  //     seed.positions[key].decreaseList.push(value)
+      positionSlot.idCount = seed.countId
+      positionSlot.cumulativeCollateral += args.collateralDelta
+      positionSlot.cumulativeSize += args.sizeDelta
+      positionSlot.cumulativeFee += args.fee
 
-  //     return seed
-  //   },
-  // },
-  // {
-  //   source: updateEvents,
-  //   step(seed, value) {
-  //     const key = getStoredPositionCounterId(seed, value.key)
-
-  //     if (!seed.positions[key]) {
-  //       throw new Error('position not found')
-  //     }
-
-  //     const trade = seed.positions[key]
-
-  //     trade.updateList.push(value as any)
-  //     trade.maxCollateral = value.collateral > trade.maxCollateral ? value.collateral : trade.maxCollateral
-  //     trade.maxSize = value.size > trade.maxSize ? value.size : trade.maxSize
-
-  //     return seed
-  //   },
-  // },
-  // {
-  //   source: closeEvents,
-  //   step(seed, value) {
-  //     const key = getStoredPositionCounterId(seed, value.key)
-
-  //     if (!seed.positions[key]) {
-  //       throw new Error('position not found')
-  //     }
-
-  //     const trade = seed.positions[key]
-
-  //     delete seed.positions[key]
+      positionSlot.link.increaseList.push({ ...value.args, __typename: 'IncreasePosition' })
 
 
-  //     seed.positionsSettled[key] = {
-  //       ...trade,
-  //       isLiquidated: false,
-  //       settlement: value
-  //     }
+      return seed
+    },
+  },
+  {
+    source: decreaseEvents,
+    step(seed, value) {
+      const args = value.args
+      const positionSlot = seed.positionSlots[args.key]
 
-  //     seed.countId++
+      if (!positionSlot) {
+        return seed
+        // throw new Error('position not found')
+      }
 
-  //     return seed
-  //   },
-  // },
+      positionSlot.cumulativeFee += args.fee
+      positionSlot.link.decreaseList.push({ ...value.args, __typename: 'DecreasePosition' })
+
+      return seed
+    },
+  },
+  {
+    source: updateEvents,
+    step(seed, value) {
+      const args = value.args
+      const positionSlot = seed.positionSlots[args.key]
+
+      if (!positionSlot) {
+        return seed
+        // throw new Error('position not found')
+      }
+
+      positionSlot.link.updateList.push({ ...value.args, __typename: 'UpdatePosition' })
+
+      positionSlot.collateral = args.collateral
+      positionSlot.realisedPnl = args.realisedPnl
+      positionSlot.averagePrice = args.averagePrice
+      positionSlot.size = args.size
+      positionSlot.reserveAmount = args.reserveAmount
+      positionSlot.entryFundingRate = args.entryFundingRate
+      positionSlot.maxCollateral = args.collateral > positionSlot.maxCollateral ? args.collateral : positionSlot.maxCollateral
+      positionSlot.maxSize = args.size > positionSlot.maxSize ? args.size : positionSlot.maxSize
+
+      return seed
+    },
+  },
+  {
+    source: closeEvents,
+    step(seed, value) {
+      const args = value.args
+      const positionSlot = seed.positionSlots[args.key]
+
+      if (!positionSlot) {
+        return seed
+        // throw new Error('position not found')
+      }
+
+      const settleId = `${args.key}:${seed.countId}` as const
+
+      seed.positionsSettled[settleId] = {
+        ...positionSlot,
+        realisedPnl: args.realisedPnl,
+        settlePrice: args.averagePrice,
+        isLiquidated: false,
+        __typename: 'PositionSettled',
+      }
+
+      delete seed.positionSlots[args.key]
+ 
+
+      seed.countId++
+
+      return seed
+    },
+  },
   {
     source: liquidateEvents,
     step(seed, value) {
-      const key = getStoredPositionCounterId(seed, value.key)
+      const args = value.args
+      const positionSlot = seed.positionSlots[args.key]
 
-      if (!seed.positions[key]) {
-        throw new Error('position not found')
+      if (!positionSlot) {
+        return seed
+        // throw new Error('position not found')
       }
 
-      const trade = seed.positions[key]
 
-      delete seed.positions[key]
+      const settleId = `${args.key}:${seed.countId}` as const
 
-      seed.positionsSettled[key] = {
-        ...trade,
-        isLiquidated: false,
-        settlement: value
+      seed.positionsSettled[settleId] = {
+        ...positionSlot,
+        realisedPnl: args.realisedPnl,
+        settlePrice: args.markPrice,
+        isLiquidated: true,
+        __typename: 'PositionSettled',
       }
+
+      delete seed.positionSlots[args.key]
+ 
 
       seed.countId++
 
@@ -164,6 +209,6 @@ export const rpcTradeList = processSources(
 )
 
 
-function getStoredPositionCounterId(seed: IStoredPositionMap, key: viem.Hex): viem.Hex {
-  return `${key}-${seed.countId}`
-}
+// function getStoredPositionCounterId(seed: IStoredPositionMap, key: viem.Hex): viem.Hex {
+//   return `${key}-${seed.countId}`
+// }
