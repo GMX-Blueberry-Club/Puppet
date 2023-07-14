@@ -1,50 +1,30 @@
-import { combineObject } from "@aelea/core"
-import { continueWith, fromPromise, map, now, switchLatest } from "@most/core"
+import { chain, fromPromise, map, now, recoverWith } from "@most/core"
 import { Stream } from "@most/types"
-import { ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, orderEvents, switchMap } from "gmx-middleware-utils"
+import { ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, min, orderEvents, switchMap } from "gmx-middleware-utils"
 import * as viem from "viem"
-import { publicClient } from "../../wallet/walletLink"
 import * as indexDB from "../storage/indexDB"
 import * as store from "../storage/storeScope"
 
-
-// type MaybeExtractEventArgsFromAbi<
-//   TAbi extends viem.Abi,
-//   TEventName extends string,
-// > = TEventName extends string ? viem.GetEventArgs<TAbi, TEventName> : undefined
-// export type IEventIndexerConfig<
-//   TAbi extends viem.Abi,
-//   TEventName extends string,
-//   TArgs extends MaybeExtractEventArgsFromAbi<TAbi, TEventName>,
-//   TScopeName extends string,
-//   TStartBlock extends bigint,
-// > = IIndexerConfig<TAbi, TEventName, TScopeName, TStartBlock> & (MaybeExtractEventArgsFromAbi<TAbi, TEventName> extends infer TEventFilterArgs
-//   ? { args?: TEventFilterArgs | (TArgs extends TEventFilterArgs ? TArgs : never) }
-//   : { args?: never })
 
 export type IIndexRpcEventLogConfig<
   _TLog extends ILogOrdered, // used to infer log type
   TAbi extends viem.Abi,
   TEventName extends string,
-  TStartBlock extends bigint = bigint,
   TParentScopeName extends string = string,
 > = {
   address: viem.Address
   eventName: viem.InferEventName<TAbi, TEventName>
   abi: TAbi,
   parentScope: store.IStoreconfig<TParentScopeName>
-  startBlock: TStartBlock
 }
-
 
 export type IIndexEventLogScopeParams<
   TLog extends ILogOrdered,
   TAbi extends viem.Abi,
   TEventName extends string,
-  TStartBlock extends bigint = bigint,
   TParentScopeName extends string = string,
-> = IIndexRpcEventLogConfig<TLog, TAbi, TEventName, TStartBlock, TParentScopeName> & {
-  scope: store.IStoreScope<`${TParentScopeName}.${viem.InferEventName<TAbi, TEventName>}:0x${string}:${TStartBlock}`, { readonly keyPath: "orderId" }>
+> = IIndexRpcEventLogConfig<TLog, TAbi, TEventName, TParentScopeName> & {
+  scope: store.IStoreScope<`${TParentScopeName}.${viem.InferEventName<TAbi, TEventName>}:0x${string}`, { readonly keyPath: "orderId" }>
 }
 
 export function createRpcLogEventScope<
@@ -52,10 +32,8 @@ export function createRpcLogEventScope<
   TAbi extends viem.Abi,
   TEventName extends string,
   TParentScopeName extends string = string,
-  TStartBlock extends bigint = bigint,
-  // TArgs extends MaybeExtractEventArgsFromAbi<TAbi, TEventName>,
->(config: IIndexRpcEventLogConfig<TLog, TAbi, TEventName, TStartBlock, TParentScopeName>): IIndexEventLogScopeParams<TLog, TAbi, TEventName, TStartBlock, TParentScopeName> {
-  const scopeName = `${config.eventName}:${config.address}:${config.startBlock}` as const
+>(config: IIndexRpcEventLogConfig<TLog, TAbi, TEventName, TParentScopeName>): IIndexEventLogScopeParams<TLog, TAbi, TEventName, TParentScopeName> {
+  const scopeName = `${config.eventName}:${config.address}` as const
   const scope = store.createStoreScope(config.parentScope, scopeName, { keyPath: 'orderId' } as const)
   
   return { ...config, scope }
@@ -66,48 +44,74 @@ export type IFilterLogsParams<
   TLog extends ILogOrderedEvent<TAbi, TEventName>,
   TAbi extends viem.Abi,
   TEventName extends string,
-  TStartBlock extends bigint = bigint,
   TParentScopeName extends string = string,
-> = IIndexEventLogScopeParams<TLog, TAbi, TEventName, TStartBlock, TParentScopeName> & {
+> = IIndexEventLogScopeParams<TLog, TAbi, TEventName, TParentScopeName> & {
   orderId: number
+  rangeSize: bigint,
+  fromBlock: bigint
+  toBlock: bigint
+  publicClient: viem.PublicClient
 }
 
-export function filterEventLogs<
+export function queryEventLog<
   TReturn extends ILogOrderedEvent<TAbi, TEventName>,
   TAbi extends viem.Abi,
   TEventName extends string,
   TParentScopeName extends string,
-  TStartBlock extends bigint,
->(config: IFilterLogsParams<TReturn, TAbi, TEventName, TStartBlock, TParentScopeName>): Stream<TReturn[]> {
+>(config: IFilterLogsParams<TReturn, TAbi, TEventName, TParentScopeName>): Stream<TReturn[]> {
 
-  const unprocessedStoredEvents: Stream<ILogOrderedEvent[]> = indexDB.getRange(config.scope, [Number(config.orderId), Number(1000000000000000000n)])
+  return fetchTradesRecur(
+    config,
+    async reqParams => {
+      const filter = await config.publicClient.createContractEventFilter({
+        abi: reqParams.abi,
+        address: reqParams.address,
+        eventName: reqParams.eventName,
+        fromBlock: reqParams.fromBlock,
+        toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeSize),
+        strict: true
+      } as viem.CreateContractEventFilterParameters<TAbi, TEventName, undefined, true>)
+      const logs = await config.publicClient.getFilterLogs({ filter }) as any as TReturn[]
 
-  return switchLatest(map(params => {
-    const lastUnprocessedEvent = params.unprocessedStoredEvents.length > 0 ? params.unprocessedStoredEvents[params.unprocessedStoredEvents.length - 1] : null
-    const fromBlock = lastUnprocessedEvent ? lastUnprocessedEvent.blockNumber : config.startBlock
-    const orderId = lastUnprocessedEvent ? getEventOrderIdentifier(lastUnprocessedEvent) : config.orderId
+      return logs.map(ev => ({ ...ev, orderId: getEventOrderIdentifier(ev) }))
+    }
+  )
+}
 
-    const newLogsQuery: Stream<TReturn[]> = fromPromise(params.publicClient.createContractEventFilter({
-      fromBlock,
-      abi: config.abi,
-      address: config.address,
-      eventName: config.eventName,
-      strict: true,
-      // args: {}
-    } as any).then(filter => params.publicClient.getFilterLogs({ filter })))
 
-    const newHistoricLogs = switchMap((syncParams) => {
-      const newLogs = orderEvents(syncParams.newLogsQuery)
-        .map(ev => {
-          return { ...ev, orderId: getEventOrderIdentifier(ev) }
-        })
-        .filter(ev => ev.orderId > orderId)
+export const fetchTradesRecur = <
+  TReturn extends ILogOrderedEvent<TAbi, TEventName>,
+  TAbi extends viem.Abi,
+  TEventName extends string,
+  TParentScopeName extends string,
+>(
+  params: IFilterLogsParams<TReturn, TAbi, TEventName, TParentScopeName>,
+  getList: (req: IFilterLogsParams<TReturn, TAbi, TEventName, TParentScopeName>) => Promise<TReturn[]>
+): Stream<TReturn[]> => {
 
-      const queryFilteredLogs = indexDB.add(config.scope, newLogs)
-      return continueWith(() => queryFilteredLogs, now(params.unprocessedStoredEvents)) // emit two events, stored, then queried filtered logs
-    }, combineObject({ newLogsQuery }))
+  const nextBatch = fromPromise(getList(params))
+  const recoverByLoweringRange = recoverWith(err => {
+    const reducedRange = params.rangeSize - params.rangeSize / 3n
+    return fetchTradesRecur({ ...params, rangeSize: reducedRange }, getList)
+  }, nextBatch)
 
-    return newHistoricLogs
-  }, combineObject({ publicClient, unprocessedStoredEvents })))
+  const filterAndStoreResponse = switchMap(res => {
+    const orderFilter = orderEvents(res).filter(ev => ev.orderId > params.orderId)
+    return indexDB.add(params.scope, orderFilter)
+  }, recoverByLoweringRange)
+
+  const nextBatchResponse = chain(res => {
+    const nextToBlock = params.fromBlock + params.rangeSize
+
+    if (nextToBlock >= params.toBlock) {
+      return now(res)
+    }
+
+    const newPage = fetchTradesRecur({ ...params, fromBlock: nextToBlock }, getList)
+
+    return map(nextPage => [...res, ...nextPage], newPage)
+  }, filterAndStoreResponse)
+
+  return nextBatchResponse
 }
 

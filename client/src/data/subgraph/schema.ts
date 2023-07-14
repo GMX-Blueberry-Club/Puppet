@@ -1,5 +1,5 @@
 import { IPositionLink, IPositionSettled } from "gmx-middleware-utils"
-import { ISchema } from "../utils/indexer/subgraph"
+import { ISchema } from "../../utils/indexer/subgraph"
 
 const adjustPosition = {
   collateralDelta: 'uint256',

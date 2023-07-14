@@ -4,15 +4,15 @@ import { Route } from "@aelea/router"
 import { $column, layoutSheet } from "@aelea/ui-components"
 import { map, mergeArray, multicast, now } from "@most/core"
 import { Chain } from "@wagmi/core"
-import { $ButtonToggle, $defaulButtonToggleContainer } from "gmx-middleware-ui-components"
+import { $ButtonToggle, $defaulButtonToggleContainer, $infoTooltipLabel } from "gmx-middleware-ui-components"
 import {
-  IRequestAccountTradeListApi
+  IRequestAccountTradeListApi, readableDate, timeSince
 } from "gmx-middleware-utils"
 import { Address } from "viem"
-import { $entry, $pnlValue, $settledSizeDisplay } from "../common/$common"
+import { $TradePnl, $entry, $openPositionPnlBreakdown, $pnlValue, $riskLiquidator, $settledSizeDisplay } from "../common/$common"
 import { $CardTable } from "../components/$common"
-import { positionList } from "../data/tradeList"
 import { connectTrade } from "../logic/trade"
+import { gmxData } from "../data/process"
 
 
 
@@ -41,18 +41,18 @@ export const $Profile = (config: IProfile) => component((
 ) => {
 
 
-  const mcP = multicast(positionList)
+  const mcP = multicast(gmxData.positionList)
 
-  // const openTrades = map(list => {
-  //   const newLocal = Object.values(list.positionSlots).filter(p => p.account === config.account)
-  //   return newLocal
-  // }, mcP)
+  const openTrades = map(list => {
+    const newLocal = Object.values(list.positionSlots).filter(p => p.account === config.account)
+    return newLocal
+  }, mcP)
 
 
   const trades = map(list => {
     const newLocal = Object.values(list.positionsSettled).filter(p => p.account === config.account)
     return newLocal
-  }, positionList)
+  }, mcP)
 
   // const accountOpenTradeList = gmxSubgraph.accountOpenTradeList(
   //   map(chain => {
@@ -88,56 +88,56 @@ export const $Profile = (config: IProfile) => component((
 
 
         $title('Open Positions'),
-        // $CardTable({
-        //   dataSource: openTrades,
-        //   columns: [
-        //     {
-        //       $head: $text('Open Time'),
-        //       columnOp: style({ maxWidth: '80px' }),
-        //       $$body: map((pos) => {
+        $CardTable({
+          dataSource: openTrades,
+          columns: [
+            {
+              $head: $text('Open Time'),
+              columnOp: style({ maxWidth: '80px' }),
+              $$body: map((pos) => {
 
-        //         const timestamp = pos.cumulativeSize
+                const timestamp = pos.cumulativeSize
 
-        //         return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
-        //           $text(timeSince(timestamp) + ' ago'),
-        //           $text(readableDate(timestamp)),
-        //         )
-        //       })
-        //     },
-        //     {
-        //       $head: $text('Entry'),
-        //       columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
-        //       $$body: map((pos) => {
-        //         return $entry(pos)
-        //       })
-        //     },
-        //     {
-        //       $head: $column(style({ textAlign: 'right' }))(
-        //         $text(style({ fontSize: '.75em' }))('Collateral'),
-        //         $text('Size'),
-        //       ),
-        //       columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
-        //       $$body: map(pos => {
-        //         const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
+                return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
+                  $text(timeSince(timestamp) + ' ago'),
+                  $text(readableDate(timestamp)),
+                )
+              })
+            },
+            {
+              $head: $text('Entry'),
+              columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
+              $$body: map((pos) => {
+                return $entry(pos)
+              })
+            },
+            {
+              $head: $column(style({ textAlign: 'right' }))(
+                $text(style({ fontSize: '.75em' }))('Collateral'),
+                $text('Size'),
+              ),
+              columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
+              $$body: map(pos => {
+                const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
 
-        //         return $riskLiquidator(pos, positionMarkPrice)
-        //       })
-        //     },
-        //     {
-        //       $head: $text('PnL'),
-        //       columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
-        //       $$body: map((pos) => {
-        //         const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
-        //         const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
+                return $riskLiquidator(pos, positionMarkPrice)
+              })
+            },
+            {
+              $head: $text('PnL'),
+              columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
+              $$body: map((pos) => {
+                const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
+                const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
 
-        //         return $infoTooltipLabel(
-        //           $openPositionPnlBreakdown(pos, cumulativeFee, positionMarkPrice),
-        //           $TradePnl(pos, positionMarkPrice)
-        //         )
-        //       })
-        //     },
-        //   ],
-        // })({}),
+                return $infoTooltipLabel(
+                  $openPositionPnlBreakdown(pos, cumulativeFee, positionMarkPrice),
+                  $TradePnl(pos, positionMarkPrice)
+                )
+              })
+            },
+          ],
+        })({}),
 
         $title('Settled Positions'),
         $CardTable({

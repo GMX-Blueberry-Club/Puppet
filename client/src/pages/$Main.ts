@@ -4,22 +4,20 @@ import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
-import { map, merge, mergeArray, multicast, now, skipRepeats, startWith, switchLatest } from '@most/core'
+import { map, merge, mergeArray, multicast, now, skipRepeats, startWith } from '@most/core'
 import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN } from "gmx-middleware-const"
-import { ETH_ADDRESS_REGEXP, switchMap } from "gmx-middleware-utils"
-import { Address } from "viem"
+import { switchMap } from "gmx-middleware-utils"
 import { $discoverIdentityDisplay } from "../components/$AccountProfile"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu'
-import * as store from "../utils/storage/storeScope"
 import { helloBackend } from '../logic/websocket'
 import { fadeIn } from "../transitions/enter"
+import { $Admin } from "./$Admin"
 import { $Home } from "./$Home"
 import { $Profile } from "./$Profile"
 import { $ProfileConnected } from "./$ProfileConnected"
 import { $Trade } from "./$Trade"
 import { $Leaderboard } from "./competition/$Leaderboard"
-import { $PuppetPortfolio } from "./$PuppetPortfolio"
 
 
 
@@ -37,6 +35,7 @@ interface Website {
 
 export const $Main = ({ baseRoute = '' }: Website) => component((
   [routeChanges, linkClickTether]: Behavior<any, string>,
+  
   // [resizeScreen, resizeScreenTether]: Behavior<any, ResizeObserverEntry[]>,
 ) => {
 
@@ -55,6 +54,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   // const profileRoute = appRoute.create({ fragment: 'profile', title: 'Berry Account' }).create({ fragment: ETH_ADDRESS_REGEXP })
   const profileWalletRoute = appRoute.create({ fragment: 'wallet', title: 'Wallet Account' })
   const leaderboardRoute = appRoute.create({ fragment: 'leaderboard', title: 'Leaderboard' })
+  const adminRoute = appRoute.create({ fragment: 'admin', title: 'Admin Utilities' })
   const TRADEURL = 'trade'
   const tradeRoute = appRoute.create({ fragment: TRADEURL })
   const tradeTermsAndConditions = appRoute.create({ fragment: 'trading-terms-and-conditions' })
@@ -86,7 +86,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       position: 'relative',
       // backgroundImage: `radial-gradient(570% 71% at 50% 15vh, ${pallete.background} 0px, ${pallete.horizon} 100%)`,
       backgroundColor: pallete.horizon,
-      fontSize: '1.25em',
+      fontSize: '1.25rem',
       minHeight: '100vh',
       fontWeight: 400,
       overflowX: 'hidden',
@@ -171,7 +171,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               //   })
               // }, isMobileScreen),
 
-              router.contains(appRoute)(
+              router.match(appRoute)(
                 $IntermediateConnectButton({
                   $$display: map(wallet => {
                     return $Profile({
@@ -273,6 +273,10 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
                 ),
 
+              ),
+
+              router.match(adminRoute)(
+                $Admin({}),
               ),
 
             )

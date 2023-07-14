@@ -5,10 +5,12 @@ import { Stream } from "@most/types"
 import { Address, GetAccountResult, GetNetworkResult, InjectedConnector, WalletClient, configureChains, createConfig, createStorage, getAccount, getNetwork, getPublicClient, getWalletClient, getWebSocketPublicClient, watchAccount, watchNetwork } from '@wagmi/core'
 import { WalletConnectConnector } from '@wagmi/core/connectors/walletConnect'
 import { alchemyProvider } from "@wagmi/core/providers/alchemy"
+import { infuraProvider } from "@wagmi/core/providers/infura"
 import { EthereumClient, w3mConnectors, w3mProvider } from '@web3modal/ethereum'
 import { Web3Modal } from '@web3modal/html'
 import { PublicClient, Transport } from "viem"
 import { arbitrum, avalanche } from "viem/chains"
+import { publicProvider } from "@wagmi/core/providers/public"
 
 const chains = [arbitrum, avalanche]
 
@@ -32,6 +34,8 @@ const configChain = configureChains(
   [arbitrum, avalanche],
   [
     alchemyProvider({ apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low' }),
+    // infuraProvider({ apiKey: '6d7e461ad6644743b92327579860b662' }),
+    // publicProvider(),
     w3mProvider({ projectId }),
     // jsonRpcProvider({
     //   rpc: chain => {
@@ -71,7 +75,7 @@ export const walletConfig = createConfig({
   // connectors: [injectedConnector, wcConnector],
 
   publicClient: configChain.publicClient,
-  webSocketPublicClient: configChain.webSocketPublicClient,
+  // webSocketPublicClient: configChain.webSocketPublicClient,
   storage,
 })
 

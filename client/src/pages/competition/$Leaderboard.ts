@@ -10,7 +10,7 @@ import { $pnlValue, $sizeDisplay } from "../../common/$common"
 import { $accountPreview } from "../../components/$AccountProfile"
 import { $CardTable } from "../../components/$common"
 import { rootStoreScope } from "../../rootStore"
-import { schema } from "../../data/schema"
+import { schema } from "../../data/subgraph/schema"
 // import { fillQuery, replaySubgraphQuery } from "../../utils/indexer/indexer"
 import { processSources } from "../../utils/indexer/processor"
 import { $seperator2 } from "../common"
@@ -21,7 +21,7 @@ import * as store from "../../utils/storage/storeScope"
 import * as indexDB from "../../utils/storage/indexDB"
 import { fillQuery } from "../../utils/indexer/indexer"
 import { createRpcLogEventScope } from "../../utils/indexer/rpc"
-import { positionList } from "../../data/tradeList"
+import { gmxData } from "../../data/process"
 
 
 
@@ -43,7 +43,7 @@ const processSeed: IPositionSettled = {
 
 
 
-const tradeList = positionList
+const tradeList = gmxData.positionList
 
 
 
@@ -83,11 +83,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
   const containerStyle = O(
     layoutSheet.spacingBig,
-    style({
-      display: 'flex',
-      fontFeatureSettings: '"tnum" on,"lnum" on',
-      fontFamily: `-apple-system,BlinkMacSystemFont,Trebuchet MS,Roboto,Ubuntu,sans-serif`,
-    })
+
   )
 
   const timeframe = store.createStoreScope(rootStoreScope, 'leaderboard')

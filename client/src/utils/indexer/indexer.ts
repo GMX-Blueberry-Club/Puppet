@@ -36,7 +36,7 @@ export const replaySubgraphQuery = <Type extends ILogSubgraphType<any>, TQuery>(
 
 
   const currentStoreKey = store.createStoreScope(config.parentStoreScope, schema.__typename as any, genesisSeed)
-  const seedStoredData = store.read(currentStoreKey, genesisSeed)
+  const seedStoredData = store.get(currentStoreKey, genesisSeed)
   
   const syncLogs = switchLatest(map(params => {
     const startBlock = config.startBlock

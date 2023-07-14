@@ -1,5 +1,5 @@
 import { Behavior, combineObject, O, Op } from "@aelea/core"
-import { $Node, $svg, attr, component, INode, NodeComposeFn, nodeEvent, style } from '@aelea/dom'
+import { $node, $Node, $svg, attr, component, INode, NodeComposeFn, nodeEvent, style } from '@aelea/dom'
 import { $column, $icon, $row, designSheet, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, never, now, recoverWith, snapshot, switchLatest } from "@most/core"
@@ -55,15 +55,15 @@ const $caretDown = $svg('path')(attr({ d: 'M4.616.296c.71.32 1.326.844 2.038 1.1
 
 export const $defaultTableCell = $row(
   layoutSheet.spacingSmall,
-  style({ padding: '6px 0', flex: 1, alignItems: 'center', overflowWrap: 'break-word' }),
+  style({ padding: '6px 0', minWidth: 0, flex: '1 0 auto', alignItems: 'center', overflowWrap: 'break-word' }),
 )
 
 export const $defaultTableHeaderCell = $defaultTableCell(
   style({ fontSize: '15px', alignItems: 'center', padding: '12px 0', color: pallete.foreground, })
 )
 export const $defaultTableRowContainer = screenUtils.isDesktopScreen
-  ? $row(layoutSheet.spacing, style({ padding: `2px 16px` }))
-  : $row(layoutSheet.spacingSmall, style({ padding: `2px 10px` }))
+  ? $node(layoutSheet.spacing, style({ padding: `2px 16px`, display: 'grid' }))
+  : $node(layoutSheet.spacingSmall, style({ padding: `2px 10px`, display: 'grid' }))
 
 
 
@@ -89,6 +89,8 @@ export const $Table = <T, FilterState = never>({
 
 
   const $header = $headerRowContainer(
+    style({ gridTemplateColumns: `repeat(${columns.length}, 1fr)`, })
+  )(
     ...columns.map(col => {
 
       if (col.sortBy) {
@@ -125,10 +127,13 @@ export const $Table = <T, FilterState = never>({
   const $body = switchLatest(map(() => {
     return  $QuantumScroll({
       ...scrollConfig,
+      // $container: $node(),
       dataSource: map((res) => {
         const $items = (Array.isArray(res) ? res : res.page).map(rowData => {
 
           return $bodyRowContainer(
+            style({ gridTemplateColumns: `repeat(${columns.length}, 1fr)`, })
+          )(
             ...columns.map(col => {
               return $bodyCell(col.columnOp || O())(
                 switchLatest(col.$$body(now(rowData)))

@@ -565,14 +565,10 @@ export const $Trade = (config: ITradeComponent) => component((
   return [
     $node(
       style({
-        fontSize: '1rem',
-        fontFeatureSettings: '"tnum" on,"lnum" on',
-        fontFamily: `-apple-system,BlinkMacSystemFont,Trebuchet MS,Roboto,Ubuntu,sans-serif`,
         display: 'flex',
         ...screenUtils.isDesktopScreen
           ? { flexDirection: 'row-reverse', gap: '45px' }
           : { flexDirection: 'column' }
-        // fontFamily: '-apple-system,BlinkMacSystemFont,Trebuchet MS,Roboto,Ubuntu,sans-serif'
       })
     )(
       $node(
