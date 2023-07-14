@@ -32,7 +32,6 @@
         "construct-style-sheets-polyfill": "3.1.0",
         "ethereum-indexer-js-processor": "^0.6.4",
         "eventemitter3": "^5.0.1",
-        "gmx-middleware-browser-indexer": "workspace:*",
         "gmx-middleware-const": "workspace:*",
         "gmx-middleware-ui-components": "workspace:*",
         "gmx-middleware-utils": "workspace:*",

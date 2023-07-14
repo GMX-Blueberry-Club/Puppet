@@ -1,6 +1,6 @@
 import { chain, fromPromise, map, now, recoverWith } from "@most/core"
 import { Stream } from "@most/types"
-import { ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, min, orderEvents, switchMap } from "gmx-middleware-utils"
+import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, min, switchMap } from "gmx-middleware-utils"
 import * as viem from "viem"
 import * as indexDB from "../storage/indexDB"
 import * as store from "../storage/storeScope"
@@ -46,38 +46,11 @@ export type IFilterLogsParams<
   TEventName extends string,
   TParentScopeName extends string = string,
 > = IIndexEventLogScopeParams<TLog, TAbi, TEventName, TParentScopeName> & {
-  orderId: number
   rangeSize: bigint,
   fromBlock: bigint
   toBlock: bigint
   publicClient: viem.PublicClient
 }
-
-export function queryEventLog<
-  TReturn extends ILogOrderedEvent<TAbi, TEventName>,
-  TAbi extends viem.Abi,
-  TEventName extends string,
-  TParentScopeName extends string,
->(config: IFilterLogsParams<TReturn, TAbi, TEventName, TParentScopeName>): Stream<TReturn[]> {
-
-  return fetchTradesRecur(
-    config,
-    async reqParams => {
-      const filter = await config.publicClient.createContractEventFilter({
-        abi: reqParams.abi,
-        address: reqParams.address,
-        eventName: reqParams.eventName,
-        fromBlock: reqParams.fromBlock,
-        toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeSize),
-        strict: true
-      } as viem.CreateContractEventFilterParameters<TAbi, TEventName, undefined, true>)
-      const logs = await config.publicClient.getFilterLogs({ filter }) as any as TReturn[]
-
-      return logs.map(ev => ({ ...ev, orderId: getEventOrderIdentifier(ev) }))
-    }
-  )
-}
-
 
 export const fetchTradesRecur = <
   TReturn extends ILogOrderedEvent<TAbi, TEventName>,
@@ -86,19 +59,18 @@ export const fetchTradesRecur = <
   TParentScopeName extends string,
 >(
   params: IFilterLogsParams<TReturn, TAbi, TEventName, TParentScopeName>,
-  getList: (req: IFilterLogsParams<TReturn, TAbi, TEventName, TParentScopeName>) => Promise<TReturn[]>
+  getList: (req: IFilterLogsParams<TReturn, TAbi, TEventName, TParentScopeName>) => Stream<TReturn[]>
 ): Stream<TReturn[]> => {
 
-  const nextBatch = fromPromise(getList(params))
-  const recoverByLoweringRange = recoverWith(err => {
+  const retryLowerRange = recoverWith<TReturn[], Error, TReturn[]>((err): Stream<TReturn[]> => {
+    console.error(err)
     const reducedRange = params.rangeSize - params.rangeSize / 3n
-    return fetchTradesRecur({ ...params, rangeSize: reducedRange }, getList)
-  }, nextBatch)
+    debugger
 
-  const filterAndStoreResponse = switchMap(res => {
-    const orderFilter = orderEvents(res).filter(ev => ev.orderId > params.orderId)
-    return indexDB.add(params.scope, orderFilter)
-  }, recoverByLoweringRange)
+    return retryLowerRange(getList({ ...params, rangeSize: reducedRange }))
+  })
+
+  const nextBatch = retryLowerRange(getList(params))
 
   const nextBatchResponse = chain(res => {
     const nextToBlock = params.fromBlock + params.rangeSize
@@ -110,7 +82,7 @@ export const fetchTradesRecur = <
     const newPage = fetchTradesRecur({ ...params, fromBlock: nextToBlock }, getList)
 
     return map(nextPage => [...res, ...nextPage], newPage)
-  }, filterAndStoreResponse)
+  }, nextBatch)
 
   return nextBatchResponse
 }

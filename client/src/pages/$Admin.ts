@@ -53,16 +53,23 @@ export const $Admin = component((
             $head: $text('Block Range'),
             $$body: map(log => {
 
-              const dbCursor = indexDb.cursor(log.scope, null, 'prev')
+              const fst = indexDb.cursor(log.scope, null, 'next')
+              const lst = indexDb.cursor(log.scope, null, 'prev')
               return $column(
-                $text(String(log.startBlock)),
-                $text(map(exx => {
-                  if (exx === null) {
-                    return ''
+                $text(map(cursor => {
+                  if (cursor === null) {
+                    return '-'
                   }
 
-                  return exx ? String(exx.value.blockNumber) : ''
-                }, dbCursor))
+                  return cursor ? String(cursor.value.blockNumber) : ''
+                }, fst)),
+                $text(map(cursor => {
+                  if (cursor === null) {
+                    return '-'
+                  }
+
+                  return cursor ? String(cursor.value.blockNumber) : ''
+                }, lst))
               )
             })
           },

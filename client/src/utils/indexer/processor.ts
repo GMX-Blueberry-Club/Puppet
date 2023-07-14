@@ -1,20 +1,15 @@
-import { awaitPromises, map, now } from "@most/core"
+import { awaitPromises, fromPromise, map, now } from "@most/core"
 import { Stream } from "@most/types"
-import { ILogOrdered, ILogOrderedEvent, max, min, switchMap } from "gmx-middleware-utils"
+import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, max, min, switchMap } from "gmx-middleware-utils"
 import { zipArray } from "../../logic/utils"
 import * as indexDB from "../storage/indexDB"
 import * as store from "../storage/storeScope"
-import { IIndexEventLogScopeParams, queryEventLog } from "./rpc"
+import { IIndexEventLogScopeParams, fetchTradesRecur } from "./rpc"
 import { combineObject } from "@aelea/core"
 import { publicClient } from "../../wallet/walletLink"
+import * as viem from "viem"
 
 
-// export interface IProcessParams<TData, TProcessConfigList extends readonly ILogOrdered[], TParentScopeName extends string> {
-//   data: Stream<TData>
-//   process: Stream<IProcessSync<TData>>
-//   config: IProcessConfig<TData, TParentScopeName>
-//   processList: { [P in keyof TProcessConfigList]: IProcessSourceConfig<TProcessConfigList[P], TData>; }
-// }
 
 export interface IProcessSync<T> {
   data: T
@@ -31,74 +26,126 @@ export interface IProcessSourceConfig<TLog extends ILogOrdered, TData> {
 }
 
 
-export interface IProcessConfig<TData, TParentScopeName extends string> {
+export interface IProcessorConfig<TData, TParentScopeName extends string> {
   parentStoreScope: store.IStoreconfig<TParentScopeName>
   initialSeed: TData
   startBlock: bigint
+  queryBlockSegmentLimit: bigint
 }
 
 export function processSources<TData, TProcessConfigList extends readonly ILogOrdered[], TParentScopeName extends string>(
-  config: IProcessConfig<TData, TParentScopeName>,
+  config: IProcessorConfig<TData, TParentScopeName>,
   ...processList: { [P in keyof TProcessConfigList]: IProcessSourceConfig<TProcessConfigList[P], TData>; }
 ): Stream<TData> {
-// ): IProcessParams<TData, TProcessConfigList, TParentScopeName> {
-  
 
-  const scopeKey = processList.reduce((acc, next) => `${acc}:${next.source.eventName}:${config.startBlock}`, 'processor')
+  const scopeKey = processList.reduce((acc, next) => `${acc}:${next.source.eventName}`, `processor:${config.startBlock}`)
   const scope = store.createStoreScope(config.parentStoreScope, scopeKey)
   const seed = { data: config.initialSeed, event: null, orderId: Number(1000000n * config.startBlock), blockNumber: config.startBlock } as IProcessSync<TData>
-  const storedData = store.get(scope, scopeKey, seed)
-  const latestBlock = awaitPromises(map(pc => pc.getBlock({ blockTag: 'latest' }), publicClient))
-
+  const processedData = store.get(scope, scopeKey, seed)
+  const latestBlock = awaitPromises(map(pc => pc.getBlockNumber({ maxAge: 0 }), publicClient)) 
 
  
-  const processWriteSources = switchMap(params => { 
-
+  const processWriteSources = switchMap(params => {
     const processNextLog = processList.map(processConfig => {
-      const nextRangeKey = IDBKeyRange.bound(params.storedData.orderId, 1000000000000000000)
-      const storedLog: Stream<ILogOrderedEvent[]> = indexDB.getAll(processConfig.source.scope, nextRangeKey)
+      const nextRangeKey = IDBKeyRange.bound(params.processedData.orderId + 1, 1e20, true)
+      const nextStoredLog: Stream<ILogOrderedEvent[]> = indexDB.getAll(processConfig.source.scope, nextRangeKey)
 
       return switchMap(stored => {
-        if (params.latestBlock.number === null) {
+        if (params.latestBlock === null) {
           throw new Error('cannot discover latest block')
         }
 
-        const processedFromBlock = params.storedData.blockNumber
+        const processedFromBlock = params.processedData.blockNumber
 
-        const prevRange = [min(processedFromBlock, stored[0]?.blockNumber || processedFromBlock), processedFromBlock]
-        const nextRange = [max(processedFromBlock, stored[stored.length - 1]?.blockNumber || processedFromBlock), params.latestBlock.number]
+        const fstEvent: ILogOrderedEvent | undefined = stored[0]
+        const lstEvent: ILogOrderedEvent | undefined = stored[stored.length - 1]
 
-        const prev = prevRange[0] < prevRange[1]
-          ? queryEventLog({
-            ...processConfig.source,
-            fromBlock: prevRange[0],
-            toBlock: prevRange[1],
-            publicClient: params.publicClient,
-            rangeSize: processConfig.rangeSize || 151204n,
-            orderId: stored[0]!.orderId
-          })
+        const startGapBlockRange = [config.startBlock, fstEvent.blockNumber]
+        const nextBlockRange = [max(processedFromBlock, lstEvent?.blockNumber || 0n), params.latestBlock]
+
+        const prev = startGapBlockRange[0] < startGapBlockRange[1]
+          ? fetchTradesRecur(
+            {
+              ...processConfig.source,
+              fromBlock: startGapBlockRange[0],
+              toBlock: startGapBlockRange[1],
+              publicClient: params.publicClient,
+              rangeSize: processConfig.rangeSize || config.queryBlockSegmentLimit,
+            },
+            reqParams => {
+              const queryLogs = fromPromise(
+                params.publicClient.createContractEventFilter({
+                  abi: reqParams.abi,
+                  address: reqParams.address,
+                  eventName: reqParams.eventName,
+                  fromBlock: reqParams.fromBlock,
+                  toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeSize),
+                  strict: true
+                }).then(filter => params.publicClient.getFilterLogs({ filter }))
+              ) as Stream<ILogEvent[]>
+
+              const storeMappedLogs = switchMap(logs => {
+                const filtered =  logs
+                  .map(ev => {
+                    const storeObj = { args: ev.args, blockNumber: ev.blockNumber, orderId: getEventOrderIdentifier(ev), transactionHash: ev.transactionHash } as ILogOrderedEvent
+                    return storeObj
+                  })
+                  .filter(ev => ev.orderId < fstEvent.orderId)
+
+                return indexDB.add(processConfig.source.scope, filtered)
+              }, queryLogs)
+
+              return storeMappedLogs
+            }
+          )
           : now([])
 
-        const next = nextRange[0] < nextRange[1]
-          ? queryEventLog({
-            ...processConfig.source,
-            fromBlock: nextRange[0],
-            toBlock: nextRange[1]!,
-            publicClient: params.publicClient,
-            rangeSize: processConfig.rangeSize || 151204n,
-            orderId: stored[stored.length - 1]!.orderId
-          })
+        const next = nextBlockRange[0] < nextBlockRange[1]
+          ? fetchTradesRecur(
+            {
+              ...processConfig.source,
+              fromBlock: nextBlockRange[0],
+              toBlock: nextBlockRange[1]!,
+              publicClient: params.publicClient,
+              rangeSize: processConfig.rangeSize || config.queryBlockSegmentLimit,
+            },
+            reqParams => {
+              const queryLogs = fromPromise(
+                params.publicClient.createContractEventFilter({
+                  abi: reqParams.abi,
+                  address: reqParams.address,
+                  eventName: reqParams.eventName,
+                  fromBlock: reqParams.fromBlock,
+                  toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeSize),
+                  strict: true
+                }).then(filter => params.publicClient.getFilterLogs({ filter }))
+              ) as Stream<ILogEvent[]>
+
+              const storeMappedLogs = switchMap(logs => {
+                const filtered =  logs
+                  .map(ev => {
+                    const storeObj = { args: ev.args, blockNumber: ev.blockNumber, orderId: getEventOrderIdentifier(ev), transactionHash: ev.transactionHash } as ILogOrderedEvent
+                    return storeObj
+                  })
+                  .filter(ev => ev.orderId > lstEvent.orderId)
+
+                return indexDB.add(processConfig.source.scope, filtered)
+              }, queryLogs)
+
+              return storeMappedLogs
+            }
+          )
           : now([])
 
         return map(log => [...log.prev, ...stored, ...log.next], combineObject({ prev, next }))
-      }, storedLog)
+      }, nextStoredLog)
     })
 
     const stepState = zipArray((...nextLogEvents) => {
       const orderedNextEvents = nextLogEvents.flat().sort((a, b) => a.orderId - b.orderId)
       const fstEvent = orderedNextEvents[0]
-      let nextSeed = fstEvent.blockNumber < params.storedData.blockNumber // if we have a gap in the log, start from the beginning
-        ? params.storedData
+      let nextSeed = !fstEvent || fstEvent.blockNumber < params.processedData.blockNumber // if we have a gap in the log, start from the beginning
+        ? params.processedData
         : { data: config.initialSeed, event: fstEvent, orderId: fstEvent.orderId, blockNumber: fstEvent.blockNumber }
       let hasThrown = false
 
@@ -127,13 +174,9 @@ export function processSources<TData, TProcessConfigList extends readonly ILogOr
     }, ...processNextLog)
 
     return stepState
-  }, combineObject({ storedData, publicClient, latestBlock }))
-
-  // return store.replayWrite(scope, currentStoreKey, processWriteSources)
+  }, combineObject({ processedData, publicClient, latestBlock }))
 
   const process = indexDB.set(scope, scopeKey, processWriteSources)
   const data = map(x => x.data, process)
   return data
-
-  // return { config, data, process, processList }
 }
