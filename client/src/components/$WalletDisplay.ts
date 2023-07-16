@@ -47,7 +47,7 @@ export const $WalletDisplay = ({ $container = $row, parentRoute }: IWalletDispla
                 })
               )
             )(
-              $discoverIdentityDisplay({ address: accountResult.address, labelSize: '.75em', $container, $profileContainer: $defaultBerry(style({ minWidth: '38px' })) })
+              $discoverIdentityDisplay({ address: accountResult.address, $container, $profileContainer: $defaultBerry })
             )
             : walletChangeTether(
               nodeEvent('click'),

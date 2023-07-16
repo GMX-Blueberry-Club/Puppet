@@ -1,4 +1,4 @@
-import { IAccountSummary, IPositionSettled, IPositionSlot, IPricefeed } from "gmx-middleware-utils"
+import { IAccountSummary, IPositionSettled, IPositionSlot, IPricefeed, div } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { rootStoreScope } from "../../rootStore"
 import { processSources } from "../../utils/indexer/processor"
@@ -28,11 +28,11 @@ const seedData: IStoredPositionMap = {
 }
 
 
-export const positionList = processSources({
+export const gmxTrading = processSources({
   initialSeed: seedData,
   parentStoreScope: rootStoreScope,
-  startBlock: 111070000n,
-  queryBlockSegmentLimit: 100000n,
+  startBlock: 110500000n,
+  queryBlockSegmentLimit: 300000n,
 },
 {
   source: vaultPriceEvents,
@@ -154,9 +154,45 @@ export const positionList = processSources({
     }
 
     delete seed.positionSlots[args.key]
- 
-
     seed.countId++
+
+    seed.leaderboard[positionSlot.account] ??= {
+      account: positionSlot.account,
+      size: 0n,
+      collateral: 0n,
+      leverage: 0n,
+
+      lossCount: 0,
+      winCount: 0,
+
+      fee: 0n,
+      pnl: 0n,
+
+      avgLeverage: 0n,
+      avgCollateral: 0n,
+      avgSize: 0n,
+    }
+
+    const settledPosition = seed.positionsSettled[settleId]
+    const accountSummary = seed.leaderboard[settledPosition.account]
+
+    accountSummary.size = settledPosition.maxSize
+    accountSummary.collateral = accountSummary.collateral + settledPosition.maxCollateral
+    accountSummary.leverage = accountSummary.leverage + div(settledPosition.maxSize, settledPosition.maxCollateral)
+
+    if (settledPosition.realisedPnl > 0n) {
+      ++accountSummary.winCount
+    } else {
+      ++accountSummary.lossCount
+    }
+
+    accountSummary.fee = accountSummary.fee + settledPosition.cumulativeFee
+    accountSummary.pnl = accountSummary.pnl + settledPosition.realisedPnl
+
+    const tradeCount = BigInt(accountSummary.winCount + accountSummary.lossCount)
+    accountSummary.avgSize = accountSummary.size / tradeCount
+    accountSummary.avgCollateral = accountSummary.collateral / tradeCount
+    accountSummary.avgLeverage = accountSummary.leverage / tradeCount
 
     return seed
   },
@@ -174,10 +210,11 @@ export const positionList = processSources({
 
 
     const settleId = `${args.key}:${seed.countId}` as const
+    const realisedPnl = -args.collateral + positionSlot.cumulativeFee
 
     seed.positionsSettled[settleId] = {
       ...positionSlot,
-      realisedPnl: args.realisedPnl,
+      realisedPnl: realisedPnl,
       settlePrice: args.markPrice,
       isLiquidated: true,
       __typename: 'PositionSettled',

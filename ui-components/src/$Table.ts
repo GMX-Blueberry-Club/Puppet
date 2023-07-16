@@ -1,7 +1,7 @@
 import { Behavior, combineObject, O, Op } from "@aelea/core"
 import { $node, $Node, $svg, attr, component, INode, NodeComposeFn, nodeEvent, style } from '@aelea/dom'
 import { $column, $icon, $row, designSheet, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { pallete } from "@aelea/ui-components-theme"
+import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, never, now, recoverWith, snapshot, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { $QuantumScroll, IScrollPagable, QuantumScroll, ScrollRequest } from "./$QuantumScroll.js"
@@ -59,7 +59,7 @@ export const $defaultTableCell = $row(
 )
 
 export const $defaultTableHeaderCell = $defaultTableCell(
-  style({ fontSize: '15px', alignItems: 'center', padding: '12px 0', color: pallete.foreground, })
+  style({ fontSize: '1rem', alignItems: 'center', padding: '12px 0', color: pallete.foreground, })
 )
 export const $defaultTableRowContainer = screenUtils.isDesktopScreen
   ? $node(layoutSheet.spacing, style({ padding: `2px 16px`, display: 'grid' }))
@@ -101,14 +101,21 @@ export const $Table = <T, FilterState = never>({
 
         return $headerCell(col.columnOp || O(), behavior)(
           style({ cursor: 'pointer' }, col.$head),
-          switchLatest(map(s => {
-            if (s === null) {
+          switchLatest(map(param => {
+            if (param === null) {
               return empty()
             }
 
-            return $column(style({ cursor: 'pointer' }))(
-              $icon({ $content: $sortArrowDown, fill: s.selector === col.sortBy ? s.direction === 'desc' ? pallete.foreground : '' : pallete.foreground, svgOps: style({ transform: 'rotate(180deg)' }), width: '8px', viewBox: '0 0 32 19.43' }),
-              $icon({ $content: $sortArrowDown, fill: s.selector === col.sortBy ? s.direction === 'asc' ? pallete.foreground : '' : pallete.foreground, width: '8px', viewBox: '0 0 32 19.43' })
+            return $column(
+              $icon({
+                $content: $sortArrowDown, 
+                svgOps: style({ transform: 'rotate(180deg)' }), width: '8px', viewBox: '0 0 32 19.43',
+                fill: param.selector === col.sortBy && param.direction === 'desc' ? '' : colorAlpha(pallete.message, 0.3)
+              }),
+              $icon({ 
+                $content: $sortArrowDown,
+                fill: param.selector === col.sortBy && param.direction === 'asc' ? '' : colorAlpha(pallete.message, 0.3),
+                width: '8px', viewBox: '0 0 32 19.43' })
             )
           }, sortBy))
         )

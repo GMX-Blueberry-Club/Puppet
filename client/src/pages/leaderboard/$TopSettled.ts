@@ -1,27 +1,19 @@
-import { Behavior, O, replayLatest } from "@aelea/core"
-import { $text, INode, StyleCSS, component, nodeEvent, style, styleBehavior } from "@aelea/dom"
-import { $Popover, $column, $icon, $row, layoutSheet } from "@aelea/ui-components"
-import { constant, map, multicast, now, startWith, switchLatest } from "@most/core"
-import { $Baseline, $ButtonToggle, $Link, $anchor, $caretDown } from "gmx-middleware-ui-components"
-import { IAccountSummary, IPositionSettled, div, formatFixed, intervalListFillOrderMap, pagingQuery, readableFixed10kBsp, toAccountSummaryList } from "gmx-middleware-utils"
+import { Behavior, combineObject, replayLatest } from "@aelea/core"
+import { $text, component, style } from "@aelea/dom"
+import * as router from '@aelea/router'
+import { $column, $row, layoutSheet } from "@aelea/ui-components"
+import { map } from "@most/core"
+import { Stream } from "@most/types"
+import { $Link, ISortBy } from "gmx-middleware-ui-components"
+import { IAccountSummary, IPositionSettled, div, pagingQuery, readableFixedBsp, switchMap } from "gmx-middleware-utils"
 import { IProfileActiveTab } from "../$Profile"
-import { $defaultProfileContainer } from "../../common/$avatar"
 import { $pnlValue, $sizeDisplay } from "../../common/$common"
 import { $accountPreview } from "../../components/$AccountProfile"
 import { $CardTable } from "../../components/$common"
-import { rootStoreScope } from "../../rootStore"
-import { schema } from "../../data/subgraph/schema"
-// import { fillQuery, replaySubgraphQuery } from "../../utils/indexer/indexer"
-import { processSources } from "../../utils/indexer/processor"
-import { $seperator2 } from "../common"
-import { ICompetitonCumulativeRoi } from "./$CumulativePnl"
-import { pallete } from "@aelea/ui-components-theme"
-import { IntervalTime, TIME_INTERVAL_MAP } from "gmx-middleware-const"
-import * as store from "../../utils/storage/storeScope"
-import * as indexDB from "../../utils/storage/indexDB"
-import { fillQuery } from "../../utils/indexer/indexer"
-import { createRpcLogEventScope } from "../../utils/indexer/rpc"
 import { gmxData } from "../../data/process"
+import { schema } from "../../data/subgraph/schema"
+import { fillQuery } from "../../utils/indexer/indexer"
+import { $seperator2 } from "../common"
 
 
 
@@ -43,64 +35,41 @@ const processSeed: IPositionSettled = {
 
 
 
-const tradeList = gmxData.positionList
 
-
-
-const newLocal = {
-  summaryList: [] as IAccountSummary[]
+export type ITopSettled = {
+  route: router.Route
 }
 
-// const data = processSources(
-//   rootStoreScope,
-//   newLocal,
-//   {
-//     source: gmxTradingSubgraph,
-//     step(seed, value) {
-
-
-//       return seed
-//     },
-//   },
-// )
-
-
-const datass = map(trades => {
-  const summaryList = toAccountSummaryList(Object.values(trades.positionsSettled))
-
-  return pagingQuery({ offset: 0, pageSize: 20, selector: 'pnl', direction: "desc" }, summaryList)
-}, tradeList)
-
-
-export type ILeaderboard = ICompetitonCumulativeRoi
-
-export const $Leaderboard = (config: ILeaderboard) => component((
+export const $TopSettled = (config: ITopSettled) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
   // [topPnlTimeframeChange, topPnlTimeframeChangeTether]: Behavior<any, ILeaderboardRequest['timeInterval']>,
+  
+  [pageIndex, pageIndexTether]: Behavior<number, number>,
+  [sortByChange, sortByChangeTether]: Behavior<ISortBy<IAccountSummary>, ISortBy<IAccountSummary>>,
+
 
 ) => {
 
 
-  const containerStyle = O(
-    layoutSheet.spacingBig,
+  const sortBy: Stream<ISortBy<IAccountSummary>> = replayLatest(sortByChange, { direction: 'desc', selector: 'pnl' })
 
-  )
+  const qparams = combineObject({
+    sortBy,
+    pageIndex,
+  })
 
-  const timeframe = store.createStoreScope(rootStoreScope, 'leaderboard')
-  // const timeframe = store.createStoreScope(rootStoreScope, TIME_INTERVAL_MAP.HR24, topPnlTimeframeChange)
+  const datass = switchMap(params => {
+    return map(data => {
+      const summaryList = Object.values(data.leaderboard)
 
-  const activeTimeframe: StyleCSS = { color: pallete.primary, pointerEvents: 'none' }
+      return pagingQuery({ ...params.sortBy, offset: params.pageIndex * 20, pageSize: 20 }, summaryList)
+    }, gmxData.gmxTrading)
+  }, qparams)
+
 
   return [
     $column(layoutSheet.spacingBig)(
 
-      $column(style({ alignItems: 'center' }))(
-        $ButtonToggle({
-          options: ['Settled', 'Open', 'Competition'],
-          selected: now('Settled'),
-          $$option: map(option => $text(option)),
-        })({ })
-      ),
 
       // switchLatest(
       //   map(list => {
@@ -169,10 +138,10 @@ export const $Leaderboard = (config: ILeaderboard) => component((
       //   )
       // ),
 
-      containerStyle(
+      $column(style({ alignItems: 'center' }))(
         $CardTable({
           dataSource: datass,
-          // sortBy,
+          sortBy,
           columns: [
             {
               $head: $text('Account'),
@@ -182,8 +151,8 @@ export const $Leaderboard = (config: ILeaderboard) => component((
                 return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
                 // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
                   $Link({
-                    $content: $accountPreview({ address: pos.account, $container: $defaultProfileContainer(style({ minWidth: '50px' })) }),
-                    route: config.parentRoute.create({ fragment: 'fefwef' }),
+                    $content: $accountPreview({ address: pos.account }),
+                    route: config.route.create({ fragment: 'fefwef' }),
                     url: `/app/profile/${pos.account}/${IProfileActiveTab.TRADING.toLowerCase()}`
                   })({ click: routeChangeTether() }),
                 // $anchor(clickAccountBehaviour)(
@@ -227,7 +196,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
               // return $row(layoutSheet.spacingSmall, w3p?.account.address === pos.account ? style({ background: invertColor(pallete.message), borderRadius: '15px', padding: '6px 12px' }) : style({}), style({ alignItems: 'center', minWidth: 0 }))(
               //   $row(style({ alignItems: 'baseline', zIndex: 5, textAlign: 'center', minWidth: '18px', placeContent: 'center' }))(
-              //     $text(style({ fontSize: '.75em' }))(`${pos.rank}`),
+              //     $text(style({ fontSize: '.75rem' }))(`${pos.rank}`),
               //   ),
               //   $Link({
               //     $content: $profilePreview({ profile: pos.profile, $container }),
@@ -240,7 +209,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
             {
               $head: $text('Win / Loss'),
-              columnOp: style({ maxWidth: '88px', alignItems: 'center', placeContent: 'center' }),
+              columnOp: style({ alignItems: 'center', placeContent: 'center' }),
               $$body: map((pos) => {
                 return $row(
                   $text(`${pos.winCount} / ${pos.lossCount}`)
@@ -251,9 +220,9 @@ export const $Leaderboard = (config: ILeaderboard) => component((
             {
               $head: $column(style({ textAlign: 'right' }))(
                 $text('Cum. Size $'),
-                $text(style({ fontSize: '.75em' }))('Avg. Leverage'),
+                $text(style({ fontSize: '.75rem' }))('Avg. Leverage'),
               ),
-              sortBy: 'pnl',
+              sortBy: 'size',
               columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
               $$body: map((pos) => {
                 return $sizeDisplay(pos.size, pos.collateral)
@@ -262,7 +231,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
             {
               $head: $column(style({ textAlign: 'right' }))(
                 $text('PnL $'),
-                $text(style({ fontSize: '.75em' }))('Return %'),
+                $text(style({ fontSize: '.75rem' }))('Return %'),
               ),
               sortBy: 'pnl',
               columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
@@ -271,36 +240,14 @@ export const $Leaderboard = (config: ILeaderboard) => component((
                 return $column(style({ gap: '3px', textAlign: 'right' }))(
                   $pnlValue(pos.pnl),
                   $seperator2,
-                  $text(style({ fontSize: '.75em' }))(readableFixed10kBsp(div(pos.pnl, pos.collateral))),
+                  $text(style({ fontSize: '.75rem' }))(readableFixedBsp(div(pos.pnl, pos.collateral))),
                 )
               })
             },
-            // {
-            //   $head: $column(style({ textAlign: 'right' }))(
-            //     // $text(style({ fontSize: '.75em' }))(currentMetricLabel),
-            //     $text('PnL $'),
-            //   ),
-            //   // sortBy: 'score',
-            //   columnOp: style({ minWidth: '90px', alignItems: 'center', placeContent: 'flex-end' }),
-            //   $$body: map(pos => {
-            //     const metricVal = pos.score
-
-            //     const newLocal = readableNumber(formatToBasis(metricVal) * 100)
-            //     const pnl = currentMetric === 'pnl' ? readableUSD(metricVal, false) : `${Number(newLocal)} %`
-
-            //     return $column(layoutSheet.spacingTiny, style({ gap: '3px', textAlign: 'right' }))(
-            //       $text(style({ fontSize: '.75em' }))(pnl),
-            //       $seperator2,
-            //       pos.prize > 0n
-            //         ? $text(style({ color: pallete.positive }))(readableUSD(pos.prize, false))
-            //         : empty(),
-            //     )
-            //   }),
-            // }
           ],
         })({
-        // sortBy: sortByChangeTether(),
-        // scrollIndex: pageIndexTether()
+          sortBy: sortByChangeTether(),
+          scrollIndex: pageIndexTether()
         })
       )
     ),

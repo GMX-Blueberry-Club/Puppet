@@ -3,7 +3,7 @@ import { $row, $seperator } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 
 
-export const $metricEntry = (label: string, value: string) => $row(style({ fontSize: '.75em', alignItems: 'center' }))(
+export const $metricEntry = (label: string, value: string) => $row(style({ fontSize: '.75rem', alignItems: 'center' }))(
   $text(style({ color: pallete.foreground, flex: 1 }))(label),
   $text(style({ fontWeight: 'bold' }))(value),
 )

@@ -137,7 +137,7 @@ export const $teamMember = ({ name, title, token }: ITeamMember) => {
     $berryByToken(token),
     $column(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
       $anchor(attr(({ href: `https://twitter.com/${name}` })), style({ fontWeight: 900, textDecoration: 'none', fontSize: '1em' }))($text(`@${name}`)),
-      $text(style({ fontSize: '.75em', color: pallete.foreground, textAlign: 'center', lineHeight: '1.3' }))(title),
+      $text(style({ fontSize: '.75rem', color: pallete.foreground, textAlign: 'center', lineHeight: '1.3' }))(title),
     )
   )
 }

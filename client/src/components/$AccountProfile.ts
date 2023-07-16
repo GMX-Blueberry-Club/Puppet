@@ -31,8 +31,8 @@ export interface IAccountClaim extends IAccountPreview {
 
 export const $AccountLabel = (address: string, fontSize = '1em') => {
   return $column(style({ fontSize }))(
-    $text(style({ fontSize: '.75em' }))(address.slice(0, 6)),
-    $text(style({ fontSize: '1em' }))(address.slice(address.length - 4, address.length))
+    $text(style({ fontSize: '.75rem' }))(address.slice(0, 6)),
+    $text(style({ fontSize: '1em', letterSpacing: '1.373px' }))(address.slice(address.length - 4, address.length))
   )
 }
 
@@ -106,7 +106,7 @@ export const $disconnectedWalletDisplay = ($container = $row) => {
       $text(style({ fontWeight: 800, color: pallete.foreground }))('?')
     ),
     $column(style({ whiteSpace: 'nowrap', fontSize: '16px' }))(
-      $text(style({ fontSize: '.75em' }))('0x----'),
+      $text(style({ fontSize: '.75rem' }))('0x----'),
       $text(style({ fontSize: '1em' }))('----')
     )
   )

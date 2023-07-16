@@ -41,7 +41,7 @@ export const $Profile = (config: IProfile) => component((
 ) => {
 
 
-  const mcP = multicast(gmxData.positionList)
+  const mcP = multicast(gmxData.gmxTrading)
 
   const openTrades = map(list => {
     const newLocal = Object.values(list.positionSlots).filter(p => p.account === config.account)
@@ -98,7 +98,7 @@ export const $Profile = (config: IProfile) => component((
 
                 const timestamp = pos.cumulativeSize
 
-                return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
+                return $column(layoutSheet.spacingTiny, style({ fontSize: '.75rem' }))(
                   $text(timeSince(timestamp) + ' ago'),
                   $text(readableDate(timestamp)),
                 )
@@ -113,7 +113,7 @@ export const $Profile = (config: IProfile) => component((
             },
             {
               $head: $column(style({ textAlign: 'right' }))(
-                $text(style({ fontSize: '.75em' }))('Collateral'),
+                $text(style({ fontSize: '.75rem' }))('Collateral'),
                 $text('Size'),
               ),
               columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
@@ -154,14 +154,14 @@ export const $Profile = (config: IProfile) => component((
 
                 return $column(layoutSheet.spacingTiny)(
                   // $text(timeSince(timestamp) + ' ago'),
-                  // $text(style({ fontSize: '.65em' }))(readableDate(timestamp)),
+                  // $text(style({ fontSize: '.75rem' }))(readableDate(timestamp)),
                 )
               })
             },
             {
               $head: $column(style({ textAlign: 'right' }))(
                 $text('Entry'),
-                $text(style({ fontSize: '.75em' }))('Price'),
+                $text(style({ fontSize: '.75rem' }))('Price'),
               ),
               columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
               $$body: map((pos) => {
@@ -171,7 +171,7 @@ export const $Profile = (config: IProfile) => component((
             {
               $head: $column(style({ textAlign: 'right' }))(
                 $text('Max Size'),
-                $text(style({ fontSize: '.75em' }))('Leverage / Liquidation'),
+                $text(style({ fontSize: '.75rem' }))('Leverage / Liquidation'),
               ),
               columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
               $$body: map(pos => {

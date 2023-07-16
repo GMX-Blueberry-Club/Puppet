@@ -3,7 +3,7 @@ import { Behavior } from '@aelea/core'
 import { $Branch, $Node, $custom, $text, IBranch, NodeComposeFn, component, style } from '@aelea/dom'
 import { $column, layoutSheet, observer } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { filter, join, map, mergeArray, now, snapshot } from "@most/core"
+import { filter, join, map, mergeArray, multicast, now, snapshot, startWith, until } from "@most/core"
 import { Stream } from '@most/types'
 
 
@@ -57,6 +57,7 @@ export const $QuantumScroll = ({
     $loader
   )
 
+  const dataLoadingMc = multicast(dataSource)
 
   const $itemLoader = snapshot((sidx, nextResponse) => {
     const itemCount = Array.isArray(nextResponse) ? nextResponse.length : nextResponse.$items.length
@@ -72,12 +73,12 @@ export const $QuantumScroll = ({
     const hasMoreItems = nextResponse.pageSize === itemCount
 
     const $items = hasMoreItems
-      ? [...nextResponse.$items, $observerloader]
+      ? [...nextResponse.$items, until(dataLoadingMc, $observerloader )]
       : nextResponse.$items
 
 
     return mergeArray($items)
-  }, scrollIndex, dataSource)
+  }, scrollIndex, dataLoadingMc)
 
 
   return [
@@ -88,7 +89,7 @@ export const $QuantumScroll = ({
     ),
 
     {
-      scrollIndex: snapshot(index => index + 1, scrollIndex, intersecting)
+      scrollIndex: startWith(0, snapshot(index => index + 1, scrollIndex, intersecting))
     }
   ]
 })

@@ -131,7 +131,7 @@ export const $IntermediateTx = <
     }),
     $loader: switchLatest(map(c => {
 
-      return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', fontSize: '.75em' }))(
+      return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', fontSize: '.75rem' }))(
         $spinner,
         $text(startWith('Wallet Request...', map(() => 'Awaiting confirmation...', fromPromise(c)))),
         $node(style({ flex: 1 }))(),

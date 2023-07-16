@@ -1,8 +1,7 @@
-import { chain, fromPromise, map, now, recoverWith } from "@most/core"
+import { chain, map, now, recoverWith } from "@most/core"
 import { Stream } from "@most/types"
-import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, min, switchMap } from "gmx-middleware-utils"
+import { ILogOrdered, ILogOrderedEvent } from "gmx-middleware-utils"
 import * as viem from "viem"
-import * as indexDB from "../storage/indexDB"
 import * as store from "../storage/storeScope"
 
 
@@ -61,16 +60,20 @@ export const fetchTradesRecur = <
   params: IFilterLogsParams<TReturn, TAbi, TEventName, TParentScopeName>,
   getList: (req: IFilterLogsParams<TReturn, TAbi, TEventName, TParentScopeName>) => Stream<TReturn[]>
 ): Stream<TReturn[]> => {
+  const nextBatch = getList(params)
 
-  const retryLowerRange = recoverWith<TReturn[], Error, TReturn[]>((err): Stream<TReturn[]> => {
-    console.error(err)
+  let retryAmount = 0
+  const retryLowerRange = recoverWith<TReturn[], Error & { code: number }, TReturn[]>((err): Stream<TReturn[]> => {
+    if (err.code !== -32602 || retryAmount > 3) {
+      throw new Error(`Failed to fetch trades after 3 retries`)
+    }
+
+    retryAmount++
+
     const reducedRange = params.rangeSize - params.rangeSize / 3n
-    debugger
 
-    return retryLowerRange(getList({ ...params, rangeSize: reducedRange }))
+    return retryLowerRange(fetchTradesRecur({ ...params, rangeSize: reducedRange }, getList))
   })
-
-  const nextBatch = retryLowerRange(getList(params))
 
   const nextBatchResponse = chain(res => {
     const nextToBlock = params.fromBlock + params.rangeSize
@@ -84,6 +87,15 @@ export const fetchTradesRecur = <
     return map(nextPage => [...res, ...nextPage], newPage)
   }, nextBatch)
 
-  return nextBatchResponse
+  return retryLowerRange(nextBatchResponse)
 }
 
+function retryLowerRange<TReturn, TError extends Error> (stream: Stream<TReturn[]>, retryAmount: number): Stream<TReturn[]> {
+  return recoverWith<TReturn[], TError>((err): Stream<TReturn[]> => {
+    if (retryAmount > 3) {
+      throw new Error(`Failed to fetch trades after 3 retries`)
+    }
+
+    return retryLowerRange(stream, retryAmount + 1)
+  }, stream)
+}

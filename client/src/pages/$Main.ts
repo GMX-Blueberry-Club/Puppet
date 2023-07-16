@@ -4,7 +4,7 @@ import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
-import { map, merge, mergeArray, multicast, now, skipRepeats, startWith } from '@most/core'
+import { map, merge, mergeArray, multicast, now, skipRepeats, startWith, tap } from '@most/core'
 import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN } from "gmx-middleware-const"
 import { switchMap } from "gmx-middleware-utils"
 import { $discoverIdentityDisplay } from "../components/$AccountProfile"
@@ -17,7 +17,7 @@ import { $Home } from "./$Home"
 import { $Profile } from "./$Profile"
 import { $ProfileConnected } from "./$ProfileConnected"
 import { $Trade } from "./$Trade"
-import { $Leaderboard } from "./competition/$Leaderboard"
+import { $Leaderboard } from "./leaderboard/$Leaderboard"
 
 
 
@@ -53,25 +53,13 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   const appRoute = rootRoute.create({ fragment: 'app', title: '' })
   // const profileRoute = appRoute.create({ fragment: 'profile', title: 'Berry Account' }).create({ fragment: ETH_ADDRESS_REGEXP })
   const profileWalletRoute = appRoute.create({ fragment: 'wallet', title: 'Wallet Account' })
-  const leaderboardRoute = appRoute.create({ fragment: 'leaderboard', title: 'Leaderboard' })
+
   const adminRoute = appRoute.create({ fragment: 'admin', title: 'Admin Utilities' })
   const TRADEURL = 'trade'
   const tradeRoute = appRoute.create({ fragment: TRADEURL })
   const tradeTermsAndConditions = appRoute.create({ fragment: 'trading-terms-and-conditions' })
 
-
-
-
-  const serverApi = helloBackend({
-    // requestPricefeed,
-    // requestLatestPriceMap,
-    // requestTrade,
-    // requestAccountTradeList
-  })
-
-
-
-
+  const leaderboardRoute = appRoute.create({ fragment: 'leaderboard' })
 
 
 
@@ -86,7 +74,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       position: 'relative',
       // backgroundImage: `radial-gradient(570% 71% at 50% 15vh, ${pallete.background} 0px, ${pallete.horizon} 100%)`,
       backgroundColor: pallete.horizon,
-      fontSize: '1.25rem',
+      fontSize: '1.15rem',
       minHeight: '100vh',
       fontWeight: 400,
       overflowX: 'hidden',
@@ -126,9 +114,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
             })
         )(
           $row(
-            style({ margin: '0 auto', maxWidth: '1140px', gap: screenUtils.isDesktopScreen ? '55px' : '55px', width: '100%' }),
+            style({ margin: '0 auto', maxWidth: '1140px', gap: screenUtils.isDesktopScreen ? '50px' : '50px', width: '100%' }),
             styleBehavior(map(isMobile => ({ flexDirection: isMobile ? 'row' : 'column' }), isMobileScreen)),
-
           )(
 
             switchMap(isMobile => {
@@ -142,7 +129,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
             }, isMobileScreen),
 
             $column(
-              layoutSheet.spacingBig, style({ flex: 1, paddingTop: screenUtils.isDesktopScreen ? '55px' : '', }),
+              layoutSheet.spacingBig, style({ flex: 1, paddingTop: screenUtils.isDesktopScreen ? '50px' : '', }),
             )(
 
               // router.match(appRoute)(
@@ -199,11 +186,13 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                   changeRoute: linkClickTether(),
                 }))
               ),
-              router.match(leaderboardRoute)(
+              router.contains(leaderboardRoute)(
                 fadeIn($Leaderboard({
-                  parentRoute: appRoute
+                  route: leaderboardRoute
                 })({
-                  routeChange: linkClickTether()
+                  routeChange: linkClickTether(
+                    tap(console.log)
+                  )
                 }))
               ),
               router.match(tradeRoute)(

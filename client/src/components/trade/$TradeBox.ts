@@ -33,7 +33,7 @@ import {
   abs, bnDiv, div, filterNull, formatFixed, readableFixedUSD30, formatBps, getAdjustedDelta, getDenominator,
   getNativeTokenDescription, getPnL, getTokenAmount, getTokenDescription, getTokenUsd,
   IPricefeed, ITokenDescription,
-  parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, zipState, readableFixed10kBsp, readableUnitAmount, IPositionSlot
+  parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, zipState, readableFixedBsp, readableUnitAmount, IPositionSlot
 } from "gmx-middleware-utils"
 import { MouseEventParams } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
@@ -537,7 +537,7 @@ export const $TradeBox = (config: ITradeBox) => component((
 
 
       //   // $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-      //   //   style({ padding: '2px', fontSize: '.75em' })(
+      //   //   style({ padding: '2px', fontSize: '.75rem' })(
       //   //     $ButtonSecondary({
       //   //       $content: $icon({ $content: $xCross, width: '24px', svgOps: style({ padding: '4px' }), viewBox: '0 0 32 32' })
       //   //     })({
@@ -683,7 +683,7 @@ export const $TradeBox = (config: ITradeBox) => component((
               value: {
                 value: config.tradeConfig.isIncrease,
                 $$option: map((isIncrease) => {
-                  return $text(style({ fontSize: '0.85em' }))(isIncrease ? 'Increase' : 'Decrease')
+                  return $text(style({ fontSize: '.75rem' }))(isIncrease ? 'Increase' : 'Decrease')
                 }),
                 list: [
                   true,
@@ -1004,7 +1004,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                     $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end', placeContent: 'center' }))(
                       $text(map(amountUsd => readableFixedUSD30(amountUsd), liquidity)),
                       $row(style({ whiteSpace: 'pre' }))(
-                        $text(map(info => readableFixed10kBsp(formatBps(info.rate)), poolInfo)),
+                        $text(map(info => readableFixedBsp(formatBps(info.rate)), poolInfo)),
                         $text(style({ color: pallete.foreground }))(' / hr')
                       ),
                     )
@@ -1063,7 +1063,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                 const tokenDesc = getTokenDescription(indexToken)
 
                 return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', flexDirection: 'row-reverse' }))(
-                  $row(layoutSheet.spacingTiny, style({ alignItems: 'center', fontSize: '.75em' }))(
+                  $row(layoutSheet.spacingTiny, style({ alignItems: 'center', fontSize: '.75rem' }))(
                     $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '14px', viewBox: '0 0 32 32' }),
                     $text(tokenDesc.symbol)
                   ),
@@ -1115,7 +1115,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                           $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end', placeContent: 'center' }))(
                             $text(map(amountUsd => readableFixedUSD30(amountUsd), liquidity)),
                             $row(style({ whiteSpace: 'pre' }))(
-                              $text(map(info => readableFixed10kBsp(formatBps(info.rate)), poolInfo)),
+                              $text(map(info => readableFixedBsp(formatBps(info.rate)), poolInfo)),
                               $text(style({ color: pallete.foreground }))(' / hr')
                             ),
                           )

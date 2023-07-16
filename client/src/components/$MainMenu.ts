@@ -120,7 +120,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
 
   return [
 
-    $column(layoutSheet.spacingBig, style({ padding: '14px', maxHeight: '100vh', paddingLeft: '0', flexShrink: 0, alignItems: 'flex-end', borderRadius: '30px', borderRight: `1px solid ${colorAlpha(pallete.foreground, .20)}`, placeContent: 'space-between' }))(
+    $column(layoutSheet.spacingBig, style({ padding: '16px 16px 16px 0px', maxHeight: '100vh', flexShrink: 0, alignItems: 'flex-end', borderRadius: '30px', borderRight: `1px solid ${colorAlpha(pallete.foreground, .20)}`, placeContent: 'space-between' }))(
       $column(layoutSheet.spacingBig, style({ alignItems: 'center' }))(
         $RouterAnchor({ url: '/', route: parentRoute, $anchor: $element('a')($icon({ $content: $puppetLogo, width: '45px', viewBox: '0 0 32 32' })) })({
           click: routeChangeTether()
@@ -142,7 +142,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
         }),
 
         $WalletDisplay({
-          $container: $column(style({ width: '45px' })),
+          $container: $column(style({ width: '50px' })),
           parentRoute
         })({
           routeChange: routeChangeTether(),
@@ -183,7 +183,7 @@ export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: 
     $icon({ $content: $iconPath, width: '36px', svgOps: style({ minWidth: '36px' }), viewBox: '0 0 32 32' }),
     $column(layoutSheet.spacingTiny)(
       $text(label),
-      $text(style({ color: pallete.foreground, fontSize: '.75em' }))(description)
+      $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(description)
     )
   )
 

@@ -8,7 +8,7 @@ import * as GMX from "gmx-middleware-const"
 import { $bear, $bull, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
 import { 
   bnDiv, readableFixedUSD30, getFundingFee, getMappedValue, getMarginFees, getNextLiquidationPrice, getPnL,
-  IPosition, IPositionSettled, IPositionSlot, ITokenSymbol, liquidationWeight, readableFixed10kBsp, div, formatBps, safeDiv, readableNumber, readableUnitAmount, readableLargeNumber
+  IPosition, IPositionSettled, IPositionSlot, ITokenSymbol, liquidationWeight, readableFixedBsp, div, formatBps, safeDiv, readableNumber, readableUnitAmount, readableLargeNumber
 } from "gmx-middleware-utils"
 import { $seperator2 } from "../pages/common"
 
@@ -16,13 +16,13 @@ import { $seperator2 } from "../pages/common"
 export const $sizeDisplay = (size: bigint, collateral: bigint) => {
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
     $text(readableFixedUSD30(size)),   
-    $seperator,
-    $text(style({ fontWeight: 'bold', fontSize: '.75em' }))(`${Math.round(formatBps(div(size, collateral)))}x`),
+    $seperator2,
+    $text(style({ fontWeight: 'bold', fontSize: '.75rem' }))(`${Math.round(formatBps(div(size, collateral)))}x`),
   )
 }
 
 export const $entry = (pos: IPosition) => {
-  return $column(layoutSheet.spacingTiny, style({ alignItems: 'center', placeContent: 'center', fontSize: '.65em' }))(
+  return $column(layoutSheet.spacingTiny, style({ alignItems: 'center', placeContent: 'center', fontSize: '.75rem' }))(
     $row(
       $icon({
         svgOps: style({ borderRadius: '50%', padding: '4px', marginRight: '-10px', zIndex: 0, alignItems: 'center', fill: pallete.message, backgroundColor: pallete.horizon }),
@@ -41,7 +41,7 @@ export const $settledSizeDisplay = (pos: IPositionSettled) => {
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
     $text(readableFixedUSD30(pos.maxSize)),
     $seperator2,
-    $row(layoutSheet.spacingSmall, style({ fontSize: '.65em', placeContent: 'center' }))(
+    $row(layoutSheet.spacingSmall, style({ fontSize: '.75rem', placeContent: 'center' }))(
       $leverage(pos.maxSize, pos.maxCollateral),
       $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
         $icon({
@@ -77,7 +77,7 @@ export const $TokenIcon = (indexToken: ITokenSymbol, IIcon?: { width?: string })
 export const $riskLiquidator = (pos: IPositionSlot, markPrice: Stream<bigint>) => {
 
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
-    $text(style({ fontSize: '.75em' }))(readableFixedUSD30(pos.size)),
+    $text(style({ fontSize: '.75rem' }))(readableFixedUSD30(pos.size)),
     $liquidationSeparator(pos, markPrice),
     $text(readableFixedUSD30(pos.size)),
   )
@@ -139,7 +139,7 @@ export function $liquidationSeparator(pos: IPositionSlot, markPrice: Stream<bigi
   )
 }
 
-export const $openPositionPnlBreakdown = (pos: IPositionSlot, cumulativeFee: Stream<bigint>, price: Stream<bigint>) => {
+export const $openPositionPnlBreakdown = (pos: IPositionSlot, cumulativeFee: Stream<bigint>) => {
   const totalMarginFee = [...pos.link.increaseList, ...pos.link.decreaseList].reduce((seed, next) => seed + getMarginFees(next.sizeDelta), 0n)
 
 

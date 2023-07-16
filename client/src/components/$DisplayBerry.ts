@@ -19,8 +19,8 @@ export function $svgContent(content: string): $Node[] {
 
 export const $defaultBerry = $column(style({
   // placeSelf: 'flex-start'
-  minWidth: '85px',
-  // width: '100%',
+  // minWidth: '85px',
+  width: '100%',
   aspectRatio: '1 / 1',
   borderRadius: '8px',
   overflow: 'hidden'

@@ -94,7 +94,7 @@ export const $ProfileConnected = (config: IAccount) => component((
 
                     const timestamp = isKeeperReq ? unixTimestampNow() : req.timestamp
 
-                    return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
+                    return $column(layoutSheet.spacingTiny, style({ fontSize: '.75rem' }))(
                       $text(timeSince(timestamp) + ' ago'),
                       $text(readableDate(timestamp)),
                     )
@@ -109,7 +109,7 @@ export const $ProfileConnected = (config: IAccount) => component((
                 },
                 {
                   $head: $column(style({ textAlign: 'right' }))(
-                    $text(style({ fontSize: '.75em' }))('Collateral'),
+                    $text(style({ fontSize: '.75rem' }))('Collateral'),
                     $text('Size'),
                   ),
                   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
@@ -148,7 +148,7 @@ export const $ProfileConnected = (config: IAccount) => component((
 
                     const timestamp = isKeeperReq ? unixTimestampNow() : req.settledTimestamp
 
-                    return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
+                    return $column(layoutSheet.spacingTiny, style({ fontSize: '.75rem' }))(
                       $text(timeSince(timestamp) + ' ago'),
                       $text(readableFixedUSD30(timestamp)),
                     )
@@ -163,7 +163,7 @@ export const $ProfileConnected = (config: IAccount) => component((
                 },
                 {
                   $head: $column(style({ textAlign: 'right' }))(
-                    $text(style({ fontSize: '.75em' }))('Collateral'),
+                    $text(style({ fontSize: '.75rem' }))('Collateral'),
                     $text('Size'),
                   ),
                   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),

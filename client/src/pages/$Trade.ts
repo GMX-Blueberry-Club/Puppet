@@ -6,7 +6,7 @@ import {
   readableFixedUSD30, formatBps, getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getLiquidationPrice, getMappedValue,
   getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getPnL, getPositionKey,
   getTokenAmount, getTokenDescription, gmxSubgraph,
-  readableAccountingNumber, readableNumber, switchMap, timeSince, unixTimestampNow, readableFixed10kBsp, IPositionSlot
+  readableAccountingNumber, readableNumber, switchMap, timeSince, unixTimestampNow, readableFixedBsp, IPositionSlot
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
@@ -565,7 +565,7 @@ export const $Trade = (config: ITradeComponent) => component((
   return [
     $node(
       style({
-        display: 'flex',
+        display: 'flex', fontSize: '1rem',
         ...screenUtils.isDesktopScreen
           ? { flexDirection: 'row-reverse', gap: '45px' }
           : { flexDirection: 'column' }
@@ -653,7 +653,7 @@ export const $Trade = (config: ITradeComponent) => component((
             //   ? style({ height: '500px' })
             //   : style({ height: '500px' })
           )(
-            $row(layoutSheet.spacing, style({ fontSize: '0.85em', zIndex: 5, margin: '8px', alignSelf: 'flex-start', placeContent: 'center', alignItems: 'center' }))(
+            $row(layoutSheet.spacing, style({ fontSize: '.75rem', zIndex: 5, margin: '8px', alignSelf: 'flex-start', placeContent: 'center', alignItems: 'center' }))(
               screenUtils.isDesktopScreen
                 ? $ButtonToggle({
                   selected: timeframe,
@@ -689,7 +689,7 @@ export const $Trade = (config: ITradeComponent) => component((
                     $$option: map((option) => {
                       const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
 
-                      return $text(style({ fontSize: '0.85em' }))(timeframeLabel)
+                      return $text(style({ fontSize: '.75rem' }))(timeframeLabel)
                     }),
                     list: [
                       GMX.TIME_INTERVAL_MAP.MIN5,
@@ -706,7 +706,7 @@ export const $Trade = (config: ITradeComponent) => component((
               $column(layoutSheet.spacingSmall)(
                 $infoLabel('Borrow Rate'),
                 $row(style({ whiteSpace: 'pre' }))(
-                  $text(map(poolInfo => readableFixed10kBsp(formatBps(poolInfo.rate)), collateralTokenPoolInfo)),
+                  $text(map(poolInfo => readableFixedBsp(formatBps(poolInfo.rate)), collateralTokenPoolInfo)),
                   $text(style({ color: pallete.foreground }))(' / hr')
                 )
               ),
@@ -741,7 +741,7 @@ export const $Trade = (config: ITradeComponent) => component((
                       style({
                         backgroundColor: pallete.background,
                         transition: 'border-color .15s ease-in-out',
-                        fontSize: '.75em',
+                        fontSize: '.75rem',
                         fontWeight: 'bold',
                         padding: '6px 8px',
                         borderRadius: '30px',
@@ -953,7 +953,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
                       const timestamp = isKeeperReq ? unixTimestampNow() : req.timestamp
 
-                      return $column(layoutSheet.spacingTiny, style({ fontSize: '.65em' }))(
+                      return $column(layoutSheet.spacingTiny, style({ fontSize: '.75rem' }))(
                         $text(timeSince(timestamp) + ' ago'),
                         $text(readableFixedUSD30(timestamp)),
                       )
