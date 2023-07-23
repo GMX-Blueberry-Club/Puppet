@@ -1,24 +1,27 @@
 import { Behavior, combineArray } from "@aelea/core"
 import { $Node, INode, NodeComposeFn, component, style } from "@aelea/dom"
 import { $column, observer } from "@aelea/ui-components"
-import { pallete } from "@aelea/ui-components-theme"
 import { map, multicast, skipRepeatsWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { CHAIN } from "gmx-middleware-const"
-import { $Baseline, $Chart } from "gmx-middleware-ui-components"
+import { $Baseline } from "gmx-middleware-ui-components"
 import {
-  IPricefeed, ITrade, formatFixed, getDeltaPercentage, getPnL,
-  intervalListFillOrderMap, isTradeSettled, readableNumber, unixTimestampNow
+  IMirrorPosition,
+  IPositionSlot,
+  IPriceInterval,
+  formatFixed, getDeltaPercentage, getPnL,
+  intervalListFillOrderMap, isPositionSettled,
+  unixTimestampNow
 } from "gmx-middleware-utils"
-import { BarPrice, ChartOptions, DeepPartial, LineStyle, MouseEventParams, Time } from "lightweight-charts"
+import { ChartOptions, DeepPartial, MouseEventParams, Time } from "lightweight-charts"
 
 interface ITradePnlPreview {
   $container: NodeComposeFn<$Node>
-  trade: ITrade
+  position: IPositionSlot | IMirrorPosition
   latestPrice: Stream<bigint>
   chartConfig?: DeepPartial<ChartOptions>
   pixelsPerBar?: number
-  pricefeed: IPricefeed[]
+  pricefeed: IPriceInterval[]
   chain: CHAIN
 }
 
@@ -45,13 +48,13 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
 
   const historicPnL = multicast(combineArray((displayColumnCount) => {
 
-    const startPrice = config.trade.updateList[0].averagePrice
-    const startTime = config.trade.increaseList[0].blockTimestamp
-    const endtime = isTradeSettled(config.trade) ? config.trade.settlement.blockTimestamp : unixTimestampNow()
+    const startPrice = config.position.link.updateList[0].averagePrice
+    const startTime = config.position.blockTimestamp
+    const endtime = isPositionSettled(config.position) ? config.position.settleBlockTimestamp : unixTimestampNow()
     const timeRange = endtime - startTime
     const interval = Math.floor(timeRange / displayColumnCount) || 1
 
-    const initalUpdate = config.trade.updateList[0]
+    const initalUpdate = config.position.link.updateList[0]
 
     const initialTick: IPricefeedTick = {
       time: startTime,
@@ -66,12 +69,12 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
     }
 
 
-    const pricefeedFramed = config.pricefeed.filter(tick => tick.timestamp >= initialTick.time)
+    const pricefeedFramed = config.pricefeed.filter(tick => tick.blockTimestamp >= initialTick.time)
 
     const data = intervalListFillOrderMap({
       source: [
         ...pricefeedFramed,
-        ...config.trade.updateList
+        ...config.position.link.updateList
       ],
       // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
       interval,
@@ -81,7 +84,7 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
         const time = next.blockTimestamp
 
         if (next.__typename === 'UpdatePosition') {
-          const pnl = getPnL(config.trade.isLong, next.averagePrice, next.markPrice, next.size)
+          const pnl = getPnL(config.position.isLong, next.averagePrice, next.markPrice, next.size)
           const realisedPnl = next.realisedPnl
           const pnlPercentage = getDeltaPercentage(pnl, next.collateral)
 
@@ -92,7 +95,7 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
           return { ...prev, pnl, pnlPercentage, time, realisedPnl, size, collateral, averagePrice }
         }
 
-        const pnl = getPnL(config.trade.isLong, prev.averagePrice, next.c, prev.size)
+        const pnl = getPnL(config.position.isLong, prev.averagePrice, next.c, prev.size)
         const pnlPercentage = getDeltaPercentage(pnl, prev.collateral)
 
         return { ...prev, time, pnl, pnlPercentage }
@@ -103,12 +106,12 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
 
     const lastChange = data[data.length - 1]
 
-    if (isTradeSettled(config.trade)) {
+    if (isPositionSettled(config.position)) {
       const pnl = 0n
-      const pnlPercentage = getDeltaPercentage(pnl, config.trade.maxCollateral)
-      const realisedPnl = config.trade.settlement.realisedPnl
+      const pnlPercentage = getDeltaPercentage(pnl, config.position.maxCollateral)
+      const realisedPnl = config.position.realisedPnl
 
-      data.push({ ...lastChange, pnl, realisedPnl, pnlPercentage, time: config.trade.settlement.blockTimestamp })
+      data.push({ ...lastChange, pnl, realisedPnl, pnlPercentage, time: config.position.settleBlockTimestamp })
     }
 
     return { data, interval }

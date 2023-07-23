@@ -1,4 +1,4 @@
-import { awaitPromises, fromPromise, map, now } from "@most/core"
+import { awaitPromises, chain, fromPromise, join, map, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, max, min, switchMap } from "gmx-middleware-utils"
 import { zipArray } from "../../logic/utils"
@@ -7,13 +7,15 @@ import * as store from "../storage/storeScope"
 import { IIndexEventLogScopeParams, fetchTradesRecur } from "./rpc"
 import { combineObject } from "@aelea/core"
 import { publicClient } from "../../wallet/walletLink"
+import * as viem from "viem"
+import { PublicClient } from "@wagmi/core"
 
 
-export interface IProcessSync<T> {
-  data: T
+export interface IProcessedStore<T> {
+  seed: T
   blockNumber: bigint
   orderId: number
-  event: ILogOrdered | null
+  chainId: number
 }
 
 
@@ -24,41 +26,67 @@ export interface IProcessSourceConfig<TLog extends ILogOrdered, TState> {
 }
 
 
-export interface IProcessorConfig<TState, TParentScopeName extends string> {
-  parentStoreScope: store.IStoreconfig<TParentScopeName>
-  initialSeed: TState
-  startBlock: bigint
+export interface IProcessorConfig<TSeed, TParentName extends string> {
+  parentScope: store.IStoreconfig<TParentName>,
+  startBlock: bigint,
+  genesisSeed: TSeed,
+  chainId: number,
   queryBlockSegmentLimit: bigint
 }
 
-export function processSources<TState, TProcessConfigList extends readonly ILogOrdered[], TParentScopeName extends string>(
-  config: IProcessorConfig<TState, TParentScopeName>,
-  ...processList: { [P in keyof TProcessConfigList]: IProcessSourceConfig<TProcessConfigList[P], TState>; }
-): Stream<TState> {
+
+
+
+export interface IProcessParams<TSeed, TProcessConfigList extends ILogOrdered[], TParentName extends string> extends IProcessorConfig<TSeed, TParentName> {
+  scope: store.IStoreScope<`${TParentName}.${string}`, any>
+  processList: { [P in keyof TProcessConfigList]: IProcessSourceConfig<TProcessConfigList[P], TSeed> }
+  state: Stream<IProcessedStore<TSeed>>
+  seed: Stream<TSeed>
+}
+
+export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], TParentName extends string >(
+  config: IProcessorConfig<TSeed, TParentName>,
+  ...processList: { [P in keyof TProcessConfigList]: IProcessSourceConfig<TProcessConfigList[P], TSeed>; }
+): IProcessParams<TSeed, TProcessConfigList, TParentName> {
 
   const scopeKey = processList.reduce((acc, next) => `${acc}:${next.source.eventName}`, `processor:${config.startBlock}`)
-  const scope = store.createStoreScope(config.parentStoreScope, scopeKey)
-  const seed = { data: config.initialSeed, event: null, orderId: Number(1000000n * config.startBlock), blockNumber: config.startBlock } as IProcessSync<TState>
-  const processedData = store.get(scope, scopeKey, seed)
-  const latestBlock = awaitPromises(map(pc => pc.getBlockNumber(), publicClient)) 
+  const scope = store.createStoreScope(config.parentScope, scopeKey)
 
+  const storeState: IProcessedStore<TSeed> = {
+    seed: config.genesisSeed,
+    chainId: config.chainId,
+    orderId: Number(1000000n * config.startBlock),
+    blockNumber: config.startBlock,
+  }
+
+  const state = store.get(scope, storeState)
+  const seed = map(s => s.seed, state)
+  
+  return {  ...config, processList, scope, state, seed  }
+}
+
+
+export interface IProcessorSeedConfig<TSeed, TProcessConfigList extends ILogOrdered[], TParentName extends string> extends IProcessParams<TSeed, TProcessConfigList, TParentName> {
+  publicClient: viem.PublicClient<viem.Transport, viem.Chain>
+  endBlock: bigint
+}
+
+
+export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TParentName extends string>(
+  config: IProcessorSeedConfig<TSeed, TProcessConfigList, TParentName>,
+): Stream<IProcessedStore<TSeed>> {
  
-  const processWriteSources = switchMap(params => {
-
-    const processNextLog = processList.map(processConfig => {
-      const nextRangeKey = IDBKeyRange.bound(params.processedData.orderId + 1, 1e20)
-      const nextStoredLog: Stream<ILogOrderedEvent[]> = indexDB.getAll(processConfig.source.scope, nextRangeKey)
+  const sync = switchMap(params => {
+    const processNextLog = config.processList.map(processConfig => {
+      const rangeKey = IDBKeyRange.bound(params.processState.orderId, 1e20)
+      const nextStoredLog: Stream<ILogOrderedEvent[]> = indexDB.getAll(processConfig.source.scope, rangeKey)
 
       return switchMap(stored => {
-        if (params.latestBlock === null) {
-          throw new Error('cannot discover new events without knowing most recent block')
-        }
-
         const fstEvent = stored[0] as ILogOrderedEvent | undefined
         const lstEvent = stored[stored.length - 1] as ILogOrderedEvent | undefined
 
-        const startGapBlockRange = fstEvent ? params.processedData.blockNumber - fstEvent.blockNumber : 0n
-        const event = processConfig.source.abi.find(ev => ev.type === 'event' && ev.name === processConfig.source.eventName)
+        const startGapBlockRange = fstEvent ? config.startBlock - fstEvent.blockNumber : 0n
+        const event = processConfig.source.abi.find((ev: any) => ev.type === 'event' && ev.name === processConfig.source.eventName)
 
         const prev = startGapBlockRange > 0n
           ? fetchTradesRecur(
@@ -66,12 +94,12 @@ export function processSources<TState, TProcessConfigList extends readonly ILogO
               ...processConfig.source,
               fromBlock: config.startBlock,
               toBlock: config.startBlock + startGapBlockRange,
-              publicClient: params.publicClient,
+              publicClient: config.publicClient,
               rangeSize: processConfig.rangeSize || config.queryBlockSegmentLimit,
             },
             reqParams => {
               const queryLogs = fromPromise(
-                params.publicClient.getLogs({
+                config.publicClient.getLogs({
                   event,
                   address: reqParams.address,
                   fromBlock: reqParams.fromBlock,
@@ -80,21 +108,11 @@ export function processSources<TState, TProcessConfigList extends readonly ILogO
                 })
               ) as Stream<ILogEvent[]>
 
-              // const queryLogs = fromPromise(
-              //   params.publicClient.createContractEventFilter({
-              //     abi: reqParams.abi,
-              //     address: reqParams.address,
-              //     eventName: reqParams.eventName,
-              //     fromBlock: reqParams.fromBlock,
-              //     toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeSize),
-              //     strict: true
-              //   }).then(filter => params.publicClient.getFilterLogs({ filter }))
-              // ) as Stream<ILogEvent[]>
 
               const storeMappedLogs = switchMap(logs => {
                 const filtered =  logs
                   .map(ev => {
-                    const storeObj = { args: ev.args, blockNumber: ev.blockNumber, orderId: getEventOrderIdentifier(ev), transactionHash: ev.transactionHash } as ILogOrderedEvent
+                    const storeObj = { ...ev, orderId: getEventOrderIdentifier(ev) } as ILogOrderedEvent
                     return storeObj
                   })
                   .filter(ev => ev.orderId < fstEvent!.orderId)
@@ -107,21 +125,20 @@ export function processSources<TState, TProcessConfigList extends readonly ILogO
           )
           : now([])
 
-        const fromBlock = max(params.processedData.blockNumber, lstEvent ? lstEvent.blockNumber : 0n)
-        const lastKnownStoredEvent = Math.max(params.processedData.orderId, lstEvent?.orderId || 0)
+        const fromBlock = max(config.startBlock, max(params.processState.blockNumber, lstEvent ? lstEvent.blockNumber : 0n))
 
-        const next = fromBlock < params.latestBlock
+        const next = fromBlock < config.endBlock
           ? fetchTradesRecur(
             {
               ...processConfig.source,
               fromBlock: fromBlock,
-              toBlock: params.latestBlock,
-              publicClient: params.publicClient,
+              toBlock: config.endBlock,
+              publicClient: config.publicClient,
               rangeSize: processConfig.rangeSize || config.queryBlockSegmentLimit,
             },
             reqParams => {
               const queryLogs = fromPromise(
-                params.publicClient.getLogs({
+                config.publicClient.getLogs({
                   event,
                   address: reqParams.address,
                   fromBlock: reqParams.fromBlock,
@@ -129,28 +146,14 @@ export function processSources<TState, TProcessConfigList extends readonly ILogO
                   toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeSize),
                 })
               ) as Stream<ILogEvent[]>
-              // const queryLogs = fromPromise(
-              //   params.publicClient.createContractEventFilter({
-              //     abi: reqParams.abi,
-              //     address: reqParams.address,
-              //     eventName: reqParams.eventName,
-              //     fromBlock: reqParams.fromBlock,
-              //     toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeSize),
-              //     strict: true
-              //   }).then(filter => params.publicClient.getFilterLogs({ filter }))
-              // ) as Stream<ILogEvent[]>
 
               const storeMappedLogs = switchMap(logs => {
                 const filtered = logs
                   .map(ev => {
-                    const storeObj = { 
-                      args: ev.args, blockNumber: ev.blockNumber, orderId: getEventOrderIdentifier(ev), transactionHash: ev.transactionHash,
-                      address: ev.address, eventName: ev.eventName, blockHash: ev.blockHash, logIndex: ev.logIndex,
-                      removed: ev.removed, transactionIndex: ev.transactionIndex, topics: ev.topics
-                    } as ILogOrderedEvent
+                    const storeObj = {  ...ev, orderId: getEventOrderIdentifier(ev) } as ILogOrderedEvent
                     return storeObj
                   })
-                  .filter(ev => ev.orderId > lastKnownStoredEvent)
+                  .filter(ev => ev.orderId > (lstEvent ? lstEvent.orderId : params.processState.orderId))
 
                 return indexDB.add(processConfig.source.scope, filtered)
               }, queryLogs)
@@ -164,24 +167,25 @@ export function processSources<TState, TProcessConfigList extends readonly ILogO
       }, nextStoredLog)
     })
 
-    const stepState = zipArray((...nextLogEvents) => {
+    return switchLatest(zipArray((...nextLogEvents) => {
       const orderedNextEvents = nextLogEvents.flat().sort((a, b) => a.orderId - b.orderId)
 
-      let nextSeed = params.processedData
+      let processState = params.processState
+
       let hasThrown = false
 
       for (let evIdx = 0; evIdx < orderedNextEvents.length; evIdx++) {
         const nextEvent = orderedNextEvents[evIdx]
         if (hasThrown) break
 
-        for (let processIdx = 0; processIdx < processList.length; processIdx++) {
-          const processState = nextLogEvents[processIdx]
-          const processSrc = processList[processIdx]
+        for (let processIdx = 0; processIdx < config.processList.length; processIdx++) {
+          const processEventLogList = nextLogEvents[processIdx]
+          const processSrc = config.processList[processIdx]
 
-          if (processState.includes(nextEvent)) {
+          if (processEventLogList.includes(nextEvent)) {
             try {
-              const nextStepState = processSrc.step(nextSeed.data, nextEvent)
-              nextSeed = { data: nextStepState, event: nextEvent, orderId: nextEvent.orderId, blockNumber: nextEvent.blockNumber }
+              const nextStepState = processSrc.step(processState.seed, nextEvent)
+              processState = { seed: nextStepState, chainId: config.publicClient.chain.id, orderId: nextEvent.orderId, blockNumber: config.endBlock }
             } catch (err){
               console.error('Error processing event ', nextEvent, err)
               hasThrown = true
@@ -191,13 +195,10 @@ export function processSources<TState, TProcessConfigList extends readonly ILogO
         }
       }
 
-      return nextSeed
-    }, ...processNextLog)
+      return indexDB.set(config.scope, processState)
+    }, ...processNextLog))
 
-    return stepState
-  }, combineObject({ processedData, publicClient, latestBlock }))
+  }, combineObject({ processState: config.state }))
 
-  const process = indexDB.set(scope, scopeKey, processWriteSources)
-  const data = map(x => x.data, process)
-  return data
+  return sync
 }

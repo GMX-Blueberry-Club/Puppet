@@ -26,20 +26,7 @@ export const $CandleSticks = (config: ICandlesticksChart) => {
       borderColor: pallete.indeterminate,
       borderVisible: false,
     },
-    layout: {
-      background: {
-        color: 'transparent'
-      },
-      textColor: pallete.message,
-      fontFamily: 'Moderat',
-      fontSize: 12
-    },
-    timeScale: {
-      rightOffset: 0,
-      secondsVisible: true,
-      timeVisible: true,
-      lockVisibleTimeRangeOnResize: true,
-    },
+    
     crosshair: {
       mode: CrosshairMode.Normal,
       horzLine: {

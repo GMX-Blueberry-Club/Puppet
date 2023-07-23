@@ -1,6 +1,6 @@
 import { combineObject } from "@aelea/core"
 import { fromPromise, map, switchLatest } from "@most/core"
-import { ILogSubgraphType, ILogType, orderEvents } from "gmx-middleware-utils"
+import { ILogType, ILogTypeName, orderEvents } from "gmx-middleware-utils"
 import * as store from "../storage/storeScope"
 import { publicClient } from "../../wallet/walletLink"
 import { IQuerySubgraphConfig, ISchema, ISchemaQuery, PrettifyReturn, querySubgraph } from "./subgraph"
@@ -12,7 +12,7 @@ export interface IReplaySubgraphConfig extends IQuerySubgraphConfig {
 }
 
 
-export interface IReplaySubgraphQueryState<Type extends ILogType<any>, TQuery> {
+export interface IReplaySubgraphQueryState<Type extends ILogTypeName<any>, TQuery> {
   subgraph: string;
   schema: ISchema<Type>
   logHistory: PrettifyReturn<ISchemaQuery<Type, TQuery>[]>
@@ -20,7 +20,7 @@ export interface IReplaySubgraphQueryState<Type extends ILogType<any>, TQuery> {
 }
 
 
-export const replaySubgraphQuery = <Type extends ILogSubgraphType<any>, TQuery>(
+export const replaySubgraphQuery = <Type extends ILogType<any>, TQuery>(
   config: IReplaySubgraphConfig,
   schema: ISchema<Type>,
   query: TQuery

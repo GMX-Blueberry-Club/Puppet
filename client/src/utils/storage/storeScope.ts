@@ -1,6 +1,8 @@
-import { continueWith, map } from "@most/core"
+import { concatMap, constant, continueWith, join, map, throttle } from "@most/core"
 import { Stream } from "@most/types"
 import * as indexDB from './indexDB'
+import { switchMap } from "gmx-middleware-utils"
+import { combineArray, combineObject } from "@aelea/core"
 
 
 // @ts-ignore
@@ -19,22 +21,25 @@ export const createStoreScope = <TParentName extends string, TName extends strin
   const dbParams = indexDB.openDb(name, options)
 
 
-  return { ...dbParams }
+  return { ...dbParams, name }
 }
 
 export function get<TData, TKey extends string, TName extends string, TOptions extends indexDB.IDbStoreConfig>(
-  scope: IStoreScope<TName, TOptions>, key: TKey, genesisSeed: TData
+  scope: IStoreScope<TName, TOptions>, seed: TData, key: TKey | IStoreScope<TName, TOptions>['name'] = scope.name
 ): Stream<TData> {
   return map(res => {
-    return res === undefined ? genesisSeed : res
+    return res === undefined ? seed : res
   }, indexDB.get(scope, key))
 }
 
 export function replayWrite<TData, TKey extends string, TName extends string, TOptions extends indexDB.IDbStoreConfig>(
-  scope: IStoreScope<TName, TOptions>, key: TKey, genesisSeed: TData, write: Stream<TData>
+  scope: IStoreScope<TName, TOptions>, seed: TData, write: Stream<TData>, key: TKey | IStoreScope<TName, TOptions>['name'] = scope.name
 ): Stream<TData> {
-  const storedValue = get(scope, key, genesisSeed)
-  return continueWith(() => indexDB.set(scope, key, write), storedValue)
+  const storedValue = get(scope, seed, key)
+  return continueWith(() => {
+    
+    return join(map(data => indexDB.set(scope, data, key), write))
+  }, storedValue)
 }
 
 

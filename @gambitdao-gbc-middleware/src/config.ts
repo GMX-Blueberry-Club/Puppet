@@ -1,4 +1,4 @@
-import { groupByKey, unixTimestampNow } from "gmx-middleware-utils"
+import { groupArrayByKey, unixTimestampNow } from "gmx-middleware-utils"
 import * as GMX from "gmx-middleware-const"
 import { IAttributeMappings, LabItemSale, SaleType } from "./types.js"
 import { parseEther } from "viem"
@@ -653,4 +653,4 @@ For more details check our see discord discussions and even help us improve this
 
 
 
-export const labItemDescriptionListMap = groupByKey(saleDescriptionList, i => i.id)
+export const labItemDescriptionListMap = groupArrayByKey(saleDescriptionList, i => i.id)

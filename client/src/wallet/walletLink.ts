@@ -2,15 +2,17 @@ import { combineObject, fromCallback } from "@aelea/core"
 import { pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, map, mergeArray, now } from "@most/core"
 import { Stream } from "@most/types"
-import { Address, GetAccountResult, GetNetworkResult, InjectedConnector, WalletClient, configureChains, createConfig, createStorage, getAccount, getNetwork, getPublicClient, getWalletClient, getWebSocketPublicClient, watchAccount, watchNetwork } from '@wagmi/core'
+import {
+  Address, GetAccountResult, GetNetworkResult,
+  WalletClient, configureChains, createConfig, createStorage, fetchBlockNumber, getAccount,
+  getNetwork, getPublicClient, getWalletClient, getWebSocketPublicClient, watchAccount, watchBlockNumber, watchNetwork
+} from '@wagmi/core'
 import { WalletConnectConnector } from '@wagmi/core/connectors/walletConnect'
-import { alchemyProvider } from "@wagmi/core/providers/alchemy"
-import { infuraProvider } from "@wagmi/core/providers/infura"
 import { EthereumClient, w3mConnectors, w3mProvider } from '@web3modal/ethereum'
 import { Web3Modal } from '@web3modal/html'
+import { switchMap } from "gmx-middleware-utils"
 import { PublicClient, Transport } from "viem"
 import { arbitrum, avalanche } from "viem/chains"
-import { publicProvider } from "@wagmi/core/providers/public"
 
 const chains = [arbitrum, avalanche]
 
@@ -33,7 +35,7 @@ const projectId = 'fdc797f2e6a68e01b9e17843c939673e'
 const configChain = configureChains(
   [arbitrum, avalanche],
   [
-    alchemyProvider({ apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low' }),
+    // alchemyProvider({ apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low' }),
     // infuraProvider({ apiKey: '6d7e461ad6644743b92327579860b662' }),
     // publicProvider(),
     w3mProvider({ projectId }),
@@ -58,6 +60,7 @@ const configChain = configureChains(
     //   }
     // })
   ],
+  { batch: { multicall: true } },
 )
 
 
@@ -67,15 +70,11 @@ export const wcConnector = new WalletConnectConnector({
 })
 
 
-const injectedConnector = new InjectedConnector({ chains, options: { name: 'injected' } })
 export const walletConfig = createConfig({
   autoConnect: true,
-  connectors: w3mConnectors({ projectId, version: 2, chains }),
-
-  // connectors: [injectedConnector, wcConnector],
-
+  connectors: w3mConnectors({ projectId, chains,  }),
   publicClient: configChain.publicClient,
-  // webSocketPublicClient: configChain.webSocketPublicClient,
+  webSocketPublicClient: configChain.webSocketPublicClient,
   storage,
 })
 
@@ -86,7 +85,6 @@ const ethereumClient = new EthereumClient(walletConfig, chains)
 
 export const networkChange = fromCallback<GetNetworkResult>(watchNetwork)
 export const accountChange = fromCallback<GetAccountResult>(watchAccount)
-
 
 
 export const chain: Stream<ISupportedChain> = map(getNetworkResult => {
@@ -102,6 +100,9 @@ export const chain: Stream<ISupportedChain> = map(getNetworkResult => {
   networkChange
 ]))
 
+
+export const block = awaitPromises(map(n => fetchBlockNumber(), now(null)))
+export const blockChange = switchMap(c => fromCallback<bigint>(cb => watchBlockNumber({ listen: true, chainId: c.id }, bn => cb(bn))), chain)
 
 
 export const account = mergeArray([

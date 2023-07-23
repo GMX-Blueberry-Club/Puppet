@@ -153,7 +153,7 @@ export const $Home = (config: ITreasury) => component((
                   )
                 })({})
               ),
-              url: '/app/leaderboard', route: config.parentRoute.create({ fragment: 'fefe' })
+              url: '/app/leaderboard/settled', route: config.parentRoute.create({ fragment: 'fefe' })
             })({
               click: linkClickTether()
             }),

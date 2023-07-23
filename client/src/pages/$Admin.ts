@@ -1,24 +1,44 @@
-import { Behavior, O } from "@aelea/core"
+import { Behavior, combineObject, replayLatest } from "@aelea/core"
 import { $node, $text, INode, attrBehavior, component, nodeEvent, style } from "@aelea/dom"
-import { $column, layoutSheet } from "@aelea/ui-components"
-import { awaitPromises, fromPromise, map, now, take } from "@most/core"
-import { $caretDown } from "gmx-middleware-ui-components"
-import { switchMap } from "gmx-middleware-utils"
-import { $CardTable } from "../components/$common"
-import { $iconCircular } from "../elements/$common"
-import * as indexDb from "../utils/storage/indexDB"
-import { $buttonAnchor } from "../components/form/$Button"
-import { gmxLog } from "../data/scope"
+import { $TextField, $column, $row, layoutSheet } from "@aelea/ui-components"
+import { fromPromise, map, mergeArray, multicast, now, snapshot, switchLatest, take } from "@most/core"
 import { Stream } from "@most/types"
+import { $caretDown, $infoLabeledValue } from "gmx-middleware-ui-components"
+import { readableFileSize, switchMap } from "gmx-middleware-utils"
+import { $CardTable } from "../components/$common"
+import { $ButtonPrimary, $buttonAnchor, defaultMiniButtonStyle } from "../components/form/$Button"
+import { gmxProcess } from "../data/process/process"
+import { gmxLog } from "../data/scope"
+import { $card, $iconCircular } from "../elements/$common"
+import { syncProcess } from "../utils/indexer/processor"
+import * as indexDb from "../utils/storage/indexDB"
+import { blockChange } from "../wallet/walletLink"
+import { $seperator2 } from "./common"
 
 
 export const $Admin = component((
   [hoverDownloadBtn, hoverDownloadBtnTether]: Behavior<INode, { href: string, download: string }>,
+  [changeStartBlock, changeStartBlockTether]: Behavior<string, bigint>,
+  [clickSyncProcess, clickSyncProcessTether]: Behavior<PointerEvent>,
 ) => {
 
   const $title = $text(style({ fontWeight: 'bold', fontSize: '1.55em' }))
 
   const logList = now(Object.values(gmxLog))
+
+  const changedSyncedProcess = switchLatest(snapshot((params) => {
+    return syncProcess({ ...gmxProcess, endBlock: params.changeStartBlock })
+  }, combineObject({ changeStartBlock }), clickSyncProcess))
+
+  const syncedProcess = replayLatest(multicast(mergeArray([
+    take(1, gmxProcess.state),
+    changedSyncedProcess
+  ])))
+
+  // const createGmxTradingProcess = processSeed({
+  //   ...gmxTradingProcess,
+  //   endBlock
+  // })
 
   
 
@@ -26,7 +46,83 @@ export const $Admin = component((
   return [
     $column(layoutSheet.spacing, style({ alignSelf: 'center' }))(
       $text(style({ fontSize: '3em', textAlign: 'center' }))('Admin Tools'),
+
+
+      $card(
+        $column(layoutSheet.spacing)(
+          $column(layoutSheet.spacing)(
+
+            $row(layoutSheet.spacing)(
+              $text('Stored Processed State'),
+              $buttonAnchor(
+                defaultMiniButtonStyle, 
+                hoverDownloadBtnTether(
+                  nodeEvent('pointerover'),
+                  switchMap(() => map(blob => URL.createObjectURL(blob), jsonBlob(gmxProcess.seed))),
+                  map(href => {
+                    return { href, download: `DB-${'process'}.json` }
+                  }),
+                ),
+                attrBehavior(map(attrs => attrs, hoverDownloadBtn))
+              )($text('Download File')),
+            ),
+            
+
+             
+            $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
+              $infoLabeledValue('Synced', $text(map(s => `${gmxProcess.startBlock}-${s.blockNumber}`, syncedProcess))),
+            ),
+
+            $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
+              $infoLabeledValue('size', $text(map(blob => readableFileSize(blob.size), jsonBlob(syncedProcess)))),
+            ),
+
+            $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
+              $infoLabeledValue('checksum', $text(switchMap(blob => fromPromise(getBlobHash(blob)), jsonBlob(syncedProcess)))),
+            ),
+
+          ),
+
+          $seperator2,
+
+          $text('Change Process State'),
+          $row(layoutSheet.spacing)(
+            $infoLabeledValue('Synced', $text(String(gmxProcess.startBlock))),
+            $TextField({ 
+              value: map(s => String(s.blockNumber), syncedProcess),
+              label: 'End',
+              validation: map(s => gmxProcess.startBlock >= Number(s) ? 'Invalid End block' : null),
+            })({
+              change: changeStartBlockTether(map(BigInt))
+            }),
+
+
+          ),
+          $row(layoutSheet.spacing)(
+          ),
+
+
+          $row(style({ placeContent:'space-between' }))(
+            $infoLabeledValue('Latest', $text(map(s => String(s), blockChange))),
+
+
+            $row(layoutSheet.spacing)(
+
+              $ButtonPrimary({
+                $content: $text('Sync'),
+              })({
+                click: clickSyncProcessTether()
+              })
+            )
+          )
+            
+        )
+      ),
+
       $node(),
+      $node(),
+
+      $text(style({ paddingLeft: '20px', fontSize: '1.15em' }))('Event log sources'),
       $CardTable({
         dataSource: logList,
         columns: [
@@ -78,13 +174,13 @@ export const $Admin = component((
             $head: $text('DB File'),
             $$body: map(log => {
               const hoverB = hoverDownloadBtnTether(
-                nodeEvent('pointerenter'),
-                switchMap(() => downloadUrl(log.scope)),
+                nodeEvent('pointerover'),
+                switchMap(() => {
+                  return map(blob => URL.createObjectURL(blob), jsonBlob(gmxProcess.seed))
+                }),
                 map(href => {
-
                   return { href, download: `DB-${log.eventName}.json` }
                 }),
-                take(1),
               )
 
               const attrB = attrBehavior(map(attrs => attrs, hoverDownloadBtn))
@@ -98,6 +194,7 @@ export const $Admin = component((
         ]
       })({}),
 
+      $node(),
 
     ),
 
@@ -108,16 +205,28 @@ export const $Admin = component((
 })
 
 
-function downloadUrl<TName extends string, TOptions extends indexDb.IDbStoreConfig>(
-  params: indexDb.IDbParams<TName, TOptions>,
-): Stream<string> {
-  const openCursor = indexDb.read(params, store => store.getAll())
+function jsonBlob<TData>(data: Stream<TData>): Stream<Blob> {
+  return map(res => {
+    const jsonContent = JSON.stringify(res, null)
+    const blob = new Blob([jsonContent], { type: "application/json" })
+    
+    return blob
+  }, data)
+}
 
-  return map(data => {
-    const jsonContent = JSON.stringify(data, null)
-    const blob = new Blob([jsonContent], { type: 'text/json' })
-    const url = URL.createObjectURL(blob)
-    return url
-  }, openCursor)
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  let binary = ''
+  const bytes = new Uint8Array(buffer)
+  const len = bytes.byteLength
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return window.btoa(binary)
+}
 
+async function getBlobHash(blob: Blob) {
+  const data = await blob.arrayBuffer()
+  const hash = await window.crypto.subtle.digest('SHA-256', data)
+  const hashBase64 = arrayBufferToBase64(hash)
+  return 'sha256-' + hashBase64
 }

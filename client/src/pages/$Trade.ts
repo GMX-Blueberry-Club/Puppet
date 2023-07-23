@@ -1,12 +1,19 @@
 import { Behavior, O, combineArray, combineObject, replayLatest } from "@aelea/core"
 import { $node, $text, component, style, styleBehavior } from "@aelea/dom"
-import { $column, $icon, $row, layoutSheet, observer, screenUtils } from "@aelea/ui-components"
-import { 
-  IPositionDecrease, IPositionIncrease, IPositionUpdate, TradeStatus, abs, filterNull, formatFixed,
-  readableFixedUSD30, formatBps, getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getLiquidationPrice, getMappedValue,
+import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
+import {
+  ILogTxType,
+  IPositionDecrease, IPositionIncrease,
+  IPositionSlot,
+  abs, filterNull,
+  formatFixed,
+  getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getIntervalIdentifier, getLiquidationPrice, getMappedValue,
   getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getPnL, getPositionKey,
-  getTokenAmount, getTokenDescription, gmxSubgraph,
-  readableAccountingNumber, readableNumber, switchMap, timeSince, unixTimestampNow, readableFixedBsp, IPositionSlot
+  getTokenAmount, getTokenDescription,
+  readableDate,
+  readableFixedBsp,
+  readableFixedUSD30,
+  readableUnitAmount, switchMap, timeSince, unixTimestampNow
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
@@ -15,7 +22,7 @@ import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
 import * as GMX from "gmx-middleware-const"
-import { $ButtonToggle, $CandleSticks, $IntermediatePromise, $infoLabel, $infoLabeledValue, $infoTooltip, $spinner, $target, $txHashRef } from "gmx-middleware-ui-components"
+import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $infoTooltip, $spinner, $target, $txHashRef } from "gmx-middleware-ui-components"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
 import { getRouteKey } from "puppet-middleware-utils"
@@ -24,15 +31,15 @@ import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $CardTable } from "../components/$common"
 import { $ButtonSecondary } from "../components/form/$Button"
 import { $Dropdown } from "../components/form/$Dropdown"
-import { $TradeBox, IRequestTrade, IRequestTradeParams, ITradeBoxParams, ITradeFocusMode } from "../components/trade/$TradeBox"
-import { rootStoreScope } from "../rootStore"
+import { $TradeBox, IRequestTrade, ITradeBoxParams, ITradeFocusMode } from "../components/trade/$TradeBox"
+import { createPositionSlot, latestTokenPrice, trading } from "../data/process/process"
 import { $card } from "../elements/$common"
 import { $caretDown } from "../elements/$icons"
-import * as store from "../utils/storage/storeScope"
 import { connectContract } from "../logic/common"
-import * as tradeReader from "../logic/trade"
-import { connectTrade, getErc20Balance, latestPriceFromExchanges } from "../logic/trade"
+import * as trade from "../logic/trade"
 import { resolveAddress } from "../logic/utils"
+import { rootStoreScope } from "../rootStore"
+import * as store from "../utils/storage/storeScope"
 import { walletLink } from "../wallet"
 import { wallet } from "../wallet/walletLink"
 
@@ -120,9 +127,8 @@ export const $Trade = (config: ITradeComponent) => component((
   const gmxContractMap = GMX.CONTRACT[config.chain.id]
   const puppetContractMap = PUPPET.CONTRACT[config.chain.id]
 
-  const tradeReader = connectTrade(config.chain)
+  const tradeReader = trade.connectTrade(config.chain)
 
-  // const vaultConfig = connectMappedContractConfig(CONTRACT, 'Vault')
   // const vaultReader = contractReader(vaultConfig)
   const vault = connectContract(gmxContractMap.Vault)
   const positionRouter = connectContract(gmxContractMap.PositionRouter)
@@ -136,16 +142,19 @@ export const $Trade = (config: ITradeComponent) => component((
   const tradingStore = store.createStoreScope(rootStoreScope, 'tradeBox' as const)
 
 
-  const timeframe = store.replayWrite(tradingStore, 'timeframe', GMX.TIME_INTERVAL_MAP.MIN60, selectTimeFrame)
-  const isTradingEnabled = store.replayWrite(tradingStore, 'isTradingEnabled', false, enableTrading)
-  const isLong = store.replayWrite(tradingStore, 'isLong', true, switchIsLong)
-  const isIncrease = store.replayWrite(tradingStore, 'isIncrease', true, switchIsIncrease)
-  const focusMode = store.replayWrite(tradingStore, 'focusMode', ITradeFocusMode.collateral, switchFocusMode)
-  const slippage = store.replayWrite(tradingStore, 'slippage', '0.35', changeSlippage)
-  const inputToken = store.replayWrite(tradingStore, 'inputToken', GMX.AddressZero, changeInputToken)
-  const indexToken = store.replayWrite(tradingStore, 'indexToken', nativeToken, changeIndexToken)
-  const shortCollateralToken = store.replayWrite(tradingStore, 'shortCollateralToken', null as viem.Address | null, changeShortCollateralToken)
-  const leverage = store.replayWrite(tradingStore, 'leverage', GMX.LIMIT_LEVERAGE / 4n, changeLeverage) 
+  const chartInterval = store.replayWrite(tradingStore, GMX.TIME_INTERVAL_MAP.MIN15, selectTimeFrame, 'chartInterval')
+  const isTradingEnabled = store.replayWrite(tradingStore, false, enableTrading, 'isTradingEnabled')
+  const isLong = store.replayWrite(tradingStore, true, switchIsLong, 'isLong')
+  const isIncrease = store.replayWrite(tradingStore, true, switchIsIncrease, 'isIncrease')
+  const focusMode = store.replayWrite(tradingStore, ITradeFocusMode.collateral, switchFocusMode, 'focusMode')
+  const slippage = store.replayWrite(tradingStore, '0.35', changeSlippage, 'slippage')
+  const inputToken = store.replayWrite(tradingStore, GMX.AddressZero, changeInputToken, 'inputToken')
+  const indexToken = store.replayWrite(tradingStore, nativeToken, changeIndexToken, 'indexToken')
+  const shortCollateralToken = store.replayWrite(tradingStore, null as viem.Address | null, changeShortCollateralToken, 'shortCollateralToken')
+  const leverage = mergeArray([
+    changeLeverage,
+    debounce(500, store.replayWrite(tradingStore, GMX.LIMIT_LEVERAGE / 4n, changeLeverage, 'leverage')),
+  ])
 
 
   const collateralDeltaUsd = replayLatest(changeCollateralDeltaUsd, 0n)
@@ -197,15 +206,16 @@ export const $Trade = (config: ITradeComponent) => component((
       return now(0n)
     }
 
-    return getErc20Balance(config.chain, params.inputToken, params.wallet.account.address)
+    return trade.getErc20Balance(config.chain, params.inputToken, params.wallet.account.address)
   }, combineObject({ inputToken, wallet }))))
 
 
-  const inputTokenPrice = skipRepeats(tradeReader.getLatestPrice(inputToken))
-  const indexTokenPrice = skipRepeats(multicast(switchLatest(map(token => {
-    return observer.duringWindowActivity(latestPriceFromExchanges(token))
-  }, indexToken))))
-  const collateralTokenPrice = skipRepeats(tradeReader.getLatestPrice(collateralToken))
+  const inputTokenPrice = latestTokenPrice(map(address => resolveAddress(config.chain.id, address), inputToken))
+  const indexTokenPrice = mergeArray([
+    latestTokenPrice(indexToken),
+    multicast(switchMap(address => trade.exchangesWebsocketPriceSource(config.chain, address), indexToken))
+  ])
+  const collateralTokenPrice = latestTokenPrice(collateralToken)
 
 
   const route = switchMap(params => {
@@ -254,11 +264,11 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const positions = vault.read('positions', map(pos => pos.key, positionKey))
 
-  const positionChange: Stream<tradeReader.IPositionGetter> = multicast(map(params => {
+  const positionChange: Stream<trade.IPositionGetter> = multicast(map(params => {
     const [size, collateral, averagePrice, entryFundingRate, reserveAmount, realisedPnl, lastIncreasedTime] = params.positions
     const lastIncreasedTimeBn = lastIncreasedTime
 
-    const ret: tradeReader.IPositionGetter = {
+    const ret: trade.IPositionGetter = {
       account: params.positionKey.account,
       isLong: params.positionKey.isLong,
       key: params.positionKey.key,
@@ -294,7 +304,7 @@ export const $Trade = (config: ITradeComponent) => component((
     positionChange,
     updatePostion,
     filterNull(snapshot(
-      (pos, update): tradeReader.IPositionGetter | null => {
+      (pos, update): trade.IPositionGetter | null => {
         if (pos.key !== update.args.key) {
           return null
         }
@@ -404,12 +414,8 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ collateralTokenPoolInfo, position }))
 
 
-
-
   // [config]
   const tradeConfig = { focusMode, slippage, isLong, isIncrease, inputToken, collateralToken, indexToken, leverage, collateralDelta, sizeDelta, collateralDeltaUsd, sizeDeltaUsd }
-
-
 
 
 
@@ -491,62 +497,43 @@ export const $Trade = (config: ITradeComponent) => component((
   const availableIndexLiquidityUsd = tradeReader.getAvailableLiquidityUsd(indexToken, collateralToken)
 
 
-  const accountOpenTradeList = switchMap(route => {
-    if (!route) {
-      return now(Promise.resolve([]))
-    }
+  const accountOpenTradeList = map(params => {
 
-    return gmxSubgraph.accountOpenTradeList(now({
-      account: route,
-      chain: config.chain.id,
-    }))
-  }, route)
+    return Object.values(params.trading.positionSlot).filter(pos => pos.account === params.route)
+  }, combineObject({ trading, route }))
 
-  const openTradeListQuery: Stream<Promise<ITrade[]>> = mergeArray([
-    combineArray(async (pos, listQuery) => {
-      const tradeList = await listQuery
+  const openPositionList: Stream<Promise<IPositionSlot[]>> = mergeArray([
+    combineArray(async (pos, posList) => {
 
-      if (pos.averagePrice === 0n || !tradeList) {
+      if (pos.averagePrice === 0n || posList.length === 0) {
         return []
       }
 
-      const trade = tradeList.find(t => t.key === pos.key) || null
+      const trade = posList.find(t => t.key === pos.key) || null
 
       if (pos.averagePrice > 0n && trade === null) {
-        const timestamp = unixTimestampNow()
-        const syntheticUpdate: IPositionUpdate = { ...pos, timestamp, realisedPnl: 0n, markPrice: pos.averagePrice, isLong: pos.isLong, __typename: 'UpdatePosition' }
-        const newTrade: ITrade = {
-          ...pos,
-          timestamp,
-          updateList: [syntheticUpdate],
-          increaseList: [], decreaseList: [],
-          fee: 0n,
-          status: TradeStatus.OPEN
-        }
+        const posSlot = createPositionSlot('0x0' as const, unixTimestampNow(), pos)
 
-        return [newTrade, ...tradeList]
+        return [posSlot, ...posList]
       }
 
       return pos.averagePrice === 0n
-        ? tradeList.filter(t => t.key !== pos.key)
-        : tradeList
+        ? posList.filter(t => t.key !== pos.key)
+        : posList
     }, position, accountOpenTradeList)
   ])
 
-  const activeTrade = zip((tradeList, pos) => {
+  const activePosition = zip((tradeList, pos) => {
     const trade = tradeList.find(t => t.key === pos.key) || null
     return { trade, positionId: pos }
-  }, awaitPromises(openTradeListQuery), positionKey)
-
+  }, awaitPromises(openPositionList), positionKey)
 
 
   const pricefeed = map(params => {
-    const range = params.timeframe * 1000
-    const to = unixTimestampNow()
-    const from = to - range
+    const feed = getIntervalIdentifier(params.indexToken, params.timeframe)
 
-    return { chain: config.chain.id, interval: params.timeframe, tokenAddress: params.indexToken, from, to }
-  }, combineObject({ timeframe, indexToken }))
+    return Object.values(params.trading.pricefeed[feed])
+  }, combineObject({ timeframe: chartInterval, indexToken, trading }))
 
 
   const focusPrice = replayLatest(multicast(changefocusPrice), null)
@@ -554,12 +541,6 @@ export const $Trade = (config: ITradeComponent) => component((
   const isFocused = replayLatest(multicast(changeIsFocused), false)
 
 
-
-
-  const requestPricefeed = snapshot(async (params, requestPricefeed) => {
-    const pricefeed = await requestPricefeed
-    return { ...params, pricefeed }
-  }, combineObject({ timeframe, indexToken }), pricefeed)
 
 
   return [
@@ -592,9 +573,9 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
               return trade
-            }, openTradeListQuery, position),
+            }, openPositionList, position),
             // positionChange,
-            openTradeListQuery,
+            openTradeListQuery: openPositionList,
 
             tradeConfig,
             tradeState: {
@@ -656,7 +637,7 @@ export const $Trade = (config: ITradeComponent) => component((
             $row(layoutSheet.spacing, style({ fontSize: '.75rem', zIndex: 5, margin: '8px', alignSelf: 'flex-start', placeContent: 'center', alignItems: 'center' }))(
               screenUtils.isDesktopScreen
                 ? $ButtonToggle({
-                  selected: timeframe,
+                  selected: chartInterval,
                   options: [
                     GMX.TIME_INTERVAL_MAP.MIN5,
                     GMX.TIME_INTERVAL_MAP.MIN15,
@@ -683,9 +664,9 @@ export const $Trade = (config: ITradeComponent) => component((
                         )
                       })({})
                     )
-                  }, timeframe)),
+                  }, chartInterval)),
                   value: {
-                    value: timeframe,
+                    value: chartInterval,
                     $$option: map((option) => {
                       const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
 
@@ -706,7 +687,7 @@ export const $Trade = (config: ITradeComponent) => component((
               $column(layoutSheet.spacingSmall)(
                 $infoLabel('Borrow Rate'),
                 $row(style({ whiteSpace: 'pre' }))(
-                  $text(map(poolInfo => readableFixedBsp(formatBps(poolInfo.rate)), collateralTokenPoolInfo)),
+                  $text(map(poolInfo => readableFixedBsp(poolInfo.rate), collateralTokenPoolInfo)),
                   $text(style({ color: pallete.foreground }))(' / hr')
                 )
               ),
@@ -716,193 +697,197 @@ export const $Trade = (config: ITradeComponent) => component((
               ),
             ),
 
-            $IntermediatePromise({
-              query: requestPricefeed,
-              $loader: style({ inset: 0, position: 'absolute' })($spinner),
-              $$done: map(params => {
+            switchLatest(snapshot( (params, pricefeed) => {
 
-                const tf = params.timeframe
+              const tf = params.timeframe
 
-                const fst = params.pricefeed[params.pricefeed.length - 1]
-                const initialTick = {
-                  open: formatFixed(fst.o, 30),
-                  high: formatFixed(fst.h, 30),
-                  low: formatFixed(fst.l, 30),
-                  close: formatFixed(fst.c, 30),
-                  time: fst.timestamp as Time
-                }
+              const fst = pricefeed[pricefeed.length - 1]
+              const initialTick = {
+                open: formatFixed(fst.o, 30),
+                high: formatFixed(fst.h, 30),
+                low: formatFixed(fst.l, 30),
+                close: formatFixed(fst.c, 30),
+                time: fst.blockTimestamp as Time
+              }
 
-                return $CandleSticks({
-                  $content: $row(
-                    $row(
-                      styleBehavior(map(state => {
-                        return { border: `1px solid ${state ? pallete.primary : pallete.horizon}` }
-                      }, isFocused)),
-                      style({
-                        backgroundColor: pallete.background,
-                        transition: 'border-color .15s ease-in-out',
-                        fontSize: '.75rem',
-                        fontWeight: 'bold',
-                        padding: '6px 8px',
-                        borderRadius: '30px',
-                      })
-                    )(
 
-                      switchMap(state => {
-                        if (!state) {
-                          return empty()
-                        }
+              return $CandleSticks({
+                $content: $row(
+                  $row(
+                    styleBehavior(map(state => {
+                      return { border: `1px solid ${state ? pallete.primary : pallete.horizon}` }
+                    }, isFocused)),
+                    style({
+                      backgroundColor: pallete.background,
+                      transition: 'border-color .15s ease-in-out',
+                      fontSize: '.75rem',
+                      fontWeight: 'bold',
+                      padding: '6px 8px',
+                      borderRadius: '30px',
+                    })
+                  )(
 
-                        return $row(layoutSheet.spacingSmall)(
-                          $infoLabeledValue('Size', $text(map(value => `${readableFixedUSD30(value)}`, sizeDeltaUsd))),
-                          $infoLabeledValue('Collateral', $text(map(value => `${readableFixedUSD30(value)}`, collateralDeltaUsd))),
-                        )
-                      }, isFocused),
-                      $icon({ $content: $target, width: '16px', svgOps: style({ margin: '0 6px' }), viewBox: '0 0 32 32' }),
-
-                      $text(map(ev => {
-                        return readableAccountingNumber.format(ev)
-                      }, filterNull(focusPrice)))
-                    )
-                  ),
-                  data: params.pricefeed.map(({ o, h, l, c, timestamp }) => {
-                    const open = formatFixed(o, 30)
-                    const high = formatFixed(h, 30)
-                    const low = formatFixed(l, 30)
-                    const close = formatFixed(c, 30)
-
-                    return { open, high, low, close, time: timestamp as Time }
-                  }),
-                  seriesConfig: {
-                    // priceFormat: {
-                    //   type: 'custom',
-                    //   formatter: (priceValue: BarPrice) => readableNumber(priceValue.valueOf())
-                    // },
-                    // lastValueVisible: false,
-                    // autoscaleInfoProvider: original => {
-                    //   debugger
-                    //   const res = original();
-                    //   if (res !== null) {
-                    //     res.priceRange.minValue -= 10;
-                    //     res.priceRange.maxValue += 10;
-                    //   }
-                    //   return res;
-                    // },
-
-                    priceLineColor: pallete.foreground,
-                    baseLineStyle: LineStyle.SparseDotted,
-
-                    upColor: pallete.middleground,
-                    borderUpColor: pallete.middleground,
-                    wickUpColor: pallete.middleground,
-
-                    downColor: 'transparent',
-                    borderDownColor: colorAlpha(pallete.middleground, .5),
-                    wickDownColor: colorAlpha(pallete.middleground, .5),
-                  },
-                  priceLines: [
-                    map(val => {
-                      if (val === 0n) {
-                        return null
+                    switchMap(state => {
+                      if (!state) {
+                        return empty()
                       }
 
-                      return {
-                        price: formatFixed(val, 30),
-                        color: pallete.middleground,
-                        lineVisible: true,
-                        // axisLabelColor: '#fff',
-                        // axisLabelTextColor: 'red',
-                        // axisLabelVisible: true,
-                        lineWidth: 1,
-                        title: `Entry`,
-                        lineStyle: LineStyle.SparseDotted,
-                      }
-                    }, averagePrice),
-                    map(val => {
-                      if (val === 0n) {
-                        return null
-                      }
+                      return $row(layoutSheet.spacingSmall)(
+                        $infoLabeledValue('Size', $text(map(value => `${readableFixedUSD30(value)}`, sizeDeltaUsd))),
+                        $infoLabeledValue('Collateral', $text(map(value => `${readableFixedUSD30(value)}`, collateralDeltaUsd))),
+                      )
+                    }, isFocused),
+                    $icon({ $content: $target, width: '16px', svgOps: style({ margin: '0 6px' }), viewBox: '0 0 32 32' }),
 
-                      return {
-                        price: formatFixed(val, 30),
-                        color: pallete.negative,
-                        lineVisible: true,
-                        // axisLabelColor: 'red',
-                        // axisLabelVisible: true,
-                        // axisLabelTextColor: 'red',
-                        lineWidth: 1,
-                        title: `Liquidation`,
-                        lineStyle: LineStyle.SparseDotted,
-                      }
-                    }, liquidationPrice)
+                    $text(map(ev => {
+                      return readableUnitAmount(ev)
+                    }, filterNull(focusPrice)))
+                  )
+                ),
+                data: pricefeed.map(({ o, h, l, c, blockTimestamp }) => {
+                  const open = formatFixed(o, 30)
+                  const high = formatFixed(h, 30)
+                  const low = formatFixed(l, 30)
+                  const close = formatFixed(c, 30)
 
-                  ],
-                  appendData: scan((prev: CandlestickData, next): CandlestickData => {
-                    const marketPrice = formatFixed(next.indexTokenPrice, 30)
-                    const timeNow = unixTimestampNow()
+                  return { open, high, low, close, time: Number(blockTimestamp) as Time }
+                }),
+                seriesConfig: {
+                  // priceFormat: {
+                  //   type: 'custom',
+                  //   formatter: (priceValue: BarPrice) => readableNumber(priceValue.valueOf())
+                  // },
+                  // lastValueVisible: false,
+                  // autoscaleInfoProvider: original => {
+                  //   debugger
+                  //   const res = original();
+                  //   if (res !== null) {
+                  //     res.priceRange.minValue -= 10;
+                  //     res.priceRange.maxValue += 10;
+                  //   }
+                  //   return res;
+                  // },
 
-                    const prevTimeSlot = Math.floor(prev.time as number / tf)
-                    const nextTimeSlot = Math.floor(timeNow / tf)
-                    const time = nextTimeSlot * tf as Time
+                  priceLineColor: pallete.foreground,
+                  baseLineStyle: LineStyle.SparseDotted,
 
-                    const isNext = nextTimeSlot > prevTimeSlot
+                  upColor: pallete.middleground,
+                  borderUpColor: pallete.middleground,
+                  wickUpColor: pallete.middleground,
 
-                    document.title = `${next.indexTokenDescription.symbol} ${readableNumber(marketPrice)}`
-
-                    if (isNext) {
-                      return {
-                        open: marketPrice,
-                        high: marketPrice,
-                        low: marketPrice,
-                        close: marketPrice,
-                        time
-                      }
+                  downColor: 'transparent',
+                  borderDownColor: colorAlpha(pallete.middleground, .5),
+                  wickDownColor: colorAlpha(pallete.middleground, .5),
+                },
+                priceLines: [
+                  map(val => {
+                    if (val === 0n) {
+                      return null
                     }
 
                     return {
-                      open: prev.open,
-                      high: marketPrice > prev.high ? marketPrice : prev.high,
-                      low: marketPrice < prev.low ? marketPrice : prev.low,
+                      price: formatFixed(val, 30),
+                      color: pallete.middleground,
+                      lineVisible: true,
+                      // axisLabelColor: '#fff',
+                      // axisLabelTextColor: 'red',
+                      // axisLabelVisible: true,
+                      lineWidth: 1,
+                      title: `Entry`,
+                      lineStyle: LineStyle.SparseDotted,
+                    }
+                  }, averagePrice),
+                  map(val => {
+                    if (val === 0n) {
+                      return null
+                    }
+
+                    return {
+                      price: formatFixed(val, 30),
+                      color: pallete.negative,
+                      lineVisible: true,
+                      // axisLabelColor: 'red',
+                      // axisLabelVisible: true,
+                      // axisLabelTextColor: 'red',
+                      lineWidth: 1,
+                      title: `Liquidation`,
+                      lineStyle: LineStyle.SparseDotted,
+                    }
+                  }, liquidationPrice)
+
+                ],
+                appendData: scan((prev: CandlestickData, next): CandlestickData => {
+                  const marketPrice = formatFixed(next.indexTokenPrice, 30)
+                  const timeNow = unixTimestampNow()
+
+                  const prevTimeSlot = Math.floor(prev.time as number / tf)
+                  const nextTimeSlot = Math.floor(timeNow / tf)
+                  const time = nextTimeSlot * tf as Time
+
+                  const isNext = nextTimeSlot > prevTimeSlot
+
+                  document.title = `${next.indexTokenDescription.symbol} ${readableUnitAmount(marketPrice)}`
+
+                  if (isNext) {
+                    return {
+                      open: marketPrice,
+                      high: marketPrice,
+                      low: marketPrice,
                       close: marketPrice,
                       time
                     }
-                  }, initialTick, combineObject({ indexTokenPrice, indexTokenDescription })),
-                  containerOp: style({ position: 'absolute', inset: 0, borderRadius: '20px', overflow: 'hidden' }),
-                  chartConfig: {
-                    rightPriceScale: {
-                      visible: true,
-                      autoScale: true,
-                      entireTextOnly: true,
-                      borderVisible: false,
-                      scaleMargins: {
-                        top: 0.15,
-                        bottom: 0.15
-                      }
-                    },
-                    timeScale: {
-                      timeVisible: true,
-                      secondsVisible: false,
-                      borderVisible: false,
-                      rightOffset: 13,
-                      shiftVisibleRangeOnNewBar: true,
+                  }
+
+                  return {
+                    open: prev.open,
+                    high: marketPrice > prev.high ? marketPrice : prev.high,
+                    low: marketPrice < prev.low ? marketPrice : prev.low,
+                    close: marketPrice,
+                    time
+                  }
+                }, initialTick, combineObject({ indexTokenPrice, indexTokenDescription })),
+                containerOp: style({ position: 'absolute', inset: 0, borderRadius: '20px', overflow: 'hidden' }),
+                chartConfig: {
+                  rightPriceScale: {
+                    visible: true,
+                    autoScale: true,
+                    entireTextOnly: true,
+                    borderVisible: false,
+                    scaleMargins: {
+                      top: 0.15,
+                      bottom: 0.15
                     }
                   },
-                  yAxisState: {
-                    price: focusPrice,
-                    isFocused: isFocused,
-                    coords: yAxisCoords
+                  timeScale: {
+                    timeVisible: true,
+                    secondsVisible: false,
+                    borderVisible: false,
+                    rightOffset: 13,
+                    shiftVisibleRangeOnNewBar: true,
                   }
-                })({
-                  yAxisCoords: changeYAxisCoordsTether(),
-                  focusPrice: changefocusPriceTether(),
-                  isFocused: changeIsFocusedTether(),
-                  // crosshairMove: chartCrosshairMoveTether(),
-                  click: chartClickTether(),
-                  visibleLogicalRangeChange: chartVisibleLogicalRangeChangeTether(),
-                })
+                },
+                yAxisState: {
+                  price: focusPrice,
+                  isFocused: isFocused,
+                  coords: yAxisCoords
+                }
+              })({
+                yAxisCoords: changeYAxisCoordsTether(),
+                focusPrice: changefocusPriceTether(),
+                isFocused: changeIsFocusedTether(),
+                // crosshairMove: chartCrosshairMoveTether(),
+                click: chartClickTether(),
+                visibleLogicalRangeChange: chartVisibleLogicalRangeChangeTether(),
+              })
 
-              }),
-            })({})
+              
+            }, combineObject({ timeframe: chartInterval, indexToken }), pricefeed)),
+
+            // $IntermediatePromise({
+            //   query: requestPricefeed,
+            //   $loader: style({ inset: 0, position: 'absolute' })($spinner),
+            //   $$done: map(params => {}),
+            // })({})
 
 
           )
@@ -926,7 +911,7 @@ export const $Trade = (config: ITradeComponent) => component((
               }
 
 
-              const initalList = params.activeTrade ? [...params.activeTrade.trade.increaseList, ...params.activeTrade.trade.decreaseList] : []
+              const initalList = params.activeTrade ? [...params.activeTrade.trade.link.increaseList, ...params.activeTrade.trade.link.decreaseList] : []
 
               return $CardTable({
                 // $rowContainer: screenUtils.isDesktopScreen
@@ -935,7 +920,7 @@ export const $Trade = (config: ITradeComponent) => component((
                 // headerCellOp: style({ padding: screenUtils.isDesktopScreen ? '15px 15px' : '6px 4px' }),
                 // cellOp: style({ padding: screenUtils.isDesktopScreen ? '4px 15px' : '6px 4px' }),
                 dataSource: mergeArray([
-                  now(initalList) as Stream<(IRequestTradeParams | IPositionIncrease | IPositionDecrease)[]>,
+                  now(initalList) as Stream<(IRequestTrade | (IPositionIncrease & ILogTxType<'IncreasePosition'>) | (IPositionDecrease & ILogTxType<'DecreasePosition'>))[]>,
                   // constant(initalList, periodic(3000)),
                   requestTradeRow
                 ]),
@@ -949,13 +934,13 @@ export const $Trade = (config: ITradeComponent) => component((
                     columnOp: O(style({ maxWidth: '100px' })),
 
                     $$body: map((req) => {
-                      const isKeeperReq = 'ctx' in req
+                      const isKeeperReq = 'slippage' in req
 
-                      const timestamp = isKeeperReq ? unixTimestampNow() : req.timestamp
+                      const timestamp = isKeeperReq ? unixTimestampNow() : req.blockTimestamp
 
                       return $column(layoutSheet.spacingTiny, style({ fontSize: '.75rem' }))(
                         $text(timeSince(timestamp) + ' ago'),
-                        $text(readableFixedUSD30(timestamp)),
+                        $text(readableDate(timestamp)),
                       )
                     })
                   },
@@ -968,21 +953,20 @@ export const $Trade = (config: ITradeComponent) => component((
 
                       if ('key' in pos) {
                         const direction = pos.__typename === 'IncreasePosition' ? '↑' : '↓'
-                        const txHash = pos.id.split(':').slice(-1)[0]
                         return $row(layoutSheet.spacingSmall)(
-                          $txHashRef(txHash, w3p.chain.id, $text(`${direction} ${readableFixedUSD30(pos.price)}`))
+                          $txHashRef(pos.transactionHash, w3p.chain.id, $text(`${direction} ${readableFixedUSD30(pos.price)}`))
                         )
                       }
 
                       const activePositionAdjustment = take(1, filter(ev => {
-                        const key = getPositionKey(ev.args.account, pos.state.isIncrease ? ev.args.path.slice(-1)[0] : ev.args.path[0], ev.args.indexToken, ev.args.isLong)
+                        const key = getPositionKey(ev.args.account, pos.isIncrease ? ev.args.path.slice(-1)[0] : ev.args.path[0], ev.args.indexToken, ev.args.isLong)
 
                         return key === pos.state.position.key
                       }, adjustPosition))
 
                       return $row(layoutSheet.spacingSmall)(
                         $txHashRef(
-                          pos.ctx.transactionHash, w3p.chain.id,
+                          pos.request.transactionHash, w3p.chain.id,
                           $text(`${isIncrease ? '↑' : '↓'} ${readableFixedUSD30(pos.acceptablePrice)} ${isIncrease ? '<' : '>'}`)
                         ),
 
@@ -1008,10 +992,10 @@ export const $Trade = (config: ITradeComponent) => component((
                       {
                         $head: $text('PnL Realised'),
                         columnOp: O(style({ flex: .5, placeContent: 'flex-end', textAlign: 'right', alignItems: 'center' })),
-                        $$body: map((req: IRequestTradeParams | IPositionIncrease | IPositionDecrease) => {
-                          const fee = -getMarginFees('ctx' in req ? req.state.sizeDeltaUsd : req.fee)
+                        $$body: map((req: IRequestTrade | IPositionIncrease | IPositionDecrease) => {
+                          const fee = -getMarginFees('request' in req ? req.sizeDeltaUsd : req.fee)
 
-                          if ('ctx' in req) {
+                          if ('request' in req) {
                             return $text(readableFixedUSD30(fee))
                           }
 
@@ -1024,10 +1008,10 @@ export const $Trade = (config: ITradeComponent) => component((
                     columnOp: O(style({ flex: .7, placeContent: 'flex-end', textAlign: 'right', alignItems: 'center' })),
 
                     $$body: map((req) => {
-                      const isKeeperReq = 'ctx' in req
+                      const isKeeperReq = 'request' in req
                       const delta = isKeeperReq
-                        ? req.state.isIncrease
-                          ? req.state.collateralDeltaUsd : -req.state.collateralDeltaUsd : req.__typename === 'IncreasePosition'
+                        ? req.isIncrease
+                          ? req.collateralDeltaUsd : -req.collateralDeltaUsd : req.__typename === 'IncreasePosition'
                           ? req.collateralDelta : -req.collateralDelta
 
                       return $text(readableFixedUSD30(delta))
@@ -1037,10 +1021,10 @@ export const $Trade = (config: ITradeComponent) => component((
                     $head: $text('Size change'),
                     columnOp: O(style({ flex: .7, placeContent: 'flex-end', textAlign: 'right', alignItems: 'center' })),
                     $$body: map((req) => {
-                      const isKeeperReq = 'ctx' in req
+                      const isKeeperReq = 'request' in req
                       const delta = isKeeperReq
-                        ? req.state.isIncrease
-                          ? req.state.sizeDeltaUsd : -req.state.sizeDeltaUsd : req.__typename === 'IncreasePosition'
+                        ? req.isIncrease
+                          ? req.sizeDeltaUsd : -req.sizeDeltaUsd : req.__typename === 'IncreasePosition'
                           ? req.sizeDelta : -req.sizeDelta
 
                       return $text(readableFixedUSD30(delta))
@@ -1048,7 +1032,7 @@ export const $Trade = (config: ITradeComponent) => component((
                   },
                 ]
               })({})
-            }, combineObject({ activeTrade }))
+            }, combineObject({ activeTrade: activePosition }))
           })({}),
         )
       )

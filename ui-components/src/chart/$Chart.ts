@@ -89,7 +89,7 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
       background: {
         color: 'transparent'
       },
-      fontFamily: 'Moderat',
+      fontFamily: `Indicate Mono`,
       fontSize: 12
     },
     timeScale: {
@@ -97,7 +97,6 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
       secondsVisible: true,
       timeVisible: true,
       lockVisibleTimeRangeOnResize: true,
-
     },
     crosshair: {
       mode: CrosshairMode.Magnet,

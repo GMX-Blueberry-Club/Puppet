@@ -120,7 +120,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
 
   return [
 
-    $column(layoutSheet.spacingBig, style({ padding: '16px 16px 16px 0px', maxHeight: '100vh', flexShrink: 0, alignItems: 'flex-end', borderRadius: '30px', borderRight: `1px solid ${colorAlpha(pallete.foreground, .20)}`, placeContent: 'space-between' }))(
+    $column(layoutSheet.spacingBig, style({ backgroundColor: pallete.horizon, padding: '16px', zIndex: 1, maxHeight: '100vh', flexShrink: 0, alignItems: 'flex-end', borderRadius: '0 30px 30px', borderRight: `1px solid ${colorAlpha(pallete.foreground, .20)}`, placeContent: 'space-between' }))(
       $column(layoutSheet.spacingBig, style({ alignItems: 'center' }))(
         $RouterAnchor({ url: '/', route: parentRoute, $anchor: $element('a')($icon({ $content: $puppetLogo, width: '45px', viewBox: '0 0 32 32' })) })({
           click: routeChangeTether()
@@ -137,7 +137,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
           click: routeChangeTether()
         }),
 
-        $Link({ $content: $pageLink($stackedCoins, ''), url: '/app/leaderboard', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+        $Link({ $content: $pageLink($stackedCoins, ''), url: '/app/leaderboard/settled', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
           click: routeChangeTether()
         }),
 

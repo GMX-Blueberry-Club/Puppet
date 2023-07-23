@@ -13,40 +13,60 @@ import { $TradePnl, $entry, $openPositionPnlBreakdown, $pnlValue, $riskLiquidato
 import { $CardTable } from "../components/$common"
 import { connectTrade } from "../logic/trade"
 import { gmxData } from "../data/process"
+import { ISupportedChain } from "../wallet/walletLink"
+import * as router from '@aelea/router'
+import { $PuppetPortfolio } from "./$PuppetPortfolio"
 
 
 
 export enum IProfileActiveTab {
-  TRADING = 'Trading',
-  BERRIES = 'Berries',
-  LAB = "Lab",
-  IDENTITY = "Identity"
+  BERRIES = 'Trader',
+  TRADING = 'Puppet',
 }
 
 export interface IProfile {
   account: Address
   parentUrl: string
   parentRoute: Route
-  chain: Chain
+  chain: ISupportedChain
+  route: router.Route
 
   $accountDisplay: $Node
 }
 
 const $title = $text(style({ fontWeight: 'bold', fontSize: '1.35em' }))
 
+type IRouteOption = {
+  label: string
+  url: string
+}
+
+
+
 export const $Profile = (config: IProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
-  [selectProfileMode, selectProfileModeTether]: Behavior<IProfileActiveTab, IProfileActiveTab>,
+  [selectProfileMode, selectProfileModeTether]: Behavior<IRouteOption, IRouteOption>,
   [requestAccountTradeList, requestAccountTradeListTether]: Behavior<number, IRequestAccountTradeListApi>,
 ) => {
 
 
-  const mcP = multicast(gmxData.gmxTrading)
+  const mcP = multicast(gmxData.trading)
 
   const openTrades = map(list => {
-    const newLocal = Object.values(list.positionSlots).filter(p => p.account === config.account)
+    const newLocal = Object.values(list.positionSlot).filter(p => p.account === config.account)
     return newLocal
   }, mcP)
+
+  const options: IRouteOption[] = [
+    {
+      label: 'Puppet',
+      url: '/profile/puppet'
+    },
+    {
+      label: 'Open',
+      url: '/profile/trader'
+    }
+  ]
 
 
   const trades = map(list => {
@@ -54,16 +74,12 @@ export const $Profile = (config: IProfile) => component((
     return newLocal
   }, mcP)
 
-  // const accountOpenTradeList = gmxSubgraph.accountOpenTradeList(
-  //   map(chain => {
-  //     return {
-  //       account: config.account,
-  //       chain: chain.id,
-  //     }
-  //   }, walletLink.chain)
-  // )
+  const puppetRoute = config.route.create({ fragment: 'puppet', title: 'Puppet' })
+  const traderRoute = config.route.create({ fragment: 'trader', title: 'Trader' })
+
 
   const tradeReader = connectTrade(config.chain)
+
 
   return [
 
@@ -72,139 +88,22 @@ export const $Profile = (config: IProfile) => component((
 
       $ButtonToggle({
         $container: $defaulButtonToggleContainer(style({ alignSelf: 'center', })),
-        selected: mergeArray([selectProfileMode, now(location.pathname.split('/').slice(-1)[0] === IProfileActiveTab.BERRIES.toLowerCase() ? IProfileActiveTab.BERRIES : IProfileActiveTab.TRADING)]),
-        options: [
-          IProfileActiveTab.BERRIES,
-          IProfileActiveTab.TRADING,
-          // IProfileActiveTab.WARDROBE,
-        ],
+        selected: mergeArray([
+          router.match<IRouteOption>(puppetRoute)(now(options[1])),
+          router.match<IRouteOption>(traderRoute)(now(options[0])),
+        ]),        options,
         $$option: map(option => {
-          return $text(option)
+          return $text(option.label)
         })
       })({ select: selectProfileModeTether() }),
 
 
-      $column(layoutSheet.spacingBig, style({ flex: 1 }))(
-
-
-        $title('Open Positions'),
-        $CardTable({
-          dataSource: openTrades,
-          columns: [
-            {
-              $head: $text('Open Time'),
-              columnOp: style({ maxWidth: '80px' }),
-              $$body: map((pos) => {
-
-                const timestamp = pos.cumulativeSize
-
-                return $column(layoutSheet.spacingTiny, style({ fontSize: '.75rem' }))(
-                  $text(timeSince(timestamp) + ' ago'),
-                  $text(readableDate(timestamp)),
-                )
-              })
-            },
-            {
-              $head: $text('Entry'),
-              columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
-              $$body: map((pos) => {
-                return $entry(pos)
-              })
-            },
-            {
-              $head: $column(style({ textAlign: 'right' }))(
-                $text(style({ fontSize: '.75rem' }))('Collateral'),
-                $text('Size'),
-              ),
-              columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
-              $$body: map(pos => {
-                const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
-
-                return $riskLiquidator(pos, positionMarkPrice)
-              })
-            },
-            {
-              $head: $text('PnL'),
-              columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
-              $$body: map((pos) => {
-                const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
-                const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
-
-                return $infoTooltipLabel(
-                  $openPositionPnlBreakdown(pos, cumulativeFee, positionMarkPrice),
-                  $TradePnl(pos, positionMarkPrice)
-                )
-              })
-            },
-          ],
-        })({}),
-
-        $title('Settled Positions'),
-        $CardTable({
-          dataSource: trades,
-          columns: [
-            {
-              $head: $text('Settle Time'),
-              columnOp: O(style({ maxWidth: '100px' })),
-
-              $$body: map((req) => {
-                const isKeeperReq = 'ctx' in req
-
-                // const timestamp = isKeeperReq ? unixTimestampNow() : req.settlement.blockTimestamp
-
-                return $column(layoutSheet.spacingTiny)(
-                  // $text(timeSince(timestamp) + ' ago'),
-                  // $text(style({ fontSize: '.75rem' }))(readableDate(timestamp)),
-                )
-              })
-            },
-            {
-              $head: $column(style({ textAlign: 'right' }))(
-                $text('Entry'),
-                $text(style({ fontSize: '.75rem' }))('Price'),
-              ),
-              columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
-              $$body: map((pos) => {
-                return $entry(pos)
-              })
-            },
-            {
-              $head: $column(style({ textAlign: 'right' }))(
-                $text('Max Size'),
-                $text(style({ fontSize: '.75rem' }))('Leverage / Liquidation'),
-              ),
-              columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
-              $$body: map(pos => {
-                return $settledSizeDisplay(pos)
-              })
-            },
-            {
-              $head: $text('PnL'),
-              columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
-              $$body: map((pos) => {
-                return $pnlValue(pos.realisedPnl - pos.cumulativeFee)
-              })
-            },
-          ],
-        })({
-          // scrollIndex: requestAccountTradeListTether(
-          //   zip((wallet, pageIndex) => {
-          //     if (!wallet || wallet.chain === null) {
-          //       return null
-          //     }
-
-          //     return {
-          //       status: TradeStatus.CLOSED,
-          //       account: wallet.account.address,
-          //       chain: wallet.chain.id,
-          //       offset: pageIndex * 20,
-          //       pageSize: 20,
-          //     }
-          //   }, walletLink.wallet),
-          //   filterNull
-          // )
-        }),
-      ),
+      // router.match(puppetRoute)(
+      //   $PuppetPortfolio({ ...config })({
+      //     routeChange: routeChangeTether()
+      //   })
+      // ),
+      
 
     ),
 

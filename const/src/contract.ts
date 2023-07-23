@@ -9,7 +9,7 @@ export const CONTRACT = {
       subgraph: 'https://api.studio.thegraph.com/query/47960/puppet/version/latest',
     },
     Orchestrator: {
-      address: "0x82403099D24b2bF9Ee036F05E34da85E30982234",
+      address: "0x262Dc133C85148eDA91B0343dF85d4fD54847970",
       abi: abi.orchestrator,
       subgraph: 'https://api.studio.thegraph.com/query/47960/puppet/version/latest',
     },

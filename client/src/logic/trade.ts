@@ -1,21 +1,23 @@
 
 import { combineObject, replayLatest } from "@aelea/core"
 import { http, observer } from "@aelea/ui-components"
-import { empty, fromPromise, map, mergeArray, multicast, now, scan, skip, snapshot, switchLatest } from "@most/core"
+import { empty, fromPromise, map, mergeArray, multicast, now, scan, skip, snapshot } from "@most/core"
 import { Stream } from "@most/types"
 import { fetchBalance, readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
 import * as GMX from "gmx-middleware-const"
 import {
-  IAbstractPositionIdentity, IAbstractPositionKey, IPricefeed, IRequestPricefeedApi, ITokenSymbol, IVaultPosition,
-  div, filterNull, getMappedValue, getSafeMappedValue, getTokenDescription, parseFixed, periodicRun, periodicSample, safeDiv, switchFailedSources
+  IAbstractPositionIdentity, IAbstractPositionKey, IPriceInterval, IRequestPricefeedApi, ITokenSymbol, IVaultPosition,
+  div, filterNull, getMappedValue,
+  getTokenDescription, parseFixed, periodicRun,
+  safeDiv
 } from "gmx-middleware-utils"
+import * as viem from "viem"
 import { Address, Chain } from "viem"
 import { arbitrum, avalanche } from "viem/chains"
 import { ISupportedChain } from "../wallet/walletLink"
 import { connectContract } from "./common"
 import { resolveAddress } from "./utils"
-import * as viem from "viem"
 
 
 export type IPositionGetter = IVaultPosition & IAbstractPositionKey & IAbstractPositionIdentity
@@ -80,7 +82,7 @@ const gmxIOPriceMapSource = {
 }
 
 export function latestPriceFromExchanges(indexToken: viem.Address): Stream<bigint> {
-  const existingToken = getMappedValue(GMX.TOKEN_ADDRESS_TO_SYMBOL, indexToken)
+  const existingToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION, indexToken)
   const symbol = derievedSymbolMapping[existingToken] || existingToken
 
   if (symbol === null) {
@@ -133,12 +135,7 @@ export function latestPriceFromExchanges(indexToken: viem.Address): Stream<bigin
     return prev === 0 ? next : (prev + next) / 2
   }, 0, allSources))
 
-  return map(ev => {
-
-
-    const newLocal = parseFixed(ev, 30)
-    return newLocal
-  }, avgPrice)
+  return map(ev => parseFixed(ev, 30), avgPrice)
 }
 
 
@@ -172,7 +169,6 @@ export function getErc20Balance(chain: Chain, token: viem.Address | typeof GMX.A
 export function connectTrade(chain: ISupportedChain) {
 
   const contract = GMX.CONTRACT[chain.id]
-  // export const positionRouter = connectMappedContract(TRADE_CONTRACT_MAPPING, 'PositionRouter', abi.positionRouter)
   const positionRouter = connectContract(contract.PositionRouter)
   const pricefeed = connectContract(contract.VaultPriceFeed)
   const router = connectContract(contract.Router)
@@ -259,47 +255,9 @@ export function connectTrade(chain: ISupportedChain) {
     return obj
   }, keyEvent, mergeArray([positionLiquidateEvent, positionCloseEvent])))
 
-  const getVaultPrimaryPrice = (token: Stream<viem.Address>) => {
-    const primaryPrice = pricefeed.read('getPrimaryPrice', token, now(false))
-
-    return observer.duringWindowActivity(periodicSample(primaryPrice, {
-      recoverError: false,
-      interval: 5000
-    }))
-  }
-
-  function getLatestPrice(token: Stream<viem.Address>) {
-    const wsPrice = switchLatest(map(params => {
-      const resolvedToken = resolveAddress(chain.id, params.token)
-
-      return exchangesWebsocketPriceSource(chain, resolvedToken)
-    }, combineObject({ token })))
-
-    return switchFailedSources([
-      wsPrice,
-      getVaultPrimaryPrice(token)
-    ])
-  }
-
-  const exchangesWebsocketPriceSource = (chain: ISupportedChain, token: viem.Address) => {
-    const source = gmxIOPriceMapSource[chain.id]
-
-    if (!source) {
-      throw new Error(`no price mapping exists for chain ${chain} ${chain}`)
-    }
-
-    return map(pmap => {
-      const val = pmap[token as keyof typeof pmap]
-
-      return BigInt(val)
-    }, source)
-  }
-
 
 
   return {
-    getVaultPrimaryPrice,
-    getLatestPrice,
     positionSettled,
     getTokenFundingRate,
     getFundingRateFactor,
@@ -312,14 +270,31 @@ export function connectTrade(chain: ISupportedChain) {
 }
 
 
+export const exchangesWebsocketPriceSource = (chain: ISupportedChain, token: viem.Address) => {
+  return latestPriceFromExchanges(token)
+  // const source = gmxIOPriceMapSource[chain.id]
+
+  // if (!source) {
+  //   throw new Error(`no price mapping exists for chain ${chain} ${chain}`)
+  // }
+
+  // return map(pmap => {
+  //   const val = pmap[token as keyof typeof pmap]
+
+  //   return BigInt(val)
+  // }, source)
+}
+
+
 export async function getGmxIOPriceMap(url: string): Promise<{ [key in viem.Address]: bigint }> {
   const res = await fetch(url)
   const json = await res.json()
 
+
   // @ts-ignore
   return Object.keys(json).reduce((seed, key) => {
     // @ts-ignore
-    seed[key.toLowerCase()] = json[key]
+    seed[key] = json[key]
     return seed
   }, {})
 }
@@ -331,14 +306,14 @@ export async function getGmxIoOrders(network: typeof arbitrum | typeof avalanche
   // @ts-ignore
   return Object.keys(json).reduce((seed, key) => {
     // @ts-ignore
-    seed[key.toLowerCase()] = json[key]
+    seed[key] = json[key]
     return seed
   }, {})
 }
 
 
 
-export const getGmxIoPricefeed = async (queryParams: IRequestPricefeedApi): Promise<IPricefeed[]> => {
+export const getGmxIoPricefeed = async (queryParams: IRequestPricefeedApi): Promise<IPriceInterval[]> => {
   const tokenDesc = getTokenDescription(queryParams.tokenAddress)
   const intervalLabel = getMappedValue(gmxIoPricefeedIntervalLabel, queryParams.interval)
   const symbol = derievedSymbolMapping[tokenDesc.symbol] || tokenDesc.symbol

@@ -36,8 +36,7 @@ export const $WalletDisplay = ({ $container = $row, parentRoute }: IWalletDispla
               routeChangeTether(
                 nodeEvent('click'),
                 map(path => {
-                  const lastFragment = location.pathname.split('/').slice(-1)[0]
-                  const newPath = `/app`
+                  const newPath = `/app/wallet`
 
                   if (location.pathname !== newPath) {
                     history.pushState(null, '', newPath)

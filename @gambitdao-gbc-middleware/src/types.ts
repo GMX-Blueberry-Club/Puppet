@@ -1,4 +1,4 @@
-import { IAccountSummary, IChainParamApi, IEnsRegistration, IResponsePageApi, IRequestPagePositionApi, IRequestSortApi, IRequestTimerangeApi } from "gmx-middleware-utils"
+import { ITraderSummary, IChainParamApi, IEnsRegistration, IResponsePageApi, IRequestPagePositionApi, IRequestSortApi, IRequestTimerangeApi, IPriceInterval } from "gmx-middleware-utils"
 import * as GMX from "gmx-middleware-const"
 import { Address } from "viem"
 
@@ -87,9 +87,6 @@ export interface IOwner {
   ens?: IEnsRegistration
 }
 
-
-
-
 export interface ITreasuryStore {
   startedStakingGlpTimestamp: null | number
   startedStakingGmxTimestamp: null | number
@@ -97,17 +94,6 @@ export interface ITreasuryStore {
 
 export interface IAccountStakingStore {
   [key: string]: null | number
-}
-
-
-
-export interface IPriceInterval {
-  o: bigint // open
-  h: bigint // high
-  l: bigint // low
-  c: bigint // close
-
-  timestamp: number
 }
 
 export interface IYieldInterval extends IAsset {
@@ -118,9 +104,7 @@ export interface IYieldInterval extends IAsset {
 }
 
 
-
-
-export interface IBlueberryLadder extends IAccountSummary {
+export interface IBlueberryLadder extends ITraderSummary {
   profile: IOwner | null
   rank: number
   score: bigint

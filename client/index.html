@@ -5,32 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <style> 
         * { box-sizing: border-box; } body { margin: 0; }
-        input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { 
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none; 
-        }
-
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { appearance: none; }
         /* Firefox */
-        input[type="number"] {
-            appearance: none;
-            -moz-appearance: textfield;
-        }
+        input[type="number"] { appearance: none; }
 
-        html, button {
-            font-family: 'Indicate Mono', sans-serif;
-            /* text-rendering: geometricPrecision;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale; */
+        html, button, input {
+            font-family: 'Sometype Mono', sans-serif;
+            text-rendering: geometricPrecision;
         }
 
 
         @font-face {
-            font-family: 'Indicate Mono';
+            font-family: 'Sometype Mono';
             src: url("/assets/font/IndicateMono-Regular.woff2") format('woff2');
             font-weight: 400;
             font-style: normal;
+            font-display: swap
+        }
+
+        @font-face {
+            font-family: 'Sometype Mono';
+            src: url("/assets/font/SometypeMono-Bold.woff2") format('woff2');
+            font-weight: 700;
+            font-style: bold;
             font-display: swap
         }
 

@@ -4,7 +4,7 @@ import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { map, now } from "@most/core"
 import { Stream } from "@most/types"
 import { $ButtonToggle, $Link, $infoTooltipLabel, ISortBy } from "gmx-middleware-ui-components"
-import { IAccountSummary, IPositionSlot, div, pagingQuery, readableFixedBsp, switchMap } from "gmx-middleware-utils"
+import { ITraderSummary, IPositionMirrorSlot, IPositionSlot, div, pagingQuery, readableFixedBsp, switchMap } from "gmx-middleware-utils"
 import { IProfileActiveTab } from "../$Profile"
 import { $TradePnl, $openPositionPnlBreakdown, $pnlValue, $sizeDisplay } from "../../common/$common"
 import { $accountPreview } from "../../components/$AccountProfile"
@@ -12,6 +12,7 @@ import { $CardTable } from "../../components/$common"
 import { gmxData } from "../../data/process"
 import { $seperator2 } from "../common"
 import * as router from '@aelea/router'
+import { latestTokenPrice } from "../../data/process/process"
 
 
 
@@ -26,12 +27,12 @@ export const $TopOpen = (config: ITopOpen) => component((
   // [topPnlTimeframeChange, topPnlTimeframeChangeTether]: Behavior<any, ILeaderboardRequest['timeInterval']>,
   
   [pageIndex, pageIndexTether]: Behavior<number, number>,
-  [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionSlot>, ISortBy<IPositionSlot>>,
+  [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionMirrorSlot>, ISortBy<IPositionMirrorSlot>>,
 
 
 ) => {
 
-  const sortBy: Stream<ISortBy<IPositionSlot>> = replayLatest(sortByChange, { direction: 'desc', selector: 'size' })
+  const sortBy: Stream<ISortBy<IPositionMirrorSlot>> = replayLatest(sortByChange, { direction: 'desc', selector: 'size' })
 
   const qparams = combineObject({
     sortBy,
@@ -40,10 +41,10 @@ export const $TopOpen = (config: ITopOpen) => component((
 
   const datass = switchMap(params => {
     return map(data => {
-      const summaryList = Object.values(data.positionSlots)
+      const list = Object.values(data.mirrorPositionSlot)
 
-      return pagingQuery({ ...params.sortBy, offset: params.pageIndex * 20, pageSize: 20 }, summaryList)
-    }, gmxData.gmxTrading)
+      return pagingQuery({ ...params.sortBy, offset: params.pageIndex * 20, pageSize: 20 }, list)
+    }, gmxData.trading)
   }, qparams)
 
 
@@ -64,11 +65,10 @@ export const $TopOpen = (config: ITopOpen) => component((
                 return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
                 // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
                   $Link({
-                    $content: $accountPreview({ address: pos.account }),
+                    $content: $accountPreview({ address: pos.trader }),
                     route: config.route.create({ fragment: 'fefwef' }),
-                    url: `/app/profile/${pos.account}/${IProfileActiveTab.TRADING.toLowerCase()}`
+                    url: `/app/profile/${pos.trader}/${IProfileActiveTab.TRADING.toLowerCase()}`
                   })({ click: routeChangeTether() }),
-
                 )
 
               })
@@ -89,10 +89,10 @@ export const $TopOpen = (config: ITopOpen) => component((
                 $text('Cum. Size $'),
                 $text(style({ fontSize: '.75rem' }))('Avg. Leverage'),
               ),
-              sortBy: 'size',
+              // sortBy: 'size',
               columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
               $$body: map((pos) => {
-                return $sizeDisplay(pos.size, pos.collateral)
+                return $sizeDisplay(pos.position.size, pos.position.collateral)
               })
             },
             {
@@ -103,8 +103,20 @@ export const $TopOpen = (config: ITopOpen) => component((
                 // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
 
                 return $infoTooltipLabel(
-                  $openPositionPnlBreakdown(pos, now(0n)),
-                  $TradePnl(pos, 0n)
+                  $openPositionPnlBreakdown(pos.position, now(0n)),
+                  $TradePnl(pos.position, latestTokenPrice(now(pos.position.indexToken)))
+                )
+              })
+            },
+            {
+              $head: $text('Puppet'),
+              columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
+              $$body: map((pos) => {
+                // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
+                // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
+
+                return $column(
+                  $text(String(pos.puppets.length)),
                 )
               })
             },

@@ -1,4 +1,4 @@
-import { chain, map, now, recoverWith } from "@most/core"
+import { chain, delay, map, now, recoverWith } from "@most/core"
 import { Stream } from "@most/types"
 import { ILogOrdered, ILogOrderedEvent } from "gmx-middleware-utils"
 import * as viem from "viem"
@@ -60,20 +60,9 @@ export const fetchTradesRecur = <
   params: IFilterLogsParams<TReturn, TAbi, TEventName, TParentScopeName>,
   getList: (req: IFilterLogsParams<TReturn, TAbi, TEventName, TParentScopeName>) => Stream<TReturn[]>
 ): Stream<TReturn[]> => {
-  const nextBatch = getList(params)
 
   let retryAmount = 0
-  const retryLowerRange = recoverWith<TReturn[], Error & { code: number }, TReturn[]>((err): Stream<TReturn[]> => {
-    if (err.code !== -32602 || retryAmount > 3) {
-      throw new Error(`Failed to fetch trades after 3 retries`)
-    }
-
-    retryAmount++
-
-    const reducedRange = params.rangeSize - params.rangeSize / 3n
-
-    return retryLowerRange(fetchTradesRecur({ ...params, rangeSize: reducedRange }, getList))
-  })
+  let delayTime = 0
 
   const nextBatchResponse = chain(res => {
     const nextToBlock = params.fromBlock + params.rangeSize
@@ -85,17 +74,25 @@ export const fetchTradesRecur = <
     const newPage = fetchTradesRecur({ ...params, fromBlock: nextToBlock }, getList)
 
     return map(nextPage => [...res, ...nextPage], newPage)
-  }, nextBatch)
+  }, getList(params))
 
-  return retryLowerRange(nextBatchResponse)
-}
 
-function retryLowerRange<TReturn, TError extends Error> (stream: Stream<TReturn[]>, retryAmount: number): Stream<TReturn[]> {
-  return recoverWith<TReturn[], TError>((err): Stream<TReturn[]> => {
-    if (retryAmount > 3) {
+
+  return recoverWith<TReturn[], Error & { code: number }, TReturn[]>((err): Stream<TReturn[]> => {
+    if (err.code === 429) {
+      delayTime += 1000
+
+      const delayEvent = delay(delayTime, now(null))
+      return chain(() => fetchTradesRecur({ ...params }, getList), delayEvent)
+    }
+
+    if (err.code !== -32602 || retryAmount > 3) {
       throw new Error(`Failed to fetch trades after 3 retries`)
     }
 
-    return retryLowerRange(stream, retryAmount + 1)
-  }, stream)
+    retryAmount++
+    const reducedRange = params.rangeSize - params.rangeSize / 3n
+
+    return fetchTradesRecur({ ...params, rangeSize: reducedRange }, getList)
+  }, nextBatchResponse)
 }

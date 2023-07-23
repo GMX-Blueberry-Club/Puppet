@@ -6,11 +6,19 @@ import { map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
 import { $bear, $bull, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
-import { 
-  bnDiv, readableFixedUSD30, getFundingFee, getMappedValue, getMarginFees, getNextLiquidationPrice, getPnL,
-  IPosition, IPositionSettled, IPositionSlot, ITokenSymbol, liquidationWeight, readableFixedBsp, div, formatBps, safeDiv, readableNumber, readableUnitAmount, readableLargeNumber
+import {
+  bnDiv,
+  div, formatBps,
+  getFundingFee, getMappedValue, getMarginFees, getNextLiquidationPrice, getPnL,
+  getTokenDescription,
+  IAbstractRouteIdentity,
+  IPosition, IPositionSettled, IPositionSlot,
+  isPositionSettled,
+  liquidationWeight,
+  readableFixedUSD30
 } from "gmx-middleware-utils"
 import { $seperator2 } from "../pages/common"
+import * as viem from "viem"
 
 
 export const $sizeDisplay = (size: bigint, collateral: bigint) => {
@@ -30,13 +38,20 @@ export const $entry = (pos: IPosition) => {
         viewBox: '0 0 32 32',
         width: '26px'
       }),
-      $TokenIcon(getMappedValue(GMX.TOKEN_ADDRESS_TO_SYMBOL, pos.indexToken), { width: '28px' }),
+      $tokenIcon(pos.indexToken, { width: '28px' }),
     ),
     $text(readableFixedUSD30(pos.averagePrice))
   )
 }
 
-export const $settledSizeDisplay = (pos: IPositionSettled) => {
+export const $route = (pos: IAbstractRouteIdentity) => {
+  return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', placeContent: 'center', fontSize: '.75rem' }))(
+    $tokenIcon(pos.indexToken, { width: '28px' }),
+    $text(pos.indexToken === pos.collateralToken ? 'Long': 'Short'),
+  )
+}
+
+export const $settledSizeDisplay = (pos: IPositionSettled | IPositionSlot) => {
 
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
     $text(readableFixedUSD30(pos.maxSize)),
@@ -45,7 +60,7 @@ export const $settledSizeDisplay = (pos: IPositionSettled) => {
       $leverage(pos.maxSize, pos.maxCollateral),
       $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
         $icon({
-          fill: pos.isLiquidated ? pallete.negative : undefined,
+          fill: isPositionSettled(pos) ? pallete.negative : undefined,
           $content: $skull,
           viewBox: '0 0 32 32',
           width: '12px'
@@ -57,8 +72,9 @@ export const $settledSizeDisplay = (pos: IPositionSettled) => {
 }
 
 
-export const $TokenIcon = (indexToken: ITokenSymbol, IIcon?: { width?: string }) => {
-  const $token = $tokenIconMap[indexToken]
+export const $tokenIcon = (indexToken: viem.Address, IIcon?: { width?: string }) => {
+  const tokenDesc = getTokenDescription(indexToken)
+  const $token = $tokenIconMap[tokenDesc.symbol]
 
   if (!$token) {
     throw new Error('Unable to find matched token')
@@ -177,17 +193,19 @@ export const $openPositionPnlBreakdown = (pos: IPositionSlot, cumulativeFee: Str
         )
       ),
       $seperator,
-      // $row(layoutSheet.spacingTiny)(
-      //   $text(style({ color: pallete.foreground, flex: 1 }))('Total Fees'),
-      //   $PnlValue(map(cumFee => {
-      //     const fstUpdate = trade.updateList[0]
-      //     const entryFundingRate = fstUpdate.entryFundingRate
+      $row(layoutSheet.spacingTiny)(
+        $text(style({ color: pallete.foreground, flex: 1 }))('Total Fees'),
+        $pnlValue(
+          map(cumFee => {
+            const fstUpdate = pos.link.updateList[0]
+            const entryFundingRate = fstUpdate.entryFundingRate
 
-      //     const fee = getFundingFee(entryFundingRate, cumFee, trade.size) + trade.fee
+            const fee = getFundingFee(entryFundingRate, cumFee, pos.size) + pos.cumulativeFee
 
-      //     return -fee
-      //   }, cumulativeFee))
-      // ),
+            return -fee
+          }, cumulativeFee)
+        )
+      ),
       $row(layoutSheet.spacingTiny)(
         $text(style({ color: pallete.foreground, flex: 1 }))('Realised Pnl'),
         $pnlValue(now(pos.realisedPnl))

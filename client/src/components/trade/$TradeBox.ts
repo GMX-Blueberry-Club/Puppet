@@ -4,22 +4,8 @@ import { Route } from "@aelea/router"
 import { $column, $icon, $NumberTicker, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import {
-  awaitPromises,
-  constant,
-  delay,
-  empty,
-  map,
-  merge,
-  mergeArray,
-  multicast,
-  now,
-  sample,
-  skipRepeats,
-  skipRepeatsWith,
-  snapshot,
-  startWith,
-  switchLatest,
-  zip
+  awaitPromises, constant, delay, empty, map, merge, mergeArray,
+  multicast, now, sample, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, zip
 } from "@most/core"
 import { Stream } from "@most/types"
 import { erc20Abi } from "abitype/test"
@@ -30,10 +16,19 @@ import {
   $spinner, $tokenIconMap, $tokenLabelFromSummary
 } from "gmx-middleware-ui-components"
 import {
-  abs, bnDiv, div, filterNull, formatFixed, readableFixedUSD30, formatBps, getAdjustedDelta, getDenominator,
+  abs, bnDiv, div, filterNull,
+  formatBps,
+  formatFixed,
+  getAdjustedDelta, getDenominator,
   getNativeTokenDescription, getPnL, getTokenAmount, getTokenDescription, getTokenUsd,
-  IPricefeed, ITokenDescription,
-  parseFixed, parseReadableNumber, readableNumber, safeDiv, StateStream, switchMap, zipState, readableFixedBsp, readableUnitAmount, IPositionSlot
+  IPositionSlot, IPriceInterval,
+  ITokenDescription,
+  parseFixed, parseReadableNumber,
+  readableFixedBsp,
+  readableFixedUSD30,
+  readableNumber,
+  readableUnitAmount,
+  safeDiv, StateStream, switchMap, zipState
 } from "gmx-middleware-utils"
 import { MouseEventParams } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
@@ -42,16 +37,18 @@ import { arbitrum } from "viem/chains"
 import { $IntermediateConnectButton } from "../$ConnectAccount"
 import { $Popover } from "../$Popover"
 import { $Slider } from "../$Slider"
+import { $entry, $openPositionPnlBreakdown, $pnlValue, $riskLiquidator } from "../../common/$common"
 import { $card } from "../../elements/$common"
 import { $caretDown } from "../../elements/$icons"
 import { connectContract, wagmiWriteContract } from "../../logic/common"
-import { connectTrade, getErc20Balance, IPositionGetter, ITokenPoolInfo } from "../../logic/trade"
+import * as trade from "../../logic/trade"
 import { resolveAddress } from "../../logic/utils"
 import { account, IWalletClient } from "../../wallet/walletLink"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultButtonPrimary, $defaultMiniButtonSecondary } from "../form/$Button"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown"
 import { $TradePnlHistory } from "./$TradePnlHistory"
-import { $entry, $openPositionPnlBreakdown, $pnlValue, $riskLiquidator } from "../../common/$common"
+import { latestTokenPrice } from "../../data/process/process"
+import { getRouteTypeKey } from "puppet-middleware-utils"
 
 
 
@@ -63,7 +60,7 @@ export enum ITradeFocusMode {
 export interface ITradeParams {
   route: viem.Address | null
 
-  position: IPositionGetter
+  position: trade.IPositionGetter
   isTradingEnabled: boolean
   isInputTokenApproved: boolean
 
@@ -85,7 +82,7 @@ export interface ITradeParams {
   averagePrice: bigint | null
   liquidationPrice: bigint | null
 
-  collateralTokenPoolInfo: ITokenPoolInfo
+  collateralTokenPoolInfo: trade.ITokenPoolInfo
 }
 
 export interface ITradeConfig {
@@ -125,7 +122,7 @@ export interface ITradeBoxParams {
 interface ITradeBox extends ITradeBoxParams {
   openTradeListQuery: Stream<Promise<IPositionSlot[]>>
 
-  pricefeed: Stream<Promise<IPricefeed[]>>
+  pricefeed: Stream<IPriceInterval[]>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>
 
@@ -184,7 +181,7 @@ export const $TradeBox = (config: ITradeBox) => component((
 ) => {
 
 
-  const tradeReader = connectTrade(config.chain)
+  const tradeReader = trade.connectTrade(config.chain)
   const pricefeed = connectContract(GMX.CONTRACT[config.chain.id].VaultPriceFeed)
   const router = connectContract(GMX.CONTRACT[config.chain.id].Router)
   const vault = connectContract(GMX.CONTRACT[config.chain.id].Vault)
@@ -446,22 +443,22 @@ export const $TradeBox = (config: ITradeBox) => component((
       amountIn: 0n,
       collateralDelta: req.collateralDelta,
       minOut: 0n,
-      sizeDelta: req.sizeDeltaUsd
+      sizeDelta: abs(req.sizeDeltaUsd)
     }
 
     const value = isNative ? params.executionFee + req.collateralDelta : params.executionFee
 
     const request = params.route
       ? wagmiWriteContract({
-        abi: PUPPET.CONTRACT[config.chain.id].Route.abi,
-        address: params.route,
+        ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
         functionName: 'requestPosition',
         value,
         args: [
           tradeParams,
           swapParams,
+          getRouteTypeKey(req.collateralToken, req.indexToken, req.isLong),
           params.executionFee,
-          req.isLong
+          req.isIncrease
         ]
       })
       : wagmiWriteContract({
@@ -618,7 +615,7 @@ export const $TradeBox = (config: ITradeBox) => component((
             //     }, config.tradeState.inputTokenDescription, config.tradeState.walletBalance)
             //   })),
             // ),
-            $row(layoutSheet.spacingTiny)(
+            $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
               $infoLabel(`Wallet`),
               $text(
                 map(params => {
@@ -720,7 +717,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                   $container: $defaultSelectContainer(style({ minWidth: '290px', left: 0 })),
                   $$option: map(option => {
                     const token = resolveAddress(chainId, option)
-                    const balanceAmount = getErc20Balance(config.chain, option, address)
+                    const balanceAmount = trade.getErc20Balance(config.chain, option, address)
                     const price = pricefeed.read('getPrimaryPrice', token, false)
                     const tokenDesc = option === GMX.AddressZero ? getNativeTokenDescription(chainId) : getTokenDescription(option)
 
@@ -1004,7 +1001,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                     $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end', placeContent: 'center' }))(
                       $text(map(amountUsd => readableFixedUSD30(amountUsd), liquidity)),
                       $row(style({ whiteSpace: 'pre' }))(
-                        $text(map(info => readableFixedBsp(formatBps(info.rate)), poolInfo)),
+                        $text(map(info => readableFixedBsp(info.rate), poolInfo)),
                         $text(style({ color: pallete.foreground }))(' / hr')
                       ),
                     )
@@ -1115,7 +1112,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                           $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end', placeContent: 'center' }))(
                             $text(map(amountUsd => readableFixedUSD30(amountUsd), liquidity)),
                             $row(style({ whiteSpace: 'pre' }))(
-                              $text(map(info => readableFixedBsp(formatBps(info.rate)), poolInfo)),
+                              $text(map(info => readableFixedBsp(info.rate), poolInfo)),
                               $text(style({ color: pallete.foreground }))(' / hr')
                             ),
                           )
@@ -1250,7 +1247,9 @@ export const $TradeBox = (config: ITradeBox) => component((
                       ),
                       'Fees'
                     ),
-                    $text(style({ color: pallete.indeterminate }))(map(params => readableFixedUSD30(params.marginFee + params.swapFee), combineObject({ swapFee, marginFee }))),
+                    $text(style({ color: pallete.indeterminate }))(
+                      map(params => readableFixedUSD30(params.marginFee + params.swapFee), combineObject({ swapFee, marginFee }))
+                    ),
                   ),
                   switchLatest(map(isIncrease => {
 
@@ -1485,7 +1484,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                           )
                         ),
                         $infoTooltipLabel(
-                          $openPositionPnlBreakdown(pos, now(params.collateralTokenPoolInfo.cumulativeRate), indexTokenPrice),
+                          $openPositionPnlBreakdown(pos, now(params.collateralTokenPoolInfo.cumulativeRate)),
                           $NumberTicker({
                             textStyle: {
                               fontSize: '1.25em',
@@ -1503,7 +1502,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                       ),
                       $TradePnlHistory({
                         $container: $column(style({ flex: 1, overflow: 'hidden', borderRadius: '20px' })),
-                        trade: pos,
+                        position: pos,
                         chain: config.chain.id,
                         pricefeed,
                         chartConfig: {
@@ -1537,7 +1536,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                   return $column(style({ flex: 1 }))(
                     ...res.map(pos => {
 
-                      const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
+                      const positionMarkPrice = latestTokenPrice(now(pos.indexToken))
                       const cumulativeFee = vault.read('cumulativeFundingRates', pos.collateralToken)
                       const pnl = map(params => {
                         const delta = getPnL(pos.isLong, pos.averagePrice, params.positionMarkPrice, pos.size)
@@ -1567,7 +1566,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                           }),
                           $riskLiquidator(pos, positionMarkPrice),
                           $infoTooltipLabel(
-                            $openPositionPnlBreakdown(pos, cumulativeFee, positionMarkPrice),
+                            $openPositionPnlBreakdown(pos, cumulativeFee),
                             $pnlValue(pnl)
                           ),
                         )
