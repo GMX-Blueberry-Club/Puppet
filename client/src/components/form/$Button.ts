@@ -3,7 +3,7 @@ import { $element, $text, component, style, stylePseudo } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { $alertIcon, $Tooltip } from "gmx-middleware-ui-components"
-import { awaitPromises, constant, map, mergeArray, never, now, recoverWith, skipRepeats, switchLatest } from "@most/core"
+import { awaitPromises, constant, map, mergeArray, multicast, never, now, recoverWith, skipRepeats, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { $ButtonCore, $defaultButtonCore, IButtonCore } from "./$ButtonCore"
 import * as viem from "viem"
@@ -78,7 +78,7 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
 ) => {
 
 
-  const duringRequest = mergeArray([
+  const duringRequest = multicast(mergeArray([
     constant(true, click),
     awaitPromises(map(async req => {
       try {
@@ -89,7 +89,7 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
         return false
       }
     }, config.request))
-  ])
+  ]))
 
   return [
     $ButtonCore({

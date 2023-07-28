@@ -1,24 +1,34 @@
-import { isStream, O } from "@aelea/core"
-import { $text, style, styleBehavior, styleInline } from "@aelea/dom"
+import { combineObject, isStream, O } from "@aelea/core"
+import { $Node, $text, style, styleBehavior, styleInline } from "@aelea/dom"
 import { $column, $icon, $row, $seperator, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { map, now, skipRepeats } from "@most/core"
+import { constant, empty, map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
 import { $bear, $bull, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
 import {
   bnDiv,
   div, formatBps,
+  formatFixed,
   getFundingFee, getMappedValue, getMarginFees, getNextLiquidationPrice, getPnL,
+  getTokenAmount,
   getTokenDescription,
   IAbstractRouteIdentity,
   IPosition, IPositionSettled, IPositionSlot,
   isPositionSettled,
+  leverageLabel,
   liquidationWeight,
-  readableFixedUSD30
+  readableFixedUSD30,
+  readableUnitAmount,
+  switchMap
 } from "gmx-middleware-utils"
 import { $seperator2 } from "../pages/common"
 import * as viem from "viem"
+import { getRouteTypeKey, getPuppetSubscriptionKey } from "puppet-middleware-const"
+import { IMirrorTraderSummary, ITraderSubscritpion } from "puppet-middleware-utils"
+import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
+import { config } from "../functions/netlifyHandlers"
+import { wallet } from "../wallet/walletLink"
 
 
 export const $sizeDisplay = (size: bigint, collateral: bigint) => {
@@ -44,9 +54,10 @@ export const $entry = (pos: IPosition) => {
   )
 }
 
-export const $route = (pos: IAbstractRouteIdentity) => {
-  return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', placeContent: 'center', fontSize: '.75rem' }))(
-    $tokenIcon(pos.indexToken, { width: '28px' }),
+export const $route = (pos: IAbstractRouteIdentity, size = '28px') => {
+  return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+    $tokenIcon(pos.indexToken, { width: size }),
+    $text(getTokenDescription(pos.indexToken).symbol),
     $text(pos.indexToken === pos.collateralToken ? 'Long': 'Short'),
   )
 }
@@ -93,9 +104,21 @@ export const $tokenIcon = (indexToken: viem.Address, IIcon?: { width?: string })
 export const $riskLiquidator = (pos: IPositionSlot, markPrice: Stream<bigint>) => {
 
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
-    $text(style({ fontSize: '.75rem' }))(readableFixedUSD30(pos.size)),
-    $liquidationSeparator(pos, markPrice),
     $text(readableFixedUSD30(pos.size)),
+    $liquidationSeparator(pos, markPrice),
+    $text(style({ fontSize: '.75rem', fontWeight: 'bold' }))(leverageLabel(div(pos.size, pos.collateral))),
+  )
+}
+
+
+export const $puppets = (puppets: readonly viem.Address[], $content: $Node) => {
+
+  // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
+  // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
+                
+  return $row(layoutSheet.spacingSmall, style({ }))(
+    $text(String(puppets.length)),
+    $content
   )
 }
 

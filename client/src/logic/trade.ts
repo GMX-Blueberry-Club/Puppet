@@ -83,7 +83,7 @@ const gmxIOPriceMapSource = {
 
 export function latestPriceFromExchanges(indexToken: viem.Address): Stream<bigint> {
   const existingToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION, indexToken)
-  const symbol = derievedSymbolMapping[existingToken] || existingToken
+  const symbol = derievedSymbolMapping[existingToken.symbol] || existingToken
 
   if (symbol === null) {
     console.warn(`no symbol ${symbol} found in mapping`)

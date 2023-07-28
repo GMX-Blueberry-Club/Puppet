@@ -1,18 +1,17 @@
 import { Behavior, O, combineObject, replayLatest } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
+import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { map, now } from "@most/core"
 import { Stream } from "@most/types"
-import { $ButtonToggle, $Link, $infoTooltipLabel, ISortBy } from "gmx-middleware-ui-components"
-import { ITraderSummary, IPositionMirrorSlot, IPositionSlot, div, pagingQuery, readableFixedBsp, switchMap } from "gmx-middleware-utils"
+import { $Link, $Table, $infoTooltipLabel, ISortBy } from "gmx-middleware-ui-components"
+import { pagingQuery, switchMap } from "gmx-middleware-utils"
 import { IProfileActiveTab } from "../$Profile"
-import { $TradePnl, $openPositionPnlBreakdown, $pnlValue, $sizeDisplay } from "../../common/$common"
-import { $accountPreview } from "../../components/$AccountProfile"
-import { $CardTable } from "../../components/$common"
-import { gmxData } from "../../data/process"
-import { $seperator2 } from "../common"
-import * as router from '@aelea/router'
-import { latestTokenPrice } from "../../data/process/process"
+import { $TradePnl, $openPositionPnlBreakdown, $sizeDisplay } from "../../common/$common"
+import { $accountPreview, $discoverIdentityDisplay } from "../../components/$AccountProfile"
+import { IGmxProcessSeed, latestTokenPrice } from "../../data/process/process"
+import { IPositionMirrorSlot } from "puppet-middleware-utils"
+import { $defaultBerry } from "../../components/$DisplayBerry"
 
 
 
@@ -20,6 +19,8 @@ import { latestTokenPrice } from "../../data/process/process"
 
 export type ITopOpen = {
   route: router.Route
+
+  processData: Stream<IGmxProcessSeed>
 }
 
 export const $TopOpen = (config: ITopOpen) => component((
@@ -32,7 +33,7 @@ export const $TopOpen = (config: ITopOpen) => component((
 
 ) => {
 
-  const sortBy: Stream<ISortBy<IPositionMirrorSlot>> = replayLatest(sortByChange, { direction: 'desc', selector: 'size' })
+  const sortBy: Stream<ISortBy<IPositionMirrorSlot>> = replayLatest(sortByChange, { direction: 'desc', selector: 'blockTimestamp' })
 
   const qparams = combineObject({
     sortBy,
@@ -41,10 +42,10 @@ export const $TopOpen = (config: ITopOpen) => component((
 
   const datass = switchMap(params => {
     return map(data => {
-      const list = Object.values(data.mirrorPositionSlot)
+      const summaryList = Object.values(data.mirrorPositionSlot)
 
-      return pagingQuery({ ...params.sortBy, offset: params.pageIndex * 20, pageSize: 20 }, list)
-    }, gmxData.trading)
+      return pagingQuery({ ...params.sortBy, offset: params.pageIndex * 20, pageSize: 20 }, summaryList)
+    }, config.processData)
   }, qparams)
 
 
@@ -53,7 +54,7 @@ export const $TopOpen = (config: ITopOpen) => component((
 
 
       $column(style({ alignItems: 'center' }))(
-        $CardTable({
+        $Table({
           dataSource: datass,
           sortBy,
           columns: [
@@ -65,9 +66,12 @@ export const $TopOpen = (config: ITopOpen) => component((
                 return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
                 // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
                   $Link({
-                    $content: $accountPreview({ address: pos.trader }),
+                    $content: $discoverIdentityDisplay({
+                      address: pos.trader,
+                      $profileContainer: $defaultBerry(style({ width: '50px' }))
+                    }),
                     route: config.route.create({ fragment: 'fefwef' }),
-                    url: `/app/profile/${pos.trader}/${IProfileActiveTab.TRADING.toLowerCase()}`
+                    url: `/app/profile/${pos.trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
                   })({ click: routeChangeTether() }),
                 )
 
@@ -104,7 +108,7 @@ export const $TopOpen = (config: ITopOpen) => component((
 
                 return $infoTooltipLabel(
                   $openPositionPnlBreakdown(pos.position, now(0n)),
-                  $TradePnl(pos.position, latestTokenPrice(now(pos.position.indexToken)))
+                  $TradePnl(pos.position, latestTokenPrice(config.processData, now(pos.position.indexToken)))
                 )
               })
             },

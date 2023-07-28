@@ -5,15 +5,18 @@ import { $column, layoutSheet } from "@aelea/ui-components"
 import { map, mergeArray, multicast, now } from "@most/core"
 import { $ButtonToggle, $defaulButtonToggleContainer } from "gmx-middleware-ui-components"
 import {
-  IRequestAccountTradeListApi
+  IRequestAccountTradeListApi, groupArrayMany, switchMap
 } from "gmx-middleware-utils"
 import { gmxData } from "../data/process"
 import { IWalletClient } from "../wallet/walletLink"
+import * as GMX from "gmx-middleware-const"
 import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
 import { connectContract } from "../logic/common"
 import { ARBITRUM_ADDRESS } from "gmx-middleware-const"
-import { IPositionMirrorSettled, IPositionMirrorSlot } from "puppet-middleware-utils"
+import { IPositionMirrorSettled, IPositionMirrorSlot, IPuppetSubscritpion } from "puppet-middleware-utils"
+import { Stream } from "@most/types"
+import { IGmxProcessSeed } from "../data/process/process"
 
 export enum IProfileActiveTab {
   BERRIES = 'Trader',
@@ -23,6 +26,7 @@ export enum IProfileActiveTab {
 export interface IProfile {
   wallet: IWalletClient
   route: router.Route
+  processData: Stream<IGmxProcessSeed>
 }
 
 const $title = $text(style({ fontWeight: 'bold', fontSize: '1.35em' }))
@@ -42,39 +46,16 @@ export const $Wallet = (config: IProfile) => component((
   [requestAccountTradeList, requestAccountTradeListTether]: Behavior<number, IRequestAccountTradeListApi>,
 ) => {
 
-  const processData = multicast(gmxData.trading)
-  const orchestrator = connectContract(PUPPET.CONTRACT[42161].Orchestrator)
-  const subscription = orchestrator.read('puppetSubscriptions', config.wallet.account.address)
+  // const orchestrator = connectContract(PUPPET.CONTRACT[42161].Orchestrator)
+  // const subscription = orchestrator.read('puppetSubscriptions', config.wallet.account.address)
 
-  const routeTrader = replayLatest(multicast(map(params => {
-    const routeTraderMapping: IRouteTraderTrade = {}
-
-    for (const prop in params.subscription) {
-      const object = params.processData.mirrorPositionSettled[prop as viem.Hex]
-
-      routeTraderMapping[object.route] ??= {}
-      routeTraderMapping[object.route][object.trader] ??= { settled: [], open: [] }
-      routeTraderMapping[object.route][object.trader].settled.push(object)
+  const routeTrades = replayLatest(multicast(map(params => {
+    if (!(config.wallet.account.address in params.processData.subscription)) {
+      return {}
     }
 
-    for (const prop in params.processData.mirrorPositionSettled) {
-      const object = params.processData.mirrorPositionSettled[prop as viem.Hex]
-
-      routeTraderMapping[object.route] ??= {}
-      routeTraderMapping[object.route][object.trader] ??= { settled: [], open: [] }
-      routeTraderMapping[object.route][object.trader].settled.push(object)
-    }
-
-    for (const prop in params.processData.mirrorPositionSlot) {
-      const object = params.processData.mirrorPositionSlot[prop as viem.Hex]
-
-      routeTraderMapping[object.route] ??= {}
-      routeTraderMapping[object.route][object.trader] ??= { settled: [], open: [] }
-      routeTraderMapping[object.route][object.trader].open.push(object)
-    }
-
-    return routeTraderMapping
-  }, combineObject({ processData, subscription }))))
+    return params.processData.subscription[config.wallet.account.address]
+  }, combineObject({ processData: config.processData }))))
 
 
 
@@ -84,16 +65,16 @@ export const $Wallet = (config: IProfile) => component((
       url: '/profile/puppet'
     },
     {
-      label: 'Open',
+      label: 'Trader',
       url: '/profile/trader'
     }
   ]
 
 
-  const trades = map(list => {
-    const newLocal = Object.values(list.positionsSettled).filter(p => p.account === config.account)
-    return newLocal
-  }, processData)
+  // const trades = map(list => {
+  //   const newLocal = Object.values(list.positionsSettled).filter(p => p.account === config.account)
+  //   return newLocal
+  // }, processData)
 
 
 
@@ -110,6 +91,21 @@ export const $Wallet = (config: IProfile) => component((
       })({ select: selectProfileModeTether() }),
 
 
+
+      switchMap(tradeRoute => {
+        const entries = Object.entries(tradeRoute) as [viem.Hex, IPuppetSubscritpion][]
+
+        return $column(
+          ...entries.map(([route, sub]) => {
+
+            const routeType = PUPPET.ROUTE_TYPE_DESCRIPTIN[route]
+            const indexTokenDescription = GMX.TOKEN_ADDRESS_DESCRIPTION[routeType.indexToken]
+
+
+            return $text(routeType.indexToken)
+          })
+        )
+      }, routeTrades)
       
 
 

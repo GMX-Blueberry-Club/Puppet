@@ -67,7 +67,7 @@ export const $defaultTableRowContainer = screenUtils.isDesktopScreen
 
 
 
-export const $defaultTableContainer = $column(designSheet.customScroll, style({ overflow: 'auto scroll' }))
+export const $defaultTableContainer = $column
 
 export const $Table = <T, FilterState = never>({
   dataSource, columns, scrollConfig,

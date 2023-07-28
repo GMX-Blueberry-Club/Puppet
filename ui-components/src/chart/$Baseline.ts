@@ -23,12 +23,13 @@ export const $Baseline = (config: IBaselineChart) => {
         color: 'transparent'
       },
       textColor: pallete.foreground,
-      fontFamily: 'Moderat',
       fontSize: 10
     },
     leftPriceScale: {
+      autoScale: true,
+      ticksVisible: true,
       scaleMargins: {
-        top: 0.15,
+        top: 0.25,
         bottom: 0.05,
       }
     },

@@ -1,6 +1,7 @@
-import { ARBITRUM_ADDRESS } from "gmx-middleware-const"
+import { ARBITRUM_ADDRESS, mapArrayBy } from "gmx-middleware-const"
+import { getRouteTypeKey } from "./mapUtils.js"
 
-export const ROUTE_TYPE = [
+export const ROUTE_DESCRIPTION = [
   {
     collateralToken: ARBITRUM_ADDRESS.NATIVE_TOKEN,
     indexToken: ARBITRUM_ADDRESS.NATIVE_TOKEN,
@@ -12,3 +13,5 @@ export const ROUTE_TYPE = [
     isLong: true
   },
 ]
+
+export const ROUTE_TYPE_DESCRIPTIN = mapArrayBy(ROUTE_DESCRIPTION, r => getRouteTypeKey(r.collateralToken, r.indexToken, r.isLong), r => r)

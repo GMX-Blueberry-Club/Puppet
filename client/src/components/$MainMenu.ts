@@ -1,10 +1,10 @@
 import { Behavior, O } from "@aelea/core"
-import { $Branch, $Node, $element, $text, attr, component, nodeEvent, style } from "@aelea/dom"
+import { $Branch, $Node, $element, $svg, $text, attr, component, nodeEvent, style } from "@aelea/dom"
 import { $RouterAnchor, Route } from '@aelea/router'
-import { $column, $icon, $row, layoutSheet } from '@aelea/ui-components'
+import {  $column, $icon, $row, layoutSheet } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { CHAIN } from "gmx-middleware-const"
-import { $Link, $anchor, $discord, $gitbook, $github, $instagram, $moreDots, $twitter } from "gmx-middleware-ui-components"
+import { $Link, $anchor, $arrowRight, $caretDblDown, $caretDown, $discord, $gitbook, $github, $instagram, $moreDots, $twitter } from "gmx-middleware-ui-components"
 import { awaitPromises, empty, map, multicast, snapshot, switchLatest } from '@most/core'
 import { Stream } from "@most/types"
 import { $bagOfCoinsCircle, $fileCheckCircle, $gmxLogo, $puppetLogo } from "../common/$icons"
@@ -28,13 +28,14 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
   [routeChange, routeChangeTether]: Behavior<string, string>,
   [clickPopoverClaim, clickPopoverClaimTether]: Behavior<any, any>,
   [walletChange, walletChangeTether]: Behavior<any, any>,
+  [toggleMenu, toggleMenuTether]: Behavior<any, any>,
 ) => {
 
 
   const routeChangeMulticast = multicast(routeChange)
 
 
-  const $pageLink = ($iconPath: $Branch<SVGPathElement>, text: string | Stream<string>) => $row(style({ alignItems: 'center', cursor: 'pointer' }))(
+  const $pageLink = ($iconPath: $Branch<SVGPathElement>, text: string | Stream<string>) => $row(style({ alignItems: 'center', padding: '8px', margin: '8px', cursor: 'pointer' }))(
     $icon({ $content: $iconPath, width: '26px', svgOps: style({ minWidth: '36px' }), viewBox: '0 0 32 32' }),
     $text(text)
   )
@@ -120,17 +121,33 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
 
   return [
 
-    $column(layoutSheet.spacingBig, style({ backgroundColor: pallete.horizon, padding: '16px', zIndex: 1, maxHeight: '100vh', flexShrink: 0, alignItems: 'flex-end', borderRadius: '0 30px 30px', borderRight: `1px solid ${colorAlpha(pallete.foreground, .20)}`, placeContent: 'space-between' }))(
-      $column(layoutSheet.spacingBig, style({ alignItems: 'center' }))(
-        $RouterAnchor({ url: '/', route: parentRoute, $anchor: $element('a')($icon({ $content: $puppetLogo, width: '45px', viewBox: '0 0 32 32' })) })({
-          click: routeChangeTether()
-        }),
+    $column(layoutSheet.spacingBig, style({ backgroundColor: pallete.horizon, zIndex: 1, maxHeight: '100vh', flexShrink: 0, alignItems: 'center', borderRadius: '0 30px 30px', borderRight: `1px solid ${colorAlpha(pallete.foreground, .20)}`, placeContent: 'space-between' }))(
 
-
-        // $extraMenuPopover,
+      
+      O(toggleMenuTether(nodeEvent('pointerdown')), style({ transform: 'rotate(270deg)', aspectRatio: `1 / 1` }))(
+        $pageLink($caretDown, '')
       ),
+      // $column(layoutSheet.spacingBig, style({ alignItems: 'center' }))(
+      //   $RouterAnchor({
+      //     url: '/',
+      //     route: parentRoute,
+      //     $anchor: $element('a')(style({ padding: '8px', margin: '8px' }))($icon({ $content: $puppetLogo, width: '45px', viewBox: '0 0 32 32' }))
+      //   })({
+      //     click: routeChangeTether()
+      //   }),
+
+
+      //   // $extraMenuPopover,
+      // ),
 
       $column(layoutSheet.spacingBig, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
+
+        $WalletDisplay({
+          $container: $column(style({ width: '50px' })),
+          parentRoute
+        })({
+          routeChange: routeChangeTether(),
+        }),
         
         $Link({ $content: $pageLink($gmxLogo, ''), url: '/app/trade', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
           // $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', disabled: now(false), route: parentRoute.create({ fragment: 'feefwefwe' }) })({
@@ -141,12 +158,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
           click: routeChangeTether()
         }),
 
-        $WalletDisplay({
-          $container: $column(style({ width: '50px' })),
-          parentRoute
-        })({
-          routeChange: routeChangeTether(),
-        }),
+        
 
 
       ),

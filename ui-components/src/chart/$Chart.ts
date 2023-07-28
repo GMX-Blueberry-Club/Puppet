@@ -78,6 +78,7 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
       borderVisible: false,
     },
     leftPriceScale: {
+      autoScale: true,
       visible: false,
       scaleMargins: {
         bottom: 0,
@@ -89,10 +90,11 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
       background: {
         color: 'transparent'
       },
-      fontFamily: `Indicate Mono`,
+      fontFamily: `-apple-system,BlinkMacSystemFont,Trebuchet MS,Roboto,Ubuntu,sans-serif`,
       fontSize: 12
     },
     timeScale: {
+      
       rightOffset: 0,
       secondsVisible: true,
       timeVisible: true,
@@ -231,6 +233,7 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
           const { width, height } = containerDimension.contentRect
           chartApi.resize(width, height)
           timeScale.resetTimeScale()
+          timeScale.fitContent()
 
 
           return empty()

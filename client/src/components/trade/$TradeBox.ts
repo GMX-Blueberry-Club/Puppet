@@ -47,8 +47,9 @@ import { account, IWalletClient } from "../../wallet/walletLink"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultButtonPrimary, $defaultMiniButtonSecondary } from "../form/$Button"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown"
 import { $TradePnlHistory } from "./$TradePnlHistory"
-import { latestTokenPrice } from "../../data/process/process"
-import { getRouteTypeKey } from "puppet-middleware-utils"
+import { IGmxProcessSeed, latestTokenPrice } from "../../data/process/process"
+import { getRouteTypeKey } from "puppet-middleware-const"
+import { IPositionMirrorSlot } from "puppet-middleware-utils"
 
 
 
@@ -117,6 +118,7 @@ export interface ITradeBoxParams {
   tokenStableMap: Partial<Record<number, viem.Address[]>>
   parentRoute: Route
   chain: typeof arbitrum
+  processData: Stream<IGmxProcessSeed>
 }
 
 interface ITradeBox extends ITradeBoxParams {
@@ -1502,7 +1504,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                       ),
                       $TradePnlHistory({
                         $container: $column(style({ flex: 1, overflow: 'hidden', borderRadius: '20px' })),
-                        position: pos,
+                        mp: pos,
                         chain: config.chain.id,
                         pricefeed,
                         chartConfig: {
@@ -1536,7 +1538,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                   return $column(style({ flex: 1 }))(
                     ...res.map(pos => {
 
-                      const positionMarkPrice = latestTokenPrice(now(pos.indexToken))
+                      const positionMarkPrice = latestTokenPrice(config.processData, now(pos.indexToken))
                       const cumulativeFee = vault.read('cumulativeFundingRates', pos.collateralToken)
                       const pnl = map(params => {
                         const delta = getPnL(pos.isLong, pos.averagePrice, params.positionMarkPrice, pos.size)

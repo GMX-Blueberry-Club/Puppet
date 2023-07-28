@@ -1,25 +1,29 @@
-import { Behavior } from "@aelea/core"
-import { $element, $node, $text, component, eventElementTarget, style, styleBehavior } from "@aelea/dom"
+import { Behavior, combineObject, replayLatest } from "@aelea/core"
+import { $element, $node, $text, component, eventElementTarget, style } from "@aelea/dom"
 import * as router from '@aelea/router'
-import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
+import { $column, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
-import { map, merge, mergeArray, multicast, now, skipRepeats, startWith, tap } from '@most/core'
+import { fromPromise, map, merge, mergeArray, multicast, now, skipRepeats, startWith, tap } from '@most/core'
 import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN } from "gmx-middleware-const"
-import { switchMap } from "gmx-middleware-utils"
-import { $discoverIdentityDisplay } from "../components/$AccountProfile"
+import { ETH_ADDRESS_REGEXP, switchMap } from "gmx-middleware-utils"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu'
-import { helloBackend } from '../logic/websocket'
 import { fadeIn } from "../transitions/enter"
 import { $Admin } from "./$Admin"
 import { $Home } from "./$Home"
-import { $Profile } from "./$Profile"
 import { $Trade } from "./$Trade"
-import { $Leaderboard } from "./leaderboard/$Leaderboard"
-import { trading } from "../data/process/process"
 import { $Wallet } from "./$Wallet"
-
+import { $Leaderboard } from "./leaderboard/$Leaderboard"
+import { gmxProcess } from "../data/process/process"
+import { syncProcess } from "../utils/indexer/processor"
+import { publicClient, block, blockCache } from "../wallet/walletLink"
+import { getBlockNumberCache } from "viem/public"
+import * as wagmi from "@wagmi/core"
+import { $Profile } from "./$Profile"
+import * as viem from 'viem'
+import { $SubscriberDrawer } from "../components/$SubscriberDrawer"
+import { ITraderSubscritpion } from "puppet-middleware-utils"
 
 
 
@@ -36,7 +40,8 @@ interface Website {
 
 export const $Main = ({ baseRoute = '' }: Website) => component((
   [routeChanges, linkClickTether]: Behavior<any, string>,
-  
+  [subscribeTrader, subscribeTraderTether]: Behavior<ITraderSubscritpion>,
+
   // [resizeScreen, resizeScreenTether]: Behavior<any, ResizeObserverEntry[]>,
 ) => {
 
@@ -50,10 +55,10 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   }, changes)
 
 
-  const rootRoute = router.create({ fragment: baseRoute, title: 'GMX Blueberry Club', fragmentsChange })
+  const rootRoute = router.create({ fragment: baseRoute, title: 'Puppet', fragmentsChange })
   const appRoute = rootRoute.create({ fragment: 'app', title: '' })
 
-  const profileRoute = appRoute.create({ fragment: 'profile', title: '' })
+  const profileRoute = appRoute.create({ fragment: 'profile' })
   const walletRoute = appRoute.create({ fragment: 'wallet', title: 'Portfolio' })
   const adminRoute = appRoute.create({ fragment: 'admin', title: 'Admin Utilities' })
   const TRADEURL = 'trade'
@@ -72,10 +77,11 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
     style({
       color: pallete.message,
       fill: pallete.message,
-      position: 'relative',
+      // position: 'relative',
       // backgroundImage: `radial-gradient(570% 71% at 50% 15vh, ${pallete.background} 0px, ${pallete.horizon} 100%)`,
       backgroundColor: pallete.horizon,
       fontSize: '1.15rem',
+      lineHeight: '1.5em',
       minHeight: '100vh',
       fontWeight: 400,
       overflowX: 'hidden',
@@ -84,6 +90,18 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   )
 
   const isMobileScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
+
+  const processData = replayLatest(multicast(switchMap(seed => {
+    if (seed.approximatedTimestamp === 0) {
+      return replayLatest(multicast(switchMap(params => {
+        return map(seedState => seedState.seed, syncProcess({ ...gmxProcess, publicClient: params.publicClient, endBlock: params.block }))
+      }, combineObject({ publicClient, block: blockCache }))))
+    }
+
+    return now(seed)
+  }, gmxProcess.seed)))
+
+  const subscribeList = replayLatest(map(l => [l], subscribeTrader), [] as ITraderSubscritpion[])
 
 
   return [
@@ -113,6 +131,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               gap: '35px',
             })
         )(
+          $text(map(x => '', processData)),
           switchMap(isMobile => {
             return isMobile
               ? $MainMenu({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
@@ -126,42 +145,17 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
           $column(
             // styleBehavior(map(isMobile => ({ flexDirection: isMobile ? 'row' : 'column' }), isMobileScreen)),
             style({
-              margin: '0 auto', maxWidth: '1240px', gap: screenUtils.isDesktopScreen ? '50px' : '50px', width: '100%', padding: '0 15px',
+              margin: '0 auto', maxWidth: '1240px', position: 'relative', gap: screenUtils.isDesktopScreen ? '50px' : '50px', width: '100%', padding: '45px 15px 15px',
               flex: 1, 
             }),
           )(
-
-            // router.match(appRoute)(
-            //   $IntermediateConnectButton({
-            //     $$display: map(wallet => {
-            //       return $PuppetPortfolio({
-            //         wallet,
-            //         parentRoute: profileWalletRoute,
-            //         chainList: [CHAIN.ARBITRUM]
-            //       })({
-            //         changeRoute: linkClickTether(),
-            //       })
-            //     })
-            //   })({})
-            // ),
-
-            // switchMap(isMobile => {
-            //   if (isMobile) {
-            //     return $MainMenu({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
-            //       routeChange: linkClickTether(),
-            //     })
-            //   }
-
-            //   return $MainMenuSmall({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
-            //     routeChange: linkClickTether(),
-            //   })
-            // }, isMobileScreen),
 
             router.contains(walletRoute)(
               $IntermediateConnectButton({
                 $$display: map(wallet => {
                   return $Wallet({
                     route: walletRoute,
+                    processData,
                     wallet: wallet,
                   })({
                     changeRoute: linkClickTether(),
@@ -171,11 +165,23 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
             ),
             router.contains(leaderboardRoute)(
               fadeIn($Leaderboard({
-                route: leaderboardRoute
+                subscribeList,
+                route: leaderboardRoute,
+                processData
               })({
                 routeChange: linkClickTether(
                   tap(console.log)
-                )
+                ),
+                changeSubscribeList: subscribeTraderTether()
+              }))
+            ),
+            router.contains(profileRoute)(
+              fadeIn($Profile({
+                route: profileRoute,
+                processData
+              })({
+                subscribeTreader: subscribeTraderTether()
+                // routeChange: linkClickTether()
               }))
             ),
             router.match(tradeRoute)(
@@ -183,6 +189,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 $$display: map(wallet => {
                   return $Trade({
                     chain: wallet.chain,
+                    processData,
                     referralCode: BLUEBERRY_REFFERAL_CODE,
                     tokenIndexMap: {
                       [CHAIN.ARBITRUM]: [
@@ -245,12 +252,18 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               ),
 
             ),
-
             router.match(adminRoute)(
               $Admin({}),
             ),
 
-          )
+            $SubscriberDrawer({
+              subscribeList,
+              subscribeTrader
+            })({
+              
+            }),
+
+          ),
           
         )
       ),

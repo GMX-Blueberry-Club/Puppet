@@ -25,14 +25,13 @@ import * as GMX from "gmx-middleware-const"
 import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $infoTooltip, $spinner, $target, $txHashRef } from "gmx-middleware-ui-components"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
-import { getRouteKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $CardTable } from "../components/$common"
 import { $ButtonSecondary } from "../components/form/$Button"
 import { $Dropdown } from "../components/form/$Dropdown"
 import { $TradeBox, IRequestTrade, ITradeBoxParams, ITradeFocusMode } from "../components/trade/$TradeBox"
-import { createPositionSlot, latestTokenPrice, trading } from "../data/process/process"
+import { createPositionSlot, latestTokenPrice } from "../data/process/process"
 import { $card } from "../elements/$common"
 import { $caretDown } from "../elements/$icons"
 import { connectContract } from "../logic/common"
@@ -42,6 +41,7 @@ import { rootStoreScope } from "../rootStore"
 import * as store from "../utils/storage/storeScope"
 import { walletLink } from "../wallet"
 import { wallet } from "../wallet/walletLink"
+import { getRouteKey } from "puppet-middleware-const"
 
 
 export type ITradeComponent = ITradeBoxParams
@@ -210,12 +210,12 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ inputToken, wallet }))))
 
 
-  const inputTokenPrice = latestTokenPrice(map(address => resolveAddress(config.chain.id, address), inputToken))
+  const inputTokenPrice = latestTokenPrice(config.processData, map(address => resolveAddress(config.chain.id, address), inputToken))
   const indexTokenPrice = mergeArray([
-    latestTokenPrice(indexToken),
+    latestTokenPrice(config.processData, indexToken),
     multicast(switchMap(address => trade.exchangesWebsocketPriceSource(config.chain, address), indexToken))
   ])
-  const collateralTokenPrice = latestTokenPrice(collateralToken)
+  const collateralTokenPrice = latestTokenPrice(config.processData, collateralToken)
 
 
   const route = switchMap(params => {
@@ -498,9 +498,8 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   const accountOpenTradeList = map(params => {
-
-    return Object.values(params.trading.positionSlot).filter(pos => pos.account === params.route)
-  }, combineObject({ trading, route }))
+    return Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.route === params.route).map(p => p.position)
+  }, combineObject({ processData: config.processData, route }))
 
   const openPositionList: Stream<Promise<IPositionSlot[]>> = mergeArray([
     combineArray(async (pos, posList) => {
@@ -512,7 +511,7 @@ export const $Trade = (config: ITradeComponent) => component((
       const trade = posList.find(t => t.key === pos.key) || null
 
       if (pos.averagePrice > 0n && trade === null) {
-        const posSlot = createPositionSlot('0x0' as const, unixTimestampNow(), pos)
+        const posSlot = createPositionSlot(unixTimestampNow(), '0x0' as const, pos, '0x00')
 
         return [posSlot, ...posList]
       }
@@ -532,8 +531,8 @@ export const $Trade = (config: ITradeComponent) => component((
   const pricefeed = map(params => {
     const feed = getIntervalIdentifier(params.indexToken, params.timeframe)
 
-    return Object.values(params.trading.pricefeed[feed])
-  }, combineObject({ timeframe: chartInterval, indexToken, trading }))
+    return Object.values(params.processData.pricefeed[feed])
+  }, combineObject({ timeframe: chartInterval, indexToken, processData: config.processData }))
 
 
   const focusPrice = replayLatest(multicast(changefocusPrice), null)

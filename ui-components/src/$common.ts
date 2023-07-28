@@ -24,8 +24,8 @@ export const $anchor = $element('a')(
 
 export const $alertContainer = $row(layoutSheet.spacingSmall, style({
   minWidth: 0, maxWidth: '100%',
-  borderRadius: '100px', alignItems: 'center', fontSize: '75%',
-  border: `1px dashed ${pallete.negative}`, padding: '8px 10px',
+  borderRadius: '100px', alignItems: 'center', fontSize: '.75rem',
+  border: `1px dashed ${pallete.negative}`, padding: '8px',
 }))
 
 export const $alert = ($content: $Node) => $alertContainer(style({ alignSelf: 'flex-start' }))(
@@ -33,13 +33,13 @@ export const $alert = ($content: $Node) => $alertContainer(style({ alignSelf: 'f
   $content,
 )
 
-export const $alertTooltip = ($content: $Node) => {
+export const $alertTooltip = ($content: $Node, $anchorContent?: $Node) => {
   return $Tooltip({
     $content: $content,
     // $dropContainer: $defaultDropContainer,
     $anchor: $alertContainer(
       $icon({ $content: $alertIcon, viewBox: '0 0 24 24', width: '18px', svgOps: style({ minWidth: '18px' }) }),
-      style({ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' })($content),
+      $anchorContent ? style({ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' })($anchorContent) : empty(),
     ),
   })({})
 }
@@ -48,8 +48,8 @@ export const $alertTooltip = ($content: $Node) => {
 
 export const $infoLabel = (label: string | $Node) => {
   return isStream(label)
-    ? style({ lineHeight: 1 })(label)
-    : $text(style({ color: pallete.foreground, lineHeight: 1 }))(label)
+    ? style({ color: pallete.foreground })(label)
+    : $text(style({ color: pallete.foreground }))(label)
 }
 
 export const $infoLabeledValue = (label: string | $Node, value: string | $Node) => {
@@ -101,7 +101,7 @@ export const $labeledDivider = (label: string) => {
   return $row(layoutSheet.spacing, style({ placeContent: 'center', alignItems: 'center' }))(
     $column(style({ flex: 1, borderBottom: `1px solid ${pallete.horizon}` }))(),
     $row(layoutSheet.spacingSmall, style({ color: pallete.foreground, alignItems: 'center' }))(
-      $text(style({ fontSize: '75%' }))(label),
+      $text(style({ fontSize: '.75rem' }))(label),
       $icon({ $content: $caretDblDown, width: '10px', viewBox: '0 0 32 32', fill: pallete.foreground }),
     ),
     $column(style({ flex: 1, borderBottom: `1px solid ${pallete.horizon}` }))(),
@@ -113,7 +113,7 @@ export const $tokenLabel = (token: ITokenDescription, $iconPath: $Node, $label?:
     $icon({ $content: $iconPath, width: '34px', viewBox: '0 0 32 32' }),
     $column(layoutSheet.flex)(
       $text(style({ fontWeight: 'bold' }))(token.symbol),
-      $text(style({ fontSize: '75%', color: pallete.foreground }))(token.symbol)
+      $text(style({ fontSize: '.75rem', color: pallete.foreground }))(token.symbol)
     ),
     style({ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }, $label || empty())
   )

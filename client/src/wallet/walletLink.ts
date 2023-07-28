@@ -8,10 +8,11 @@ import {
   getNetwork, getPublicClient, getWalletClient, getWebSocketPublicClient, watchAccount, watchBlockNumber, watchNetwork
 } from '@wagmi/core'
 import { WalletConnectConnector } from '@wagmi/core/connectors/walletConnect'
+import { alchemyProvider } from "@wagmi/core/providers/alchemy"
 import { EthereumClient, w3mConnectors, w3mProvider } from '@web3modal/ethereum'
 import { Web3Modal } from '@web3modal/html'
 import { switchMap } from "gmx-middleware-utils"
-import { PublicClient, Transport } from "viem"
+import { PublicClient, Transport, WatchAssetParameters } from "viem"
 import { arbitrum, avalanche } from "viem/chains"
 
 const chains = [arbitrum, avalanche]
@@ -74,7 +75,7 @@ export const walletConfig = createConfig({
   autoConnect: true,
   connectors: w3mConnectors({ projectId, chains,  }),
   publicClient: configChain.publicClient,
-  webSocketPublicClient: configChain.webSocketPublicClient,
+  // webSocketPublicClient: configChain.webSocketPublicClient,
   storage,
 })
 
@@ -95,15 +96,8 @@ export const chain: Stream<ISupportedChain> = map(getNetworkResult => {
   const defChain = chains.find(chain => chain.id == getNetworkResult.chain?.id) || arbitrum
 
   return defChain
-}, mergeArray([
-  map(() => getNetwork(), now(null)),
-  networkChange
-]))
-
-
-export const block = awaitPromises(map(n => fetchBlockNumber(), now(null)))
-export const blockChange = switchMap(c => fromCallback<bigint>(cb => watchBlockNumber({ listen: true, chainId: c.id }, bn => cb(bn))), chain)
-
+  // return mergeArray([networkChange, now(defChain)])
+}, map(() => getNetwork(), now(null)))
 
 export const account = mergeArray([
   map(() => getAccount(), now(null)),
@@ -122,7 +116,6 @@ export const publicClient: Stream<PublicClient<Transport, ISupportedChain>> = ma
   return clientAvaialble
 }, combineObject({ chain }))
 
-
 export const wallet = awaitPromises(map(async params => {
 
   const clientAvaialble = await getWalletClient({ chainId: params.chain.id })
@@ -130,6 +123,21 @@ export const wallet = awaitPromises(map(async params => {
   return clientAvaialble
 }, combineObject({ chain, account })))
 
+export const nativeBalance = awaitPromises(map(params => {
+  if (params.wallet === null) {
+    return 0n
+  }
+
+  return params.publicClient.getBalance({ address: params.wallet.account.address })
+}, combineObject({ publicClient, wallet })))
+
+
+export const blockCache = awaitPromises(map(async pc => {
+  
+  return (await pc.getBlockNumber({ maxAge: 10000 })) || 0n
+}, publicClient))
+export const block = awaitPromises(map(n => fetchBlockNumber(), now(null)))
+export const blockChange = switchMap(c => fromCallback<bigint>(cb => watchBlockNumber({ listen: true, chainId: c.id }, bn => cb(bn))), chain)
 
 
 export const web3Modal = new Web3Modal({

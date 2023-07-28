@@ -28,7 +28,7 @@ export const $Popover = ({ $popContent, offset = 30, padding = 76, dismiss = emp
 
   const $overlay = $node(
     style({
-      position: 'absolute', zIndex: 99999,
+      position: 'fixed', zIndex: 99999,
       top: 0, left: 0, right: 0, bottom: 0
     }),
     overlayClickTether(
@@ -72,13 +72,27 @@ export const $Popover = ({ $popContent, offset = 30, padding = 76, dismiss = emp
         const { y, x, width, bottom } = rect.intersectionRect
         const rootWidth = rect.rootBounds?.width || 0
 
+
+
+
         const bottomSpcace = window.innerHeight - bottom
         const goDown = bottomSpcace > bottom
+
+
+        if (rect.target instanceof HTMLElement && rect.target.offsetParent instanceof HTMLElement) {
+          if (rect.target.offsetParent.offsetWidth !== document.body.clientWidth)  {
+            return {
+              top: 0,
+              visibility: 'visible',
+              transform: `translate(-50%, ${goDown ? '0' : '-100%'})`
+            }
+          }
+        }
+
 
         const top = (goDown ? bottom + offset : y - offset) + 'px'
 
         const placedWidth = x + contentRect.contentRect.width
-
         const leftOffset = placedWidth > rootWidth ? rootWidth - placedWidth - 20 : 0
 
         const left = x + leftOffset + (width / 2) + 'px'

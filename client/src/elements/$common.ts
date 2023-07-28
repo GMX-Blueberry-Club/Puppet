@@ -1,6 +1,6 @@
 import { $Branch, $text, attr, style } from "@aelea/dom"
 import { $ButtonIcon, $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { pallete, theme } from "@aelea/ui-components-theme"
+import { colorAlpha, pallete, theme } from "@aelea/ui-components-theme"
 import { IToken, LAB_CHAIN } from "@gambitdao/gbc-middleware"
 import { $anchor, $calendar, $caretDblDown, $ethScan } from "gmx-middleware-ui-components"
 import { getAccountExplorerUrl, getTxExplorerUrl, shortenAddress } from "gmx-middleware-utils"
@@ -11,7 +11,6 @@ import { $trash } from "./$icons"
 export const $TrashBtn = $ButtonIcon($trash)
 
 export const $card = $column(layoutSheet.spacing,
-
   style({ borderRadius: '20px', padding: '20px' }),
   theme.name === 'dark'
     ? style({
@@ -22,6 +21,15 @@ export const $card = $column(layoutSheet.spacing,
       boxShadow: 'rgb(0 0 0 / 25%) 0px 0px 1px, rgb(59 60 74 / 15%) 0px 15px 20px, rgb(0 0 0 / 8%) 0px 1px 12px',
       backgroundColor: pallete.background, padding: '22px', borderRadius: '20px', flex: 1
     })
+)
+
+
+export const $card2 = $column(layoutSheet.spacing,
+  style({ border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderRadius: '20px', padding: '20px' }),
+  style({
+    backgroundColor: pallete.horizon,
+    boxShadow: 'rgb(0 0 0 / 25%) 0px 0px 1px, rgb(0 0 0 / 15%) 0px 15px 20px, rgb(0 0 0 / 8%) 0px 1px 12px',
+  })
 )
 
 export const $seperator = $text(style({ color: pallete.foreground, pointerEvents: 'none' }))('|')
@@ -45,7 +53,7 @@ export const $labeledDivider = (label: string) => {
   return $row(layoutSheet.spacing, style({ placeContent: 'center', alignItems: 'center' }))(
     $column(style({ flex: 1, borderBottom: `1px solid ${pallete.horizon}` }))(),
     $row(layoutSheet.spacingSmall, style({ color: pallete.foreground, alignItems: 'center' }))(
-      $text(style({ fontSize: '75%' }))(label),
+      $text(style({ fontSize: '.75rem' }))(label),
       $icon({ $content: $caretDblDown, width: '10px', viewBox: '0 0 32 32', fill: pallete.foreground }),
     ),
     $column(style({ flex: 1, borderBottom: `1px solid ${pallete.horizon}` }))(),
@@ -133,7 +141,7 @@ export interface ITeamMember {
 }
 
 export const $teamMember = ({ name, title, token }: ITeamMember) => {
-  return $column(layoutSheet.spacing, style({ alignItems: 'center', fontSize: screenUtils.isDesktopScreen ? '' : '75%' }))(
+  return $column(layoutSheet.spacing, style({ alignItems: 'center', fontSize: screenUtils.isDesktopScreen ? '' : '.75rem' }))(
     $berryByToken(token),
     $column(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
       $anchor(attr(({ href: `https://twitter.com/${name}` })), style({ fontWeight: 900, textDecoration: 'none', fontSize: '1em' }))($text(`@${name}`)),

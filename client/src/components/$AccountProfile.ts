@@ -65,10 +65,26 @@ export const $discoverIdentityDisplay = (config: IAccountPreview) => {
 }
 
 
+export const $discoverAvatar = (config: IAccountPreview) => {
+  const { $container, address, showAddress = true } = config
+
+  const profileEv = awaitPromises(blueberrySubgraph.owner(now({ id: address.toLowerCase() })))
+
+  return switchLatest(map(profile => {
+    return profile?.profile
+      ? style({ borderRadius: '50%' }, $berryByToken(profile.profile, config.$profileContainer))
+      : $jazzicon({
+        address,
+        $container: config.$profileContainer
+      })
+  }, profileEv))
+}
+
+
 export const $accountPreview = ({
   address, showAddress = true, $container = $row, labelSize, $profileContainer
 }: IAccountPreview) => {
-  return $container(layoutSheet.spacingSmall, style({ alignItems: 'center', placeContent: 'center', pointerEvents: 'none', textDecoration: 'none' }))(
+  return $container(layoutSheet.spacingSmall, style({ alignItems: 'center', placeContent: 'center', textDecoration: 'none' }))(
     $jazzicon({
       address,
       $container: $profileContainer
@@ -81,7 +97,7 @@ export const $accountPreview = ({
 export const $profilePreview = ({
   $container = $row, $profileContainer, profile, showAddress = true, labelSize = '16px'
 }: IProfilePreview) => {
-  return $container(layoutSheet.spacingSmall, style({ alignItems: 'center', pointerEvents: 'none', textDecoration: 'none' }))(
+  return $container(layoutSheet.spacingSmall, style({ alignItems: 'center', textDecoration: 'none' }))(
     profile.profile
       ? style({ borderRadius: '50%' }, $berryByToken(profile.profile, $profileContainer))
       : $jazzicon({

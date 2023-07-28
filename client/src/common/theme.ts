@@ -30,7 +30,7 @@ const dark: Theme = {
     background: '#1b181d',
     horizon: '#2d2c32',
     middleground: '#98b0c5',
-    foreground: '#bfbbcf',
+    foreground: '#8d97a9',
 
     positive: '#38E567',
     negative: '#FA4333',

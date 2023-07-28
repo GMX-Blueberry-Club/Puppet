@@ -1,31 +1,27 @@
 import { Behavior, replayLatest } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
-import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { chain, empty, map, mergeArray, multicast, never, now, snapshot, switchLatest } from "@most/core"
-import { $ButtonToggle, $Table, $defaulButtonToggleContainer, $tokenIconMap } from "gmx-middleware-ui-components"
+import { $column, layoutSheet } from "@aelea/ui-components"
+import { empty, map, mergeArray, multicast, now, switchLatest } from "@most/core"
+import { Stream } from "@most/types"
+import { $ButtonToggle } from "gmx-middleware-ui-components"
+import { ITraderSubscritpion } from "puppet-middleware-utils"
+import * as viem from "viem"
+import { $SubscriberDrawer } from "../../components/$SubscriberDrawer"
+import { IGmxProcessSeed } from "../../data/process/process"
+import { $card } from "../../elements/$common"
+import { wallet } from "../../wallet/walletLink"
 import { $TopOpen } from "./$TopOpen"
 import { $TopSettled } from "./$TopSettled"
-import { $card } from "../../elements/$common"
-import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { connectContract, wagmiWriteContract } from "../../logic/common"
-import * as PUPPET from "puppet-middleware-const"
-import { wallet } from "../../wallet/walletLink"
-import * as viem from "viem"
-import { Stream } from "@most/types"
-import { $ButtonPrimaryCtx } from "../../components/form/$Button"
-import { $IntermediateConnectButton } from "../../components/$ConnectAccount"
-import { IPuppetSubscription, getRouteTypeKey } from "puppet-middleware-utils"
-import { ARBITRUM_ADDRESS } from "gmx-middleware-const"
-import { formatBps, readableFixedBsp, readablePercentage, switchMap } from "gmx-middleware-utils"
-import { $accountPreview } from "../../components/$AccountProfile"
-import { $route, $tokenIcon } from "../../common/$common"
 
 
 
 
 export type ILeaderboard = {
   route: router.Route
+  processData: Stream<IGmxProcessSeed>
+
+  subscribeList: Stream<ITraderSubscritpion[]>
 }
 
 type IRouteOption = {
@@ -36,10 +32,7 @@ type IRouteOption = {
 export const $Leaderboard = (config: ILeaderboard) => component((
   [changeTab, changeTabTether]: Behavior<IRouteOption, string>,
   [routeChange, routeChangeTether]: Behavior<string, string>,
-
-  [requestChangeSubscription, requestChangeSubscriptionTether]: Behavior<PointerEvent, Promise<viem.TransactionReceipt>>,
-  [changeSubscribeList, changeSubscribeListTether]: Behavior<IPuppetSubscription[], IPuppetSubscription[]>,
-
+  [subscribeTrader, subscribeTraderTether]: Behavior<ITraderSubscritpion>,
 ) => {
   const settledRoute = config.route.create({ fragment: 'settled', title: 'Leaderboard' })
   const topOpenRoute = config.route.create({ fragment: 'open', title: 'Leaderboard' })
@@ -47,11 +40,11 @@ export const $Leaderboard = (config: ILeaderboard) => component((
   const routeChangeState = map(url => {
     history.pushState(null, '', url)
     return url
-  }, mergeArray([changeTab, routeChange]))
+  }, mergeArray([changeTab]))
 
   const options: IRouteOption[] = [
     {
-      label: 'Settled',
+      label: 'Aggregated',
       url: '/app/leaderboard/settled'
     },
     {
@@ -60,7 +53,6 @@ export const $Leaderboard = (config: ILeaderboard) => component((
     }
   ]
 
-  const orchestrator = connectContract(PUPPET.CONTRACT[42161].Orchestrator)
 
 
 
@@ -71,11 +63,12 @@ export const $Leaderboard = (config: ILeaderboard) => component((
       return empty()
     }
 
-    return orchestrator.read('puppetSubscriptions', w3p.account.address)
+    return map(data => {
+      return data.subscription.filter(s => s.trader === w3p.account.address)
+    }, config.processData)
   }, wallet))
   
 
-  const subscribeList = replayLatest(changeSubscribeList, [] as IPuppetSubscription[])
   
 
 
@@ -114,84 +107,21 @@ export const $Leaderboard = (config: ILeaderboard) => component((
           router.match(settledRoute)(
             $TopSettled({
               ...config,
-              subscribeList: subscribeList,
+              subscribeList: config.subscribeList,
               subscription,
             })({
               routeChange: routeChangeTether(),
-              changeSubscribeList: changeSubscribeListTether()
+              subscribeTrader: subscribeTraderTether(multicast)
             })
           )
         ),
       ),
 
 
-      $row(style({ border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderBottom: 'none', padding: '16px', borderRadius: '20px 20px 0 0' }))(
-        $Table({
-          dataSource: subscribeList,
-          columns: [
-            {
-              $head: $text('Trader'),
-              columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
-              $$body: map(sbusc => {
-                return $accountPreview({ address: sbusc.account })
-              })
-            },
-            {
-              $head: $text('Action'),
-              columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
-              $$body: map(subsc => {
-                return $text(subsc.subscribe ? 'Subscribe' : 'Unsubscribe')
-              })
-            },
-            {
-              $head: $text('Route'),
-              columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
-              $$body: map(subsc => {
-                return $route(subsc)
-              })
-            },
-            {
-              $head: $text('Allowance'),
-              columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
-              $$body: map(subsc => {
-                return $text(readableFixedBsp(subsc.allowance))
-              })
-            },
-          ]
-        })({}),
-
-        $IntermediateConnectButton({
-          $$display: map(w3p => {
-              
-            return $ButtonPrimaryCtx({
-              $content: $text('Save'),
-              request: requestChangeSubscription
-            })({
-              click: requestChangeSubscriptionTether(
-                snapshot(list => {
-
-                  const allowance = list.map(x => x.allowance) // 1%
-                  const traders = list.map(a => a.account)
-                  const routeTypes = list.map(x => getRouteTypeKey(x.collateralToken, x.indexToken, x.isLong))
-                  const subscribe = list.map(x => x.subscribe)
-
-                  return wagmiWriteContract({
-                    ...PUPPET.CONTRACT[42161].Orchestrator,
-                    functionName: 'batchSubscribeRoute',
-                    args: [allowance, traders, routeTypes, subscribe]
-                  })
-                }, subscribeList),
-                multicast
-              )
-            })
-          })
-        })({})
-      ),
-
     ),
 
     {
-      routeChange: routeChangeState,
+      routeChange: mergeArray([routeChange, routeChangeState]), changeSubscribeList: subscribeTrader
     }
   ]
 })

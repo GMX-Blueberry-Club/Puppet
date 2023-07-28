@@ -1,19 +1,18 @@
-import { combineObject, replayLatest } from "@aelea/core"
-import { map, multicast } from "@most/core"
+import { map } from "@most/core"
 import { Stream } from "@most/types"
 import { BASIS_POINTS_DIVISOR, IntervalTime, TIME_INTERVAL_MAP } from "gmx-middleware-const"
 import {
-  IAbstractPositionIdentity, IAbstractPositionKey, IPositionSettled, IPositionSlot, IPriceInterval,
+  IPositionIncrease, IPositionSlot, IPriceInterval,
   IPriceIntervalIdentity, createPricefeedCandle, div, getIntervalIdentifier, switchMap
 } from "gmx-middleware-utils"
+import { getPuppetSubscriptionKey } from "puppet-middleware-const"
+import { IAccountToRouteMap, IPositionMirrorSettled, IPositionMirrorSlot, IPositionRequest, IPuppetSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { rootStoreScope } from "../../rootStore"
-import { defineProcess, syncProcess } from "../../utils/indexer/processor"
-import { block, publicClient } from "../../wallet/walletLink"
+import { defineProcess } from "../../utils/indexer/processor"
 import { puppetLog } from "../scope"
 import * as gmxLog from "../scope/gmx"
-import { IPositionMirrorSettled, IPositionMirrorSlot, IPositionRequest } from "puppet-middleware-utils"
 
 
 export interface IProcessMetrics {
@@ -24,28 +23,28 @@ export interface IProcessMetrics {
   height: bigint
 }
 
-type MirrorTrades = Record<viem.Address, {
-  subscribed: boolean
-  settled: IPositionMirrorSettled[]
-  open: IPositionMirrorSlot[]
-}>
 
-type IPositionCounter = `0x${string}:${number}`
+export const PRICEFEED_INTERVAL = [
+  TIME_INTERVAL_MAP.MIN5,
+  TIME_INTERVAL_MAP.MIN15,
+  TIME_INTERVAL_MAP.MIN60,
+  TIME_INTERVAL_MAP.HR4,
+  TIME_INTERVAL_MAP.HR24,
+] as const
 
 export interface IGmxProcessSeed {
   blockMetrics: IProcessMetrics,
-  positionSlot: Record<viem.Hex, IPositionSlot>
-  positionsSettled: Record<IPositionCounter, IPositionSettled>
+  // positionSlot: Record<viem.Hex, IPositionSlot>
+  // positionsSettled: Record<viem.Hex, IPositionSettled>
   // leaderboard: Record<viem.Address, ITraderSummary>
-  countId: number
   pricefeed: Record<IPriceIntervalIdentity, Record<string, IPriceInterval>>
   latestPrice: Record<viem.Address, bigint>
   approximatedTimestamp: number
 
   mirrorPositionRequest: Record<viem.Hex, IPositionRequest>
   mirrorPositionSlot: Record<viem.Hex, IPositionMirrorSlot>
-  mirrorPositionSettled: Record<viem.Hex, IPositionMirrorSettled>
-  subscription: Record<viem.Hex, MirrorTrades>
+  mirrorPositionSettled: IAccountToRouteMap<IPositionMirrorSettled[]>
+  subscription: IPuppetSubscritpion[]
 }
 
 const processMetrics: IProcessMetrics = {
@@ -59,10 +58,9 @@ const processMetrics: IProcessMetrics = {
 
 const gmxSeedData: IGmxProcessSeed = {
   blockMetrics: processMetrics,
-  countId: 0,
   approximatedTimestamp: 0,
-  positionSlot: {},
-  positionsSettled: {},
+  // positionSlot: {},
+  // positionsSettled: {},
   // leaderboard: {},
   pricefeed: {},
   latestPrice: {},
@@ -70,14 +68,14 @@ const gmxSeedData: IGmxProcessSeed = {
   mirrorPositionRequest: {},
   mirrorPositionSlot: {},
   mirrorPositionSettled: {},
-  subscription: {},
+  subscription: [],
 }
 
 
 
 export const gmxProcess = defineProcess(
   {
-    startBlock: 113260800n,
+    startBlock: 114838028n,
     chainId: arbitrum.id,
     genesisSeed: gmxSeedData,
     parentScope: rootStoreScope,
@@ -121,11 +119,9 @@ export const gmxProcess = defineProcess(
 
       seed.approximatedTimestamp = Number(seed.blockMetrics.timestamp + (value.blockNumber - seed.blockMetrics.height) * seed.blockMetrics.avgDeltaTime / BASIS_POINTS_DIVISOR)
 
-      storeCandle(seed, args.token, TIME_INTERVAL_MAP.MIN5, args.fastPrice)
-      storeCandle(seed, args.token, TIME_INTERVAL_MAP.MIN15, args.fastPrice)
-      storeCandle(seed, args.token, TIME_INTERVAL_MAP.MIN60, args.fastPrice)
-      storeCandle(seed, args.token, TIME_INTERVAL_MAP.HR4, args.fastPrice)
-      storeCandle(seed, args.token, TIME_INTERVAL_MAP.HR24, args.fastPrice)
+      for (const key in PRICEFEED_INTERVAL) {
+        storeCandle(seed, args.token, PRICEFEED_INTERVAL[key], args.fastPrice)
+      }
 
       return seed
     },
@@ -135,15 +131,34 @@ export const gmxProcess = defineProcess(
     step(seed, value) {
 
       const args = value.args
+      const mirrorPositionReq = seed.mirrorPositionRequest[args.key]
 
-      const positionSlot = seed.positionSlot[args.key] ??= createPositionSlot(value.transactionHash, seed.approximatedTimestamp, args)
+      if (mirrorPositionReq?.route !== args.account) {
+        return seed
+      }
 
-      positionSlot.idCount = seed.countId
-      positionSlot.cumulativeCollateral += args.collateralDelta
-      positionSlot.cumulativeSize += args.sizeDelta
-      positionSlot.cumulativeFee += args.fee
 
-      positionSlot.link.increaseList.push({ ...value.args, blockTimestamp: seed.approximatedTimestamp, transactionHash: value.transactionHash, __typename: 'IncreasePosition' })
+      if (!seed.mirrorPositionSlot[args.key]) {
+        const positionSlot = seed.mirrorPositionSlot[args.key] = createMirrorPositionSlot(seed.approximatedTimestamp, value.transactionHash, args, mirrorPositionReq.requestKey, mirrorPositionReq)
+        seed.mirrorPositionSlot[args.key].puppets.forEach(puppet => {
+          const subscKey = getPuppetSubscriptionKey(puppet, positionSlot.trader, positionSlot.routeTypeKey)
+          const subsc = seed.subscription.find(s => s.puppetSubscriptionKey === subscKey)!
+
+          subsc.open.push(positionSlot)
+        })
+      }
+
+      const positionSlot = seed.mirrorPositionSlot[args.key]
+      positionSlot.position.requestKey = mirrorPositionReq.routeTypeKey
+      positionSlot.position.cumulativeCollateral += args.collateralDelta
+      positionSlot.position.cumulativeSize += args.sizeDelta
+      positionSlot.position.cumulativeFee += args.fee
+      positionSlot.position.link.increaseList.push({
+        ...value.args,
+        blockTimestamp: seed.approximatedTimestamp,
+        transactionHash: value.transactionHash,
+        __typename: 'IncreasePosition'
+      })
 
 
       return seed
@@ -153,15 +168,15 @@ export const gmxProcess = defineProcess(
     source: gmxLog.decreaseEvents,
     step(seed, value) {
       const args = value.args
-      const positionSlot = seed.positionSlot[args.key]
+      const positionSlot = seed.mirrorPositionSlot[args.key]
 
       if (!positionSlot) {
         return seed
         // throw new Error('position not found')
       }
 
-      positionSlot.cumulativeFee += args.fee
-      positionSlot.link.decreaseList.push({ ...value.args, blockTimestamp: seed.approximatedTimestamp, transactionHash: value.transactionHash, __typename: 'DecreasePosition' })
+      positionSlot.position.cumulativeFee += args.fee
+      positionSlot.position.link.decreaseList.push({ ...value.args, blockTimestamp: seed.approximatedTimestamp, transactionHash: value.transactionHash, __typename: 'DecreasePosition' })
 
       return seed
     },
@@ -170,25 +185,24 @@ export const gmxProcess = defineProcess(
     source: gmxLog.updateEvents,
     step(seed, value) {
       const args = value.args
-      const positionSlot = seed.positionSlot[args.key]
+      const positionSlot = seed.mirrorPositionSlot[args.key]
 
       if (!positionSlot) {
         return seed
         // throw new Error('position not found')
       }
 
-      const markPrice = seed.latestPrice[positionSlot.indexToken]
+      const markPrice = seed.latestPrice[positionSlot.position.indexToken]
 
-      positionSlot.link.updateList.push({ ...value.args, blockTimestamp: seed.approximatedTimestamp, markPrice, transactionHash: value.transactionHash, __typename: 'UpdatePosition' })
-
-      positionSlot.collateral = args.collateral
-      positionSlot.realisedPnl = args.realisedPnl
-      positionSlot.averagePrice = args.averagePrice
-      positionSlot.size = args.size
-      positionSlot.reserveAmount = args.reserveAmount
-      positionSlot.entryFundingRate = args.entryFundingRate
-      positionSlot.maxCollateral = args.collateral > positionSlot.maxCollateral ? args.collateral : positionSlot.maxCollateral
-      positionSlot.maxSize = args.size > positionSlot.maxSize ? args.size : positionSlot.maxSize
+      positionSlot.position.link.updateList.push({ ...value.args, blockTimestamp: seed.approximatedTimestamp, markPrice, transactionHash: value.transactionHash, __typename: 'UpdatePosition' })
+      positionSlot.position.collateral = args.collateral
+      positionSlot.position.realisedPnl = args.realisedPnl
+      positionSlot.position.averagePrice = args.averagePrice
+      positionSlot.position.size = args.size
+      positionSlot.position.reserveAmount = args.reserveAmount
+      positionSlot.position.entryFundingRate = args.entryFundingRate
+      positionSlot.position.maxCollateral = args.collateral > positionSlot.position.maxCollateral ? args.collateral : positionSlot.position.maxCollateral
+      positionSlot.position.maxSize = args.size > positionSlot.position.maxSize ? args.size : positionSlot.position.maxSize
 
       return seed
     },
@@ -197,36 +211,46 @@ export const gmxProcess = defineProcess(
     source: gmxLog.closeEvents,
     step(seed, value) {
       const args = value.args
-      const positionSlot = seed.positionSlot[args.key]
-      const mpSlot = seed.mirrorPositionSlot[args.key]
+      const positionSlot = seed.mirrorPositionSlot[args.key]
 
-      if (!mpSlot || !positionSlot ) {
+      if (!positionSlot ) {
         return seed
         // throw new Error('position not found')
       }
 
 
-
-      const settleId = `${args.key}:${seed.countId}` as const
-
-      seed.positionsSettled[settleId] = {
+      seed.mirrorPositionSettled[positionSlot.trader] ??= {}
+      seed.mirrorPositionSettled[positionSlot.trader][positionSlot.routeTypeKey] ??= []
+      const newSettledPosition: IPositionMirrorSettled = {
         ...positionSlot,
-        settleBlockTimestamp: seed.approximatedTimestamp,
-        realisedPnl: args.realisedPnl,
-        settlePrice: args.averagePrice,
-        isLiquidated: false,
-        __typename: 'PositionSettled',
-      }
+        position: {
+          ...positionSlot.position,
+          realisedPnl: args.realisedPnl,
+          settlePrice: seed.latestPrice[positionSlot.position.indexToken],
+          isLiquidated: false,
+          settledTransactionHash: value.transactionHash,
+          settledBlockTimestamp: seed.approximatedTimestamp,
+          __typename: 'PositionSettled',
+        },
+        blockTimestamp: seed.approximatedTimestamp,
+        transactionHash: value.transactionHash,
+        __typename: 'PositionMirrorSettled',
+      } as const
+      seed.mirrorPositionSettled[positionSlot.trader][positionSlot.routeTypeKey].push(newSettledPosition)
 
-      seed.mirrorPositionSettled[settleId] = {
-        ...mpSlot,
-        position: seed.positionsSettled[settleId],
-      }
 
+      positionSlot.puppets.forEach(puppet => {
+        const subscKey = getPuppetSubscriptionKey(puppet, positionSlot.trader, positionSlot.routeTypeKey)
+        const subsc = seed.subscription.find(s => s.puppetSubscriptionKey === subscKey)!
 
-      delete seed.positionSlot[args.key]
+        subsc.settled.push(newSettledPosition)
+
+        const removeIdx = subsc.open.findIndex(pos => pos.positionKey === positionSlot.positionKey)
+        subsc.open.splice(removeIdx, 1)
+      })
+
       delete seed.mirrorPositionSlot[args.key]
-      seed.countId++
+      delete seed.mirrorPositionRequest[args.key]
 
       // seed.leaderboard[positionSlot.account] ??= {
       //   account: positionSlot.account,
@@ -273,7 +297,7 @@ export const gmxProcess = defineProcess(
     source: gmxLog.liquidateEvents,
     step(seed, value) {
       const args = value.args
-      const positionSlot = seed.positionSlot[args.key]
+      const positionSlot = seed.mirrorPositionSlot[args.key]
 
       if (!positionSlot) {
         return seed
@@ -281,22 +305,37 @@ export const gmxProcess = defineProcess(
       }
 
 
-      const settleId = `${args.key}:${seed.countId}` as const
       const realisedPnl = -args.collateral
 
-      seed.positionsSettled[settleId] = {
+      seed.mirrorPositionSettled[positionSlot.trader] ??= {}
+      seed.mirrorPositionSettled[positionSlot.trader][positionSlot.routeTypeKey] ??= []
+      const newSettledPosition: IPositionMirrorSettled = {
         ...positionSlot,
-        settleBlockTimestamp: seed.approximatedTimestamp,
-        realisedPnl: realisedPnl,
-        settlePrice: args.markPrice,
-        isLiquidated: true,
-        __typename: 'PositionSettled',
-      }
+        position: {
+          ...positionSlot.position,
+          realisedPnl: realisedPnl,
+          settlePrice: args.markPrice,
+          isLiquidated: false,
+          settledTransactionHash: value.transactionHash,
+          settledBlockTimestamp: seed.approximatedTimestamp,
+          __typename: 'PositionSettled',
+        },
+        __typename: 'PositionMirrorSettled',
+      } as const
+      seed.mirrorPositionSettled[positionSlot.trader][positionSlot.routeTypeKey].push(newSettledPosition)
 
-      delete seed.positionSlot[args.key]
- 
+      positionSlot.puppets.forEach(puppet => {
+        const subscKey = getPuppetSubscriptionKey(puppet, positionSlot.trader, positionSlot.routeTypeKey)
+        const subsc = seed.subscription.find(s => s.puppetSubscriptionKey === subscKey)!
 
-      seed.countId++
+        subsc.settled.push(newSettledPosition)
+
+        const removeIdx = subsc.open.findIndex(pos => pos.positionKey === positionSlot.positionKey)
+        subsc.open.splice(removeIdx, 1)
+      })
+
+      delete seed.mirrorPositionSlot[args.key]
+      delete seed.mirrorPositionRequest[args.key]
 
       return seed
     },
@@ -308,9 +347,7 @@ export const gmxProcess = defineProcess(
     step(seed, value) {
       const args = value.args
 
-      const key = args.positionKey
-
-      seed.mirrorPositionRequest[args.requestKey] ??= {
+      seed.mirrorPositionRequest[args.positionKey] ??= {
         ...args,
         blockTimestamp: seed.approximatedTimestamp,
         transactionHash: value.transactionHash,
@@ -322,41 +359,31 @@ export const gmxProcess = defineProcess(
     },
   },
   {
-    source: puppetLog.executePosition,
-    step(seed, value) {
-      const args = value.args
-
-      const request = seed.mirrorPositionRequest[args.requestKey]
-
-      if (request) {
-        const slot = seed.positionSlot[request.positionKey]
-        seed.mirrorPositionSlot[request.positionKey] = {
-          ...request,
-          position: slot,
-          blockTimestamp: seed.approximatedTimestamp,
-          transactionHash: value.transactionHash,
-          __typename: 'PositionMirrorSlot',
-        }
-      }
-
-      delete seed.mirrorPositionRequest[args.requestKey]
-
-      return seed
-    },
-  },
-  {
     source: puppetLog.subscribeRoute,
     step(seed, value) {
       const args = value.args
+      const subscKey = getPuppetSubscriptionKey(args.puppet, args.trader, args.routeTypeKey)
 
-      seed.subscription[args.routeTypeKey] ??= {}
-      seed.subscription[args.routeTypeKey][args.trader] ??= {
-        subscribed: true,
-        settled: [],
-        open: []
+      let subsc = seed.subscription.find(subsc => subsc.puppetSubscriptionKey === subscKey)
+
+      if (!subsc) {
+        subsc = {
+          allowance: 0n,
+          puppet: args.puppet,
+          trader: args.trader,
+          puppetSubscriptionKey: subscKey,
+          routeTypeKey: args.routeTypeKey,
+          subscribed: args.subscribe,
+          settled: [],
+          open: []
+        }
+
+        seed.subscription.push(subsc)
       }
 
-      seed.subscription[args.routeTypeKey][args.trader].subscribed = args.subscribe
+      
+
+      subsc.subscribed = args.subscribe
 
       return seed
     },
@@ -368,25 +395,7 @@ export interface IPuppetProcess extends IGmxProcessSeed {
 
 }
 
-const puppetSeedData: IPuppetProcess = {
-  ...gmxSeedData,
 
-  mirrorPositionRequest: {},
-  mirrorPositionSlot: {},
-  // mirrorPositionsSettled: {},
-}
-
-
-// export const puppetProcess = defineProcess(
-//   {
-//     startBlock: 113108778n,
-//     chainId: arbitrum.id,
-//     genesisSeed: puppetSeedData,
-//     parentScope: rootStoreScope,
-//     queryBlockSegmentLimit: 100000n,
-//   },
-
-// )
 
 function storeCandle(seed: IGmxProcessSeed, token: viem.Address, interval: IntervalTime, price: bigint) {
   const id = getIntervalIdentifier(token, interval)
@@ -410,15 +419,14 @@ function storeCandle(seed: IGmxProcessSeed, token: viem.Address, interval: Inter
   }
 }
 
-export function createPositionSlot( transactionHash: viem.Hex, openTimestamp: number, args: IAbstractPositionIdentity & IAbstractPositionKey): IPositionSlot {
+export function createPositionSlot(blockTimestamp: number, transactionHash: viem.Hex, event: IPositionIncrease, requestKey: viem.Hex): IPositionSlot {
   return {
-    // id: args.key,
-    idCount: 0,
-    key: args.key,
-    account: args.account,
-    collateralToken: args.collateralToken,
-    indexToken: args.indexToken,
-    isLong: args.isLong,
+    requestKey,
+    key: event.key,
+    account: event.account,
+    collateralToken: event.collateralToken,
+    indexToken: event.indexToken,
+    isLong: event.isLong,
     averagePrice: 0n,
     collateral: 0n,
     cumulativeCollateral: 0n,
@@ -437,13 +445,22 @@ export function createPositionSlot( transactionHash: viem.Hex, openTimestamp: nu
       updateList: [],
     },
 
-    transactionHash,
-    blockTimestamp: openTimestamp,
+    transactionHash: transactionHash,
+    blockTimestamp: blockTimestamp,
   }
 }
 
-export const trading = replayLatest(multicast(switchMap(params => {
-  return map(seedState => seedState.seed, syncProcess({ ...gmxProcess, publicClient: params.publicClient, endBlock: params.block }))
-}, combineObject({ publicClient, block }))))
+export function createMirrorPositionSlot(blockTimestamp: number, transactionHash: viem.Hex, event: IPositionIncrease, requestKey: viem.Hex, req: IPositionRequest): IPositionMirrorSlot {
+  return {
+    ...req,
+    position: createPositionSlot(blockTimestamp, transactionHash, event, requestKey),
+    __typename: 'PositionMirrorSlot',
+  }
+}
 
-export const latestTokenPrice = (tokenEvent: Stream<viem.Address>) => switchMap(token => map(seed => seed.latestPrice[token], trading), tokenEvent)
+
+
+export const latestTokenPrice = (process: Stream<IGmxProcessSeed>, tokenEvent: Stream<viem.Address>) => {
+  return switchMap(token => map(seed => seed.latestPrice[token], process), tokenEvent)
+}
+

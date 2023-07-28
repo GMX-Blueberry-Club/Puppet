@@ -1,13 +1,10 @@
-import { IAbstractPositionKey, ILogTxType, IPositionSettled, IPositionSlot, ITraderSummary } from "gmx-middleware-utils"
+import { ILogTxType, IPositionSettled, IPositionSlot, ITraderSummary } from "gmx-middleware-utils"
 import * as viem from "viem"
 
 
-export interface IPuppetSubscription extends IAbstractPositionKey {
-  allowance: bigint
-  subscribe: boolean
-}
 
 export interface IMirrorPosition {
+  requestKey: viem.Hex
   puppets: readonly viem.Address[]
   trader: viem.Address
   routeTypeKey: viem.Hex
@@ -22,7 +19,7 @@ export interface IPositionMirrorSlot extends ILogTxType<'PositionMirrorSlot'>, I
   position: IPositionSlot
 }
 
-export interface IPositionMirrorSettled extends ILogTxType<'PositionMirrorSlot'>, IMirrorPosition {
+export interface IPositionMirrorSettled extends ILogTxType<'PositionMirrorSettled'>, IMirrorPosition {
   position: IPositionSettled
 }
 
@@ -32,5 +29,21 @@ export interface IMirrorTraderSummary extends ITraderSummary {
   settledTradeList: IPositionMirrorSettled[]
 }
 
+
+export type ITraderSubscritpion = {
+  trader: viem.Address
+  puppet: viem.Address
+  subscribed: boolean
+  allowance: bigint
+  routeTypeKey: viem.Hex
+  puppetSubscriptionKey: viem.Hex
+}
+
+export type IPuppetSubscritpion = ITraderSubscritpion & {
+  settled: IPositionMirrorSettled[]
+  open: IPositionMirrorSlot[]
+}
+
+export type IAccountToRouteMap<T> = Record<viem.Address, Record<viem.Hex, T>>
 
 
