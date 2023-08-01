@@ -1,5 +1,5 @@
 import { Behavior, combineArray, combineObject, replayLatest } from "@aelea/core"
-import { $Node, INode, MOTION_NO_WOBBLE, NodeComposeFn, component, motion, style } from "@aelea/dom"
+import { $Node, $text, INode, MOTION_NO_WOBBLE, NodeComposeFn, component, motion, style } from "@aelea/dom"
 import { $NumberTicker, $column, $row, observer } from "@aelea/ui-components"
 import { map, multicast, now, scan, skipRepeatsWith, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
@@ -48,27 +48,27 @@ function findClosest<T extends readonly number[]> (arr: T, chosen: number): T[nu
 
 export const $ProfilePerformanceCard = (config: IProfilePerformanceCard) => component((
   [containerDimension, sampleContainerDimension]: Behavior<INode, ResizeObserverEntry[]>,
-
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
 ) => {
 
-  const tradeList = map(seed => {
-    const settled = Object.values(seed.mirrorPositionSettled[config.trader]).flat().filter(pos => pos.trader === config.trader).sort((a, b) => Number(a.position.settledBlockTimestamp) - Number(b.position.settledBlockTimestamp))
-    const open = Object.values(seed.mirrorPositionSlot).filter(pos => pos.trader === config.trader)
+  const processData = map(seed => {
+    const settled = Object.values(seed.mirrorPositionSettled[config.trader]).flat() //.flatMap(t => t.flatMap(t => [...t.position.link.updateList, t.position ]))
+    const open = Object.values(seed.mirrorPositionSlot).filter(pos => pos.trader === config.trader) //.flatMap(t => t.position.link.updateList)
+
     const pricefeed = seed.pricefeed
-    const latestPrice = seed.latestPrice
-    return { settled, open, pricefeed, latestPrice }
+    // const latestPrice = seed.latestPrice
+    return { open, settled, pricefeed }
   }, config.processData)
 
   const pixelsPerBar = config.pixelsPerBar || 5
   const displayColumnCount = map(([container]) => container.contentRect.width / pixelsPerBar, containerDimension)
 
   const historicPnL = multicast(map(params => {
-    const openList = params.allTrades.open
-    const settledList = params.allTrades.settled
+    const openList = params.processData.open
+    const settledList = params.processData.settled
 
-    const startTime = settledList[0].position.blockTimestamp
-    const endtime = openList.length ? unixTimestampNow() : settledList[settledList.length - 1].position.blockTimestamp
+    const startTime = settledList[0].blockTimestamp
+    const endtime = openList.length ? unixTimestampNow() : settledList[settledList.length - 1].blockTimestamp
     const timeRange = endtime - startTime
     const interval = findClosest(PRICEFEED_INTERVAL, timeRange / params.displayColumnCount)
 
@@ -79,13 +79,18 @@ export const $ProfilePerformanceCard = (config: IProfilePerformanceCard) => comp
     }
 
 
-
-    const data =  intervalListFillOrderMap({
-      source: settledList,
+    const data = intervalListFillOrderMap({
+      source: [
+        ...settledList,
+        ...openList,
+        {
+          blockTimestamp: unixTimestampNow()
+        }
+      ],
       // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
       interval,
       seed: initialTick,
-      getTime: x => x.position.blockTimestamp,
+      getTime: x => x.blockTimestamp,
       fillMap: (prev, next) => {
         // const time = next.blockTimestamp
         // if (next.__typename === 'UpdatePosition') {
@@ -100,8 +105,20 @@ export const $ProfilePerformanceCard = (config: IProfilePerformanceCard) => comp
         //   return { ...prev, pnl, pnlPercentage, time, realisedPnl, size, collateral, averagePrice }
         // }
 
+
+        if (!('position' in next)) {
+          return prev
+        }
         
         const value = prev.value + formatFixed(next.position.realisedPnl, 30)
+
+        // const seedValue = data[data.length - 1].value
+        // const nextValue = params.allTrades.open.reduce((seed, pos) => {
+        //   const pnl = getSlotNetPnL(pos.position, params.allTrades.latestPrice[pos.position.indexToken])
+        //   return seed + formatFixed(pnl, 30)
+        // }, 0)
+        // const value = seedValue + nextValue
+        // const time = unixTimestampNow()
         // const pnlPercentage = getDeltaPercentage(pnl, prev.collateral)
         
 
@@ -109,22 +126,11 @@ export const $ProfilePerformanceCard = (config: IProfilePerformanceCard) => comp
 
       }
     })
-
-
-    if (openList.length) {
-      const seedValue = data[data.length - 1].value
-      const nextValue = params.allTrades.open.reduce((seed, pos) => {
-        const pnl = getSlotNetPnL(pos.position, params.allTrades.latestPrice[pos.position.indexToken])
-        return seed + formatFixed(pnl, 30)
-      }, 0)
-      const value = seedValue + nextValue
-      const time = unixTimestampNow()
-      data.push({ time, value })
-    }
+    
 
 
     return { data, interval }
-  }, combineObject({ displayColumnCount, allTrades: tradeList })))
+  }, combineObject({ displayColumnCount, processData })))
 
 
   const $container = config.$container || $column(style({ height: '80px', minWidth: '100px' }))
@@ -152,12 +158,12 @@ export const $ProfilePerformanceCard = (config: IProfilePerformanceCard) => comp
   return [
 
     $container(sampleContainerDimension(observer.resize()))(
-      $row(style({ position: 'absolute', inset: `5px 0 auto`, alignItems: 'center', placeContent: 'center' }))(
+      $row(style({ position: 'absolute', placeContent: 'center',  top: '10px', alignSelf: 'center', zIndex: 11, alignItems: 'center', placeSelf: 'center' }))(
         $column(style({ alignItems: 'center' }))(
           $NumberTicker({
             textStyle: {
               fontSize: '1.75rem',
-              // fontWeight: 'bold',
+              fontWeight: '900',
             },
             // background: `radial-gradient(${colorAlpha(invertColor(pallete.message), .7)} 9%, transparent 63%)`,
             value$: map(hoverValue => {
@@ -168,7 +174,7 @@ export const $ProfilePerformanceCard = (config: IProfilePerformanceCard) => comp
             incrementColor: pallete.positive,
             decrementColor: pallete.negative
           }),
-          $infoTooltipLabel('The total combined settled and open trades', 'PnL')
+          $infoTooltipLabel('The total combined settled and open trades', $text(style({ fontSize: '.85rem' }))('PnL'))
         )
       ),
       switchLatest(

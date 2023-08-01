@@ -545,7 +545,7 @@ export const $Trade = (config: ITradeComponent) => component((
   return [
     $node(
       style({
-        display: 'flex', fontSize: '1rem',
+        display: 'flex',
         ...screenUtils.isDesktopScreen
           ? { flexDirection: 'row-reverse', gap: '45px' }
           : { flexDirection: 'column' }
@@ -633,7 +633,7 @@ export const $Trade = (config: ITradeComponent) => component((
             //   ? style({ height: '500px' })
             //   : style({ height: '500px' })
           )(
-            $row(layoutSheet.spacing, style({ fontSize: '.75rem', zIndex: 5, margin: '8px', alignSelf: 'flex-start', placeContent: 'center', alignItems: 'center' }))(
+            $row(layoutSheet.spacing, style({ fontSize: '.85rem', zIndex: 5, margin: '8px', alignSelf: 'flex-start', placeContent: 'center', alignItems: 'center' }))(
               screenUtils.isDesktopScreen
                 ? $ButtonToggle({
                   selected: chartInterval,
@@ -669,7 +669,7 @@ export const $Trade = (config: ITradeComponent) => component((
                     $$option: map((option) => {
                       const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
 
-                      return $text(style({ fontSize: '.75rem' }))(timeframeLabel)
+                      return $text(style({ fontSize: '.85rem' }))(timeframeLabel)
                     }),
                     list: [
                       GMX.TIME_INTERVAL_MAP.MIN5,
@@ -719,8 +719,7 @@ export const $Trade = (config: ITradeComponent) => component((
                     style({
                       backgroundColor: pallete.background,
                       transition: 'border-color .15s ease-in-out',
-                      fontSize: '.75rem',
-                      fontWeight: 'bold',
+                      fontSize: '.85rem',
                       padding: '6px 8px',
                       borderRadius: '30px',
                     })
@@ -902,7 +901,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
               if (!params.activeTrade.trade) {
                 return $column(layoutSheet.spacingSmall, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
-                  $text(style({ fontSize: '1.5em' }))('Trade History'),
+                  $text(style({ fontSize: '1.5rem' }))('Trade History'),
                   $text(style({ color: pallete.foreground }))(
                     `No active ${route} position`
                   )
@@ -910,7 +909,7 @@ export const $Trade = (config: ITradeComponent) => component((
               }
 
 
-              const initalList = params.activeTrade ? [...params.activeTrade.trade.link.increaseList, ...params.activeTrade.trade.link.decreaseList] : []
+              const initalList = params.activeTrade ? [...params.activeTrade.trade.increaseList, ...params.activeTrade.trade.link.decreaseList] : []
 
               return $CardTable({
                 // $rowContainer: screenUtils.isDesktopScreen
@@ -937,7 +936,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
                       const timestamp = isKeeperReq ? unixTimestampNow() : req.blockTimestamp
 
-                      return $column(layoutSheet.spacingTiny, style({ fontSize: '.75rem' }))(
+                      return $column(layoutSheet.spacingTiny, style({ fontSize: '.85rem' }))(
                         $text(timeSince(timestamp) + ' ago'),
                         $text(readableDate(timestamp)),
                       )

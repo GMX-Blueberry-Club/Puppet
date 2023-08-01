@@ -152,31 +152,35 @@ export const gmxProcess = defineProcess(
       positionSlot.position.requestKey = mirrorPositionReq.routeTypeKey
       positionSlot.position.cumulativeCollateral += args.collateralDelta
       positionSlot.position.cumulativeSize += args.sizeDelta
-      positionSlot.position.cumulativeFee += args.fee
-      positionSlot.position.link.increaseList.push({
-        ...value.args,
-        blockTimestamp: seed.approximatedTimestamp,
-        transactionHash: value.transactionHash,
-        __typename: 'IncreasePosition'
-      })
+      positionSlot.position.cumulativeFee += args.fee * 2n
+      // positionSlot.position.link.increaseList.push({
+      //   ...value.args,
+      //   blockTimestamp: seed.approximatedTimestamp,
+      //   transactionHash: value.transactionHash,
+      //   __typename: 'IncreasePosition'
+      // })
 
 
       return seed
     },
   },
   {
-    source: gmxLog.decreaseEvents,
+    source: puppetLog.shareIncrease,
     step(seed, value) {
       const args = value.args
-      const positionSlot = seed.mirrorPositionSlot[args.key]
+      const positionSlot = seed.mirrorPositionSlot[args.positionKey]
 
       if (!positionSlot) {
         return seed
         // throw new Error('position not found')
       }
 
-      positionSlot.position.cumulativeFee += args.fee
-      positionSlot.position.link.decreaseList.push({ ...value.args, blockTimestamp: seed.approximatedTimestamp, transactionHash: value.transactionHash, __typename: 'DecreasePosition' })
+      positionSlot.shares = args.puppetsShares
+      positionSlot.traderShare = args.traderShares
+      positionSlot.shareSupply = args.totalSupply
+
+      // positionSlot.position.cumulativeFee += args.fee
+      // positionSlot.position.link.decreaseList.push({ ...value.args, blockTimestamp: seed.approximatedTimestamp, transactionHash: value.transactionHash, __typename: 'DecreasePosition' })
 
       return seed
     },
@@ -349,6 +353,9 @@ export const gmxProcess = defineProcess(
 
       seed.mirrorPositionRequest[args.positionKey] ??= {
         ...args,
+        shares: [],
+        shareSupply: 0n,
+        traderShare: 0n,
         blockTimestamp: seed.approximatedTimestamp,
         transactionHash: value.transactionHash,
         __typename: 'PositionRequest',
@@ -440,8 +447,8 @@ export function createPositionSlot(blockTimestamp: number, transactionHash: viem
     realisedPnl: 0n,
     __typename: 'PositionSlot',
     link: {
-      decreaseList: [],
-      increaseList: [],
+      // decreaseList: [],
+      // increaseList: [],
       updateList: [],
     },
 

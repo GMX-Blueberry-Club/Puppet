@@ -53,7 +53,7 @@ export const $labeledDivider = (label: string) => {
   return $row(layoutSheet.spacing, style({ placeContent: 'center', alignItems: 'center' }))(
     $column(style({ flex: 1, borderBottom: `1px solid ${pallete.horizon}` }))(),
     $row(layoutSheet.spacingSmall, style({ color: pallete.foreground, alignItems: 'center' }))(
-      $text(style({ fontSize: '.75rem' }))(label),
+      $text(style({ fontSize: '.85rem' }))(label),
       $icon({ $content: $caretDblDown, width: '10px', viewBox: '0 0 32 32', fill: pallete.foreground }),
     ),
     $column(style({ flex: 1, borderBottom: `1px solid ${pallete.horizon}` }))(),
@@ -145,7 +145,7 @@ export const $teamMember = ({ name, title, token }: ITeamMember) => {
     $berryByToken(token),
     $column(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
       $anchor(attr(({ href: `https://twitter.com/${name}` })), style({ fontWeight: 900, textDecoration: 'none', fontSize: '1em' }))($text(`@${name}`)),
-      $text(style({ fontSize: '.75rem', color: pallete.foreground, textAlign: 'center', lineHeight: '1.3' }))(title),
+      $text(style({ fontSize: '.85rem', color: pallete.foreground, textAlign: 'center', lineHeight: '1.3' }))(title),
     )
   )
 }

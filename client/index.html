@@ -3,36 +3,43 @@
 <head>
     <base href="/">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+    <!-- <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sono:wght@200;400;800&display=swap" rel="stylesheet"> -->
     <style> 
-        * { box-sizing: border-box; line-height: 1.5em;  }
+
+        :root {
+            --font-familiy: 'VAG Rounded',-apple-system,BlinkMacSystemFont,Trebuchet MS,Roboto,Ubuntu,sans-serif;
+        }
+
+        * { box-sizing: border-box; }
         body { overflow: hidden; margin: 0;  }
         input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { appearance: none; }
         /* Firefox */
         input[type="number"] { appearance: none; }
 
         html, button, input {
-            font-family: -apple-system,BlinkMacSystemFont,Trebuchet MS,Roboto,Ubuntu,sans-serif;
+            font-family: var(--font-familiy);
             text-rendering: geometricPrecision;
             font-size: 100%;
             font-feature-settings: "tnum" on,"lnum" on;
         }
 
-
-        /* @font-face {
-            font-family: '"Victor Mono", monospace';
-            src: url("/assets/font/VictorMono-Regular.woff2") format('woff2');
+        @font-face {
+            font-family: 'VAG Rounded';
+            src: url("/assets/font/VAG-400.woff2") format('woff2');
             font-weight: 400;
             font-style: normal;
             font-display: swap
         }
 
         @font-face {
-            font-family: '"Victor Mono", monospace';
-            src: url("/assets/font/VictorMono-Bold.woff2") format('woff2');
-            font-weight: 700;
+            font-family: 'VAG Rounded';
+            src: url("/assets/font/VAG-900.woff2") format('woff2');
+            font-weight: 900;
             font-style: bold;
             font-display: swap
-        } */
+        }
 
 
 

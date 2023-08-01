@@ -6,7 +6,10 @@ import * as viem from "viem"
 export interface IMirrorPosition {
   requestKey: viem.Hex
   puppets: readonly viem.Address[]
+  shares: readonly bigint[]
+  traderShare: bigint
   trader: viem.Address
+  shareSupply: bigint
   routeTypeKey: viem.Hex
   positionKey: viem.Hex
   route: viem.Address

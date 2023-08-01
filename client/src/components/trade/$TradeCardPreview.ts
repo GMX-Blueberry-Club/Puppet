@@ -134,7 +134,7 @@ export const $TradeCardPreview = ({
                   }),
                   $text(readableUSD(trade.averagePrice))
                 ),
-                $row(layoutSheet.spacingSmall, style({ color: isSettled ? '' : pallete.indeterminate, fontSize: '.75rem' }))(
+                $row(layoutSheet.spacingSmall, style({ color: isSettled ? '' : pallete.indeterminate, fontSize: '.85rem' }))(
                   $text(tradeTitle(trade)),
                   $row(style({ gap: '3px', alignItems: 'baseline' }))(
                     $icon({
@@ -164,7 +164,7 @@ export const $TradeCardPreview = ({
             : $column(layoutSheet.spacingTiny, style({ textAlign: 'center' }))(
               $text(readableUSD(trade.size)),
               $seperator,
-              style({ textAlign: 'center', fontSize: '.75rem' }, $text(style({ fontWeight: 'bold' }))(`${readableNumber(bnDiv(trade.size, trade.collateral))}x`)),
+              style({ textAlign: 'center', fontSize: '.85rem' }, $text(style({ fontWeight: 'bold' }))(`${readableNumber(bnDiv(trade.size, trade.collateral))}x`)),
             ),
 
 
@@ -195,7 +195,7 @@ export const $TradeCardPreview = ({
                 })
               )
               : $text(tickerStyle, styleBehavior(map(pnl => ({ color: pnl > 0 ? pallete.positive : pallete.negative }), chartRealisedPnl)))(map(O(Math.floor, x => `${x > 0 ? '+' : ''}` + x.toLocaleString()), chartRealisedPnl)),
-            $text(style({ fontSize: '.75rem', color: pallete.foreground }))('$'),
+            $text(style({ fontSize: '.85rem', color: pallete.foreground }))('$'),
           ),
           // $liquidationSeparator(liqPercentage),
           $row(style({ fontSize: '1.75rem', alignItems: 'baseline' }))(

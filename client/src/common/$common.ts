@@ -1,46 +1,42 @@
-import { combineObject, isStream, O } from "@aelea/core"
+import { isStream, O, Tether } from "@aelea/core"
 import { $Node, $text, style, styleBehavior, styleInline } from "@aelea/dom"
 import { $column, $icon, $row, $seperator, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { constant, empty, map, now, skipRepeats } from "@most/core"
+import { map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
-import * as GMX from "gmx-middleware-const"
-import { $bear, $bull, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
+import { $bear, $bull, $Link, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
 import {
   bnDiv,
   div, formatBps,
-  formatFixed,
-  getFundingFee, getMappedValue, getMarginFees, getNextLiquidationPrice, getPnL,
-  getTokenAmount,
+  getFundingFee,
+  getNextLiquidationPrice, getPnL,
   getTokenDescription,
   IAbstractRouteIdentity,
   IPosition, IPositionSettled, IPositionSlot,
   isPositionSettled,
   leverageLabel,
   liquidationWeight,
-  readableFixedUSD30,
-  readableUnitAmount,
-  switchMap
+  readableFixedUSD30
 } from "gmx-middleware-utils"
-import { $seperator2 } from "../pages/common"
+import { getPropotion, IPositionMirrorSettled, IPositionMirrorSlot } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { getRouteTypeKey, getPuppetSubscriptionKey } from "puppet-middleware-const"
-import { IMirrorTraderSummary, ITraderSubscritpion } from "puppet-middleware-utils"
-import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
-import { config } from "../functions/netlifyHandlers"
-import { wallet } from "../wallet/walletLink"
+import { $discoverAvatar, $discoverIdentityDisplay } from "../components/$AccountProfile"
+import { $defaultBerry } from "../components/$DisplayBerry"
+import { IProfileActiveTab } from "../pages/$Profile"
+import { $seperator2 } from "../pages/common"
+import { Route } from "@aelea/router"
 
 
 export const $sizeDisplay = (size: bigint, collateral: bigint) => {
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
     $text(readableFixedUSD30(size)),   
     $seperator2,
-    $text(style({ fontWeight: 'bold', fontSize: '.75rem' }))(`${Math.round(formatBps(div(size, collateral)))}x`),
+    $text(style({ fontWeight: 'bold', fontSize: '.85rem' }))(`${Math.round(formatBps(div(size, collateral)))}x`),
   )
 }
 
 export const $entry = (pos: IPosition) => {
-  return $column(layoutSheet.spacingTiny, style({ alignItems: 'center', placeContent: 'center', fontSize: '.75rem' }))(
+  return $column(layoutSheet.spacingTiny, style({ alignItems: 'center', placeContent: 'center', fontSize: '.85rem' }))(
     $row(
       $icon({
         svgOps: style({ borderRadius: '50%', padding: '4px', marginRight: '-10px', zIndex: 0, alignItems: 'center', fill: pallete.message, backgroundColor: pallete.horizon }),
@@ -63,11 +59,10 @@ export const $route = (pos: IAbstractRouteIdentity, size = '28px') => {
 }
 
 export const $settledSizeDisplay = (pos: IPositionSettled | IPositionSlot) => {
-
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
     $text(readableFixedUSD30(pos.maxSize)),
     $seperator2,
-    $row(layoutSheet.spacingSmall, style({ fontSize: '.75rem', placeContent: 'center' }))(
+    $row(layoutSheet.spacingSmall, style({ fontSize: '.85rem', placeContent: 'center' }))(
       $leverage(pos.maxSize, pos.maxCollateral),
       $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
         $icon({
@@ -79,6 +74,27 @@ export const $settledSizeDisplay = (pos: IPositionSettled | IPositionSlot) => {
         $text(readableFixedUSD30(pos.averagePrice)),
       ),
     )
+  )
+}
+
+
+export const $traderDisplay = (route: Route ,pos: IPositionMirrorSlot | IPositionMirrorSettled, changeRoute: Tether<string, string>) => {
+  return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+    // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
+    $Link({
+      $content: $discoverIdentityDisplay({
+        address: pos.trader,
+        $profileContainer: $defaultBerry(style({ width: '50px' }))
+      }),
+      route: route.create({ fragment: 'fefwef' }),
+      url: `/app/profile/${pos.trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
+    })({ click: changeRoute() }),
+    // $anchor(clickAccountBehaviour)(
+    //   $accountPreview({ address: pos.account })
+    // )
+    // style({ zoom: '0.7' })(
+    //   $alert($text('Unclaimed'))
+    // )
   )
 }
 
@@ -106,7 +122,19 @@ export const $riskLiquidator = (pos: IPositionSlot, markPrice: Stream<bigint>) =
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
     $text(readableFixedUSD30(pos.size)),
     $liquidationSeparator(pos, markPrice),
-    $text(style({ fontSize: '.75rem', fontWeight: 'bold' }))(leverageLabel(div(pos.size, pos.collateral))),
+    $text(style({ fontSize: '.85rem', fontWeight: 'bold' }))(leverageLabel(div(pos.size, pos.collateral))),
+  )
+}
+
+export const $riskLiquidatorShare = (mp: IPositionMirrorSlot | IPositionMirrorSettled, share: bigint, markPrice: Stream<bigint>) => {
+  const propSize = getPropotion(mp.position.size, mp.shareSupply, share)
+  const position = mp.position
+  const isSettled = isPositionSettled(position)
+
+  return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
+    $text(readableFixedUSD30(propSize)),
+    isSettled ? $seperator2 : $liquidationSeparator(position, markPrice),
+    $text(style({ fontSize: '.85rem', fontWeight: 'bold' }))(leverageLabel(div(mp.position.size, mp.position.collateral))),
   )
 }
 
@@ -117,13 +145,15 @@ export const $puppets = (puppets: readonly viem.Address[], $content: $Node) => {
   // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
                 
   return $row(layoutSheet.spacingSmall, style({ }))(
-    $text(String(puppets.length)),
+    ...puppets.map(address => {
+      return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minWidth: '30px', maxWidth: '30px' })) })
+    }),
     $content
   )
 }
 
 export const $leverage = (size: bigint, collateral: bigint) =>
-  $text(style({ fontWeight: 'bold' }))(`${Math.round(bnDiv(size, collateral))}x`)
+  $text(style({ fontWeight: '900' }))(`${Math.round(bnDiv(size, collateral))}x`)
 
 export const $pnlValue = (pnl: Stream<bigint> | bigint, colorful = true) => {
   const pnls = isStream(pnl) ? pnl : now(pnl)
@@ -154,7 +184,7 @@ export const $PnlPercentageValue = (pnl: Stream<bigint> | bigint, collateral: bi
   )
 }
 
-export const $TradePnl = (pos: IPositionSlot, positionMarkPrice: Stream<bigint> | bigint, colorful = true) => {
+export const $tradePnl = (pos: IPositionSlot, positionMarkPrice: Stream<bigint> | bigint, colorful = true) => {
 
   const pnl = isStream(positionMarkPrice)
     ? map((markPrice: bigint) => {
@@ -179,7 +209,6 @@ export function $liquidationSeparator(pos: IPositionSlot, markPrice: Stream<bigi
 }
 
 export const $openPositionPnlBreakdown = (pos: IPositionSlot, cumulativeFee: Stream<bigint>) => {
-  const totalMarginFee = [...pos.link.increaseList, ...pos.link.decreaseList].reduce((seed, next) => seed + getMarginFees(next.sizeDelta), 0n)
 
 
   return $column(layoutSheet.spacing)(
@@ -192,7 +221,7 @@ export const $openPositionPnlBreakdown = (pos: IPositionSlot, cumulativeFee: Str
           const fee = getFundingFee(entryFundingRate, cumFee, pos.size)
           const realisedLoss = pos.realisedPnl < 0n ? -pos.realisedPnl : 0n
 
-          return readableFixedUSD30(pos.collateral + fee + realisedLoss + totalMarginFee)
+          return readableFixedUSD30(pos.collateral + fee + realisedLoss + pos.cumulativeFee)
         }, cumulativeFee))
       )
     ),
@@ -200,7 +229,7 @@ export const $openPositionPnlBreakdown = (pos: IPositionSlot, cumulativeFee: Str
 
       $row(layoutSheet.spacingTiny)(
         $text(style({ color: pallete.foreground, flex: 1 }))('Margin Fee'),
-        $pnlValue(-totalMarginFee)
+        $pnlValue(-pos.cumulativeFee)
       ),
       $row(layoutSheet.spacingTiny)(
         $text(style({ color: pallete.foreground, flex: 1 }))('Borrow Fee'),

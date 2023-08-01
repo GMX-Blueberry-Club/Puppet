@@ -33,7 +33,7 @@ export const $defaultButtonSecondary = $defaultButtonCore(
   style({ fontSize: '.85em' })
 )
 
-export const defaultMiniButtonStyle = style({ alignSelf: 'center', padding: '6px 10px', fontSize: '.75rem' })
+export const defaultMiniButtonStyle = style({ alignSelf: 'center', padding: '6px 10px', fontSize: '.85rem' })
 export const $defaultMiniButtonSecondary = $defaultButtonSecondary(defaultMiniButtonStyle)
 
 

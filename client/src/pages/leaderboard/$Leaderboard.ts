@@ -97,7 +97,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
 
       $column(style({ flex: 1 }))(
-        $card(style({ padding: "12px", gap: 0, borderRadius: '0' }))(
+        $card(style({ gap: 0, borderRadius: '0' }))(
      
           router.match(topOpenRoute)(
             $TopOpen({ ...config })({

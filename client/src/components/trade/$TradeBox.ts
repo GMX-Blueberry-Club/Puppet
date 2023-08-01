@@ -536,7 +536,7 @@ export const $TradeBox = (config: ITradeBox) => component((
 
 
       //   // $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-      //   //   style({ padding: '2px', fontSize: '.75rem' })(
+      //   //   style({ padding: '2px', fontSize: '.85rem' })(
       //   //     $ButtonSecondary({
       //   //       $content: $icon({ $content: $xCross, width: '24px', svgOps: style({ padding: '4px' }), viewBox: '0 0 32 32' })
       //   //     })({
@@ -682,7 +682,7 @@ export const $TradeBox = (config: ITradeBox) => component((
               value: {
                 value: config.tradeConfig.isIncrease,
                 $$option: map((isIncrease) => {
-                  return $text(style({ fontSize: '.75rem' }))(isIncrease ? 'Increase' : 'Decrease')
+                  return $text(style({ fontSize: '.85rem' }))(isIncrease ? 'Increase' : 'Decrease')
                 }),
                 list: [
                   true,
@@ -1062,7 +1062,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                 const tokenDesc = getTokenDescription(indexToken)
 
                 return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', flexDirection: 'row-reverse' }))(
-                  $row(layoutSheet.spacingTiny, style({ alignItems: 'center', fontSize: '.75rem' }))(
+                  $row(layoutSheet.spacingTiny, style({ alignItems: 'center', fontSize: '.85rem' }))(
                     $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '14px', viewBox: '0 0 32 32' }),
                     $text(tokenDesc.symbol)
                   ),

@@ -7,7 +7,7 @@ import { Stream } from "@most/types"
 import { $Link, $Table, $infoTooltipLabel, ISortBy } from "gmx-middleware-ui-components"
 import { pagingQuery, switchMap } from "gmx-middleware-utils"
 import { IProfileActiveTab } from "../$Profile"
-import { $TradePnl, $openPositionPnlBreakdown, $sizeDisplay } from "../../common/$common"
+import { $tradePnl, $openPositionPnlBreakdown, $sizeDisplay } from "../../common/$common"
 import { $accountPreview, $discoverIdentityDisplay } from "../../components/$AccountProfile"
 import { IGmxProcessSeed, latestTokenPrice } from "../../data/process/process"
 import { IPositionMirrorSlot } from "puppet-middleware-utils"
@@ -91,7 +91,7 @@ export const $TopOpen = (config: ITopOpen) => component((
             {
               $head: $column(style({ textAlign: 'right' }))(
                 $text('Cum. Size $'),
-                $text(style({ fontSize: '.75rem' }))('Avg. Leverage'),
+                $text(style({ fontSize: '.85rem' }))('Avg. Leverage'),
               ),
               // sortBy: 'size',
               columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
@@ -108,7 +108,7 @@ export const $TopOpen = (config: ITopOpen) => component((
 
                 return $infoTooltipLabel(
                   $openPositionPnlBreakdown(pos.position, now(0n)),
-                  $TradePnl(pos.position, latestTokenPrice(config.processData, now(pos.position.indexToken)))
+                  $tradePnl(pos.position, latestTokenPrice(config.processData, now(pos.position.indexToken)))
                 )
               })
             },

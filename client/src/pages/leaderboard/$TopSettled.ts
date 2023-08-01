@@ -195,7 +195,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
               // return $row(layoutSheet.spacingSmall, w3p?.account.address === pos.account ? style({ background: invertColor(pallete.message), borderRadius: '15px', padding: '6px 12px' }) : style({}), style({ alignItems: 'center', minWidth: 0 }))(
               //   $row(style({ alignItems: 'baseline', zIndex: 5, textAlign: 'center', minWidth: '18px', placeContent: 'center' }))(
-              //     $text(style({ fontSize: '.75rem' }))(`${pos.rank}`),
+              //     $text(style({ fontSize: '.85rem' }))(`${pos.rank}`),
               //   ),
               //   $Link({
               //     $content: $profilePreview({ profile: pos.profile, $container }),
@@ -242,7 +242,7 @@ export const $TopSettled = (config: ITopSettled) => component((
           {
             $head: $column(style({ textAlign: 'right' }))(
               $text('Cum. Size $'),
-              $text(style({ fontSize: '.75rem' }))('Avg. Leverage'),
+              $text(style({ fontSize: '.85rem' }))('Avg. Leverage'),
             ),
             sortBy: 'size',
             columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
@@ -262,7 +262,7 @@ export const $TopSettled = (config: ITopSettled) => component((
           {
             $head: $column(style({ textAlign: 'right' }))(
               $text('PnL $'),
-              $text(style({ fontSize: '.75rem' }))('Return %'),
+              $text(style({ fontSize: '.85rem' }))('Return %'),
             ),
             sortBy: 'pnl',
             columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
@@ -271,7 +271,7 @@ export const $TopSettled = (config: ITopSettled) => component((
               return $column(style({ gap: '3px', textAlign: 'right' }))(
                 $pnlValue(pos.pnl),
                 $seperator2,
-                $text(style({ fontSize: '.75rem' }))(readableFixedBsp(div(pos.pnl, pos.collateral))),
+                $text(style({ fontSize: '.85rem' }))(readableFixedBsp(div(pos.pnl, pos.collateral))),
               )
             })
           },

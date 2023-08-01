@@ -1,8 +1,8 @@
 import { Behavior, combineObject, O, Op } from "@aelea/core"
 import { $node, $Node, $svg, attr, component, INode, NodeComposeFn, nodeEvent, style } from '@aelea/dom'
-import { $column, $icon, $row, designSheet, layoutSheet, screenUtils } from "@aelea/ui-components"
+import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { constant, empty, map, never, now, recoverWith, snapshot, switchLatest } from "@most/core"
+import { constant, empty, map, now, snapshot, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { $QuantumScroll, IScrollPagable, QuantumScroll, ScrollRequest } from "./$QuantumScroll.js"
 
@@ -59,11 +59,11 @@ export const $defaultTableCell = $row(
 )
 
 export const $defaultTableHeaderCell = $defaultTableCell(
-  style({ fontSize: '1rem', alignItems: 'center', padding: '12px 0', color: pallete.foreground, })
+  style({  alignItems: 'center', color: pallete.foreground, })
 )
 export const $defaultTableRowContainer = screenUtils.isDesktopScreen
-  ? $node(layoutSheet.spacing, style({ padding: `2px 16px`, display: 'grid' }))
-  : $node(layoutSheet.spacingSmall, style({ padding: `2px 10px`, display: 'grid' }))
+  ? $node(layoutSheet.spacing, style({ display: 'grid' }))
+  : $node(layoutSheet.spacingSmall, style({ display: 'grid' }))
 
 
 

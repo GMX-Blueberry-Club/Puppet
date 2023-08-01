@@ -1,6 +1,6 @@
-import { isStream } from "@aelea/core"
-import { $element, $Node, $text, attr, style, styleBehavior, stylePseudo } from "@aelea/dom"
-import { $column, $icon, $row, layoutSheet } from "@aelea/ui-components"
+import { isStream, O, Op } from "@aelea/core"
+import { $element, $Node, $svg, $text, attr, IBranch, style, styleBehavior, stylePseudo } from "@aelea/dom"
+import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { empty, map } from "@most/core"
 import { Stream } from "@most/types"
@@ -24,7 +24,7 @@ export const $anchor = $element('a')(
 
 export const $alertContainer = $row(layoutSheet.spacingSmall, style({
   minWidth: 0, maxWidth: '100%',
-  borderRadius: '100px', alignItems: 'center', fontSize: '.75rem',
+  borderRadius: '100px', alignItems: 'center', fontSize: '.85rem',
   border: `1px dashed ${pallete.negative}`, padding: '8px',
 }))
 
@@ -85,7 +85,7 @@ export const $txHashRef = (txHash: string, chain: CHAIN, label?: $Node) => {
 
 
 
-// $text(style({ fontSize: '.75rem' }))(readableUSD(pos.averagePrice)),
+// $text(style({ fontSize: '.85rem' }))(readableUSD(pos.averagePrice)),
 // $column(style({ marginLeft: '-5px', borderRadius: '50%', padding: '6px', alignItems: 'center', backgroundColor: pallete.horizon }))(
 //   $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
 
@@ -101,7 +101,7 @@ export const $labeledDivider = (label: string) => {
   return $row(layoutSheet.spacing, style({ placeContent: 'center', alignItems: 'center' }))(
     $column(style({ flex: 1, borderBottom: `1px solid ${pallete.horizon}` }))(),
     $row(layoutSheet.spacingSmall, style({ color: pallete.foreground, alignItems: 'center' }))(
-      $text(style({ fontSize: '.75rem' }))(label),
+      $text(style({ fontSize: '.85rem' }))(label),
       $icon({ $content: $caretDblDown, width: '10px', viewBox: '0 0 32 32', fill: pallete.foreground }),
     ),
     $column(style({ flex: 1, borderBottom: `1px solid ${pallete.horizon}` }))(),
@@ -113,7 +113,7 @@ export const $tokenLabel = (token: ITokenDescription, $iconPath: $Node, $label?:
     $icon({ $content: $iconPath, width: '34px', viewBox: '0 0 32 32' }),
     $column(layoutSheet.flex)(
       $text(style({ fontWeight: 'bold' }))(token.symbol),
-      $text(style({ fontSize: '.75rem', color: pallete.foreground }))(token.symbol)
+      $text(style({ fontSize: '.85rem', color: pallete.foreground }))(token.symbol)
     ),
     style({ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }, $label || empty())
   )
@@ -158,5 +158,20 @@ export const $hintNumChange = (config: {
   ),
 )
 
+interface Icon {
+  /**  in pixels */
+  width?: string
+  height?: string
+  viewBox?: string
+  fill?: string
 
+  $content: $Node
+  svgOps?: Op<IBranch<SVGSVGElement>, IBranch<SVGSVGElement>>
+}
+
+export const $icon = ({ $content, width = '24px', viewBox = `0 0 ${parseInt(width)} ${parseInt(width)}`, fill = 'inherit', svgOps = O() }: Icon) => (
+  $svg('svg')(attr({ viewBox, fill }), style({ width, aspectRatio: '1 /1' }), svgOps)(
+    $content
+  )
+)
 

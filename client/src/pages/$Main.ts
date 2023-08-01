@@ -24,7 +24,8 @@ import { $Profile } from "./$Profile"
 import * as viem from 'viem'
 import { $SubscriberDrawer } from "../components/$SubscriberDrawer"
 import { ITraderSubscritpion } from "puppet-middleware-utils"
-
+import { rootStoreScope } from "../rootStore"
+import * as store from "../utils/storage/storeScope"
 
 
 const popStateEvent = eventElementTarget('popstate', window)
@@ -41,9 +42,13 @@ interface Website {
 export const $Main = ({ baseRoute = '' }: Website) => component((
   [routeChanges, linkClickTether]: Behavior<any, string>,
   [subscribeTrader, subscribeTraderTether]: Behavior<ITraderSubscritpion>,
+  [toggleMenu, toggleMenuTether]: Behavior<boolean>,
 
   // [resizeScreen, resizeScreenTether]: Behavior<any, ResizeObserverEntry[]>,
 ) => {
+
+  const tradingStore = store.createStoreScope(rootStoreScope, 'tradeBox' as const)
+  const isMenuOpen = store.replayWrite(tradingStore, true, toggleMenu, 'isLong')
 
   const changes = merge(locationChange, multicast(routeChanges))
   const fragmentsChange = map(() => {
@@ -81,7 +86,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       // backgroundImage: `radial-gradient(570% 71% at 50% 15vh, ${pallete.background} 0px, ${pallete.horizon} 100%)`,
       backgroundColor: pallete.horizon,
       fontSize: '1.15rem',
-      lineHeight: '1.5em',
       minHeight: '100vh',
       fontWeight: 400,
       overflowX: 'hidden',
@@ -134,10 +138,11 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
           $text(map(x => '', processData)),
           switchMap(isMobile => {
             return isMobile
-              ? $MainMenu({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+              ? $MainMenu({ isMenuOpen, parentRoute: appRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
                 routeChange: linkClickTether(),
+                toggleMenu: toggleMenuTether()
               })
-              : $MainMenuMobile({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+              : $MainMenuMobile({ isMenuOpen, parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
                 routeChange: linkClickTether(),
               })
           }, isMobileScreen),
@@ -180,8 +185,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 route: profileRoute,
                 processData
               })({
-                subscribeTreader: subscribeTraderTether()
-                // routeChange: linkClickTether()
+                subscribeTreader: subscribeTraderTether(),
+                changeRoute: linkClickTether()
               }))
             ),
             router.match(tradeRoute)(
@@ -230,9 +235,9 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               $column(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
                 $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
                 $node(),
-                $text(style({ fontSize: '1.5em', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
+                $text(style({ fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
                 $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host + '/app/' + TRADEURL} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
-                $element('ul')(layoutSheet.spacing, style({ lineHeight: '1.5em' }))(
+                $element('ul')(layoutSheet.spacing, style({  }))(
                   $liItem(
                     $text(`I am not a United States person or entity;`),
                   ),

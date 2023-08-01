@@ -104,7 +104,7 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
       mode: CrosshairMode.Magnet,
       horzLine: {
         // visible: false,
-        labelBackgroundColor: pallete.foreground,
+        labelBackgroundColor: pallete.background,
         // labelVisible: false,
         color: pallete.indeterminate,
         width: 1,
@@ -112,7 +112,7 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
       },
       vertLine: {
         color: pallete.indeterminate,
-        labelBackgroundColor: pallete.foreground,
+        labelBackgroundColor: pallete.background,
         width: 1,
         style: LineStyle.Dotted,
       }

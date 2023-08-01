@@ -1,10 +1,10 @@
-import { Behavior, O } from "@aelea/core"
-import { $Branch, $Node, $element, $svg, $text, attr, component, nodeEvent, style } from "@aelea/dom"
-import { $RouterAnchor, Route } from '@aelea/router'
-import {  $column, $icon, $row, layoutSheet } from '@aelea/ui-components'
+import { Behavior, O, combineArray } from "@aelea/core"
+import { $Branch, $Node, $element, $svg, $text, StyleCSS, attr, component, nodeEvent, style, styleBehavior } from "@aelea/dom"
+import { $RouterAnchor, IAnchor, Route } from '@aelea/router'
+import {  $column, $row, layoutSheet } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { CHAIN } from "gmx-middleware-const"
-import { $Link, $anchor, $arrowRight, $caretDblDown, $caretDown, $discord, $gitbook, $github, $instagram, $moreDots, $twitter } from "gmx-middleware-ui-components"
+import { $Link, $anchor, $arrowRight, $caretDblDown, $caretDown, $discord, $gitbook, $github, $icon, $instagram, $moreDots, $twitter } from "gmx-middleware-ui-components"
 import { awaitPromises, empty, map, multicast, snapshot, switchLatest } from '@most/core'
 import { Stream } from "@most/types"
 import { $bagOfCoinsCircle, $fileCheckCircle, $gmxLogo, $puppetLogo } from "../common/$icons"
@@ -22,23 +22,60 @@ interface MainMenu {
   chainList: CHAIN[]
   parentRoute: Route
   showAccount?: boolean
+  isMenuOpen: Stream<boolean>
 }
 
-export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMenu) => component((
+
+
+export const $MainMenu = ({ parentRoute, chainList, isMenuOpen, showAccount = true }: MainMenu) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
   [clickPopoverClaim, clickPopoverClaimTether]: Behavior<any, any>,
   [walletChange, walletChangeTether]: Behavior<any, any>,
-  [toggleMenu, toggleMenuTether]: Behavior<any, any>,
+  [clickToggleMenu, clickToggleMenuTether]: Behavior<any>,
 ) => {
-
 
   const routeChangeMulticast = multicast(routeChange)
 
 
-  const $pageLink = ($iconPath: $Branch<SVGPathElement>, text: string | Stream<string>) => $row(style({ alignItems: 'center', padding: '8px', margin: '8px', cursor: 'pointer' }))(
-    $icon({ $content: $iconPath, width: '26px', svgOps: style({ minWidth: '36px' }), viewBox: '0 0 32 32' }),
-    $text(text)
-  )
+  const $pageLink = (config: Omit<IAnchor, '$anchor'> & { $iconPath: $Branch<SVGPathElement>, text: string | Stream<string> }) => {
+
+
+    
+
+    return component((
+      [click, clickTether]: Behavior<string, string>,
+      [active, containsTether]: Behavior<boolean, boolean>,
+      [focus, focusTether]: Behavior<boolean, boolean>,
+    ) => {
+      const $anchorEl = $anchor(
+        style({ borderRadius: '50px' }),
+        styleBehavior(
+          combineArray((isActive, isFocus): StyleCSS | null => {
+            return isActive ? { backgroundColor: `${pallete.background} !important`, fill: pallete.middleground, cursor: 'default' }
+              : isFocus ? { backgroundColor: `${pallete.background} !important`, fill: pallete.middleground }
+                : null
+          }, active, focus)
+        ),
+        // styleBehavior(map(isDisabled => (isDisabled ?  { pointerEvents: 'none', opacity: .3 } : {}), disabled))
+      )(
+        $row(style({ alignItems: 'center', cursor: 'pointer', borderRadius: '50px' }))(
+          $icon({ $content: config.$iconPath, svgOps: style({ padding: '0px 12px', minWidth: '54px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),
+          $text(style({ padding: '16px 12px' }))(config.text)
+        )
+      )
+
+
+      return [
+        $RouterAnchor({ $anchor: $anchorEl, url: config.url, route: config.route })({
+          click: clickTether(),
+          focus: focusTether(),
+          contains: containsTether()
+        }),
+
+        { click, active, focus }
+      ]
+    }) 
+  }
 
 
   const $circleButtonAnchor = $anchor(
@@ -121,11 +158,18 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
 
   return [
 
-    $column(layoutSheet.spacingBig, style({ backgroundColor: pallete.horizon, zIndex: 1, maxHeight: '100vh', flexShrink: 0, alignItems: 'center', borderRadius: '0 30px 30px', borderRight: `1px solid ${colorAlpha(pallete.foreground, .20)}`, placeContent: 'space-between' }))(
+    $column(
+      styleBehavior(map(isOpen => ({ width: isOpen ? '210px' : '78px' }), isMenuOpen)),
+      layoutSheet.spacingBig,
+      style({
+        transition: 'width .3s ease-in-out', overflow: 'hidden',
+        backgroundColor: pallete.horizon, zIndex: 1, padding: '18px 12px', maxHeight: '100vh', flexShrink: 0,
+        borderRadius: '0 30px 30px', borderRight: `1px solid ${colorAlpha(pallete.foreground, .20)}`, placeContent: 'space-between' })
+    )(
 
       
-      O(toggleMenuTether(nodeEvent('pointerdown')), style({ transform: 'rotate(270deg)', aspectRatio: `1 / 1` }))(
-        $pageLink($caretDown, '')
+      O(clickToggleMenuTether(nodeEvent('pointerdown')), style({ cursor: 'pointer', transform: 'rotate(270deg)', aspectRatio: `1 / 1` }))(
+        $icon({ $content: $caretDown, svgOps: style({ minWidth: '56px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' })
       ),
       // $column(layoutSheet.spacingBig, style({ alignItems: 'center' }))(
       //   $RouterAnchor({
@@ -140,7 +184,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
       //   // $extraMenuPopover,
       // ),
 
-      $column(layoutSheet.spacingBig, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
+      $column(layoutSheet.spacingBig, style({ flex: 1, placeContent: 'center' }))(
 
         $WalletDisplay({
           $container: $column(style({ width: '50px' })),
@@ -149,14 +193,30 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
           routeChange: routeChangeTether(),
         }),
         
-        $Link({ $content: $pageLink($gmxLogo, ''), url: '/app/trade', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
-          // $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', disabled: now(false), route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+        $pageLink({
+          $iconPath: $gmxLogo, 
+          route: parentRoute.create({ fragment: 'trade' }),
+          text: 'Trade',
+          url: '/app/trade',
+        })({
           click: routeChangeTether()
         }),
+        $pageLink({
+          $iconPath: $stackedCoins,
+          route: parentRoute.create({ fragment: 'leaderboard' }).create({ fragment: 'settled' }),
+          url: '/app/leaderboard/settled',
+          text: 'leaderboard',
+        })({
+          click: routeChangeTether()
+        }),
+        // $Link({ $content: , url: '/app/trade', route:  })({
+        //   // $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', disabled: now(false), route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+        //   click: routeChangeTether()
+        // }),
 
-        $Link({ $content: $pageLink($stackedCoins, ''), url: '/app/leaderboard/settled', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
-          click: routeChangeTether()
-        }),
+        // $Link({ $content: $pageLink($stackedCoins, 'Leaderboard'), url: '/app/leaderboard/settled', route:  })({
+        //   click: routeChangeTether()
+        // }),
 
         
 
@@ -177,7 +237,10 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
       )
     ),
 
-    { routeChange: routeChangeMulticast }
+    {
+      routeChange: routeChangeMulticast,
+      toggleMenu: snapshot(isOpen => !isOpen, isMenuOpen, clickToggleMenu)
+    }
   ]
 })
 
@@ -195,7 +258,7 @@ export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: 
     $icon({ $content: $iconPath, width: '36px', svgOps: style({ minWidth: '36px' }), viewBox: '0 0 32 32' }),
     $column(layoutSheet.spacingTiny)(
       $text(label),
-      $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(description)
+      $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(description)
     )
   )
 
@@ -329,7 +392,9 @@ export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: 
       )
     ),
 
-    { routeChange: routeChangeMulticast }
+    {
+      routeChange: routeChangeMulticast,
+    }
   ]
 })
 

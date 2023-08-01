@@ -31,7 +31,7 @@ export const $defaultThumb = $row(
     borderRadius: '50px',
     cursor: 'grab',
     lineHeight: .9,
-    fontSize: '.75rem',
+    fontSize: '.85rem',
     alignItems: 'center',
     placeContent: 'center',
     transition: 'border 250ms ease-in',

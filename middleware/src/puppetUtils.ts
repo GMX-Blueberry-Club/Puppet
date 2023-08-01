@@ -78,3 +78,13 @@ export function leaderboardMirrorTrader(positionMap: IAccountToRouteMap<IPositio
   return tradeListEntries.map(settledTradeList => summariesMirrorTrader(settledTradeList))
 }
 
+
+export function getPropotion(pool: bigint, supply: bigint, amount: bigint): bigint {
+  if (amount == 0n) throw new Error("ZeroAmount")
+
+  if (pool == 0n) {
+    return amount
+  } else {
+    return amount * pool / supply
+  }
+}

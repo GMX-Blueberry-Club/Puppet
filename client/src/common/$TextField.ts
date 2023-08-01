@@ -50,7 +50,7 @@ export const $TextField = (config: TextField) => component((
         config.placeholder ? attr({ placeholder: config.placeholder }, $field): $field,
       ),
       $row(style({ position: 'relative' }))(
-        hint ? $text(style({ fontSize: '.75rem', width: '100%' }))(hint) : empty()
+        hint ? $text(style({ fontSize: '.85rem', width: '100%' }))(hint) : empty()
       )
     ),
 

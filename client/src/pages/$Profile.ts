@@ -14,8 +14,9 @@ import { gmxData } from "../data/process"
 import { IGmxProcessSeed } from "../data/process/process"
 import { connectTrade } from "../logic/trade"
 import * as viem from 'viem'
-import { $TraderProfile } from "../components/$Trader"
+import { $TraderProfile } from "../components/participant/$Trader"
 import { ITraderSubscritpion } from "puppet-middleware-utils"
+import { $PuppetProfile } from "../components/participant/$Puppet"
 
 export enum IProfileActiveTab {
   TRADER = 'Trader',
@@ -31,7 +32,7 @@ const $title = $text(style({ fontWeight: 'bold', fontSize: '1.35em' }))
 
 type IRouteOption = {
   label: string
-  url: string
+  fragment: string
 }
 
 
@@ -55,11 +56,11 @@ export const $Profile = (config: IProfile) => component((
   const options: IRouteOption[] = [
     {
       label: 'Trader',
-      url: '/profile/puppet'
+      fragment: 'trader'
     },
     {
       label: 'Puppet',
-      url: '/profile/trader'
+      fragment: 'puppet'
     }
   ]
 
@@ -91,11 +92,26 @@ export const $Profile = (config: IProfile) => component((
           subscribeTreader: subscribeTreaderTether()
         })
       ),
+      router.match(puppetRoute)(
+        $PuppetProfile({ ...config, address })({
+          // subscribeTreader: subscribeTreaderTether()
+        })
+      ),
       
 
     ),
 
-    { changeRoute, subscribeTreader }
+    {
+      changeRoute: mergeArray([
+        changeRoute,
+        map(option => {
+          const url = `/app/profile/${address}/${option.fragment}`
+          history.pushState({}, '', url)
+          return url
+        }, selectProfileMode)
+      ]),
+      subscribeTreader
+    }
   ]
 })
 

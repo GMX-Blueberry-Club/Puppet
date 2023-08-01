@@ -1,25 +1,21 @@
-import { Behavior, O, combineObject } from "@aelea/core"
+import { Behavior, O } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { constant, empty, map, now } from "@most/core"
+import { pallete } from "@aelea/ui-components-theme"
+import { empty, map, now } from "@most/core"
 import { Stream } from "@most/types"
-import { $Table, $infoLabel, $infoTooltipLabel } from "gmx-middleware-ui-components"
-import { IRequestAccountTradeListApi, formatBps, leverageLabel, readableDate, readableUnitAmount, switchMap, timeSince } from "gmx-middleware-utils"
+import { $Table, $infoTooltipLabel } from "gmx-middleware-ui-components"
+import { IRequestAccountTradeListApi, leverageLabel, readableDate, switchMap, timeSince } from "gmx-middleware-utils"
 import { ITraderSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from 'viem'
-import { $TradePnl, $entry, $openPositionPnlBreakdown, $pnlValue, $puppets, $riskLiquidator, $sizeDisplay } from "../common/$common"
-import { IGmxProcessSeed, latestTokenPrice } from "../data/process/process"
-import { $card, $card2 } from "../elements/$common"
-import { $discoverAvatar, $discoverIdentityDisplay } from "./$AccountProfile"
-import { $defaultBerry } from "./$DisplayBerry"
-import { $ProfilePerformanceCard } from "./trade/$ProfilePerformanceCard"
-import { $seperator2 } from "../pages/common"
-import { $ButtonSecondary, $defaultMiniButtonSecondary } from "./form/$Button"
-import { wallet } from "../wallet/walletLink"
-import { ARBITRUM_ADDRESS } from "gmx-middleware-const"
-import { getRouteTypeKey, getPuppetSubscriptionKey } from "puppet-middleware-const"
+import { $discoverAvatar, $discoverIdentityDisplay } from "../$AccountProfile"
+import { $defaultBerry } from "../$DisplayBerry"
+import { $entry, $openPositionPnlBreakdown, $pnlValue, $puppets, $riskLiquidator, $riskLiquidatorShare, $tradePnl, $traderDisplay } from "../../common/$common"
+import { IGmxProcessSeed, latestTokenPrice } from "../../data/process/process"
+import { $card, $card2 } from "../../elements/$common"
+import { $seperator2 } from "../../pages/common"
+import { $ProfilePerformanceCard } from "../trade/$ProfilePerformanceCard"
 
 
 
@@ -32,21 +28,20 @@ export interface ITraderProfile {
 
 
 
-export const $TraderProfile = (config: ITraderProfile) => component((
+export const $PuppetProfile = (config: ITraderProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [requestAccountTradeList, requestAccountTradeListTether]: Behavior<number, IRequestAccountTradeListApi>,
-
   [subscribeTreader, subscribeTreaderTether]: Behavior<PointerEvent, ITraderSubscritpion>,
 
 ) => {
 
   const openTrades = map(seed => {
-    const newLocal = Object.values(seed.mirrorPositionSlot).filter(pos => pos.trader.toLowerCase() === config.address.toLowerCase())
-    return newLocal
+    const list = seed.subscription.find(s => s.trader)?.open.reverse() || []
+    return list
   }, config.processData)
 
   const settledTrades = map(seed => {
-    const list = Object.values(seed.mirrorPositionSettled[config.address]).flat().reverse()
+    const list = seed.subscription.find(s => s.trader)?.settled.sort((a, b) => b.blockTimestamp - a.blockTimestamp) || []
     return list
   }, config.processData)
 
@@ -62,42 +57,65 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
   const $itemListRow = $row(layoutSheet.spacingBig, style({ placeContent: 'space-between' }))
 
+  const $metricRow = $column(style({ placeContent: 'center', alignItems: 'center' }))
+  const $metricLabel = $row(style({ color: pallete.foreground, letterSpacing: '1px', fontSize: '.85rem' }))
+  const $metricValue = $row(style({ fontWeight: 900, letterSpacing: '1px', fontSize: '1.75rem' }))
+
+
   return [
     $column(layoutSheet.spacingBig, style({ width: '100%', margin: '0 auto', alignItems: 'center' }))(
 
       $row(style({ gap: '45px', alignItems: 'center' }))(
 
         $card2(style({ padding: 0, position: 'relative' }))(
-          $row(layoutSheet.spacing, style({ marginBottom: '-20px', position: 'absolute', bottom: '100%', left: '20px' }))(
-            $discoverIdentityDisplay({
-              address: config.address,
-              $container: $row(
-                style({ minWidth: '120px', })
+          $row(layoutSheet.spacing, style({ marginBottom: '-10px', flex: 1, placeContent: 'space-between', position: 'absolute', bottom: '100%', left: '20px', right: 0 }))(
+            $row(
+              $discoverIdentityDisplay({
+                address: config.address,
+                $container: $row(
+                  style({ minWidth: '120px', })
+                ),
+                $profileContainer: $defaultBerry(style({ width: '100px', }))
+              })
+            ),
+
+            $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end', paddingBottom: '32px' }))(
+              $metricRow(
+                $metricValue(
+                  switchMap(puppets => {
+                    return $row(style({ flex: 1, padding: '2px 0 4px' }))(
+                      ...puppets.map(address => {
+                        return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minWidth: '30px', maxWidth: '30px' })) })
+                      })
+                    )
+                  }, subscribers)
+                ),
+                $metricLabel($text('Puppets')),
               ),
-              $profileContainer: $defaultBerry(style({ width: '100px', }))
-            }),
 
-            // switchMap(params => {
-            //   if (params.wallet === null || params.subscriptionList.find(s => s.trader === pos.account) !== undefined) {
-            //     return empty()
-            //   }
+              // $seperator2,
 
-            //   const routeTypeKey = getRouteTypeKey(ARBITRUM_ADDRESS.NATIVE_TOKEN, ARBITRUM_ADDRESS.NATIVE_TOKEN, true)
-            //   const puppetSubscriptionKey = getPuppetSubscriptionKey(params.wallet.account.address, pos.account, routeTypeKey)
+              $metricRow(
+                $metricValue(
+                  $text(map(seed => {
+                    return `${seed.winCount} / ${seed.lossCount}`
+                  }, summary))
+                ),
+                $metricLabel($text('Win / Loss')),
+              ),
 
-            //   const newLocal: ITraderSubscritpion = {
-            //     trader: pos.account,
-            //     puppet: params.wallet.account.address,
-            //     allowance: 1000n,
-            //     routeTypeKey,
-            //     puppetSubscriptionKey,
-            //     subscribed: params.subscription.find(x => x.indexOf(pos.route) > -1) === undefined,
-            //   }
+              // $seperator2,
 
-            //   return $ButtonSecondary({ $content: $text('Copy'), $container: $defaultMiniButtonSecondary })({
-            //     click: subscribeTreaderTether(constant(newLocal))
-            //   }) 
-            // }, combineObject({ wallet, subscription: config.subscription, subscriptionList: config.subscribeList }))
+              $metricRow(
+                $metricValue(
+                  $text(map(seed => {
+                    return leverageLabel(seed.avgLeverage)
+                  }, summary))
+                ),
+                $metricLabel($text('Avg Leverage')),
+              ),
+            ),
+
           ),
           $ProfilePerformanceCard({
             $container: $column(style({ width: '700px', height: '200px', padding: 0 })),
@@ -106,49 +124,14 @@ export const $TraderProfile = (config: ITraderProfile) => component((
           })({ }),
         ),
 
-        $column(layoutSheet.spacingBig, style({  }))(
-          $itemListRow(
-            $infoLabel('Puppets'),
-            $row(style({ alignItems: 'center' }))(
-              switchMap(puppets => {
-                return $row(style({ flex: 1 }))(
-                  ...puppets.map(address => {
-                    return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minWidth: '30px', maxWidth: '30px' })) })
-                  })
-                )
-              }, subscribers)
-            ),
-          ),
-
-          $seperator2,
-
-          $itemListRow(
-            $infoLabel('Win / Loss'),
-            $text(map(seed => {
-              return `${seed.winCount} / ${seed.lossCount}`
-            }, summary))
-          ),
-
-          $seperator2,
-
-          $itemListRow(
-            $infoLabel(
-              $text('Avg Leverage')
-            ),
-            $row(style({ minHeight: '20px', alignItems: 'center' }))(
-              $text(map(seed => {
-                return leverageLabel(seed.avgLeverage)
-              }, summary))
-            )
-          ),
-        ),
+        
       ),
 
       $node(),
 
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
         $column(
-          $text('Open Positions'),
+          $text(style({ fontSize: '1.25rem', fontWeight: '900', marginBottom: '6px' }))('Open Positions'),
           $Table({
             dataSource: openTrades,
             columns: [
@@ -161,7 +144,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
                   return $column(layoutSheet.spacingTiny)(
                     $text(readableDate(timestamp)),
-                    $text(style({ fontSize: '.75rem' }))(timeSince(timestamp) + ' ago'),
+                    $text(style({ fontSize: '.85rem' }))(timeSince(timestamp) + ' ago'),
                   )
                 })
               },
@@ -173,19 +156,16 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                 })
               },
               {
-                $head: $text('Puppets'),
-                columnOp: O(layoutSheet.spacingTiny, style({ flex: 1 })),
+                $head: $text('Trader'),
+                columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
                 $$body: map((pos) => {
-                  // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
-                  // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
-
-                  return $puppets(pos.puppets, empty())
+                  return $traderDisplay(config.route, pos, changeRouteTether)
                 })
               },
               {
                 $head: $column(style({ textAlign: 'right' }))(
                   $text('Size'),
-                  $text(style({ fontSize: '.75rem' }))('Leverage'),
+                  $text(style({ fontSize: '.85rem' }))('Leverage'),
                 ),
                 columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
                 $$body: map(pos => {
@@ -204,7 +184,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                   return style({ flexDirection: 'row-reverse' })(
                     $infoTooltipLabel(
                       $openPositionPnlBreakdown(pos.position, cumulativeFee),
-                      $TradePnl(pos.position, positionMarkPrice)
+                      $tradePnl(pos.position, positionMarkPrice)
                     )
                   )
                 })
@@ -213,10 +193,10 @@ export const $TraderProfile = (config: ITraderProfile) => component((
           })({}),
         ),
 
-        $node(),
+        $seperator2,
 
         $column(
-          $text('Settled Positions'),
+          $text(style({ fontSize: '1.25rem', fontWeight: '900', marginBottom: '6px' }))('Settled Positions'),
           $Table({
             dataSource: settledTrades,
             columns: [
@@ -229,7 +209,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
                   return $column(layoutSheet.spacingTiny)(
                     $text(readableDate(timestamp)),
-                    $text(style({ fontSize: '.75rem' }))(timeSince(timestamp) + ' ago'),
+                    $text(style({ fontSize: '.85rem' }))(timeSince(timestamp) + ' ago'),
                   )
                 })
               },
@@ -253,11 +233,13 @@ export const $TraderProfile = (config: ITraderProfile) => component((
               {
                 $head: $column(style({ textAlign: 'right' }))(
                   $text('Size'),
-                  $text(style({ fontSize: '.75rem' }))('Leverage'),
+                  $text(style({ fontSize: '.85rem' }))('Leverage'),
                 ),
                 columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
                 $$body: map(pos => {
-                  return $sizeDisplay(pos.position.size, pos.position.collateral)
+                  const positionMarkPrice = latestTokenPrice(config.processData, now(pos.position.indexToken))
+
+                  return $riskLiquidatorShare(pos, pos.traderShare, positionMarkPrice)
                 })
               },
               {
@@ -313,14 +295,14 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
       //         return $column(layoutSheet.spacingTiny)(
       //           // $text(timeSince(timestamp) + ' ago'),
-      //           // $text(style({ fontSize: '.75rem' }))(readableDate(timestamp)),
+      //           // $text(style({ fontSize: '.85rem' }))(readableDate(timestamp)),
       //         )
       //       })
       //     },
       //     {
       //       $head: $column(style({ textAlign: 'right' }))(
       //         $text('Entry'),
-      //         $text(style({ fontSize: '.75rem' }))('Price'),
+      //         $text(style({ fontSize: '.85rem' }))('Price'),
       //       ),
       //       columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
       //       $$body: map((pos) => {
@@ -330,7 +312,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
       //     {
       //       $head: $column(style({ textAlign: 'right' }))(
       //         $text('Max Size'),
-      //         $text(style({ fontSize: '.75rem' }))('Leverage / Liquidation'),
+      //         $text(style({ fontSize: '.85rem' }))('Leverage / Liquidation'),
       //       ),
       //       columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
       //       $$body: map(pos => {
@@ -369,7 +351,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
       
     ),
     {
-      changeRoute, subscribeTreader
+      changeRoute
     }
   ]
 })
