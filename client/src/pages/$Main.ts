@@ -96,7 +96,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   const isMobileScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
 
   const processData = replayLatest(multicast(switchMap(seed => {
-    const refreshThreshold = import.meta.env.MODE === 'development' ? TIME_INTERVAL_MAP.MIN5 : TIME_INTERVAL_MAP.MIN / 6
+    const refreshThreshold = (import.meta as any).env.MODE === 'development' ? TIME_INTERVAL_MAP.MIN5 : TIME_INTERVAL_MAP.MIN / 6
     const timeNow = unixTimestampNow()
 
     if (timeNow - seed.approximatedTimestamp > refreshThreshold) {

@@ -2,9 +2,7 @@ import { Behavior, O, combineArray, combineObject, replayLatest } from "@aelea/c
 import { $node, $text, component, style, styleBehavior } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import {
-  ILogTxType,
   IPositionDecrease, IPositionIncrease,
-  IPositionLink,
   IPositionSlot,
   abs, filterNull,
   formatFixed,
@@ -18,7 +16,7 @@ import {
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, combine, constant, debounce, empty, filter, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, take, zip } from "@most/core"
+import { awaitPromises, combine, constant, debounce, empty, filter, fromPromise, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, take, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
@@ -512,7 +510,7 @@ export const $Trade = (config: ITradeComponent) => component((
       const trade = posList.find(t => t.key === pos.key) || null
 
       if (pos.averagePrice > 0n && trade === null) {
-        const posSlot = createPositionSlot(unixTimestampNow(), '0x0' as const, pos, '0x00')
+        const posSlot = createPositionSlot(unixTimestampNow(), '0x0' as const, pos as any, '0x00')
 
         return [posSlot, ...posList]
       }
@@ -559,9 +557,9 @@ export const $Trade = (config: ITradeComponent) => component((
           : style({ paddingBottom: '24px', flexDirection: 'column-reverse' })
       )(
 
-        filterNull(
-          constant(null, adjustPosition)
-        ) as Stream<any>,
+        // filterNull(
+        //   constant(null, adjustPosition)
+        // ) as Stream<any>,
 
         $column(layoutSheet.spacingSmall)(
           $TradeBox({
@@ -957,31 +955,34 @@ export const $Trade = (config: ITradeComponent) => component((
                         )
                       }
 
-                      const activePositionAdjustment = take(1, filter(ev => {
-                        const key = getPositionKey(ev.args.account, pos.isIncrease ? ev.args.path.slice(-1)[0] : ev.args.path[0], ev.args.indexToken, ev.args.isLong)
-
-                        return key === pos.state.position.key
-                      }, adjustPosition))
-
                       return $row(layoutSheet.spacingSmall)(
-                        $txHashRef(
-                          pos.request.transactionHash, w3p.chain.id,
-                          $text(`${isIncrease ? '↑' : '↓'} ${readableFixedUSD30(pos.acceptablePrice)} ${isIncrease ? '<' : '>'}`)
-                        ),
+                        // switchMap(req => {
+                        //   const activePositionAdjustment = take(1, filter(ev => {
+                        //     const key = getPositionKey(ev.args.account, pos.isIncrease ? ev.args.path.slice(-1)[0] : ev.args.path[0], ev.args.indexToken, ev.args.isLong)
 
-                        switchLatest(mergeArray([
-                          now($spinner),
-                          map(req => {
-                            const isRejected = req.eventName === 'CancelIncreasePosition' // || req.eventName === 'CancelDecreasePosition'
+                        //     return key === getPositionKey(pos.route, pos.collateralToken, pos.indexToken, pos.isLong)
+                        //   }, adjustPosition))
 
-                            const message = $text(`${isRejected ? `✖ ${readableFixedUSD30(req.args.acceptablePrice)}` : `✔ ${readableFixedUSD30(req.args.acceptablePrice)}`}`)
+                        //   return $row(layoutSheet.spacingSmall)(
+                        //     switchLatest(mergeArray([
+                        //       now($spinner),
+                        //       map(req => {
+                        //         const isRejected = req.eventName === 'CancelIncreasePosition' // || req.eventName === 'CancelDecreasePosition'
 
-                            return $requestRow(
-                              $txHashRef(req.transactionHash!, w3p.chain.id, message),
-                              $infoTooltip('transaction was sent, keeper will execute the request, the request will either be executed or rejected'),
-                            )
-                          }, activePositionAdjustment),
-                        ]))
+                        //         const message = $text(`${isRejected ? `✖ ${readableFixedUSD30(req.args.acceptablePrice)}` : `✔ ${readableFixedUSD30(req.args.acceptablePrice)}`}`)
+
+                        //         return $requestRow(
+                        //           $txHashRef(req.transactionHash!, w3p.chain.id, message),
+                        //           $infoTooltip('transaction was sent, keeper will execute the request, the request will either be executed or rejected'),
+                        //         )
+                        //       }, activePositionAdjustment),
+                        //     ])),
+                        //     $txHashRef(
+                        //       req.transactionHash, w3p.chain.id,
+                        //       $text(`${isIncrease ? '↑' : '↓'} ${readableFixedUSD30(pos.acceptablePrice)} ${isIncrease ? '<' : '>'}`)
+                        //     ),
+                        //   ) 
+                        // }, fromPromise(pos.request)),
                       )
 
                     })

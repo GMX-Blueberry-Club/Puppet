@@ -79,23 +79,21 @@ type onlyArray<T> = T extends readonly any[] ? T : never
 export const contractReader = <
   TAddress extends Address,
   TAbi extends viem.Abi,
->(params_: ContractParams<TAbi, TAddress>) =>
-  <TFunctionName extends string, TArgs extends AbiParametersToPrimitiveTypes<ExtractAbiFunction<TAbi, TFunctionName>['inputs']>>(functionName: viem.InferFunctionName<TAbi, TFunctionName, 'view' | 'pure'>, ...args_: onlyArray<TArgs> | onlyArray<StreamInputArray<onlyArray<TArgs>>>): Stream<viem.ReadContractReturnType<TAbi, TFunctionName>> => {
+>(params_: ContractParams<TAbi, TAddress>) => {
+  return <TFunctionName extends string, TArgs extends AbiParametersToPrimitiveTypes<ExtractAbiFunction<TAbi, TFunctionName>['inputs']>>(functionName: viem.InferFunctionName<TAbi, TFunctionName, 'view' | 'pure'>, ...args_: onlyArray<TArgs> | onlyArray<StreamInputArray<onlyArray<TArgs>>>): Stream<wagmi.ReadContractResult<TAbi, TFunctionName>> => {
 
     const resolveArgs: Stream<onlyArray<TArgs>> = isStream(args_[0]) ? combineArray((..._args) => _args, ...args_ as any) : now(args_ as any) as any
 
     return awaitPromises(map(async args => {
-
       try {
         return await wagmi.readContract({ ...params_, functionName, args } as any)
       } catch (error) {
         console.error(error)
         throw error
       }
-
-      
-    }, resolveArgs))
+    }, resolveArgs)) as any
   }
+}
 
 
 export const listenContract = <
@@ -180,7 +178,7 @@ export const wagmiWriteContract = async <
 
   const client = wagmi.getPublicClient()
   const simReq = await wagmi.prepareWriteContract(simParams)
-  const writeResults = await wagmi.writeContract(simReq.request)
+  const writeResults = await wagmi.writeContract(simReq.request as any)
   const recpt = await client.waitForTransactionReceipt(writeResults)
 
   return recpt

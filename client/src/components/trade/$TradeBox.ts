@@ -133,11 +133,12 @@ interface ITradeBox extends ITradeBoxParams {
 
 export type IRequestTradeParams = ITradeConfig & { wallet: IWalletClient }
 export type IRequestTrade = IRequestTradeParams & {
-  executionFee: bigint,
-  indexTokenPrice: bigint,
-  acceptablePrice: bigint,
-  swapRoute: string[],
-  request: Promise<viem.TransactionReceipt>,
+  // key: viem.Hex
+  executionFee: bigint
+  indexTokenPrice: bigint
+  acceptablePrice: bigint
+  swapRoute: string[]
+  request: Promise<viem.TransactionReceipt>
 }
 
 const BOX_SPACING = 20

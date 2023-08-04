@@ -8,11 +8,10 @@ import {
   getNetwork, getPublicClient, getWalletClient, getWebSocketPublicClient, watchAccount, watchBlockNumber, watchNetwork
 } from '@wagmi/core'
 import { WalletConnectConnector } from '@wagmi/core/connectors/walletConnect'
-import { alchemyProvider } from "@wagmi/core/providers/alchemy"
 import { EthereumClient, w3mConnectors, w3mProvider } from '@web3modal/ethereum'
 import { Web3Modal } from '@web3modal/html'
 import { switchMap } from "gmx-middleware-utils"
-import { PublicClient, Transport, WatchAssetParameters } from "viem"
+import { PublicClient, Transport } from "viem"
 import { arbitrum, avalanche } from "viem/chains"
 
 const chains = [arbitrum, avalanche]
@@ -88,6 +87,7 @@ export const networkChange = fromCallback<GetNetworkResult>(watchNetwork)
 export const accountChange = fromCallback<GetAccountResult>(watchAccount)
 
 
+const networkQuery = map(() => getNetwork(), now(null))
 export const chain: Stream<ISupportedChain> = map(getNetworkResult => {
   if (!getNetworkResult) {
     throw new Error('network is null')
@@ -97,7 +97,7 @@ export const chain: Stream<ISupportedChain> = map(getNetworkResult => {
 
   return defChain
   // return mergeArray([networkChange, now(defChain)])
-}, map(() => getNetwork(), now(null)))
+}, networkQuery)
 
 export const account = mergeArray([
   map(() => getAccount(), now(null)),

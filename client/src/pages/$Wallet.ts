@@ -51,10 +51,10 @@ export const $Wallet = (config: IProfile) => component((
 
   const routeTrades = replayLatest(multicast(map(params => {
     if (!(config.wallet.account.address in params.processData.subscription)) {
-      return {}
+      return []
     }
 
-    return params.processData.subscription[config.wallet.account.address]
+    return params.processData.subscription.filter(s => s.puppet === config.wallet.account.address) || []
   }, combineObject({ processData: config.processData }))))
 
 
@@ -92,15 +92,11 @@ export const $Wallet = (config: IProfile) => component((
 
 
 
-      switchMap(tradeRoute => {
-        const entries = Object.entries(tradeRoute) as [viem.Hex, IPuppetSubscritpion][]
+      switchMap(subscList => {
 
         return $column(
-          ...entries.map(([route, sub]) => {
-
-            const routeType = PUPPET.ROUTE_TYPE_DESCRIPTIN[route]
-            const indexTokenDescription = GMX.TOKEN_ADDRESS_DESCRIPTION[routeType.indexToken]
-
+          ...subscList.map((subsc) => {
+            const routeType = PUPPET.ROUTE_TYPE_DESCRIPTIN[subsc.routeTypeKey]
 
             return $text(routeType.indexToken)
           })

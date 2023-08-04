@@ -12,7 +12,7 @@ import { gmxLog } from "../data/scope"
 import { $card, $iconCircular } from "../elements/$common"
 import { syncProcess } from "../utils/indexer/processor"
 import * as indexDb from "../utils/storage/indexDB"
-import { blockChange } from "../wallet/walletLink"
+import { blockChange, publicClient } from "../wallet/walletLink"
 import { $seperator2 } from "./common"
 
 
@@ -27,8 +27,8 @@ export const $Admin = component((
   const logList = now(Object.values(gmxLog))
 
   const changedSyncedProcess = switchLatest(snapshot((params) => {
-    return syncProcess({ ...gmxProcess, endBlock: params.changeStartBlock })
-  }, combineObject({ changeStartBlock }), clickSyncProcess))
+    return syncProcess({ ...gmxProcess, endBlock: params.changeStartBlock, publicClient: params.publicClient })
+  }, combineObject({ changeStartBlock, publicClient }), clickSyncProcess))
 
   const syncedProcess = replayLatest(multicast(mergeArray([
     take(1, gmxProcess.state),

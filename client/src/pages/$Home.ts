@@ -1,16 +1,12 @@
 import { Behavior } from "@aelea/core"
-import { $element, $node, $text, component, eventElementTarget, style, styleBehavior, styleInline } from "@aelea/dom"
+import { $element, $node, $text, component, eventElementTarget, style, styleInline } from "@aelea/dom"
 import { Route } from "@aelea/router"
 import { $column, $icon, $row, designSheet, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { $alert, $anchor, $Link } from "gmx-middleware-ui-components"
-import {
-  ITreasuryStore
-} from "@gambitdao/gbc-middleware"
-import { $ButtonSecondary } from "../components/form/$Button"
-import { BrowserStore } from "../logic/store"
 import { pallete } from "@aelea/ui-components-theme"
-import { $gmxLogo, $puppetLogo } from "../common/$icons"
 import { empty, map } from "@most/core"
+import { $Link, $anchor } from "gmx-middleware-ui-components"
+import { $gmxLogo, $puppetLogo } from "../common/$icons"
+import { $ButtonSecondary } from "../components/form/$Button"
 
 
 
