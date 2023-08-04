@@ -2,13 +2,13 @@
   "name": "puppet",
   "license": "MIT",
   "scripts": {
-    "codegen": "pnpm run clean && graph codegen",
-    "build": "graph build",
-    "clean": "graph clean",
-    "deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/ gmx-house",
-    "create-local": "graph create --node http://localhost:8020/ gmx-house",
-    "remove-local": "graph remove --node http://localhost:8020/ gmx-house",
-    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 gmx-house"
+    "graph-codegen": "pnpm run clean && graph codegen",
+    "graph-build": "graph build",
+    "graph-clean": "graph clean",
+    "graph-deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/ gmx-house",
+    "graph-create-local": "graph create --node http://localhost:8020/ gmx-house",
+    "graph-remove-local": "graph remove --node http://localhost:8020/ gmx-house",
+    "graph-deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 gmx-house"
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "^0.51.2",
