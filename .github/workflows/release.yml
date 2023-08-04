@@ -16,7 +16,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.SUBMODULES_ACCESS }}
-          submodules: true
+          # submodules: true
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
