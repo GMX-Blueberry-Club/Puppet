@@ -1,10 +1,6 @@
 [submodule "contracts-submodule"]
 	path = contracts-submodule
-	url = https://github.com/johnnyonline/puppet-finance.git
-	branch = main
-[submodule "contracts-sm"]
-	path = contracts-sm
-	url = https://github.com/johnnyonline/puppet-finance.git
+	url = https://github.com/GMX-Blueberry-Club/puppet-contracts.git
 [submodule "gmx-middleware"]
 	path = gmx-middleware
-	url = https://github.com/nissoh/gmx-middleware
+	url = https://github.com/nissoh/gmx-middleware.git
