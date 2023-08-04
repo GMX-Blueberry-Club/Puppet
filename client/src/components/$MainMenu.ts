@@ -12,7 +12,7 @@ import { dark, light } from "../common/theme"
 import { $Picker } from "./$ThemePicker"
 import { $stackedCoins } from "../elements/$icons"
 import { $Popover } from "./$Popover"
-import { $WalletDisplay } from "./$WalletDisplay"
+import { $WalletProfileDisplay } from "./$WalletDisplay"
 import { $ButtonSecondary } from "./form/$Button"
 import { disconnect } from "@wagmi/core"
 import { walletLink } from "../wallet"
@@ -186,8 +186,8 @@ export const $MainMenu = ({ parentRoute, chainList, isMenuOpen, showAccount = tr
 
       $column(layoutSheet.spacingBig, style({ flex: 1, placeContent: 'center' }))(
 
-        $WalletDisplay({
-          $container: $column(style({ width: '50px' })),
+        $WalletProfileDisplay({
+          $container: $column(style({ alignSelf: 'center' })),
           parentRoute
         })({
           routeChange: routeChangeTether(),
@@ -379,7 +379,7 @@ export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: 
 
       $row(layoutSheet.spacing, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
 
-        $WalletDisplay({
+        $WalletProfileDisplay({
           $container: $row(style({ minWidth: '140px', minHeight: '38px' })),
           parentRoute
         })({

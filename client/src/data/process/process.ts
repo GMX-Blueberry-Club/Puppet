@@ -149,17 +149,35 @@ export const gmxProcess = defineProcess(
       }
 
       const positionSlot = seed.mirrorPositionSlot[args.key]
+      positionSlot.position.lastIncreasedTime = BigInt(seed.approximatedTimestamp)
       positionSlot.position.requestKey = mirrorPositionReq.routeTypeKey
       positionSlot.position.cumulativeCollateral += args.collateralDelta
       positionSlot.position.cumulativeSize += args.sizeDelta
       positionSlot.position.cumulativeFee += args.fee * 2n
-      // positionSlot.position.link.increaseList.push({
-      //   ...value.args,
-      //   blockTimestamp: seed.approximatedTimestamp,
-      //   transactionHash: value.transactionHash,
-      //   __typename: 'IncreasePosition'
-      // })
+      positionSlot.position.link.increaseList.push({
+        ...value.args,
+        blockTimestamp: seed.approximatedTimestamp,
+        transactionHash: value.transactionHash,
+        __typename: 'IncreasePosition'
+      })
 
+
+      return seed
+    },
+  },
+  {
+    source: gmxLog.decreaseEvents,
+    step(seed, value) {
+      const args = value.args
+      const positionSlot = seed.mirrorPositionSlot[args.key]
+
+      if (!positionSlot) {
+        return seed
+        // throw new Error('position not found')
+      }
+
+      positionSlot.position.cumulativeFee += args.fee
+      positionSlot.position.link.decreaseList.push({ ...value.args, blockTimestamp: seed.approximatedTimestamp, transactionHash: value.transactionHash, __typename: 'DecreasePosition' })
 
       return seed
     },
@@ -434,6 +452,7 @@ export function createPositionSlot(blockTimestamp: number, transactionHash: viem
     collateralToken: event.collateralToken,
     indexToken: event.indexToken,
     isLong: event.isLong,
+    lastIncreasedTime: 0n,
     averagePrice: 0n,
     collateral: 0n,
     cumulativeCollateral: 0n,
@@ -447,8 +466,8 @@ export function createPositionSlot(blockTimestamp: number, transactionHash: viem
     realisedPnl: 0n,
     __typename: 'PositionSlot',
     link: {
-      // decreaseList: [],
-      // increaseList: [],
+      decreaseList: [],
+      increaseList: [],
       updateList: [],
     },
 

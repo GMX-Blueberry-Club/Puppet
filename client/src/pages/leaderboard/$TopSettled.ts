@@ -2,23 +2,22 @@ import { Behavior, O, combineObject, replayLatest } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { constant, empty, map, snapshot } from "@most/core"
+import { constant, empty, map } from "@most/core"
 import { Stream } from "@most/types"
-import { ARBITRUM_ADDRESS } from "gmx-middleware-const"
+import * as GMX from 'gmx-middleware-const'
 import { $Link, $Table, ISortBy } from "gmx-middleware-ui-components"
-import { ITraderSummary, div, pagingQuery, readableFixedBsp, switchMap } from "gmx-middleware-utils"
+import { ITraderSummary, pagingQuery, switchMap } from "gmx-middleware-utils"
 import { getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-const"
 import { ITraderSubscritpion, leaderboardMirrorTrader } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { IProfileActiveTab } from "../$Profile"
-import { $pnlValue, $puppets, $sizeDisplay } from "../../common/$common"
+import { $pnlValue, $puppets, $size } from "../../common/$common"
 import { $discoverIdentityDisplay } from "../../components/$AccountProfile"
 import { $defaultBerry } from "../../components/$DisplayBerry"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../../components/form/$Button"
+import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceCard"
 import { IGmxProcessSeed } from "../../data/process/process"
 import { wallet } from "../../wallet/walletLink"
-import { $seperator2 } from "../common"
-import * as GMX from 'gmx-middleware-const'
 
 
 
@@ -207,7 +206,7 @@ export const $TopSettled = (config: ITopSettled) => component((
           },
           {
             $head: $text('Puppets'),
-            columnOp: O(layoutSheet.spacingTiny, style({ flex: 1 })),
+            columnOp: O(layoutSheet.spacingTiny, style({ width: '160px' })),
             $$body: map((pos) => {
               // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
               // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
@@ -215,7 +214,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
 
               const $copyBtn = switchMap(params => {
-                if (params.wallet === null || params.subscriptionList.find(s => s.trader === pos.account) !== undefined) {
+                if (!params.wallet || params.subscriptionList.find(s => s.trader === pos.account) !== undefined) {
                   return empty()
                 }
 
@@ -245,14 +244,14 @@ export const $TopSettled = (config: ITopSettled) => component((
               $text(style({ fontSize: '.85rem' }))('Avg. Leverage'),
             ),
             sortBy: 'size',
-            columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
+            columnOp: style({ placeContent: 'flex-end', width: '120px' }),
             $$body: map((pos) => {
-              return $sizeDisplay(pos.size, pos.collateral)
+              return $size(pos.size, pos.collateral)
             })
           },
           {
             $head: $text('Win / Loss'),
-            columnOp: style({ alignItems: 'center', placeContent: 'center' }),
+            columnOp: style({ alignItems: 'center', width: '120px', placeContent: 'center' }),
             $$body: map((pos) => {
               return $row(
                 $text(`${pos.winCount} / ${pos.lossCount}`)
@@ -265,13 +264,22 @@ export const $TopSettled = (config: ITopSettled) => component((
               $text(style({ fontSize: '.85rem' }))('Return %'),
             ),
             sortBy: 'pnl',
-            columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
+            columnOp: style({ placeContent: 'flex-end', width: '190px' }),
             $$body: map((pos) => {
 
-              return $column(style({ gap: '3px', textAlign: 'right' }))(
-                $pnlValue(pos.pnl),
-                $seperator2,
-                $text(style({ fontSize: '.85rem' }))(readableFixedBsp(div(pos.pnl, pos.collateral))),
+              return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+                $ProfilePerformanceGraph({
+                  processData: config.processData,
+                  trader: pos.account,
+                  width: 150,
+
+                })({}),
+                $pnlValue(pos.pnl)
+                // $column(style({ gap: '3px', textAlign: 'right' }))(
+                //   $pnlValue(pos.pnl),
+                //   $seperator2,
+                //   $text(style({ fontSize: '.85rem' }))(readableFixedBsp(div(pos.pnl, pos.collateral))),
+                // )
               )
             })
           },

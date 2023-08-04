@@ -11,11 +11,12 @@ import { ITraderSubscritpion, summariesMirrorTrader } from "puppet-middleware-ut
 import * as viem from 'viem'
 import { $discoverAvatar, $discoverIdentityDisplay } from "../$AccountProfile"
 import { $defaultBerry } from "../$DisplayBerry"
-import { $entry, $openPositionPnlBreakdown, $pnlValue, $puppets, $riskLiquidator, $riskLiquidatorShare, $tradePnl, $traderDisplay } from "../../common/$common"
+import { $entry, $openPositionPnlBreakdown, $pnlValue, $puppets, $sizeLiq, $riskLiquidator, $tradePnl, $traderDisplay } from "../../common/$common"
 import { IGmxProcessSeed, latestTokenPrice } from "../../data/process/process"
 import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
 import { $ProfilePerformanceCard } from "../trade/$ProfilePerformanceCard"
+import { entryColumn, slotSizeColumn, pnlSlotColumn, timeSlotColumn, settledTimeColumn, settledPnlColumn } from "../table/$TableColumn"
 
 
 
@@ -60,6 +61,8 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
   const $metricRow = $column(style({ placeContent: 'center', alignItems: 'center' }))
   const $metricLabel = $row(style({ color: pallete.foreground, letterSpacing: '1px', fontSize: '.85rem' }))
   const $metricValue = $row(style({ fontWeight: 900, letterSpacing: '1px', fontSize: '1.75rem' }))
+
+  const $heading = $text(style({ fontSize: '1.15rem', fontWeight: '900', marginBottom: '6px', letterSpacing: '1px', marginLeft: '-13px', color: pallete.foreground }))
 
 
   return [
@@ -131,30 +134,12 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
 
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
         $column(
-          $text(style({ fontSize: '1.25rem', fontWeight: '900', marginBottom: '6px' }))('Open Positions'),
+          $heading('Open Positions'),
           $Table({
             dataSource: openTrades,
             columns: [
-              {
-                $head: $text('Open Time'),
-                columnOp: style({ maxWidth: '130px' }),
-                $$body: map((pos) => {
-
-                  const timestamp = pos.blockTimestamp
-
-                  return $column(layoutSheet.spacingTiny)(
-                    $text(readableDate(timestamp)),
-                    $text(style({ fontSize: '.85rem' }))(timeSince(timestamp) + ' ago'),
-                  )
-                })
-              },
-              {
-                $head: $text('Entry'),
-                columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
-                $$body: map((pos) => {
-                  return $entry(pos.position)
-                })
-              },
+              timeSlotColumn,
+              entryColumn,
               {
                 $head: $text('Trader'),
                 columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
@@ -162,33 +147,8 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
                   return $traderDisplay(config.route, pos, changeRouteTether)
                 })
               },
-              {
-                $head: $column(style({ textAlign: 'right' }))(
-                  $text('Size'),
-                  $text(style({ fontSize: '.85rem' }))('Leverage'),
-                ),
-                columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
-                $$body: map(pos => {
-                  const positionMarkPrice = latestTokenPrice(config.processData, now(pos.position.indexToken))
-
-                  return $riskLiquidator(pos.position, positionMarkPrice)
-                })
-              },
-              {
-                $head: $text('PnL'),
-                columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
-                $$body: map((pos) => {
-                  const positionMarkPrice = latestTokenPrice(config.processData, now(pos.position.indexToken))
-                  const cumulativeFee = now(0n)
-
-                  return style({ flexDirection: 'row-reverse' })(
-                    $infoTooltipLabel(
-                      $openPositionPnlBreakdown(pos.position, cumulativeFee),
-                      $tradePnl(pos.position, positionMarkPrice)
-                    )
-                  )
-                })
-              },
+              slotSizeColumn(config.processData, config.address),
+              pnlSlotColumn(config.processData),
             ],
           })({}),
         ),
@@ -196,59 +156,21 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
         $seperator2,
 
         $column(
-          $text(style({ fontSize: '1.25rem', fontWeight: '900', marginBottom: '6px' }))('Settled Positions'),
+          $heading('Settled Positions'),
           $Table({
             dataSource: settledTrades,
             columns: [
+              settledTimeColumn,
+              entryColumn,
               {
-                $head: $text('Settle Time'),
-                columnOp: style({ maxWidth: '130px' }),
+                $head: $text('Trader'),
+                columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
                 $$body: map((pos) => {
-
-                  const timestamp = pos.blockTimestamp
-
-                  return $column(layoutSheet.spacingTiny)(
-                    $text(readableDate(timestamp)),
-                    $text(style({ fontSize: '.85rem' }))(timeSince(timestamp) + ' ago'),
-                  )
+                  return $traderDisplay(config.route, pos, changeRouteTether)
                 })
               },
-              {
-                $head: $text('Entry'),
-                columnOp: O(style({ maxWidth: '100px' }), layoutSheet.spacingTiny),
-                $$body: map((pos) => {
-                  return $entry(pos.position)
-                })
-              },
-              {
-                $head: $text('Puppets'),
-                columnOp: O(layoutSheet.spacingTiny, style({ flex: 1 })),
-                $$body: map((pos) => {
-                  // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
-                  // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
-
-                  return $puppets(pos.puppets, empty())
-                })
-              },
-              {
-                $head: $column(style({ textAlign: 'right' }))(
-                  $text('Size'),
-                  $text(style({ fontSize: '.85rem' }))('Leverage'),
-                ),
-                columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
-                $$body: map(pos => {
-                  const positionMarkPrice = latestTokenPrice(config.processData, now(pos.position.indexToken))
-
-                  return $riskLiquidatorShare(pos, pos.traderShare, positionMarkPrice)
-                })
-              },
-              {
-                $head: $text('PnL'),
-                columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
-                $$body: map((pos) => {
-                  return $pnlValue(pos.position.realisedPnl - pos.position.cumulativeFee)
-                })
-              },
+              slotSizeColumn(config.processData, config.address),
+              settledPnlColumn(config.address),
             ],
           })({})
         ),

@@ -98,6 +98,9 @@ export const $Profile = (config: IProfile) => component((
         })
       ),
       
+      $node(),
+      $node(),
+      $node(),
 
     ),
 

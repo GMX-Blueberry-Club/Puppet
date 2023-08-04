@@ -7,7 +7,7 @@ import { Stream } from "@most/types"
 import { $Link, $Table, $infoTooltipLabel, ISortBy } from "gmx-middleware-ui-components"
 import { pagingQuery, switchMap } from "gmx-middleware-utils"
 import { IProfileActiveTab } from "../$Profile"
-import { $tradePnl, $openPositionPnlBreakdown, $sizeDisplay } from "../../common/$common"
+import { $tradePnl, $openPositionPnlBreakdown, $size } from "../../common/$common"
 import { $accountPreview, $discoverIdentityDisplay } from "../../components/$AccountProfile"
 import { IGmxProcessSeed, latestTokenPrice } from "../../data/process/process"
 import { IPositionMirrorSlot } from "puppet-middleware-utils"
@@ -96,7 +96,7 @@ export const $TopOpen = (config: ITopOpen) => component((
               // sortBy: 'size',
               columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
               $$body: map((pos) => {
-                return $sizeDisplay(pos.position.size, pos.position.collateral)
+                return $size(pos.position.size, pos.position.collateral)
               })
             },
             {

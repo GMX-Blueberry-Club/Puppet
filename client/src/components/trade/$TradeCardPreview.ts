@@ -5,11 +5,10 @@ import { pallete } from "@aelea/ui-components-theme"
 import { map, merge, multicast, now, skip, skipRepeats, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import {
-  formatFixed, readableUSD, isTradeSettled, readableNumber,
-  isTradeLiquidated, CHAIN_TOKEN_ADDRESS_TO_SYMBOL, ITrade, IPricefeedParamApi, IChainParamApi, getDeltaPercentage, bnDiv, getPnL
+  formatFixed, readableUSD, readableNumber, IChainParamApi, getDeltaPercentage, bnDiv, getPnL
 } from "gmx-middleware-utils"
 import { ChartOptions, DeepPartial, MouseEventParams } from "lightweight-charts"
-import { $bull, $bear, $target, $RiskLiquidator, $tokenIconMap } from "gmx-middleware-ui-components"
+import { $bull, $bear, $target, $tokenIconMap } from "gmx-middleware-ui-components"
 
 
 export interface ITradeCardPreview {

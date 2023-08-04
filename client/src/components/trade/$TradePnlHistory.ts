@@ -9,7 +9,7 @@ import {
   IPositionSlot,
   IPriceInterval,
   formatFixed, getDeltaPercentage, getPnL,
-  intervalListFillOrderMap, isPositionSettled,
+  createTimeline, isPositionSettled,
   unixTimestampNow
 } from "gmx-middleware-utils"
 import { ChartOptions, DeepPartial, MouseEventParams, Time } from "lightweight-charts"
@@ -68,10 +68,9 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
       pnlPercentage: 0n
     }
 
-
     const pricefeedFramed = config.pricefeed.filter(tick => tick.blockTimestamp >= initialTick.time)
 
-    const data = intervalListFillOrderMap({
+    const data = createTimeline({
       source: [
         ...pricefeedFramed,
         ...config.mp.position.link.updateList
@@ -80,7 +79,7 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
       interval,
       seed: initialTick,
       getTime: x => x.blockTimestamp,
-      fillMap: (prev, next) => {
+      seedMap: (prev, next) => {
         const time = next.blockTimestamp
 
         if (next.__typename === 'UpdatePosition') {

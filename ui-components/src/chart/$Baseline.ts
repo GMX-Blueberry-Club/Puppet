@@ -5,17 +5,43 @@ import {
   CandlestickSeriesPartialOptions,
   ChartOptions,
   DeepPartial,
-  LineStyle
+  LineStyle,
+  LineType
 } from 'lightweight-charts'
 import { $Chart, IChartConfig } from "./$Chart.js"
 import { readableNumber, readableUnitAmount } from 'gmx-middleware-utils'
 
 
 export interface IBaselineChart extends IChartConfig<'Baseline'> {
+  baselineOptions?: BaselineSeriesPartialOptions
 }
 
 
 export const $Baseline = (config: IBaselineChart) => {
+
+  const baselineOptions: BaselineSeriesPartialOptions = {
+    priceFormat: {
+      type: 'custom',
+      formatter: (priceValue: BarPrice) => readableUnitAmount(priceValue.valueOf())
+    },
+    baseLineStyle: LineStyle.Dashed,
+    lineStyle: LineStyle.Solid,
+    topLineColor: pallete.positive,
+    bottomLineColor: pallete.negative,
+    baseValue: {
+      type: 'price',
+      price: 0,
+    },
+    // baseLineStyle: LineStyle.Dashed,
+    // lineWidth: 2,
+    baseLineWidth: 1,
+    // baseLineColor: 'yellow',
+    // priceLineColor: 'yellow',
+    baseLineVisible: true,
+    // lastValueVisible: false,
+    priceLineVisible: false,
+    ...config.baselineOptions
+  }
 
   const chartConfig: DeepPartial<ChartOptions> = {
     layout: {
@@ -29,8 +55,8 @@ export const $Baseline = (config: IBaselineChart) => {
       autoScale: true,
       ticksVisible: true,
       scaleMargins: {
-        top: 0.25,
-        bottom: 0.05,
+        top: 0.1,
+        bottom: 0.1,
       }
     },
     // rightPriceScale: {
@@ -62,26 +88,7 @@ export const $Baseline = (config: IBaselineChart) => {
   return $Chart({
     ...config,
     chartConfig,
-    getSeriesApi: api => api.addBaselineSeries({
-      // topFillColor1: pallete.positive,
-      // topFillColor2: pallete.positive,
-      priceFormat: {
-        type: 'custom',
-        formatter: (priceValue: BarPrice) => readableUnitAmount(priceValue.valueOf())
-      },
-      topLineColor: pallete.positive,
-      bottomLineColor: pallete.negative,
-      baseValue: {
-        type: 'price',
-        price: 0,
-      },
-      baseLineStyle: LineStyle.Dashed,
-      lineWidth: 2,
-      baseLineColor: 'red',
-      baseLineVisible: true,
-      lastValueVisible: false,
-      priceLineVisible: false,
-    })
+    getSeriesApi: api => api.addBaselineSeries(baselineOptions)
   })
 }
 

@@ -11,14 +11,16 @@ import {
   getFundingFee,
   getNextLiquidationPrice, getPnL,
   getTokenDescription,
+  IAbstractPositionStake,
   IAbstractRouteIdentity,
   IPosition, IPositionSettled, IPositionSlot,
   isPositionSettled,
+  IVaultPosition,
   leverageLabel,
   liquidationWeight,
   readableFixedUSD30
 } from "gmx-middleware-utils"
-import { getPropotion, IPositionMirrorSettled, IPositionMirrorSlot } from "puppet-middleware-utils"
+import { getPortion, IPositionMirrorSettled, IPositionMirrorSlot } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $discoverAvatar, $discoverIdentityDisplay } from "../components/$AccountProfile"
 import { $defaultBerry } from "../components/$DisplayBerry"
@@ -27,7 +29,7 @@ import { $seperator2 } from "../pages/common"
 import { Route } from "@aelea/router"
 
 
-export const $sizeDisplay = (size: bigint, collateral: bigint) => {
+export const $size = (size: bigint, collateral: bigint) => {
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
     $text(readableFixedUSD30(size)),   
     $seperator2,
@@ -116,8 +118,7 @@ export const $tokenIcon = (indexToken: viem.Address, IIcon?: { width?: string })
   })
 }
 
-
-export const $riskLiquidator = (pos: IPositionSlot, markPrice: Stream<bigint>) => {
+export const $sizeLiq = (pos: IVaultPosition & IAbstractRouteIdentity, markPrice: Stream<bigint>) => {
 
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
     $text(readableFixedUSD30(pos.size)),
@@ -126,16 +127,8 @@ export const $riskLiquidator = (pos: IPositionSlot, markPrice: Stream<bigint>) =
   )
 }
 
-export const $riskLiquidatorShare = (mp: IPositionMirrorSlot | IPositionMirrorSettled, share: bigint, markPrice: Stream<bigint>) => {
-  const propSize = getPropotion(mp.position.size, mp.shareSupply, share)
-  const position = mp.position
-  const isSettled = isPositionSettled(position)
-
-  return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
-    $text(readableFixedUSD30(propSize)),
-    isSettled ? $seperator2 : $liquidationSeparator(position, markPrice),
-    $text(style({ fontSize: '.85rem', fontWeight: 'bold' }))(leverageLabel(div(mp.position.size, mp.position.collateral))),
-  )
+export const $riskLiquidator = (pos: IPositionSettled | IPositionSlot,  markPrice: Stream<bigint>) => {
+  return isPositionSettled(pos) ? $size(pos.size, pos.collateral) : $sizeLiq(pos, markPrice)
 }
 
 
@@ -196,7 +189,7 @@ export const $tradePnl = (pos: IPositionSlot, positionMarkPrice: Stream<bigint> 
   return $pnlValue(pnl, colorful)
 }
 
-export function $liquidationSeparator(pos: IPositionSlot, markPrice: Stream<bigint>) {
+export function $liquidationSeparator(pos: IVaultPosition & IAbstractRouteIdentity, markPrice: Stream<bigint>) {
 
   const liquidationPrice = getNextLiquidationPrice(pos.isLong, pos.size, pos.collateral, pos.averagePrice)
   const liqWeight = map(price => liquidationWeight(pos.isLong, liquidationPrice, price), markPrice)

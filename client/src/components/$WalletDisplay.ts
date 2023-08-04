@@ -18,7 +18,7 @@ export interface IWalletDisplay {
   $container?: NodeComposeFn<$Node>
 }
 
-export const $WalletDisplay = ({ $container = $row, parentRoute }: IWalletDisplay) => component((
+export const $WalletProfileDisplay = ({ $container = $row, parentRoute }: IWalletDisplay) => component((
   [profileLinkClick, profileLinkClickTether]: Behavior<any, any>,
   [routeChange, routeChangeTether]: Behavior<any, string>,
   [walletChange, walletChangeTether]: Behavior<any, string>,
@@ -46,7 +46,7 @@ export const $WalletDisplay = ({ $container = $row, parentRoute }: IWalletDispla
                 })
               )
             )(
-              $discoverIdentityDisplay({ address: accountResult.address, $container, $profileContainer: $defaultBerry })
+              $discoverIdentityDisplay({ address: accountResult.address, $container, $profileContainer: $defaultBerry(style({ width: '50px' })) })
             )
             : walletChangeTether(
               nodeEvent('click'),

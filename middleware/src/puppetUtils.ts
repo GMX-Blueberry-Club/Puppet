@@ -1,6 +1,6 @@
-import { groupArrayMany, div } from "gmx-middleware-utils"
+import { div, groupArrayMany } from "gmx-middleware-utils"
 import * as viem from "viem"
-import { IAccountToRouteMap, IMirrorTraderSummary, IPositionMirrorSettled } from "./types.js"
+import { IAccountToRouteMap, IMirrorTraderSummary, IPositionMirrorSettled, IPositionMirrorSlot } from "./types.js"
 
 
 export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]): IMirrorTraderSummary {
@@ -70,6 +70,27 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
 }
 
 
+export function getPuppetShare(shares: readonly bigint[], puppets: readonly viem.Address[], puppet: viem.Address): bigint {
+  const idx = puppets.indexOf(puppet)
+
+  if (idx == -1) throw new Error("Puppet not found")
+
+  return shares[idx]
+}
+
+
+export function getPuppetPosition<T extends IPositionMirrorSlot | IPositionMirrorSettled>(trade: T, puppet: viem.Address): T['position'] {
+  const share = getPuppetShare(trade.shares, trade.puppets, puppet) 
+  const size = getPortion(trade.position.size, trade.shareSupply, share)
+  const collateral = getPortion(trade.position.collateral, trade.shareSupply, share)
+
+  return {
+    ...trade.position,
+    size,
+    collateral
+  }
+}
+
 export function leaderboardMirrorTrader(positionMap: IAccountToRouteMap<IPositionMirrorSettled[]>): IMirrorTraderSummary[] {
   const flattenMapMap = Object.values(positionMap).flatMap(x => Object.values(x).flat())
   const tradeListMap = groupArrayMany(flattenMapMap, a => a.trader)
@@ -78,8 +99,7 @@ export function leaderboardMirrorTrader(positionMap: IAccountToRouteMap<IPositio
   return tradeListEntries.map(settledTradeList => summariesMirrorTrader(settledTradeList))
 }
 
-
-export function getPropotion(pool: bigint, supply: bigint, amount: bigint): bigint {
+export function getPortion(pool: bigint, supply: bigint, amount: bigint): bigint {
   if (amount == 0n) throw new Error("ZeroAmount")
 
   if (pool == 0n) {

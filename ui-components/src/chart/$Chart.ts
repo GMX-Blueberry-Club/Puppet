@@ -169,7 +169,7 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
 
   return [
     $wrapNativeElement(containerEl)(
-      style({ position: 'relative', minHeight: '130px', flex: 1, width: '100%' }),
+      style({ position: 'relative', minHeight: '30px', flex: 1, width: '100%' }),
       sampleContainerDimension(observer.resize()),
       config.containerOp || O(),
     )(

@@ -89,7 +89,7 @@ export const $Table = <T, FilterState = never>({
 
 
   const $header = $headerRowContainer(
-    style({ gridTemplateColumns: `repeat(${columns.length}, 1fr)`, })
+    style({ gridTemplateColumns: `repeat(${columns.length}, auto)`, })
   )(
     ...columns.map(col => {
 
@@ -139,7 +139,7 @@ export const $Table = <T, FilterState = never>({
         const $items = (Array.isArray(res) ? res : res.page).map(rowData => {
 
           return $bodyRowContainer(
-            style({ gridTemplateColumns: `repeat(${columns.length}, 1fr)`, })
+            style({ gridTemplateColumns: `repeat(${columns.length}, auto)`, })
           )(
             ...columns.map(col => {
               return $bodyCell(col.columnOp || O())(

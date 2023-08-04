@@ -11,7 +11,7 @@ import { $trash } from "./$icons"
 export const $TrashBtn = $ButtonIcon($trash)
 
 export const $card = $column(layoutSheet.spacing,
-  style({ borderRadius: '20px', padding: '20px' }),
+  style({ borderRadius: '20px', padding: '36px' }),
   theme.name === 'dark'
     ? style({
       backgroundColor: pallete.background,

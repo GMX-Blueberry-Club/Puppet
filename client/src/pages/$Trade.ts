@@ -4,6 +4,7 @@ import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-compon
 import {
   ILogTxType,
   IPositionDecrease, IPositionIncrease,
+  IPositionLink,
   IPositionSlot,
   abs, filterNull,
   formatFixed,
@@ -25,6 +26,7 @@ import * as GMX from "gmx-middleware-const"
 import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $infoTooltip, $spinner, $target, $txHashRef } from "gmx-middleware-ui-components"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
+import { getRouteKey } from "puppet-middleware-const"
 import * as viem from "viem"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $CardTable } from "../components/$common"
@@ -41,7 +43,6 @@ import { rootStoreScope } from "../rootStore"
 import * as store from "../utils/storage/storeScope"
 import { walletLink } from "../wallet"
 import { wallet } from "../wallet/walletLink"
-import { getRouteKey } from "puppet-middleware-const"
 
 
 export type ITradeComponent = ITradeBoxParams
@@ -909,7 +910,7 @@ export const $Trade = (config: ITradeComponent) => component((
               }
 
 
-              const initalList = params.activeTrade ? [...params.activeTrade.trade.increaseList, ...params.activeTrade.trade.link.decreaseList] : []
+              const initalList = params.activeTrade ? [...params.activeTrade.trade.link.increaseList, ...params.activeTrade.trade.link.decreaseList] : []
 
               return $CardTable({
                 // $rowContainer: screenUtils.isDesktopScreen

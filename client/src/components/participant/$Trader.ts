@@ -14,7 +14,7 @@ import { $defaultBerry } from "../$DisplayBerry"
 import { IGmxProcessSeed } from "../../data/process/process"
 import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
-import { entryColumn, pnlColumn, puppetsColumn, settledTimeColumn, sizeColumn, slotPnlColumn, slotTimeColumn } from "../table/$Columns"
+import { entryColumn, settledPnlColumn, puppetsColumn, settledTimeColumn, slotSizeColumn, pnlSlotColumn, timeSlotColumn } from "../table/$TableColumn"
 import { $ProfilePerformanceCard } from "../trade/$ProfilePerformanceCard"
 
 
@@ -57,6 +57,9 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
 
   const $itemListRow = $row(layoutSheet.spacingBig, style({ placeContent: 'space-between' }))
+
+
+  const $heading = $text(style({ fontSize: '1.15rem', fontWeight: '900', marginBottom: '6px', letterSpacing: '1px', marginLeft: '-13px', color: pallete.foreground }))
 
   const $metricRow = $column(style({ placeContent: 'center', alignItems: 'center' }))
   const $metricLabel = $row(style({ color: pallete.foreground, letterSpacing: '1px', fontSize: '.85rem' }))
@@ -126,7 +129,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
             //   const puppetSubscriptionKey = getPuppetSubscriptionKey(params.wallet.account.address, pos.account, routeTypeKey)
 
             //   const newLocal: ITraderSubscritpion = {
-            //     trader: pos.account,
+            //     trader: pos.account,w
             //     puppet: params.wallet.account.address,
             //     allowance: 1000n,
             //     routeTypeKey,
@@ -139,6 +142,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
             //   }) 
             // }, combineObject({ wallet, subscription: config.subscription, subscriptionList: config.subscribeList }))
           ),
+          
           $ProfilePerformanceCard({
             $container: $column(style({ width: '700px', height: '200px', padding: 0 })),
             processData: config.processData,
@@ -153,15 +157,15 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
         $column(
-          $text(style({ fontSize: '1.25rem', fontWeight: '900', marginBottom: '6px' }))('Open Positions'),
+          $heading('Open Positions'),
           $Table({
             dataSource: openTrades,
             columns: [
-              slotTimeColumn,
+              timeSlotColumn,
               entryColumn,
               puppetsColumn,
-              sizeColumn(config.processData),
-              slotPnlColumn(config.processData),
+              slotSizeColumn(config.processData),
+              pnlSlotColumn(config.processData),
             ],
           })({}),
         ),
@@ -169,15 +173,15 @@ export const $TraderProfile = (config: ITraderProfile) => component((
         $seperator2,
 
         $column(
-          $text(style({ fontSize: '1.25rem', fontWeight: '900', marginBottom: '6px' }))('Settled Positions'),
+          $heading('Settled Positions'),
           $Table({
             dataSource: settledTrades,
             columns: [
               settledTimeColumn,
               entryColumn,
               puppetsColumn,
-              sizeColumn(config.processData),
-              pnlColumn,
+              slotSizeColumn(config.processData),
+              settledPnlColumn(),
             ],
           })({})
         ),

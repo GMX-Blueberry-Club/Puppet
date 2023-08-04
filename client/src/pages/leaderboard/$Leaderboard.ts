@@ -1,5 +1,5 @@
 import { Behavior, replayLatest } from "@aelea/core"
-import { $text, component, style } from "@aelea/dom"
+import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, layoutSheet } from "@aelea/ui-components"
 import { empty, map, mergeArray, multicast, now, switchLatest } from "@most/core"
@@ -73,12 +73,15 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
 
   return [
-    $column(style({ alignItems: 'center',
-      paddingTop: '50px',
-      flex: 1,
+    $column(
+      layoutSheet.spacingBig,
+      style({
+        alignItems: 'center',
+        paddingTop: '50px',
+        flex: 1,
       // margin: '0 -50vw', backgroundColor: pallete.background
-    }), layoutSheet.spacingBig)(
-
+      })
+    )(
       $ButtonToggle({
         options,
         // $container: $row,
@@ -96,27 +99,23 @@ export const $Leaderboard = (config: ILeaderboard) => component((
       }),
 
 
-      $column(style({ flex: 1 }))(
-        $card(style({ gap: 0, borderRadius: '0' }))(
-     
-          router.match(topOpenRoute)(
-            $TopOpen({ ...config })({
-              routeChange: routeChangeTether()
-            })
-          ),
-          router.match(settledRoute)(
-            $TopSettled({
-              ...config,
-              subscribeList: config.subscribeList,
-              subscription,
-            })({
-              routeChange: routeChangeTether(),
-              subscribeTrader: subscribeTraderTether(multicast)
-            })
-          )
+      $card(
+        router.match(topOpenRoute)(
+          $TopOpen({ ...config })({
+            routeChange: routeChangeTether()
+          })
         ),
+        router.match(settledRoute)(
+          $TopSettled({
+            ...config,
+            subscribeList: config.subscribeList,
+            subscription,
+          })({
+            routeChange: routeChangeTether(),
+            subscribeTrader: subscribeTraderTether(multicast)
+          })
+        )
       ),
-
 
     ),
 

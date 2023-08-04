@@ -1,14 +1,12 @@
-import { awaitPromises, chain, fromPromise, join, map, now, switchLatest } from "@most/core"
+import { combineObject } from "@aelea/core"
+import { fromPromise, map, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, max, min, switchMap } from "gmx-middleware-utils"
+import * as viem from "viem"
 import { zipArray } from "../../logic/utils"
 import * as indexDB from "../storage/indexDB"
 import * as store from "../storage/storeScope"
 import { IIndexEventLogScopeParams, fetchTradesRecur } from "./rpc"
-import { combineObject } from "@aelea/core"
-import { publicClient } from "../../wallet/walletLink"
-import * as viem from "viem"
-import { PublicClient } from "@wagmi/core"
 
 
 export interface IProcessedStore<T> {

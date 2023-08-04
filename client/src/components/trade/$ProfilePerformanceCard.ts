@@ -1,146 +1,196 @@
 import { Behavior, combineArray, combineObject, replayLatest } from "@aelea/core"
 import { $Node, $text, INode, MOTION_NO_WOBBLE, NodeComposeFn, component, motion, style } from "@aelea/dom"
 import { $NumberTicker, $column, $row, observer } from "@aelea/ui-components"
-import { map, multicast, now, scan, skipRepeatsWith, startWith, switchLatest } from "@most/core"
+import { pallete } from "@aelea/ui-components-theme"
+import { map, multicast, skipRepeatsWith, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { $Baseline, $infoTooltipLabel } from "gmx-middleware-ui-components"
 import {
+  ILogTxType,
+  IPositionSettled,
+  IPositionUpdate,
+  createTimeline,
   filterNull,
   formatFixed,
   getPnL,
-  getSlotNetPnL,
-  intervalListFillOrderMap,
   parseReadableNumber,
-  readableNumber,
   readableUnitAmount,
   switchMap,
   unixTimestampNow
 } from "gmx-middleware-utils"
-import { BaselineData, ChartOptions, DeepPartial, MouseEventParams } from "lightweight-charts"
+import { BaselineData, ChartOptions, DeepPartial, LineType, MouseEventParams } from "lightweight-charts"
+import { IPositionMirrorSettled, getPortion, getPuppetShare } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { IGmxProcessSeed, PRICEFEED_INTERVAL, latestTokenPrice } from "../../data/process/process"
-import { pallete } from "@aelea/ui-components-theme"
+import { IGmxProcessSeed, PRICEFEED_INTERVAL } from "../../data/process/process"
+
 
 interface IProfilePerformanceCard {
-  processData: Stream<IGmxProcessSeed>
-  trader: viem.Address
-  // pricefeed: IPriceInterval[]
-  // chain: CHAIN
-  // mp: Array<IPositionMirrorSettled | IPositionMirrorSlot>
-  // latestPrice: Stream<bigint>
-
   $container?: NodeComposeFn<$Node>
   chartConfig?: DeepPartial<ChartOptions>
   pixelsPerBar?: number
-
+  processData: Stream<IGmxProcessSeed>
+  trader: viem.Address
+  puppet?: viem.Address
 }
 
-export interface IPerformanceTick {
+type ITimelinePositionSlot = {
+  realisedPnl: bigint
+  openPnl: bigint
+  update: IPositionUpdate
+}
+
+interface IPerformanceTick {
   time: number
+  pendingPnl: bigint
+  settledPnl: bigint
   value: number
+  positionSlot: Record<viem.Hex, ITimelinePositionSlot>
 }
 
 
 function findClosest<T extends readonly number[]> (arr: T, chosen: number): T[number] {
-  return arr.reduce((a, b) => b - chosen < a - chosen ? b : a)
+  return arr.reduce((a, b) => b - chosen < chosen - a ? b : a)
 }
 
+function getTime(tickItem: IPositionMirrorSettled | IPositionUpdate & ILogTxType<'UpdatePosition'> | {end: boolean, blockTimestamp: number}) {
+  if ('__typename' in  tickItem && tickItem.__typename === 'PositionMirrorSettled') return tickItem.position.settledBlockTimestamp
+
+  return tickItem.blockTimestamp
+}
+
+
+function performanceTimeline(
+  processData: IGmxProcessSeed,
+  trader: viem.Address,
+  tickCount: number,
+  puppet?: viem.Address,
+) {
+  const settledList = Object.values(processData.mirrorPositionSettled[trader]).flat() //.slice(-1)
+  const openList = Object.values(processData.mirrorPositionSlot).filter(pos => pos.trader === trader) //.flatMap(t => t.position.link.updateList)
+  // const pricefeed = processData.pricefeed
+
+  const now = unixTimestampNow()
+
+  const sourceList = [
+    ...settledList.flatMap(mp => mp.position.link.updateList.map(update => ({ ...update, mp }))),
+    ...settledList,
+    {
+      end: true,
+      blockTimestamp: now
+    }
+  ].sort((a, b) => getTime(a) - getTime(b))
+
+  const startTime = sourceList[0].blockTimestamp
+  const timeRange = now - startTime
+  const interval = findClosest(PRICEFEED_INTERVAL, timeRange / tickCount)
+
+
+  const initialTick: IPerformanceTick = {
+    time: startTime - interval,
+    value: 0,
+    pendingPnl: 0n,
+    settledPnl: 0n,
+    positionSlot: {}
+  }
+
+
+
+  const data = createTimeline({
+    source: sourceList,
+    // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
+    interval,
+    seed: initialTick,
+    getTime: mp => getTime(mp as any),
+    seedMap: (acc, next, intervalSlot) => {
+      if ('end' in next) {
+        return { ...acc }
+      }
+
+      if (next.__typename === 'UpdatePosition') {
+        const tickerId = `${next.mp.position.indexToken}:${interval}` as const
+        const tokenPrice = processData.pricefeed[tickerId][intervalSlot]
+
+        if (!tokenPrice) {
+          return { ...acc }
+        }
+
+        acc.positionSlot[next.key] ??= {
+          openPnl: 0n,
+          realisedPnl: next.realisedPnl,
+          update: next
+        }
+
+        const pendingPnl = Object.values(acc.positionSlot).reduce((a, b) => a + b.openPnl + b.realisedPnl, 0n)
+        const value = formatFixed(acc.settledPnl + acc.pendingPnl, 30)
+
+        return { ...acc, pendingPnl, value }
+      }
+
+
+      const position = next.position as IPositionSettled
+      const settledPnl = acc.settledPnl + position.realisedPnl // - position.cumulativeFee
+
+      const positionPnL = { ...acc.positionSlot }
+      delete positionPnL[next.position.key]
+
+      const pendingPnl = Object.values(positionPnL).reduce((a, b) => a + b.openPnl + b.realisedPnl, 0n)
+      const value = formatFixed(settledPnl + pendingPnl, 30)
+
+      return { ...acc, settledPnl, pendingPnl, value, positionSlot: positionPnL }
+
+    },
+    gapMap: (acc, next, intervalSlot) => {
+      if ('end' in next) {
+        return acc
+      }
+
+      const position = next.__typename === 'PositionMirrorSettled' ? next.position : next.mp.position
+      const mp = next.__typename === 'PositionMirrorSettled' ? next : next.mp
+
+        
+      const tickerId = `${position.indexToken}:${interval}` as const
+      const tokenPrice = processData.pricefeed[tickerId][intervalSlot]
+
+      if (!acc.positionSlot[position.key] || !tokenPrice) {
+        return { ...acc }
+      }
+
+      const share = puppet ? getPuppetShare(mp.shares, mp.puppets, puppet) : mp.traderShare
+
+      const slot = acc.positionSlot[position.key]
+      const pnl = getPnL(position.isLong, slot.update.averagePrice, tokenPrice.c, slot.update.size)
+      const pnlPortion = getPortion(pnl, mp.shareSupply, share)
+      slot.openPnl = pnlPortion
+
+      const pendingPnl = Object.values(acc.positionSlot).reduce((a, b) => a + b.openPnl + b.realisedPnl, 0n)
+      const value = formatFixed(acc.settledPnl + acc.pendingPnl, 30)
+
+
+      return { ...acc, pendingPnl, value }
+    }
+  })
+    
+  return { data, interval }
+}
 
 export const $ProfilePerformanceCard = (config: IProfilePerformanceCard) => component((
   [containerDimension, sampleContainerDimension]: Behavior<INode, ResizeObserverEntry[]>,
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
 ) => {
 
-  const processData = map(seed => {
-    const settled = Object.values(seed.mirrorPositionSettled[config.trader]).flat() //.flatMap(t => t.flatMap(t => [...t.position.link.updateList, t.position ]))
-    const open = Object.values(seed.mirrorPositionSlot).filter(pos => pos.trader === config.trader) //.flatMap(t => t.position.link.updateList)
-
-    const pricefeed = seed.pricefeed
-    // const latestPrice = seed.latestPrice
-    return { open, settled, pricefeed }
-  }, config.processData)
-
   const pixelsPerBar = config.pixelsPerBar || 5
-  const displayColumnCount = map(([container]) => container.contentRect.width / pixelsPerBar, containerDimension)
+  const tickCount = map(([container]) => container.contentRect.width / pixelsPerBar, containerDimension)
+  const timeline = map(
+    params => {
 
-  const historicPnL = multicast(map(params => {
-    const openList = params.processData.open
-    const settledList = params.processData.settled
-
-    const startTime = settledList[0].blockTimestamp
-    const endtime = openList.length ? unixTimestampNow() : settledList[settledList.length - 1].blockTimestamp
-    const timeRange = endtime - startTime
-    const interval = findClosest(PRICEFEED_INTERVAL, timeRange / params.displayColumnCount)
-
-
-    const initialTick: IPerformanceTick = {
-      time: startTime,
-      value: 0
-    }
-
-
-    const data = intervalListFillOrderMap({
-      source: [
-        ...settledList,
-        ...openList,
-        {
-          blockTimestamp: unixTimestampNow()
-        }
-      ],
-      // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
-      interval,
-      seed: initialTick,
-      getTime: x => x.blockTimestamp,
-      fillMap: (prev, next) => {
-        // const time = next.blockTimestamp
-        // if (next.__typename === 'UpdatePosition') {
-        //   const pnl = getPnL(config.mp.position.isLong, next.averagePrice, next.markPrice, next.size)
-        //   const realisedPnl = next.realisedPnl
-        //   const pnlPercentage = getDeltaPercentage(pnl, next.collateral)
-
-        //   const averagePrice = next.averagePrice
-        //   const size = next.size
-        //   const collateral = next.collateral
-
-        //   return { ...prev, pnl, pnlPercentage, time, realisedPnl, size, collateral, averagePrice }
-        // }
-
-
-        if (!('position' in next)) {
-          return prev
-        }
-        
-        const value = prev.value + formatFixed(next.position.realisedPnl, 30)
-
-        // const seedValue = data[data.length - 1].value
-        // const nextValue = params.allTrades.open.reduce((seed, pos) => {
-        //   const pnl = getSlotNetPnL(pos.position, params.allTrades.latestPrice[pos.position.indexToken])
-        //   return seed + formatFixed(pnl, 30)
-        // }, 0)
-        // const value = seedValue + nextValue
-        // const time = unixTimestampNow()
-        // const pnlPercentage = getDeltaPercentage(pnl, prev.collateral)
-        
-
-        return { value }
-
-      }
-    })
-    
-
-
-    return { data, interval }
-  }, combineObject({ displayColumnCount, processData })))
-
+      return performanceTimeline(params.processData, config.trader, params.tickCount)
+    },
+    combineObject({ processData: config.processData, tickCount })
+  )
 
   const $container = config.$container || $column(style({ height: '80px', minWidth: '100px' }))
-
-
   const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
 
-  const pnlCrossHairTime = map((cross: MouseEventParams) => {
-
-  }, pnlCrossHairTimeChange)
 
   const hoverChartPnl = filterNull(map(params => {
     if (params.pnlCrossHairTimeChange?.point) {
@@ -148,11 +198,10 @@ export const $ProfilePerformanceCard = (config: IProfilePerformanceCard) => comp
       return value
     }
 
-    const data = params.historicPnL.data
+    const data = params.timeline.data
     const value = data[data.length - 1].value
     return value || null
-  }, combineObject({ pnlCrossHairTimeChange, historicPnL })))
-
+  }, combineObject({ pnlCrossHairTimeChange, timeline })))
 
 
   return [
@@ -181,6 +230,25 @@ export const $ProfilePerformanceCard = (config: IProfilePerformanceCard) => comp
         combineArray(({ data, interval }) => {
 
           return $Baseline({
+            chartConfig: {
+              leftPriceScale: {
+                autoScale: true,
+                ticksVisible: true,
+                scaleMargins: {
+                  top: 0.35,
+                  bottom: 0.05,
+                }
+              },
+            },
+            baselineOptions: {
+              baseLineColor: pallete.message,
+              baseLineVisible: true,
+              lineWidth: 2,
+              baseValue: {
+                price: 0,
+                type: 'price',
+              },
+            },
             // appendData: scan((prev, next) => {
             //   const marketPrice = formatFixed(next.indexTokenPrice, 30)
             //   const timeNow = unixTimestampNow()
@@ -194,14 +262,85 @@ export const $ProfilePerformanceCard = (config: IProfilePerformanceCard) => comp
             //     time
             //   }
             // }, data[data.length - 1], config.processData),
-            data: data as BaselineData[],
+            data: data as any as BaselineData[],
           })({
             crosshairMove: crosshairMoveTether(
               skipRepeatsWith((a, b) => a.point?.x === b.point?.x)
             )
           })
-        }, historicPnL)
+        }, timeline)
       )
+    ),
+
+    {
+      crosshairMove,
+      // requestPricefeed
+    }
+  ]
+})
+
+
+export const $ProfilePerformanceGraph = (config: {
+  processData: Stream<IGmxProcessSeed>
+  trader: viem.Address
+  width: number
+}) => component((
+  [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
+) => {
+
+  const tickCount = config.width / 5
+  const timeline = map(
+    params => performanceTimeline(params.processData, config.trader, tickCount),
+    combineObject({ processData: config.processData })
+  )
+
+  const $container = $row(style({   }))
+  // const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
+
+
+  // const hoverChartPnl = filterNull(map(params => {
+  //   if (params.pnlCrossHairTimeChange?.point) {
+  //     const value = params.pnlCrossHairTimeChange.seriesData.values().next().value.value
+  //     return value
+  //   }
+
+  //   const data = params.timeline.data
+  //   const value = data[data.length - 1].value
+  //   return value || null
+  // }, combineObject({ pnlCrossHairTimeChange, timeline })))
+
+
+  return [
+    $container(
+      switchMap(({ data, interval }) => {
+        return  $Baseline({
+          chartConfig: {
+            crosshair: {
+              horzLine: {
+                visible: false,
+              },
+              vertLine: {
+                visible: false,
+              }
+            },
+            height: 40,
+            width: config.width,
+            timeScale :{
+              visible: false
+            }
+          },
+          data: data as any as BaselineData[],
+          containerOp: style({  inset: '0px 0px 0px 0px' }),
+          baselineOptions: {
+            lineWidth: 1,
+            lineType: LineType.Curved,
+          },
+        })({
+          crosshairMove: crosshairMoveTether(
+            skipRepeatsWith((a, b) => a.point?.x === b.point?.x)
+          )
+        })
+      }, timeline),
     ),
 
     {
