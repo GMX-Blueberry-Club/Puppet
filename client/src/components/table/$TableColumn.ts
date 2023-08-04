@@ -1,17 +1,17 @@
 import { O } from "@aelea/core"
-import { style, $text } from "@aelea/dom"
+import { $text, style } from "@aelea/dom"
 import { $column, layoutSheet } from "@aelea/ui-components"
 import { empty, map, now } from "@most/core"
-import { $infoTooltipLabel, TableColumn } from "gmx-middleware-ui-components"
-import { IPositionMirrorSettled, IPositionMirrorSlot, getPortion, getPuppetPosition, getPuppetShare } from "puppet-middleware-utils"
-import { $entry, $openPositionPnlBreakdown, $pnlValue, $puppets, $riskLiquidator, $tradePnl } from "../../common/$common"
-import { IGmxProcessSeed, latestTokenPrice } from "../../data/process/process"
-import { readableDate, timeSince } from "gmx-middleware-utils"
 import { Stream } from "@most/types"
+import { $infoTooltipLabel, TableColumn } from "gmx-middleware-ui-components"
+import { readableDate, timeSince } from "gmx-middleware-utils"
+import { IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from 'viem'
+import { $entry, $openPositionPnlBreakdown, $pnlValue, $puppets, $size, $sizeAndLiquidation, $tradePnl } from "../../common/$common"
+import { IGmxProcessSeed, latestTokenPrice } from "../../data/process/process"
 
 
-export const slotSizeColumn = (processData: Stream<IGmxProcessSeed>, puppet?: viem.Address): TableColumn<IPositionMirrorSettled | IPositionMirrorSlot> => ({
+export const slotSizeColumn = (processData: Stream<IGmxProcessSeed>, shareTarget?: viem.Address): TableColumn<IPositionMirrorSettled | IPositionMirrorSlot> => ({
   $head: $column(style({ textAlign: 'right' }))(
     $text('Size'),
     $text(style({ fontSize: '.85rem' }))('Leverage'),
@@ -19,21 +19,24 @@ export const slotSizeColumn = (processData: Stream<IGmxProcessSeed>, puppet?: vi
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $$body: map(mp => {
     const positionMarkPrice = latestTokenPrice(processData, now(mp.position.indexToken))
+    const size = getParticiapntMpPortion(mp, mp.position.maxSize, shareTarget)
+    const collateral = getParticiapntMpPortion(mp, mp.position.maxCollateral, shareTarget)
 
-    return $riskLiquidator(puppet ? getPuppetPosition(mp, puppet) : mp.position, positionMarkPrice)
+    return $sizeAndLiquidation(mp.position.isLong, size, collateral, mp.position.averagePrice, positionMarkPrice)
   })
 })
 
-export const settledSizeColumn = (processData: Stream<IGmxProcessSeed>, puppet?: viem.Address): TableColumn<IPositionMirrorSettled | IPositionMirrorSlot> => ({
+export const settledSizeColumn = (processData: Stream<IGmxProcessSeed>, puppet?: viem.Address): TableColumn<IPositionMirrorSettled> => ({
   $head: $column(style({ textAlign: 'right' }))(
     $text('Size'),
     $text(style({ fontSize: '.85rem' }))('Leverage'),
   ),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $$body: map(mp => {
-    const positionMarkPrice = latestTokenPrice(processData, now(mp.position.indexToken))
+    const size = getParticiapntMpPortion(mp, mp.position.maxSize, puppet)
+    const collateral = getParticiapntMpPortion(mp, mp.position.maxCollateral, puppet)
 
-    return $riskLiquidator(puppet ? getPuppetPosition(mp, puppet) : mp.position, positionMarkPrice)
+    return $size(size, collateral)
   })
 })
 
@@ -87,13 +90,11 @@ export const pnlSlotColumn = (processData: Stream<IGmxProcessSeed>): TableColumn
   })
 })
 
-export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IPositionMirrorSettled> => ({
+export const settledPnlColumn = (participant: viem.Address): TableColumn<IPositionMirrorSettled> => ({
   $head: $text('PnL'),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
-  $$body: map((pos) => {
-    const total = pos.position.realisedPnl // - pos.position.cumulativeFee
-    const share = puppet ? getPuppetShare(pos.shares, pos.puppets, puppet) : pos.traderShare
-    const pnl = getPortion(total, pos.shareSupply, share)
+  $$body: map(mp => {
+    const pnl = getParticiapntMpPortion(mp, mp.position.realisedPnl, participant)
       
     return $pnlValue(pnl)
   })

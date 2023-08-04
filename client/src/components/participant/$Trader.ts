@@ -3,7 +3,7 @@ import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { map } from "@most/core"
+import { empty, map } from "@most/core"
 import { Stream } from "@most/types"
 import { $Table } from "gmx-middleware-ui-components"
 import { IRequestAccountTradeListApi, leverageLabel, switchMap } from "gmx-middleware-utils"
@@ -14,7 +14,7 @@ import { $defaultBerry } from "../$DisplayBerry"
 import { IGmxProcessSeed } from "../../data/process/process"
 import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
-import { entryColumn, settledPnlColumn, puppetsColumn, settledTimeColumn, slotSizeColumn, pnlSlotColumn, timeSlotColumn } from "../table/$TableColumn"
+import { entryColumn, settledPnlColumn, puppetsColumn, settledTimeColumn, slotSizeColumn, pnlSlotColumn, timeSlotColumn, settledSizeColumn } from "../table/$TableColumn"
 import { $ProfilePerformanceCard } from "../trade/$ProfilePerformanceCard"
 
 
@@ -42,11 +42,15 @@ export const $TraderProfile = (config: ITraderProfile) => component((
   }, config.processData)
 
   const settledTrades = map(seed => {
-    const list = Object.values(seed.mirrorPositionSettled[config.address]).flat().reverse()
+    const list = Object.values(seed.mirrorPositionSettled[config.address] || {}).flat().reverse()
     return list
   }, config.processData)
 
   const summary = map(list => {
+    if (list.length === 0) {
+      return null
+    }
+
     return summariesMirrorTrader(list)
   }, settledTrades)
 
@@ -89,7 +93,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                   switchMap(puppets => {
                     return $row(style({ flex: 1, padding: '2px 0 4px' }))(
                       ...puppets.map(address => {
-                        return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minWidth: '30px', maxWidth: '30px' })) })
+                        return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minWidth: '30px', margin: '0 -4px', maxWidth: '30px' })) })
                       })
                     )
                   }, subscribers)
@@ -102,6 +106,9 @@ export const $TraderProfile = (config: ITraderProfile) => component((
               $metricRow(
                 $metricValue(
                   $text(map(seed => {
+
+                    if (seed === null) return '-'
+
                     return `${seed.winCount} / ${seed.lossCount}`
                   }, summary))
                 ),
@@ -113,6 +120,8 @@ export const $TraderProfile = (config: ITraderProfile) => component((
               $metricRow(
                 $metricValue(
                   $text(map(seed => {
+                    if (seed === null) return '-'
+
                     return leverageLabel(seed.avgLeverage)
                   }, summary))
                 ),
@@ -180,8 +189,8 @@ export const $TraderProfile = (config: ITraderProfile) => component((
               settledTimeColumn,
               entryColumn,
               puppetsColumn,
-              slotSizeColumn(config.processData),
-              settledPnlColumn(),
+              settledSizeColumn(config.processData),
+              settledPnlColumn(config.address),
             ],
           })({})
         ),

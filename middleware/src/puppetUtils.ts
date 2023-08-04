@@ -78,18 +78,18 @@ export function getPuppetShare(shares: readonly bigint[], puppets: readonly viem
   return shares[idx]
 }
 
+export function getParticiapntMpShare(mp: IPositionMirrorSettled | IPositionMirrorSlot, shareTarget?: viem.Address): bigint {
+  if (!shareTarget || mp.puppets.indexOf(shareTarget) === -1) return mp.traderShare
 
-export function getPuppetPosition<T extends IPositionMirrorSlot | IPositionMirrorSettled>(trade: T, puppet: viem.Address): T['position'] {
-  const share = getPuppetShare(trade.shares, trade.puppets, puppet) 
-  const size = getPortion(trade.position.size, trade.shareSupply, share)
-  const collateral = getPortion(trade.position.collateral, trade.shareSupply, share)
-
-  return {
-    ...trade.position,
-    size,
-    collateral
-  }
+  return getPuppetShare(mp.shares, mp.puppets, shareTarget)
 }
+
+export function getParticiapntMpPortion(mp: IPositionMirrorSettled | IPositionMirrorSlot, amount: bigint, shareTarget?: viem.Address): bigint {
+  const share = getParticiapntMpShare(mp, shareTarget)
+
+  return getPortion(mp.shareSupply, share, amount)
+}
+
 
 export function leaderboardMirrorTrader(positionMap: IAccountToRouteMap<IPositionMirrorSettled[]>): IMirrorTraderSummary[] {
   const flattenMapMap = Object.values(positionMap).flatMap(x => Object.values(x).flat())
@@ -99,12 +99,12 @@ export function leaderboardMirrorTrader(positionMap: IAccountToRouteMap<IPositio
   return tradeListEntries.map(settledTradeList => summariesMirrorTrader(settledTradeList))
 }
 
-export function getPortion(pool: bigint, supply: bigint, amount: bigint): bigint {
-  if (amount == 0n) throw new Error("ZeroAmount")
+export function getPortion(supply: bigint, share: bigint, amount: bigint): bigint {
+  if (amount == 0n) throw new Error("amount cannot be 0")
 
-  if (pool == 0n) {
+  if (share == 0n) {
     return amount
   } else {
-    return amount * pool / supply
+    return amount * share / supply
   }
 }

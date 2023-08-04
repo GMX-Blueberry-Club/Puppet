@@ -151,7 +151,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const slippage = store.replayWrite(tradingStore, '0.35', changeSlippage, 'slippage')
   const inputToken = store.replayWrite(tradingStore, GMX.AddressZero, changeInputToken, 'inputToken')
   const indexToken = store.replayWrite(tradingStore, nativeToken, changeIndexToken, 'indexToken')
-  const shortCollateralToken = store.replayWrite(tradingStore, null as viem.Address | null, changeShortCollateralToken, 'shortCollateralToken')
+  const shortCollateralToken = store.replayWrite(tradingStore, GMX.ARBITRUM_ADDRESS.USDC as viem.Address | null, changeShortCollateralToken, 'shortCollateralToken')
   const leverage = mergeArray([
     changeLeverage,
     debounce(500, store.replayWrite(tradingStore, GMX.LIMIT_LEVERAGE / 4n, changeLeverage, 'leverage')),
@@ -919,7 +919,7 @@ export const $Trade = (config: ITradeComponent) => component((
                 // headerCellOp: style({ padding: screenUtils.isDesktopScreen ? '15px 15px' : '6px 4px' }),
                 // cellOp: style({ padding: screenUtils.isDesktopScreen ? '4px 15px' : '6px 4px' }),
                 dataSource: mergeArray([
-                  now(initalList) as Stream<(IRequestTrade | (IPositionIncrease & ILogTxType<'IncreasePosition'>) | (IPositionDecrease & ILogTxType<'DecreasePosition'>))[]>,
+                  now(initalList) as Stream<(IRequestTrade | IPositionIncrease | IPositionDecrease)[]>,
                   // constant(initalList, periodic(3000)),
                   requestTradeRow
                 ]),

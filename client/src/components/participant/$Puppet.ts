@@ -1,22 +1,22 @@
-import { Behavior, O } from "@aelea/core"
+import { Behavior } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map, now } from "@most/core"
+import { map } from "@most/core"
 import { Stream } from "@most/types"
-import { $Table, $infoTooltipLabel } from "gmx-middleware-ui-components"
-import { IRequestAccountTradeListApi, leverageLabel, readableDate, switchMap, timeSince } from "gmx-middleware-utils"
+import { $Table } from "gmx-middleware-ui-components"
+import { IRequestAccountTradeListApi, leverageLabel, switchMap } from "gmx-middleware-utils"
 import { ITraderSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $discoverAvatar, $discoverIdentityDisplay } from "../$AccountProfile"
 import { $defaultBerry } from "../$DisplayBerry"
-import { $entry, $openPositionPnlBreakdown, $pnlValue, $puppets, $sizeLiq, $riskLiquidator, $tradePnl, $traderDisplay } from "../../common/$common"
-import { IGmxProcessSeed, latestTokenPrice } from "../../data/process/process"
+import { $traderDisplay } from "../../common/$common"
+import { IGmxProcessSeed } from "../../data/process/process"
 import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
+import { entryColumn, pnlSlotColumn, settledPnlColumn, settledSizeColumn, settledTimeColumn, slotSizeColumn, timeSlotColumn } from "../table/$TableColumn"
 import { $ProfilePerformanceCard } from "../trade/$ProfilePerformanceCard"
-import { entryColumn, slotSizeColumn, pnlSlotColumn, timeSlotColumn, settledTimeColumn, settledPnlColumn } from "../table/$TableColumn"
 
 
 
@@ -124,6 +124,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
             $container: $column(style({ width: '700px', height: '200px', padding: 0 })),
             processData: config.processData,
             trader: config.address,
+            targetShare: config.address,
           })({ }),
         ),
 
@@ -169,7 +170,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
                   return $traderDisplay(config.route, pos, changeRouteTether)
                 })
               },
-              slotSizeColumn(config.processData, config.address),
+              settledSizeColumn(config.processData, config.address),
               settledPnlColumn(config.address),
             ],
           })({})

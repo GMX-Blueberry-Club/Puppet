@@ -8,7 +8,7 @@ import * as GMX from 'gmx-middleware-const'
 import { $Link, $Table, ISortBy } from "gmx-middleware-ui-components"
 import { ITraderSummary, pagingQuery, switchMap } from "gmx-middleware-utils"
 import { getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-const"
-import { ITraderSubscritpion, leaderboardMirrorTrader } from "puppet-middleware-utils"
+import { IPuppetSubscritpion, ITraderSubscritpion, leaderboardMirrorTrader } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { IProfileActiveTab } from "../$Profile"
 import { $pnlValue, $puppets, $size } from "../../common/$common"
@@ -26,7 +26,7 @@ export type ITopSettled = {
   route: router.Route
   processData: Stream<IGmxProcessSeed>
 
-  subscription: Stream<viem.Address[]>
+  subscription: Stream<IPuppetSubscritpion[]>
   subscribeList: Stream<ITraderSubscritpion[]>
 }
 
@@ -221,17 +221,19 @@ export const $TopSettled = (config: ITopSettled) => component((
                 const routeTypeKey = getRouteTypeKey(GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, true)
                 const puppetSubscriptionKey = getPuppetSubscriptionKey(params.wallet.account.address, pos.account, routeTypeKey)
 
-                const newLocal: ITraderSubscritpion = {
+                const isSubscribed = params.subscription.find(x => x.puppetSubscriptionKey === puppetSubscriptionKey) === undefined
+                const subsc: ITraderSubscritpion = {
                   trader: pos.account,
                   puppet: params.wallet.account.address,
                   allowance: 1000n,
                   routeTypeKey,
                   puppetSubscriptionKey,
-                  subscribed: params.subscription.find(x => x.indexOf(pos.route) > -1) === undefined,
+                  // subscribed: false,
+                  subscribed: isSubscribed,
                 }
 
-                return  $ButtonSecondary({ $content: $text('Copy'), $container: $defaultMiniButtonSecondary })({
-                  click: subscribeTraderTether(constant(newLocal))
+                return  $ButtonSecondary({ $content: $text(isSubscribed ? 'Copy' : 'Unsub'), $container: $defaultMiniButtonSecondary })({
+                  click: subscribeTraderTether(constant(subsc))
                 })
               }, combineObject({ wallet, subscription: config.subscription, subscriptionList: config.subscribeList })) 
                 
@@ -272,7 +274,6 @@ export const $TopSettled = (config: ITopSettled) => component((
                   processData: config.processData,
                   trader: pos.account,
                   width: 150,
-
                 })({}),
                 $pnlValue(pos.pnl)
                 // $column(style({ gap: '3px', textAlign: 'right' }))(

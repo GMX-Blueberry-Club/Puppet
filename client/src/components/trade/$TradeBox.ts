@@ -37,7 +37,7 @@ import { arbitrum } from "viem/chains"
 import { $IntermediateConnectButton } from "../$ConnectAccount"
 import { $Popover } from "../$Popover"
 import { $Slider } from "../$Slider"
-import { $entry, $openPositionPnlBreakdown, $pnlValue, $sizeLiq } from "../../common/$common"
+import { $entry, $openPositionPnlBreakdown, $pnlValue, $sizeAndLiquidation } from "../../common/$common"
 import { $card } from "../../elements/$common"
 import { $caretDown } from "../../elements/$icons"
 import { connectContract, wagmiWriteContract } from "../../logic/common"
@@ -1504,7 +1504,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                       ),
                       $TradePnlHistory({
                         $container: $column(style({ flex: 1, overflow: 'hidden', borderRadius: '20px' })),
-                        mp: pos,
+                        position: pos,
                         chain: config.chain.id,
                         pricefeed,
                         chartConfig: {
@@ -1566,7 +1566,7 @@ export const $TradeBox = (config: ITradeBox) => component((
                               constant(pos)
                             )
                           }),
-                          $sizeLiq(pos, positionMarkPrice),
+                          $sizeAndLiquidation(pos.isLong, pos.size, pos.collateral, pos.averagePrice, positionMarkPrice),
                           $infoTooltipLabel(
                             $openPositionPnlBreakdown(pos, cumulativeFee),
                             $pnlValue(pnl)

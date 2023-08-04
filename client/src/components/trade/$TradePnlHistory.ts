@@ -6,18 +6,19 @@ import { Stream } from "@most/types"
 import { CHAIN } from "gmx-middleware-const"
 import { $Baseline } from "gmx-middleware-ui-components"
 import {
+  IPositionSettled,
   IPositionSlot,
   IPriceInterval,
+  createTimeline,
   formatFixed, getDeltaPercentage, getPnL,
-  createTimeline, isPositionSettled,
+  isPositionSettled,
   unixTimestampNow
 } from "gmx-middleware-utils"
 import { ChartOptions, DeepPartial, MouseEventParams, Time } from "lightweight-charts"
-import { IPositionMirrorSettled, IPositionMirrorSlot } from "puppet-middleware-utils"
 
 interface ITradePnlPreview {
   $container: NodeComposeFn<$Node>
-  mp: IPositionMirrorSettled | IPositionMirrorSlot
+  position: IPositionSlot | IPositionSettled
   latestPrice: Stream<bigint>
   chartConfig?: DeepPartial<ChartOptions>
   pixelsPerBar?: number
@@ -48,13 +49,13 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
 
   const historicPnL = multicast(combineArray((displayColumnCount) => {
 
-    const startPrice = config.mp.position.link.updateList[0].averagePrice
-    const startTime = config.mp.blockTimestamp
-    const endtime = isPositionSettled(config.mp.position) ? config.mp.position.settledBlockTimestamp : unixTimestampNow()
+    const startPrice = config.position.link.updateList[0].averagePrice
+    const startTime = config.position.blockTimestamp
+    const endtime = isPositionSettled(config.position) ? config.position.settlement.blockTimestamp : unixTimestampNow()
     const timeRange = endtime - startTime
     const interval = Math.floor(timeRange / displayColumnCount) || 1
 
-    const initalUpdate = config.mp.position.link.updateList[0]
+    const initalUpdate = config.position.link.updateList[0]
 
     const initialTick: IPricefeedTick = {
       time: startTime,
@@ -73,7 +74,7 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
     const data = createTimeline({
       source: [
         ...pricefeedFramed,
-        ...config.mp.position.link.updateList
+        ...config.position.link.updateList
       ],
       // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
       interval,
@@ -83,7 +84,7 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
         const time = next.blockTimestamp
 
         if (next.__typename === 'UpdatePosition') {
-          const pnl = getPnL(config.mp.position.isLong, next.averagePrice, next.markPrice, next.size)
+          const pnl = getPnL(config.position.isLong, next.averagePrice, next.markPrice, next.size)
           const realisedPnl = next.realisedPnl
           const pnlPercentage = getDeltaPercentage(pnl, next.collateral)
 
@@ -94,7 +95,7 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
           return { ...prev, pnl, pnlPercentage, time, realisedPnl, size, collateral, averagePrice }
         }
 
-        const pnl = getPnL(config.mp.position.isLong, prev.averagePrice, next.c, prev.size)
+        const pnl = getPnL(config.position.isLong, prev.averagePrice, next.c, prev.size)
         const pnlPercentage = getDeltaPercentage(pnl, prev.collateral)
 
         return { ...prev, time, pnl, pnlPercentage }
@@ -105,12 +106,12 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
 
     const lastChange = data[data.length - 1]
 
-    if (isPositionSettled(config.mp.position)) {
+    if (isPositionSettled(config.position)) {
       const pnl = 0n
-      const pnlPercentage = getDeltaPercentage(pnl, config.mp.position.maxCollateral)
-      const realisedPnl = config.mp.position.realisedPnl
+      const pnlPercentage = getDeltaPercentage(pnl, config.position.maxCollateral)
+      const realisedPnl = config.position.realisedPnl
 
-      data.push({ ...lastChange, pnl, realisedPnl, pnlPercentage, time: config.mp.position.settledBlockTimestamp })
+      data.push({ ...lastChange, pnl, realisedPnl, pnlPercentage, time: config.position.settlement.blockTimestamp })
     }
 
     return { data, interval }

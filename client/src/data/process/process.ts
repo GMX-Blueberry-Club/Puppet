@@ -80,7 +80,6 @@ export const gmxProcess = defineProcess(
     genesisSeed: gmxSeedData,
     parentScope: rootStoreScope,
     queryBlockSegmentLimit: 100000n,
-
   },
   {
     source: gmxLog.requestIncreasePosition,
@@ -139,7 +138,18 @@ export const gmxProcess = defineProcess(
 
 
       if (!seed.mirrorPositionSlot[args.key]) {
-        const positionSlot = seed.mirrorPositionSlot[args.key] = createMirrorPositionSlot(seed.approximatedTimestamp, value.transactionHash, args, mirrorPositionReq.requestKey, mirrorPositionReq)
+        const positionSlot = seed.mirrorPositionSlot[args.key] = createMirrorPositionSlot(
+          seed.approximatedTimestamp,
+          value.transactionHash,
+          {
+            ...args,
+            __typename: 'IncreasePosition',
+            blockTimestamp: seed.approximatedTimestamp,
+            transactionHash: value.transactionHash,
+          },
+          mirrorPositionReq.requestKey,
+          mirrorPositionReq
+        )
         seed.mirrorPositionSlot[args.key].puppets.forEach(puppet => {
           const subscKey = getPuppetSubscriptionKey(puppet, positionSlot.trader, positionSlot.routeTypeKey)
           const subsc = seed.subscription.find(s => s.puppetSubscriptionKey === subscKey)!
@@ -250,8 +260,12 @@ export const gmxProcess = defineProcess(
           realisedPnl: args.realisedPnl,
           settlePrice: seed.latestPrice[positionSlot.position.indexToken],
           isLiquidated: false,
-          settledTransactionHash: value.transactionHash,
-          settledBlockTimestamp: seed.approximatedTimestamp,
+          settlement: {
+            ...args,
+            transactionHash: value.transactionHash,
+            blockTimestamp: seed.approximatedTimestamp,
+            __typename: 'ClosePosition',
+          },
           __typename: 'PositionSettled',
         },
         blockTimestamp: seed.approximatedTimestamp,
@@ -338,8 +352,12 @@ export const gmxProcess = defineProcess(
           realisedPnl: realisedPnl,
           settlePrice: args.markPrice,
           isLiquidated: false,
-          settledTransactionHash: value.transactionHash,
-          settledBlockTimestamp: seed.approximatedTimestamp,
+          settlement: {
+            ...args,
+            transactionHash: value.transactionHash,
+            blockTimestamp: seed.approximatedTimestamp,
+            __typename: 'LiquidatePosition',
+          },
           __typename: 'PositionSettled',
         },
         __typename: 'PositionMirrorSettled',

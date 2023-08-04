@@ -1,13 +1,11 @@
-import { Behavior, replayLatest } from "@aelea/core"
-import { $node, $text, component, style } from "@aelea/dom"
+import { Behavior } from "@aelea/core"
+import { $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, layoutSheet } from "@aelea/ui-components"
 import { empty, map, mergeArray, multicast, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { $ButtonToggle } from "gmx-middleware-ui-components"
-import { ITraderSubscritpion } from "puppet-middleware-utils"
-import * as viem from "viem"
-import { $SubscriberDrawer } from "../../components/$SubscriberDrawer"
+import { IPuppetSubscritpion, ITraderSubscritpion } from "puppet-middleware-utils"
 import { IGmxProcessSeed } from "../../data/process/process"
 import { $card } from "../../elements/$common"
 import { wallet } from "../../wallet/walletLink"
@@ -58,13 +56,13 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
 
 
-  const subscription: Stream<viem.Address[]> = switchLatest(map(w3p => {
+  const subscription: Stream<IPuppetSubscritpion[]> = switchLatest(map(w3p => {
     if (!w3p) {
       return empty()
     }
 
     return map(data => {
-      return data.subscription.filter(s => s.trader === w3p.account.address)
+      return data.subscription.filter(s => s.puppet === w3p.account.address)
     }, config.processData)
   }, wallet))
   

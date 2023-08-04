@@ -5,8 +5,8 @@ import { $column, designSheet, layoutSheet, screenUtils } from '@aelea/ui-compon
 import { pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
 import { fromPromise, map, merge, mergeArray, multicast, now, skipRepeats, startWith, tap } from '@most/core'
-import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN } from "gmx-middleware-const"
-import { ETH_ADDRESS_REGEXP, switchMap } from "gmx-middleware-utils"
+import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN, TIME_INTERVAL_MAP } from "gmx-middleware-const"
+import { ETH_ADDRESS_REGEXP, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu'
 import { fadeIn } from "../transitions/enter"
@@ -96,7 +96,10 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   const isMobileScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
 
   const processData = replayLatest(multicast(switchMap(seed => {
-    if (seed.approximatedTimestamp === 0) {
+    const refreshThreshold = import.meta.env.MODE === 'development' ? TIME_INTERVAL_MAP.MIN5 : TIME_INTERVAL_MAP.MIN / 6
+    const timeNow = unixTimestampNow()
+
+    if (timeNow - seed.approximatedTimestamp > refreshThreshold) {
       return replayLatest(multicast(switchMap(params => {
         return map(seedState => seedState.seed, syncProcess({ ...gmxProcess, publicClient: params.publicClient, endBlock: params.block }))
       }, combineObject({ publicClient, block: blockCache }))))

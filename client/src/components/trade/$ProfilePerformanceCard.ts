@@ -1,13 +1,13 @@
-import { Behavior, combineArray, combineObject, replayLatest } from "@aelea/core"
+import { Behavior, combineObject, replayLatest } from "@aelea/core"
 import { $Node, $text, INode, MOTION_NO_WOBBLE, NodeComposeFn, component, motion, style } from "@aelea/dom"
 import { $NumberTicker, $column, $row, observer } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { map, multicast, skipRepeatsWith, startWith, switchLatest } from "@most/core"
+import { map, multicast, skipRepeatsWith, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { $Baseline, $infoTooltipLabel } from "gmx-middleware-ui-components"
 import {
-  ILogTxType,
-  IPositionSettled,
+  IPositionClose,
+  IPositionLiquidated,
   IPositionUpdate,
   createTimeline,
   filterNull,
@@ -19,18 +19,18 @@ import {
   unixTimestampNow
 } from "gmx-middleware-utils"
 import { BaselineData, ChartOptions, DeepPartial, LineType, MouseEventParams } from "lightweight-charts"
-import { IPositionMirrorSettled, getPortion, getPuppetShare } from "puppet-middleware-utils"
+import { IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion, getParticiapntMpShare } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { IGmxProcessSeed, PRICEFEED_INTERVAL } from "../../data/process/process"
 
 
-interface IProfilePerformanceCard {
+interface IParticipantPerformanceCard {
   $container?: NodeComposeFn<$Node>
   chartConfig?: DeepPartial<ChartOptions>
   pixelsPerBar?: number
   processData: Stream<IGmxProcessSeed>
   trader: viem.Address
-  puppet?: viem.Address
+  targetShare?: viem.Address
 }
 
 type ITimelinePositionSlot = {
@@ -52,33 +52,33 @@ function findClosest<T extends readonly number[]> (arr: T, chosen: number): T[nu
   return arr.reduce((a, b) => b - chosen < chosen - a ? b : a)
 }
 
-function getTime(tickItem: IPositionMirrorSettled | IPositionUpdate & ILogTxType<'UpdatePosition'> | {end: boolean, blockTimestamp: number}) {
-  if ('__typename' in  tickItem && tickItem.__typename === 'PositionMirrorSettled') return tickItem.position.settledBlockTimestamp
-
+function getTime(tickItem: (IPositionClose | IPositionLiquidated | IPositionUpdate) & { mp: IPositionMirrorSettled | IPositionMirrorSlot }) {
   return tickItem.blockTimestamp
 }
 
 
 function performanceTimeline(
+  positionList: (IPositionMirrorSettled | IPositionMirrorSlot)[],
   processData: IGmxProcessSeed,
-  trader: viem.Address,
   tickCount: number,
-  puppet?: viem.Address,
+  shareTarget?: viem.Address,
 ) {
-  const settledList = Object.values(processData.mirrorPositionSettled[trader]).flat() //.slice(-1)
-  const openList = Object.values(processData.mirrorPositionSlot).filter(pos => pos.trader === trader) //.flatMap(t => t.position.link.updateList)
+
+  if (positionList.length === 0) return []
+
   // const pricefeed = processData.pricefeed
 
   const now = unixTimestampNow()
 
-  const sourceList = [
-    ...settledList.flatMap(mp => mp.position.link.updateList.map(update => ({ ...update, mp }))),
-    ...settledList,
-    {
-      end: true,
-      blockTimestamp: now
+  const sourceList = positionList.flatMap(mp => {
+    const updateList = mp.position.link.updateList.map(update => ({ ...update, mp }))
+    if ('settlement' in mp.position) {
+      return [...updateList, { ...mp.position.settlement, mp }]
     }
-  ].sort((a, b) => getTime(a) - getTime(b))
+
+    return updateList
+  }).sort((a, b) => getTime(a) - getTime(b))
+    
 
   const startTime = sourceList[0].blockTimestamp
   const timeRange = now - startTime
@@ -96,7 +96,13 @@ function performanceTimeline(
 
 
   const data = createTimeline({
-    source: sourceList,
+    source: [
+      ...sourceList,
+      {
+        end: true,
+        blockTimestamp: now
+      }
+    ],
     // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
     interval,
     seed: initialTick,
@@ -106,6 +112,8 @@ function performanceTimeline(
         return { ...acc }
       }
 
+      const share = getParticiapntMpShare(next.mp, shareTarget)
+
       if (next.__typename === 'UpdatePosition') {
         const tickerId = `${next.mp.position.indexToken}:${interval}` as const
         const tokenPrice = processData.pricefeed[tickerId][intervalSlot]
@@ -114,8 +122,12 @@ function performanceTimeline(
           return { ...acc }
         }
 
+
+        const pnl = getPnL(next.mp.position.isLong, next.averagePrice, tokenPrice.c, next.size)
+        const pnlPortion = getParticiapntMpPortion(next.mp, pnl, shareTarget)
+
         acc.positionSlot[next.key] ??= {
-          openPnl: 0n,
+          openPnl: pnlPortion,
           realisedPnl: next.realisedPnl,
           update: next
         }
@@ -126,12 +138,13 @@ function performanceTimeline(
         return { ...acc, pendingPnl, value }
       }
 
+      const nextSettlePnl = next.__typename === 'LiquidatePosition' ? -next.collateral : next.realisedPnl
+      const pnlPortion = getParticiapntMpPortion(next.mp, nextSettlePnl, shareTarget)
 
-      const position = next.position as IPositionSettled
-      const settledPnl = acc.settledPnl + position.realisedPnl // - position.cumulativeFee
-
+      const settledPnl = acc.settledPnl + pnlPortion // - position.cumulativeFee
       const positionPnL = { ...acc.positionSlot }
-      delete positionPnL[next.position.key]
+
+      delete positionPnL[next.key]
 
       const pendingPnl = Object.values(positionPnL).reduce((a, b) => a + b.openPnl + b.realisedPnl, 0n)
       const value = formatFixed(settledPnl + pendingPnl, 30)
@@ -144,22 +157,20 @@ function performanceTimeline(
         return acc
       }
 
-      const position = next.__typename === 'PositionMirrorSettled' ? next.position : next.mp.position
-      const mp = next.__typename === 'PositionMirrorSettled' ? next : next.mp
+      const mp = next.mp
 
         
-      const tickerId = `${position.indexToken}:${interval}` as const
+      const tickerId = `${next.mp.position.indexToken}:${interval}` as const
       const tokenPrice = processData.pricefeed[tickerId][intervalSlot]
 
-      if (!acc.positionSlot[position.key] || !tokenPrice) {
+      if (!acc.positionSlot[next.key] || !tokenPrice) {
         return { ...acc }
       }
 
-      const share = puppet ? getPuppetShare(mp.shares, mp.puppets, puppet) : mp.traderShare
+      const slot = acc.positionSlot[next.key]
+      const pnl = getPnL(mp.position.isLong, slot.update.averagePrice, tokenPrice.c, slot.update.size)
+      const pnlPortion = getParticiapntMpPortion(next.mp, pnl, shareTarget)
 
-      const slot = acc.positionSlot[position.key]
-      const pnl = getPnL(position.isLong, slot.update.averagePrice, tokenPrice.c, slot.update.size)
-      const pnlPortion = getPortion(pnl, mp.shareSupply, share)
       slot.openPnl = pnlPortion
 
       const pendingPnl = Object.values(acc.positionSlot).reduce((a, b) => a + b.openPnl + b.realisedPnl, 0n)
@@ -170,10 +181,10 @@ function performanceTimeline(
     }
   })
     
-  return { data, interval }
+  return data
 }
 
-export const $ProfilePerformanceCard = (config: IProfilePerformanceCard) => component((
+export const $ProfilePerformanceCard = (config: IParticipantPerformanceCard) => component((
   [containerDimension, sampleContainerDimension]: Behavior<INode, ResizeObserverEntry[]>,
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
 ) => {
@@ -183,7 +194,11 @@ export const $ProfilePerformanceCard = (config: IProfilePerformanceCard) => comp
   const timeline = map(
     params => {
 
-      return performanceTimeline(params.processData, config.trader, params.tickCount)
+      const traderPos = params.processData.mirrorPositionSettled[config.trader] || {}
+      const settledList = Object.values(traderPos).flat() // .slice(-1)
+      // const openList = Object.values(processData.mirrorPositionSlot).filter(pos => pos.trader === trader) //.flatMap(t => t.position.link.updateList)
+
+      return performanceTimeline(settledList, params.processData, params.tickCount, config.targetShare)
     },
     combineObject({ processData: config.processData, tickCount })
   )
@@ -198,8 +213,8 @@ export const $ProfilePerformanceCard = (config: IProfilePerformanceCard) => comp
       return value
     }
 
-    const data = params.timeline.data
-    const value = data[data.length - 1].value
+    const data = params.timeline
+    const value = data[data.length - 1]?.value
     return value || null
   }, combineObject({ pnlCrossHairTimeChange, timeline })))
 
@@ -226,50 +241,54 @@ export const $ProfilePerformanceCard = (config: IProfilePerformanceCard) => comp
           $infoTooltipLabel('The total combined settled and open trades', $text(style({ fontSize: '.85rem' }))('PnL'))
         )
       ),
-      switchLatest(
-        combineArray(({ data, interval }) => {
+      
+      switchMap(timeline => {
+        if (timeline.length === 0) {
+          return $text(style({ 
+            fontSize: '.85rem', color: pallete.foreground, textAlign: 'center',
+          }))('No trades yet')
+        }
 
-          return $Baseline({
-            chartConfig: {
-              leftPriceScale: {
-                autoScale: true,
-                ticksVisible: true,
-                scaleMargins: {
-                  top: 0.35,
-                  bottom: 0.05,
-                }
-              },
+        return $Baseline({
+          chartConfig: {
+            leftPriceScale: {
+              autoScale: true,
+              ticksVisible: true,
+              scaleMargins: {
+                top: 0.35,
+                bottom: 0.05,
+              }
             },
-            baselineOptions: {
-              baseLineColor: pallete.message,
-              baseLineVisible: true,
-              lineWidth: 2,
-              baseValue: {
-                price: 0,
-                type: 'price',
-              },
+          },
+          baselineOptions: {
+            baseLineColor: pallete.message,
+            baseLineVisible: true,
+            lineWidth: 2,
+            baseValue: {
+              price: 0,
+              type: 'price',
             },
-            // appendData: scan((prev, next) => {
-            //   const marketPrice = formatFixed(next.indexTokenPrice, 30)
-            //   const timeNow = unixTimestampNow()
-            //   const prevTimeSlot = Math.floor(prev.time as number / tf)
-            //   const nextTimeSlot = Math.floor(timeNow / tf)
-            //   const time = nextTimeSlot * tf as Time
-            //   const isNext = nextTimeSlot > prevTimeSlot
+          },
+          // appendData: scan((prev, next) => {
+          //   const marketPrice = formatFixed(next.indexTokenPrice, 30)
+          //   const timeNow = unixTimestampNow()
+          //   const prevTimeSlot = Math.floor(prev.time as number / tf)
+          //   const nextTimeSlot = Math.floor(timeNow / tf)
+          //   const time = nextTimeSlot * tf as Time
+          //   const isNext = nextTimeSlot > prevTimeSlot
 
-            //   return {
-            //     value: marketPrice,
-            //     time
-            //   }
-            // }, data[data.length - 1], config.processData),
-            data: data as any as BaselineData[],
-          })({
-            crosshairMove: crosshairMoveTether(
-              skipRepeatsWith((a, b) => a.point?.x === b.point?.x)
-            )
-          })
-        }, timeline)
-      )
+          //   return {
+          //     value: marketPrice,
+          //     time
+          //   }
+          // }, data[data.length - 1], config.processData),
+          data: timeline as any as BaselineData[],
+        })({
+          crosshairMove: crosshairMoveTether(
+            skipRepeatsWith((a, b) => a.point?.x === b.point?.x)
+          )
+        })
+      }, timeline)
     ),
 
     {
@@ -283,14 +302,20 @@ export const $ProfilePerformanceCard = (config: IProfilePerformanceCard) => comp
 export const $ProfilePerformanceGraph = (config: {
   processData: Stream<IGmxProcessSeed>
   trader: viem.Address
-  width: number
+  width: number,
+  targetShare?: viem.Address
 }) => component((
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
 ) => {
 
   const tickCount = config.width / 5
   const timeline = map(
-    params => performanceTimeline(params.processData, config.trader, tickCount),
+    params => {
+      const traderPos = params.processData.mirrorPositionSettled[config.trader] || {}
+      const settledList = Object.values(traderPos).flat() //.slice(-1)
+
+      return performanceTimeline(settledList, params.processData, tickCount, config.targetShare)
+    },
     combineObject({ processData: config.processData })
   )
 
@@ -312,8 +337,8 @@ export const $ProfilePerformanceGraph = (config: {
 
   return [
     $container(
-      switchMap(({ data, interval }) => {
-        return  $Baseline({
+      switchMap((data) => {
+        return $Baseline({
           chartConfig: {
             crosshair: {
               horzLine: {
