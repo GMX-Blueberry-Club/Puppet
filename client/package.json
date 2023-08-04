@@ -1,6 +1,7 @@
 {
     "name": "client",
     "private": true,
+    "type": "module",
     "files": [
         ".dist"
     ],

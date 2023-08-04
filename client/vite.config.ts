@@ -2,11 +2,20 @@ import { defineConfig } from 'vite'
 import dotenv from 'dotenv'
 import path from 'path'
 
-const parentDotenvPath = path.join(__dirname, '../', '.env')
-const parentDotenvConfig = dotenv.config({ path: parentDotenvPath })
+let parentDotenvConfig
 
+// In local environment, __dirname is a valid node variable. 
+// In cloud context like Netlify, it's not available so we catch the error
+try {
+  const parentDotenvPath = path.join(__dirname, '../', '.env')
+  parentDotenvConfig = dotenv.config({ path: parentDotenvPath })
+} catch(err) {
+  parentDotenvConfig = { parsed: process.env }
+}
+
+// `.env` file not found or error while reading
 if (parentDotenvConfig.parsed === undefined) {
-  throw new Error(`Failed to load parent .env file at ${parentDotenvPath}`)
+  throw new Error(`Failed to load parent .env file`)
 }
 
 const prefixedParentEnv = Object.fromEntries(
