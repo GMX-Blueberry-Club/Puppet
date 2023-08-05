@@ -8,7 +8,7 @@
     "scripts": {
         "dev": "rimraf dev-dist && DEBUG=vite-plugin-pwa SW_DEV=true vite --force",
         "dev-destroy": "rimraf dev-dist && DEBUG=vite-plugin-pwa SW_DESTROY=true SW_DEV=true vite --force",
-        "build": "DEBUG=vite-plugin-pwa vite build",
+        "build": "vite build",
         "run-build": "DEBUG=vite-plugin-pwa BASE_URL=/ SOURCE_MAP=true vite build",
         "start-preview": "vite preview --port=4173"
     },
