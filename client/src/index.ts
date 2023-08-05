@@ -4,7 +4,7 @@ import { registerSW } from 'virtual:pwa-register'
 
 
 // replaced dyanmicaly
-const reloadSW: any = '__RELOAD_SW__'
+const reloadSW = '__RELOAD_SW__'
 
 const reload = registerSW({
   async onNeedRefresh() {

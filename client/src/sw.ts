@@ -9,7 +9,6 @@ self.addEventListener('message', (event) => {
 })
 
 // self.__WB_MANIFEST is default injection point
-// @ts-ignore
 precacheAndRoute(self.__WB_MANIFEST)
 
 // clean old assets
