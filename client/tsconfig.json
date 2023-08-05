@@ -1,10 +1,14 @@
 {
   "compilerOptions": {
     "target": "ESNext",
+    "types": [
+      "vite-plugin-pwa/client"
+    ],
     "lib": [
       "DOM",
       "DOM.Iterable",
-      "ESNext"
+      "ESNext",
+      "webworker"
     ],
     "module": "ESNext",
     "skipLibCheck": true,

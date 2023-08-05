@@ -14,6 +14,8 @@ import { IProcessedStore, defineProcess } from "../../utils/indexer/processor"
 import { puppetLog } from "../scope"
 import * as gmxLog from "../scope/gmx"
 import { transformBigints } from "../../utils/storage/storeScope"
+import { nullSink } from "@aelea/core"
+import { newDefaultScheduler } from "@most/scheduler"
 
 
 export interface IProcessMetrics {
@@ -73,18 +75,20 @@ const gmxSeedData: IGmxProcessSeed = {
 }
 
 
-
-const ww =  importGlobal(import('../../data/db/processor_42161_114838028_CreateIncreasePosition_PriceData_IncreasePosition_DecreasePosition_SharesIncrease_UpdatePosition_ClosePosition_LiquidatePosition_OpenPosition_SubscribeRoute.json'))
+const newLocal = '../../data/db/sha256-w9wMeTD1weowD5_n86aDyKg9M_HofhCG4g9mQTzuuy0=.json'
+const seedProcess =  importGlobal(async () => {
+  const req = await import(newLocal)
+  return req
+})
 
 export const gmxProcess = defineProcess(
   {
-    // seedProcess: transformBigints(dbProcess) as IProcessedStore<IGmxProcessSeed>,
-    seedProcess:  {
-      startBlock: 114838028n,
-      chainId: arbitrum.id,
-      orderId: Number(1000000n),
-      seed: gmxSeedData,
-    },
+    startBlock: 114838028n,
+    chainId: arbitrum.id,
+
+    seed: seedProcess,
+    blueprint: gmxSeedData,
+
     parentScope: rootStoreScope,
     queryBlockSegmentLimit: 100000n,
   },

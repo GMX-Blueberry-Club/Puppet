@@ -102,12 +102,12 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
     if (timeNow - seed.approximatedTimestamp > refreshThreshold) {
       return replayLatest(multicast(switchMap(params => {
-        return map(seedState => seedState.seed, syncProcess({ ...gmxProcess, publicClient: params.publicClient, endBlock: params.block }))
+        return map(seedState => seedState.state, syncProcess({ ...gmxProcess, publicClient: params.publicClient, endBlock: params.block }))
       }, combineObject({ publicClient, block: blockCache }))))
     }
 
     return now(seed)
-  }, gmxProcess.seed)))
+  }, gmxProcess.state)))
 
   const subscribeList = replayLatest(map(l => [l], subscribeTrader), [] as ITraderSubscritpion[])
 

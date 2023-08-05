@@ -1,7 +1,7 @@
 import { Behavior, combineObject, replayLatest } from "@aelea/core"
 import { $node, $text, INode, attrBehavior, component, nodeEvent, style } from "@aelea/dom"
 import { $TextField, $column, $row, layoutSheet } from "@aelea/ui-components"
-import { fromPromise, map, mergeArray, multicast, now, snapshot, switchLatest, take } from "@most/core"
+import { awaitPromises, fromPromise, map, mergeArray, multicast, now, snapshot, switchLatest, take } from "@most/core"
 import { Stream } from "@most/types"
 import { $caretDown, $infoLabeledValue } from "gmx-middleware-ui-components"
 import { readableFileSize, switchMap } from "gmx-middleware-utils"
@@ -10,7 +10,7 @@ import { $ButtonPrimary, $buttonAnchor, defaultMiniButtonStyle } from "../compon
 import { gmxProcess } from "../data/process/process"
 import { gmxLog } from "../data/scope"
 import { $card, $iconCircular } from "../elements/$common"
-import { syncProcess } from "../utils/indexer/processor"
+import { getBlobHash, syncProcess } from "../utils/indexer/processor"
 import * as indexDb from "../utils/storage/indexDB"
 import { blockChange, publicClient } from "../wallet/walletLink"
 import { $seperator2 } from "./common"
@@ -32,7 +32,7 @@ export const $Admin = component((
   }, combineObject({ changeStartBlock, publicClient }), clickSyncProcess))
 
   const processState = replayLatest(multicast(mergeArray([
-    take(1, gmxProcess.state),
+    take(1, gmxProcess.seed),
     changedSyncedProcess
   ])))
 
@@ -59,9 +59,16 @@ export const $Admin = component((
                 defaultMiniButtonStyle, 
                 hoverDownloadBtnTether(
                   nodeEvent('pointerover'),
-                  switchMap(() => map(blob => URL.createObjectURL(blob), jsonBlob(gmxProcess.state))),
-                  map(href => {
-                    return { href, download: `${gmxProcess.scopeKey}.json` }
+                  switchMap(() => map(async blob => {
+
+                    return {
+                      href: URL.createObjectURL(blob),
+                      hash: await getBlobHash(blob)
+                    }
+                  }, jsonBlob(gmxProcess.seed))),
+                  awaitPromises,
+                  map(params => {
+                    return { href: params.href, download: `${params.hash}.json` }
                   }),
                 ),
                 attrBehavior(map(attrs => attrs, hoverDownloadBtn))
@@ -71,7 +78,7 @@ export const $Admin = component((
 
              
             $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
-              $infoLabeledValue('Synced', $text(map(s => `${s.startBlock}-${s.blockNumber}`, processState))),
+              $infoLabeledValue('Synced', $text(map(s => `${gmxProcess.startBlock}-${s.blockNumber}`, processState))),
             ),
 
             $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
@@ -90,11 +97,11 @@ export const $Admin = component((
 
           switchMap(state => {
             return $row(layoutSheet.spacing)(
-              $infoLabeledValue('Synced', $text(String(state.startBlock))),
+              $infoLabeledValue('Synced', $text(String(gmxProcess.startBlock))),
               $TextField({ 
                 value: now(String(state.blockNumber)),
                 label: 'End',
-                validation: map(s => state.startBlock >= Number(s) ? 'Invalid End block' : null),
+                validation: map(s => gmxProcess.startBlock >= Number(s) ? 'Invalid End block' : null),
               })({
                 change: changeStartBlockTether(map(BigInt))
               }),
@@ -216,19 +223,3 @@ function jsonBlob<TData>(data: Stream<TData>): Stream<Blob> {
   }, data)
 }
 
-function arrayBufferToBase64(buffer: ArrayBuffer) {
-  let binary = ''
-  const bytes = new Uint8Array(buffer)
-  const len = bytes.byteLength
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i])
-  }
-  return window.btoa(binary)
-}
-
-async function getBlobHash(blob: Blob) {
-  const data = await blob.arrayBuffer()
-  const hash = await window.crypto.subtle.digest('SHA-256', data)
-  const hashBase64 = arrayBufferToBase64(hash)
-  return 'sha256-' + hashBase64
-}

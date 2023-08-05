@@ -1,28 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <base href="/">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <!-- <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sono:wght@200;400;800&display=swap" rel="stylesheet"> -->
-    <style> 
+    <title>Puppet</title>
+    <meta name="description" content="My Awesome App description">
+    <link rel="icon" href="/pwa-192x192.png">
+    <link rel="apple-touch-icon" href="/pwa-512x512.png" sizes="512x512">
+    <meta name="theme-color" content="%THEME_PRIMARY%">
 
+    <style>
         :root {
-            --font-familiy: 'VAG Rounded',-apple-system,BlinkMacSystemFont,Trebuchet MS,Roboto,Ubuntu,sans-serif;
+            --font-familiy: 'VAG Rounded', -apple-system, BlinkMacSystemFont, Trebuchet MS, Roboto, Ubuntu, sans-serif;
         }
 
-        * { box-sizing: border-box; }
-        body { overflow: hidden; margin: 0;  }
-        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { appearance: none; }
-        /* Firefox */
-        input[type="number"] { appearance: none; }
+        * {
+            box-sizing: border-box;
+        }
 
-        html, button, input {
+        body {
+            overflow: hidden;
+            margin: 0;
+        }
+
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            appearance: none;
+        }
+
+        /* Firefox */
+        input[type="number"] {
+            appearance: none;
+        }
+
+        html,
+        button,
+        input {
             font-family: var(--font-familiy);
             text-rendering: geometricPrecision;
             font-size: 100%;
-            font-feature-settings: "tnum" on,"lnum" on;
+            font-feature-settings: "tnum" on, "lnum" on;
         }
 
         @font-face {
@@ -40,33 +58,23 @@
             font-style: bold;
             font-display: swap
         }
-
-
-
     </style>
 
-    <link rel="icon" type="image/png" href="/assets/favicon.png">
 
-    <meta property="og:url" content="blueberry.club">
+    <meta property="og:url" content="%URL%">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="GMX Blueberry Club">
+    <meta property="og:title" content="%APP_DESC_SHORT%">
     <meta property="og:image" content="/assets/OG_GBC.jpg">
 
     <meta name="twitter:image:src" content="/assets/OG_GBC.jpg">
-    <meta name="twitter:site" content="@GBlueberryClub" />
+    <meta name="twitter:site" content="%TWITTER_HASH%" />
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="GMX Blueberry Club">
+    <meta name="twitter:title" content="%APP_DESC_SHORT%">
 
     <script type="module" src="/src/index.ts"></script>
 </head>
 
 <body>
-
-    <!-- <div style="
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(circle,rgb(255 255 255) 31%,rgb(184 5 88 / 43%) 99%);
-        "></div> -->
 </body>
 
 </html>
