@@ -6,14 +6,19 @@ import { registerSW } from 'virtual:pwa-register'
 // replaced dyanmicaly
 const reloadSW: any = '__RELOAD_SW__'
 
-const register = registerSW({
-  onNeedRefresh() {
-    if (reloadSW === 'true') {
-      setInterval(async () => {
-        console.log('Checking for sw update')
-        await register(true)
-      }, 20000 /* 20s for testing purposes */)
+const reload = registerSW({
+  async onNeedRefresh() {
+    const res = window.prompt('new update is pending, respond with "X" to reload')
+
+    if (res === 'X') {
+      await reload(true)
+      console.log('Done reloading')
     }
+
+    // if (reloadSW === 'true') {
+    //   setInterval(async () => {
+    //   }, 20000 /* 20s for testing purposes */)
+    // }
   },
   immediate: true,
   onRegisteredSW(swUrl, r) {
