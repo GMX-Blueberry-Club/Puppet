@@ -107,7 +107,7 @@ export const $Home = (config: ITreasury) => component((
 
 
         $column(style({ textAlign: 'center' }))(
-          $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.75rem' }))('Matching top Traders with Investors2'),
+          $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.75rem' }))('Matching top Traders with Investors'),
         ),
         $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Traders earn more, investors minimize their risks by mirroring multiple performant traders on a single deposit.`),
 
