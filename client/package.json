@@ -9,8 +9,7 @@
         "dev": "rimraf dev-dist && DEBUG=vite-plugin-pwa SW_DEV=true vite --force",
         "dev-destroy": "rimraf dev-dist && DEBUG=vite-plugin-pwa SW_DESTROY=true SW_DEV=true vite --force",
         "build": "vite build",
-        "run-build": "DEBUG=vite-plugin-pwa BASE_URL=/ SOURCE_MAP=true vite build",
-        "start-preview": "vite preview --port=4173"
+        "preview": "vite preview --port=4173"
     },
     "dependencies": {
         "@rollup/plugin-replace": "^5.0.1",
