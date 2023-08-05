@@ -1,4 +1,4 @@
-import { div, groupArrayMany } from "gmx-middleware-utils"
+import { div, getPnL, groupArrayMany } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { IAccountToRouteMap, IMirrorTraderSummary, IPositionMirrorSettled, IPositionMirrorSlot } from "./types.js"
 
@@ -42,7 +42,7 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
 
 
     const fee = seed.fee + position.cumulativeFee
-    const pnl = seed.fee + position.realisedPnl
+    const pnl = seed.pnl + position.realisedPnl
 
 
     const winCount = seed.winCount + (position.realisedPnl > 0n ? 1 : 0)
@@ -88,6 +88,15 @@ export function getParticiapntMpPortion(mp: IPositionMirrorSettled | IPositionMi
   const share = getParticiapntMpShare(mp, shareTarget)
 
   return getPortion(mp.shareSupply, share, amount)
+}
+
+
+export function getMpPnL(mp: IPositionMirrorSettled | IPositionMirrorSlot, markPrice: bigint, shareTarget?: viem.Address): bigint {
+  const position = mp.position
+  const delta = getPnL(position.isLong, position.averagePrice, markPrice, position.size)
+  const openPnl = getParticiapntMpPortion(mp, delta, shareTarget)
+
+  return openPnl
 }
 
 

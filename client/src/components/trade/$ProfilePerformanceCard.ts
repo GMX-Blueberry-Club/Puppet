@@ -2,13 +2,15 @@ import { Behavior, combineObject, replayLatest } from "@aelea/core"
 import { $Node, $text, INode, MOTION_NO_WOBBLE, NodeComposeFn, component, motion, style } from "@aelea/dom"
 import { $NumberTicker, $column, $row, observer } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { map, multicast, skipRepeatsWith, startWith } from "@most/core"
+import { map, multicast, skipRepeatsWith, startWith, take } from "@most/core"
 import { Stream } from "@most/types"
 import { $Baseline, $infoTooltipLabel } from "gmx-middleware-ui-components"
 import {
   IPositionClose,
   IPositionLiquidated,
   IPositionUpdate,
+  IPriceInterval,
+  IPriceIntervalIdentity,
   createTimeline,
   filterNull,
   formatFixed,
@@ -16,7 +18,8 @@ import {
   parseReadableNumber,
   readableUnitAmount,
   switchMap,
-  unixTimestampNow
+  unixTimestampNow,
+  zipState
 } from "gmx-middleware-utils"
 import { BaselineData, ChartOptions, DeepPartial, LineType, MouseEventParams } from "lightweight-charts"
 import { IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion, getParticiapntMpShare } from "puppet-middleware-utils"
@@ -28,20 +31,22 @@ interface IParticipantPerformanceCard {
   $container?: NodeComposeFn<$Node>
   chartConfig?: DeepPartial<ChartOptions>
   pixelsPerBar?: number
+  positionList: Stream<(IPositionMirrorSettled | IPositionMirrorSlot)[]>
   processData: Stream<IGmxProcessSeed>
-  trader: viem.Address
   targetShare?: viem.Address
 }
+
+
+type IPerformanceTickUpdateTick = IPositionUpdate & { mp: IPositionMirrorSettled | IPositionMirrorSlot }
 
 type ITimelinePositionSlot = {
   realisedPnl: bigint
   openPnl: bigint
-  update: IPositionUpdate
+  update: IPerformanceTickUpdateTick
 }
 
 interface IPerformanceTick {
   time: number
-  pendingPnl: bigint
   settledPnl: bigint
   value: number
   positionSlot: Record<viem.Hex, ITimelinePositionSlot>
@@ -51,6 +56,7 @@ interface IPerformanceTick {
 function findClosest<T extends readonly number[]> (arr: T, chosen: number): T[number] {
   return arr.reduce((a, b) => b - chosen < chosen - a ? b : a)
 }
+
 
 function getTime(tickItem: (IPositionClose | IPositionLiquidated | IPositionUpdate) & { mp: IPositionMirrorSettled | IPositionMirrorSlot }) {
   return tickItem.blockTimestamp
@@ -88,7 +94,6 @@ function performanceTimeline(
   const initialTick: IPerformanceTick = {
     time: startTime - interval,
     value: 0,
-    pendingPnl: 0n,
     settledPnl: 0n,
     positionSlot: {}
   }
@@ -107,81 +112,61 @@ function performanceTimeline(
     interval,
     seed: initialTick,
     getTime: mp => getTime(mp as any),
-    seedMap: (acc, next, intervalSlot) => {
+    seedMap: (acc, next) => {
       if ('end' in next) {
         return { ...acc }
       }
 
-      const share = getParticiapntMpShare(next.mp, shareTarget)
-
       if (next.__typename === 'UpdatePosition') {
-        const tickerId = `${next.mp.position.indexToken}:${interval}` as const
-        const tokenPrice = processData.pricefeed[tickerId][intervalSlot]
-
-        if (!tokenPrice) {
-          return { ...acc }
-        }
-
-
-        const pnl = getPnL(next.mp.position.isLong, next.averagePrice, tokenPrice.c, next.size)
-        const pnlPortion = getParticiapntMpPortion(next.mp, pnl, shareTarget)
-
         acc.positionSlot[next.key] ??= {
-          openPnl: pnlPortion,
-          realisedPnl: next.realisedPnl,
+          openPnl: 0n,
+          realisedPnl: 0n,
           update: next
         }
-
-        const pendingPnl = Object.values(acc.positionSlot).reduce((a, b) => a + b.openPnl + b.realisedPnl, 0n)
-        const value = formatFixed(acc.settledPnl + acc.pendingPnl, 30)
-
-        return { ...acc, pendingPnl, value }
+        return { ...acc }
+      } else {
+        delete acc.positionSlot[next.key]
       }
 
       const nextSettlePnl = next.__typename === 'LiquidatePosition' ? -next.collateral : next.realisedPnl
       const pnlPortion = getParticiapntMpPortion(next.mp, nextSettlePnl, shareTarget)
+      const openPnl = Object.values(acc.positionSlot).reduce((a, b) => a + b.openPnl + b.realisedPnl, 0n)
 
       const settledPnl = acc.settledPnl + pnlPortion // - position.cumulativeFee
-      const positionPnL = { ...acc.positionSlot }
+      const value = formatFixed(settledPnl + openPnl, 30)
 
-      delete positionPnL[next.key]
-
-      const pendingPnl = Object.values(positionPnL).reduce((a, b) => a + b.openPnl + b.realisedPnl, 0n)
-      const value = formatFixed(settledPnl + pendingPnl, 30)
-
-      return { ...acc, settledPnl, pendingPnl, value, positionSlot: positionPnL }
-
+      return { ...acc, settledPnl, value }
     },
     gapMap: (acc, next, intervalSlot) => {
-      if ('end' in next) {
-        return acc
-      }
+      const pendingPnl = Object.values(acc.positionSlot).reduce((pnlAcc, slot) => {
+        const mp = slot.update.mp
+        const tickerId = `${mp.position.indexToken}:${interval}` as const
+        const tokenPrice = getClosestpricefeedCandle(processData.pricefeed, tickerId, intervalSlot)
+        const pnl = getPnL(mp.position.isLong, slot.update.averagePrice, tokenPrice.c, slot.update.size)
+        const openPnl = getParticiapntMpPortion(mp, pnl, shareTarget)
 
-      const mp = next.mp
+        return pnlAcc + openPnl
+      }, 0n)
 
-        
-      const tickerId = `${next.mp.position.indexToken}:${interval}` as const
-      const tokenPrice = processData.pricefeed[tickerId][intervalSlot]
-
-      if (!acc.positionSlot[next.key] || !tokenPrice) {
-        return { ...acc }
-      }
-
-      const slot = acc.positionSlot[next.key]
-      const pnl = getPnL(mp.position.isLong, slot.update.averagePrice, tokenPrice.c, slot.update.size)
-      const pnlPortion = getParticiapntMpPortion(next.mp, pnl, shareTarget)
-
-      slot.openPnl = pnlPortion
-
-      const pendingPnl = Object.values(acc.positionSlot).reduce((a, b) => a + b.openPnl + b.realisedPnl, 0n)
-      const value = formatFixed(acc.settledPnl + acc.pendingPnl, 30)
-
+      const value = formatFixed(acc.settledPnl + pendingPnl, 30)
 
       return { ...acc, pendingPnl, value }
     }
   })
     
   return data
+}
+
+
+
+function getClosestpricefeedCandle(pricefeed: Record<IPriceIntervalIdentity, Record<string, IPriceInterval>>, tickerId: IPriceIntervalIdentity, intervalSlot: number) {
+  const price = pricefeed[tickerId][intervalSlot] || pricefeed[tickerId][intervalSlot + 1]
+
+  if (!price) {
+    return getClosestpricefeedCandle(pricefeed, tickerId, intervalSlot - 1)
+  }
+
+  return price
 }
 
 export const $ProfilePerformanceCard = (config: IParticipantPerformanceCard) => component((
@@ -191,17 +176,12 @@ export const $ProfilePerformanceCard = (config: IParticipantPerformanceCard) => 
 
   const pixelsPerBar = config.pixelsPerBar || 5
   const tickCount = map(([container]) => container.contentRect.width / pixelsPerBar, containerDimension)
-  const timeline = map(
+  const timeline = multicast(map(
     params => {
-
-      const traderPos = params.processData.mirrorPositionSettled[config.trader] || {}
-      const settledList = Object.values(traderPos).flat() // .slice(-1)
-      // const openList = Object.values(processData.mirrorPositionSlot).filter(pos => pos.trader === trader) //.flatMap(t => t.position.link.updateList)
-
-      return performanceTimeline(settledList, params.processData, params.tickCount, config.targetShare)
+      return performanceTimeline(params.positionList, params.processData, params.tickCount, config.targetShare)
     },
-    combineObject({ processData: config.processData, tickCount })
-  )
+    zipState({ processData: config.processData, positionList: config.positionList, tickCount })
+  ))
 
   const $container = config.$container || $column(style({ height: '80px', minWidth: '100px' }))
   const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))

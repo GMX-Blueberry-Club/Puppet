@@ -1,5 +1,5 @@
 import { Behavior, combineObject, O, Op } from "@aelea/core"
-import { $node, $Node, $svg, attr, component, INode, NodeComposeFn, nodeEvent, style } from '@aelea/dom'
+import { $element, $node, $Node, $svg, attr, component, INode, NodeComposeFn, nodeEvent, style } from '@aelea/dom'
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, now, snapshot, switchLatest } from "@most/core"
@@ -13,9 +13,10 @@ export type TablePageResponse<T> = T[] | Omit<IScrollPagable, '$items'> & { page
 export interface TableOption<T, FilterState> {
 
   columns: TableColumn<T>[]
-  $between?: $Node
-
+  gridTemplateColumns?: string
   dataSource: Stream<TablePageResponse<T>>
+
+  $between?: $Node
   scrollConfig?: Omit<QuantumScroll, 'dataSource'>
 
   $container?: NodeComposeFn<$Node>
@@ -37,6 +38,8 @@ export interface TableColumn<T> {
   $$body: Op<T, $Node>
   sortBy?: keyof T,
 
+  gridTemplate?: string
+
   columnOp?: Op<INode, INode>
 }
 
@@ -55,29 +58,29 @@ const $caretDown = $svg('path')(attr({ d: 'M4.616.296c.71.32 1.326.844 2.038 1.1
 
 export const $defaultTableCell = $row(
   layoutSheet.spacingSmall,
-  style({ padding: '6px 0', minWidth: 0, flex: '1 0 auto', alignItems: 'center', overflowWrap: 'break-word' }),
+  style({ padding: '6px 0', minWidth: 0, alignItems: 'center', overflowWrap: 'break-word' }),
 )
 
 export const $defaultTableHeaderCell = $defaultTableCell(
   style({  alignItems: 'center', color: pallete.foreground, })
 )
-export const $defaultTableRowContainer = screenUtils.isDesktopScreen
-  ? $node(layoutSheet.spacing, style({ display: 'grid' }))
-  : $node(layoutSheet.spacingSmall, style({ display: 'grid' }))
+export const $defaultTableRowContainer = $row(style({ display: 'grid' }), screenUtils.isDesktopScreen ? layoutSheet.spacing : layoutSheet.spacingSmall)
 
 
 
-export const $defaultTableContainer = $column
+export const $defaultTableContainer = $column(layoutSheet.spacingSmall)
 
 export const $Table = <T, FilterState = never>({
   dataSource, columns, scrollConfig,
-  $cell = $defaultTableCell,
-  $bodyCell = $cell,
-  $headerCell = $defaultTableHeaderCell,
+
   $container = $defaultTableContainer,
   $rowContainer = $defaultTableRowContainer,
   $headerRowContainer = $rowContainer,
   $bodyRowContainer = $rowContainer,
+  $cell = $defaultTableCell,
+  $bodyCell = $cell,
+  $headerCell = $defaultTableHeaderCell,
+
   sortBy = now(null),
   filter = now(null),
   $between = empty(),
@@ -87,9 +90,10 @@ export const $Table = <T, FilterState = never>({
   [sortByChange, sortByChangeTether]: Behavior<INode, keyof T>
 ) => {
 
+  const gridTemplateColumns = columns.map(col => col.gridTemplate || '1fr').join(' ')
 
   const $header = $headerRowContainer(
-    style({ gridTemplateColumns: `repeat(${columns.length}, auto)`, })
+    style({ gridTemplateColumns })
   )(
     ...columns.map(col => {
 
@@ -134,12 +138,11 @@ export const $Table = <T, FilterState = never>({
   const $body = switchLatest(map(() => {
     return  $QuantumScroll({
       ...scrollConfig,
-      // $container: $node(),
       dataSource: map((res) => {
         const $items = (Array.isArray(res) ? res : res.page).map(rowData => {
 
           return $bodyRowContainer(
-            style({ gridTemplateColumns: `repeat(${columns.length}, auto)`, })
+            style({ gridTemplateColumns, })
           )(
             ...columns.map(col => {
               return $bodyCell(col.columnOp || O())(

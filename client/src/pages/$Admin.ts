@@ -14,6 +14,7 @@ import { syncProcess } from "../utils/indexer/processor"
 import * as indexDb from "../utils/storage/indexDB"
 import { blockChange, publicClient } from "../wallet/walletLink"
 import { $seperator2 } from "./common"
+import { jsonStringify } from "../utils/storage/storeScope"
 
 
 export const $Admin = component((
@@ -30,7 +31,7 @@ export const $Admin = component((
     return syncProcess({ ...gmxProcess, endBlock: params.changeStartBlock, publicClient: params.publicClient })
   }, combineObject({ changeStartBlock, publicClient }), clickSyncProcess))
 
-  const syncedProcess = replayLatest(multicast(mergeArray([
+  const processState = replayLatest(multicast(mergeArray([
     take(1, gmxProcess.state),
     changedSyncedProcess
   ])))
@@ -58,9 +59,9 @@ export const $Admin = component((
                 defaultMiniButtonStyle, 
                 hoverDownloadBtnTether(
                   nodeEvent('pointerover'),
-                  switchMap(() => map(blob => URL.createObjectURL(blob), jsonBlob(gmxProcess.seed))),
+                  switchMap(() => map(blob => URL.createObjectURL(blob), jsonBlob(gmxProcess.state))),
                   map(href => {
-                    return { href, download: `DB-${'process'}.json` }
+                    return { href, download: `${gmxProcess.scopeKey}.json` }
                   }),
                 ),
                 attrBehavior(map(attrs => attrs, hoverDownloadBtn))
@@ -70,15 +71,15 @@ export const $Admin = component((
 
              
             $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
-              $infoLabeledValue('Synced', $text(map(s => `${gmxProcess.startBlock}-${s.blockNumber}`, syncedProcess))),
+              $infoLabeledValue('Synced', $text(map(s => `${s.startBlock}-${s.blockNumber}`, processState))),
             ),
 
             $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
-              $infoLabeledValue('size', $text(map(blob => readableFileSize(blob.size), jsonBlob(syncedProcess)))),
+              $infoLabeledValue('size', $text(map(blob => readableFileSize(blob.size), jsonBlob(processState)))),
             ),
 
             $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
-              $infoLabeledValue('checksum', $text(switchMap(blob => fromPromise(getBlobHash(blob)), jsonBlob(syncedProcess)))),
+              $infoLabeledValue('checksum', $text(switchMap(blob => fromPromise(getBlobHash(blob)), jsonBlob(processState)))),
             ),
 
           ),
@@ -86,18 +87,19 @@ export const $Admin = component((
           $seperator2,
 
           $text('Change Process State'),
-          $row(layoutSheet.spacing)(
-            $infoLabeledValue('Synced', $text(String(gmxProcess.startBlock))),
-            $TextField({ 
-              value: map(s => String(s.blockNumber), syncedProcess),
-              label: 'End',
-              validation: map(s => gmxProcess.startBlock >= Number(s) ? 'Invalid End block' : null),
-            })({
-              change: changeStartBlockTether(map(BigInt))
-            }),
 
-
-          ),
+          switchMap(state => {
+            return $row(layoutSheet.spacing)(
+              $infoLabeledValue('Synced', $text(String(state.startBlock))),
+              $TextField({ 
+                value: now(String(state.blockNumber)),
+                label: 'End',
+                validation: map(s => state.startBlock >= Number(s) ? 'Invalid End block' : null),
+              })({
+                change: changeStartBlockTether(map(BigInt))
+              }),
+            )
+          }, processState),
           $row(layoutSheet.spacing)(
           ),
 
@@ -207,7 +209,7 @@ export const $Admin = component((
 
 function jsonBlob<TData>(data: Stream<TData>): Stream<Blob> {
   return map(res => {
-    const jsonContent = JSON.stringify(res, null)
+    const jsonContent = jsonStringify(res)
     const blob = new Blob([jsonContent], { type: "application/json" })
     
     return blob

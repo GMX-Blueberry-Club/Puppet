@@ -49,8 +49,6 @@ export const $Profile = (config: IProfile) => component((
   const traderRoute = profileAddressRoute.create({ fragment: 'trader', title: 'Trader' })
   const puppetRoute = profileAddressRoute.create({ fragment: 'puppet', title: 'Puppet' })
 
-  const urlFragments = document.location.pathname.split('/')
-  const address = urlFragments[urlFragments.length - 2] as viem.Address
 
 
   const options: IRouteOption[] = [
@@ -88,14 +86,28 @@ export const $Profile = (config: IProfile) => component((
       $node(),
 
       router.match(traderRoute)(
-        $TraderProfile({ ...config, address })({
-          subscribeTreader: subscribeTreaderTether()
-        })
+        {
+          run(sink, scheduler) {
+            const urlFragments = document.location.pathname.split('/')
+            const address = urlFragments[urlFragments.length - 2] as viem.Address
+
+            return $TraderProfile({ ...config, address })({
+              subscribeTreader: subscribeTreaderTether()
+            }).run(sink, scheduler)
+          },
+        }
       ),
       router.match(puppetRoute)(
-        $PuppetProfile({ ...config, address })({
-          // subscribeTreader: subscribeTreaderTether()
-        })
+        {
+          run(sink, scheduler) {
+            const urlFragments = document.location.pathname.split('/')
+            const address = urlFragments[urlFragments.length - 2] as viem.Address
+
+            return $PuppetProfile({ ...config, address })({
+              changeRoute: changeRouteTether(),
+            }).run(sink, scheduler)
+          },
+        }
       ),
       
       $node(),
@@ -108,6 +120,8 @@ export const $Profile = (config: IProfile) => component((
       changeRoute: mergeArray([
         changeRoute,
         map(option => {
+          const urlFragments = document.location.pathname.split('/')
+          const address = urlFragments[urlFragments.length - 2] as viem.Address
           const url = `/app/profile/${address}/${option.fragment}`
           history.pushState({}, '', url)
           return url

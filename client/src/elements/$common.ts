@@ -129,7 +129,7 @@ export const $accountIconLink = (address: Address) => $anchor(attr({ href: getAc
   $text(style({}))(` ${shortenAddress(address)} `),
 )
 
-export const $txnIconLink = (address: string) => $anchor(attr({ href: getTxExplorerUrl(LAB_CHAIN, address) }))(
+export const $txnIconLink = (hash: string) => $anchor(attr({ href: getTxExplorerUrl(LAB_CHAIN, hash) }))(
   $icon({ $content: $ethScan, width: '16px', viewBox: '0 0 24 24' })
 )
 

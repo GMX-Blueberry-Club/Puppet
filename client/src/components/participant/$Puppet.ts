@@ -41,12 +41,18 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
     return list
   }, config.processData)
 
-  const settledTrades = map(seed => {
-    const list = seed.subscription.find(s => s.trader)?.settled.sort((a, b) => b.blockTimestamp - a.blockTimestamp) || []
-    return list
+  const settledTrades = map(processData => {
+    const tradeList = processData.subscription.filter(s => s.puppet === config.address)
+      .flatMap(trade => trade.settled)
+      .reverse()
+    return tradeList
   }, config.processData)
 
   const summary = map(list => {
+    if (list.length === 0) {
+      return null
+    }
+
     return summariesMirrorTrader(list)
   }, settledTrades)
 
@@ -101,6 +107,8 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
               $metricRow(
                 $metricValue(
                   $text(map(seed => {
+                    if (seed === null) return '-'
+
                     return `${seed.winCount} / ${seed.lossCount}`
                   }, summary))
                 ),
@@ -112,6 +120,8 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
               $metricRow(
                 $metricValue(
                   $text(map(seed => {
+                    if (seed === null) return '-'
+
                     return leverageLabel(seed.avgLeverage)
                   }, summary))
                 ),
@@ -123,7 +133,14 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
           $ProfilePerformanceCard({
             $container: $column(style({ width: '700px', height: '200px', padding: 0 })),
             processData: config.processData,
-            trader: config.address,
+            positionList: map(processData => {
+              const tradeList = processData.subscription.filter(s => s.puppet === config.address)
+                .flatMap(trade => {
+                  return [...trade.settled, ...trade.open]
+                }) // .slice(-1)
+
+              return tradeList
+            }, config.processData),
             targetShare: config.address,
           })({ }),
         ),

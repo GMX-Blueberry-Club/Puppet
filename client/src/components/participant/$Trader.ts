@@ -30,8 +30,6 @@ export interface ITraderProfile {
 
 export const $TraderProfile = (config: ITraderProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
-  [requestAccountTradeList, requestAccountTradeListTether]: Behavior<number, IRequestAccountTradeListApi>,
-
   [subscribeTreader, subscribeTreaderTether]: Behavior<PointerEvent, ITraderSubscritpion>,
 
 ) => {
@@ -100,9 +98,6 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                 ),
                 $metricLabel($text('Puppets')),
               ),
-
-              // $seperator2,
-
               $metricRow(
                 $metricValue(
                   $text(map(seed => {
@@ -114,9 +109,6 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                 ),
                 $metricLabel($text('Win / Loss')),
               ),
-
-              // $seperator2,
-
               $metricRow(
                 $metricValue(
                   $text(map(seed => {
@@ -129,33 +121,20 @@ export const $TraderProfile = (config: ITraderProfile) => component((
               ),
             ),
 
-            // switchMap(params => {
-            //   if (params.wallet === null || params.subscriptionList.find(s => s.trader === pos.account) !== undefined) {
-            //     return empty()
-            //   }
-
-            //   const routeTypeKey = getRouteTypeKey(ARBITRUM_ADDRESS.NATIVE_TOKEN, ARBITRUM_ADDRESS.NATIVE_TOKEN, true)
-            //   const puppetSubscriptionKey = getPuppetSubscriptionKey(params.wallet.account.address, pos.account, routeTypeKey)
-
-            //   const newLocal: ITraderSubscritpion = {
-            //     trader: pos.account,w
-            //     puppet: params.wallet.account.address,
-            //     allowance: 1000n,
-            //     routeTypeKey,
-            //     puppetSubscriptionKey,
-            //     subscribed: params.subscription.find(x => x.indexOf(pos.route) > -1) === undefined,
-            //   }
-
-            //   return $ButtonSecondary({ $content: $text('Copy'), $container: $defaultMiniButtonSecondary })({
-            //     click: subscribeTreaderTether(constant(newLocal))
-            //   }) 
-            // }, combineObject({ wallet, subscription: config.subscription, subscriptionList: config.subscribeList }))
           ),
           
           $ProfilePerformanceCard({
             $container: $column(style({ width: '700px', height: '200px', padding: 0 })),
             processData: config.processData,
-            trader: config.address,
+            positionList: map(processData => {
+              const traderPos = Object.values(processData.mirrorPositionSettled[config.address] || {}).flat() //.slice(1, 2) // .slice(-1)
+              // const traderPos = [] as any
+              const openList = Object.values(processData.mirrorPositionSlot).filter(pos => pos.trader === config.address) //.flatMap(t => t.position.link.updateList)
+              // const openList = [] as any
+
+              return [...traderPos, ...openList]
+            }, config.processData)
+            // trader: config.address,
           })({ }),
         ),
 
@@ -190,7 +169,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
               entryColumn,
               puppetsColumn,
               settledSizeColumn(config.processData),
-              settledPnlColumn(config.address),
+              settledPnlColumn(),
             ],
           })({})
         ),

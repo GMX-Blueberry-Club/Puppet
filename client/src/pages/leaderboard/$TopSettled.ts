@@ -18,6 +18,7 @@ import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../../components/
 import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceCard"
 import { IGmxProcessSeed } from "../../data/process/process"
 import { wallet } from "../../wallet/walletLink"
+import { traderColumn } from "../../components/table/$TableColumn"
 
 
 
@@ -138,72 +139,7 @@ export const $TopSettled = (config: ITopSettled) => component((
         dataSource: datass,
         sortBy,
         columns: [
-          {
-            $head: $text('Trader'),
-            columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
-            $$body: map((pos) => {
-
-              return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-                // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
-                $Link({
-                  $content: $discoverIdentityDisplay({
-                    address: pos.account,
-                    $profileContainer: $defaultBerry(style({ width: '50px' }))
-                  }),
-                  route: config.route.create({ fragment: 'fefwef' }),
-                  url: `/app/profile/${pos.account}/${IProfileActiveTab.TRADER.toLowerCase()}`
-                })({ click: routeChangeTether() }),
-                // $anchor(clickAccountBehaviour)(
-                //   $accountPreview({ address: pos.account })
-                // )
-                // style({ zoom: '0.7' })(
-                //   $alert($text('Unclaimed'))
-                // )
-              )
-
-
-              // const $container = pos.rank < 4
-              //   ? $defaultBerry(style(
-              //     {
-              //       width: '50px',
-              //       minWidth: '50px',
-              //       border: `1px solid ${pallete.message}`,
-              //       boxShadow: `${colorAlpha(pallete.positive, .4)} 0px 3px 20px 5px`
-              //     }
-              //     // pos.rank === 1 ? {
-              //     //   minWidth: '50px',
-              //     //   width: '60px',
-              //     //   border: `1px solid ${pallete.positive}`,
-              //     //   boxShadow: `${colorAlpha(pallete.positive, .4)} 0px 3px 20px 5px`
-              //     // }
-              //     //   : pos.rank === 2 ? {
-              //     //     minWidth: '50px',
-              //     //     width: '60px',
-              //     //     border: `1px solid ${pallete.indeterminate}`,
-              //     //     boxShadow: `${colorAlpha(pallete.indeterminate, .4)} 0px 3px 20px 5px`
-              //     //   }
-              //     //     : {
-              //     //       minWidth: '50px',
-              //     //       width: '60px',
-              //     //       border: `1px solid ${pallete.negative}`,
-              //     //       boxShadow: `${colorAlpha(pallete.negative, .4)} 0px 3px 20px 5px`
-              //     //     }
-
-              //   ))
-              //   : $defaultBerry(style({ width: '50px', minWidth: '50px', }))
-
-              // return $row(layoutSheet.spacingSmall, w3p?.account.address === pos.account ? style({ background: invertColor(pallete.message), borderRadius: '15px', padding: '6px 12px' }) : style({}), style({ alignItems: 'center', minWidth: 0 }))(
-              //   $row(style({ alignItems: 'baseline', zIndex: 5, textAlign: 'center', minWidth: '18px', placeContent: 'center' }))(
-              //     $text(style({ fontSize: '.85rem' }))(`${pos.rank}`),
-              //   ),
-              //   $Link({
-              //     $content: $profilePreview({ profile: pos.profile, $container }),
-              //     route: config.parentRoute.create({ fragment: 'fefwef' }),
-              //     url: `/app/profile/${pos.account}/${IProfileActiveTab.TRADING.toLowerCase()}`
-              //   })({ click: routeChangeTether() }),
-              // )
-            })
-          },
+          traderColumn(routeChangeTether(), config.route),
           {
             $head: $text('Puppets'),
             columnOp: O(layoutSheet.spacingTiny, style({ width: '160px' })),

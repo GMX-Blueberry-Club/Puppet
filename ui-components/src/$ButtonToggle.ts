@@ -4,6 +4,7 @@ import { $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { constant, map, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
+import { invertColor } from "gmx-middleware-utils"
 
 export interface IButtonToggle<T> {
   options: T[]
@@ -44,7 +45,7 @@ export const $ButtonToggle = <T>({ options, selected, $$option = defaultOption, 
           styleBehavior(
             map(selectedOpt => {
               return selectedOpt === opt
-                ? { backgroundColor: pallete.primary, color: pallete.message, cursor: 'default' }
+                ? { backgroundColor: pallete.primary, color: invertColor(pallete.message), cursor: 'default' }
                 : null
             }, selected)
           )

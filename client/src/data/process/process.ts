@@ -3,16 +3,17 @@ import { Stream } from "@most/types"
 import { BASIS_POINTS_DIVISOR, IntervalTime, TIME_INTERVAL_MAP } from "gmx-middleware-const"
 import {
   IPositionIncrease, IPositionSlot, IPriceInterval,
-  IPriceIntervalIdentity, createPricefeedCandle, div, getIntervalIdentifier, switchMap
+  IPriceIntervalIdentity, createPricefeedCandle, div, getIntervalIdentifier, importGlobal, switchMap
 } from "gmx-middleware-utils"
 import { getPuppetSubscriptionKey } from "puppet-middleware-const"
 import { IAccountToRouteMap, IPositionMirrorSettled, IPositionMirrorSlot, IPositionRequest, IPuppetSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { rootStoreScope } from "../../rootStore"
-import { defineProcess } from "../../utils/indexer/processor"
+import { IProcessedStore, defineProcess } from "../../utils/indexer/processor"
 import { puppetLog } from "../scope"
 import * as gmxLog from "../scope/gmx"
+import { transformBigints } from "../../utils/storage/storeScope"
 
 
 export interface IProcessMetrics {
@@ -73,11 +74,17 @@ const gmxSeedData: IGmxProcessSeed = {
 
 
 
+const ww =  importGlobal(import('../../data/db/processor_42161_114838028_CreateIncreasePosition_PriceData_IncreasePosition_DecreasePosition_SharesIncrease_UpdatePosition_ClosePosition_LiquidatePosition_OpenPosition_SubscribeRoute.json'))
+
 export const gmxProcess = defineProcess(
   {
-    startBlock: 114838028n,
-    chainId: arbitrum.id,
-    genesisSeed: gmxSeedData,
+    // seedProcess: transformBigints(dbProcess) as IProcessedStore<IGmxProcessSeed>,
+    seedProcess:  {
+      startBlock: 114838028n,
+      chainId: arbitrum.id,
+      orderId: Number(1000000n),
+      seed: gmxSeedData,
+    },
     parentScope: rootStoreScope,
     queryBlockSegmentLimit: 100000n,
   },

@@ -1,12 +1,26 @@
-import { concatMap, constant, continueWith, join, map, throttle } from "@most/core"
+import { continueWith, join, map } from "@most/core"
 import { Stream } from "@most/types"
 import * as indexDB from './indexDB'
-import { switchMap } from "gmx-middleware-utils"
-import { combineArray, combineObject } from "@aelea/core"
 
 
-// @ts-ignore
-BigInt.prototype.toJSON = function () { return this.toString() + 'n' }
+// stringify with bigint support
+export function jsonStringify(obj: any) {
+  return JSON.stringify(obj, (_, v) => typeof v === 'bigint' ? v.toString() + 'n' : v)
+}
+
+const BIG_INT_STR = /^(?:[-+])?\d+n$/
+
+
+export function transformBigints(obj: any) {
+  for (const k in obj) {
+    if (typeof obj[k] === 'object' && obj[k] !== null) {
+      transformBigints(obj[k])
+    } else if (typeof obj[k] === 'string' && BIG_INT_STR.test(obj[k])) {
+      obj[k] = BigInt(obj[k].slice(0, -1))
+    }
+  }
+  return obj
+}
 
 
 export interface IStoreScope<TName extends string, TOptions extends indexDB.IDbStoreConfig> extends indexDB.IDbParams<TName, TOptions> {}
