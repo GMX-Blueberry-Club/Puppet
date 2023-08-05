@@ -75,9 +75,8 @@ const gmxSeedData: IGmxProcessSeed = {
 }
 
 
-const newLocal = '../../data/db/sha256-w9wMeTD1weowD5_n86aDyKg9M_HofhCG4g9mQTzuuy0=.json'
 const seedProcess =  importGlobal(async () => {
-  const req = await import(newLocal)
+  const req = await import('../../data/db/sha256-w9wMeTD1weowD5_n86aDyKg9M_HofhCG4g9mQTzuuy0=.json')
   return req
 })
 
