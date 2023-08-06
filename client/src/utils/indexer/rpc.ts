@@ -68,7 +68,6 @@ export const fetchTradesRecur = <
     const nextToBlock = params.fromBlock + params.rangeSize
 
     if (nextToBlock >= params.toBlock) {
-      console.log(res)
       return now(res)
     }
 

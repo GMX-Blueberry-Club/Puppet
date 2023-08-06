@@ -3,11 +3,14 @@ import { registerSW } from 'virtual:pwa-register'
 // import Wroker from './workers/background?worker'
 
 
-// replaced dyanmicaly
-const reloadSW = '__RELOAD_SW__'
-
 const reload = registerSW({
   async onNeedRefresh() {
+
+    // @ts-ignore
+    if (SW_DEV) {
+      return
+    }
+
     const confirm = window.confirm('new update is pending, click Ok to reload')
 
     if (confirm) {

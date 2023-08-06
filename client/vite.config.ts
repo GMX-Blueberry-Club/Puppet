@@ -50,7 +50,8 @@ const pwaOptions: Partial<VitePWAOptions> = {
   mode: 'development',
   base: '/',
   devOptions: {
-    enabled: process.env.SW_DEV === 'true' || false,
+    // enabled: true,
+    enabled: process.env.SW_DEV === 'true',
     /* when using generateSW the PWA plugin will switch to classic */
     type: 'module',
     navigateFallback: 'index.html',
@@ -58,22 +59,12 @@ const pwaOptions: Partial<VitePWAOptions> = {
   },
 }
 
-console.log(process.env.SW_DEV)
 
-const replaceOptions = { __DATE__: new Date().toISOString() }
-const reload = process.env.RELOAD_SW === 'true'
+const replaceOptions = { __DATE__: new Date().toISOString(), SW_DEV: process.env.SW_DEV }
 const selfDestroying = process.env.SW_DESTROY === 'true'
-
-
-
-if (reload) {
-  // @ts-expect-error overrides
-  replaceOptions.__RELOAD_SW__ = 'true'
-}
 
 if (selfDestroying)
   pwaOptions.selfDestroying = selfDestroying
-
 
 
 // https://vitejs.dev/config/
