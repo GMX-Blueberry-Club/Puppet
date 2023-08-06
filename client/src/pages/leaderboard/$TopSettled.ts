@@ -189,6 +189,7 @@ export const $TopSettled = (config: ITopSettled) => component((
           },
           {
             $head: $text('Win / Loss'),
+            gridTemplate: 'minmax(110px, 120px)',
             columnOp: style({ alignItems: 'center', width: '120px', placeContent: 'center' }),
             $$body: map((pos) => {
               return $row(

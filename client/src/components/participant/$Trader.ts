@@ -16,6 +16,7 @@ import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
 import { entryColumn, settledPnlColumn, puppetsColumn, settledTimeColumn, slotSizeColumn, pnlSlotColumn, timeSlotColumn, settledSizeColumn } from "../table/$TableColumn"
 import { $ProfilePerformanceCard } from "../trade/$ProfilePerformanceCard"
+import { $heading1, $heading2 } from "../../common/$text"
 
 
 
@@ -52,16 +53,11 @@ export const $TraderProfile = (config: ITraderProfile) => component((
     return summariesMirrorTrader(list)
   }, settledTrades)
 
-  const subscribers = map(seed => {
-    const newLocal = seed.subscription.filter((sub) => sub.trader === config.address).map(s => s.puppet)
+  const subscribedPuppets = map(seed => {
+    const newLocal = seed.subscription.filter((sub) => sub.puppet === config.address).map(s => s.trader)
     return newLocal
   }, config.processData)
 
-
-  const $itemListRow = $row(layoutSheet.spacingBig, style({ placeContent: 'space-between' }))
-
-
-  const $heading = $text(style({ fontSize: '1.15rem', fontWeight: '900', marginBottom: '6px', letterSpacing: '1px', marginLeft: '-13px', color: pallete.foreground }))
 
   const $metricRow = $column(style({ placeContent: 'center', alignItems: 'center' }))
   const $metricLabel = $row(style({ color: pallete.foreground, letterSpacing: '1px', fontSize: '.85rem' }))
@@ -94,7 +90,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                         return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minWidth: '30px', margin: '0 -4px', maxWidth: '30px' })) })
                       })
                     )
-                  }, subscribers)
+                  }, subscribedPuppets)
                 ),
                 $metricLabel($text('Puppets')),
               ),
@@ -145,7 +141,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
         $column(
-          $heading('Open Positions'),
+          $heading2('Open Positions'),
           $Table({
             dataSource: openTrades,
             columns: [
@@ -161,7 +157,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
         $seperator2,
 
         $column(
-          $heading('Settled Positions'),
+          $heading2('Settled Positions'),
           $Table({
             dataSource: settledTrades,
             columns: [

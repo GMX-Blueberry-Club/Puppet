@@ -17,7 +17,7 @@ import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
 import { entryColumn, pnlSlotColumn, settledPnlColumn, settledSizeColumn, settledTimeColumn, slotSizeColumn, timeSlotColumn } from "../table/$TableColumn"
 import { $ProfilePerformanceCard } from "../trade/$ProfilePerformanceCard"
-import { $heading1 } from "../../common/$text"
+import { $heading1, $heading2 } from "../../common/$text"
 
 
 
@@ -57,7 +57,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
     return summariesMirrorTrader(list)
   }, settledTrades)
 
-  const subscribers = map(seed => {
+  const subscribedTraders = map(seed => {
     const newLocal = seed.subscription.filter((sub) => sub.trader === config.address).map(s => s.puppet)
     return newLocal
   }, config.processData)
@@ -89,18 +89,18 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
             ),
 
             $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end', paddingBottom: '32px' }))(
-              $metricRow(
-                $metricValue(
-                  switchMap(puppets => {
-                    return $row(style({ flex: 1, padding: '2px 0 4px' }))(
-                      ...puppets.map(address => {
-                        return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minWidth: '30px', maxWidth: '30px' })) })
-                      })
-                    )
-                  }, subscribers)
-                ),
-                $metricLabel($text('Puppets')),
-              ),
+              // $metricRow(
+              //   $metricValue(
+              //     switchMap(puppets => {
+              //       return $row(style({ flex: 1, padding: '2px 0 4px' }))(
+              //         ...puppets.map(address => {
+              //           return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minWidth: '30px', maxWidth: '30px' })) })
+              //         })
+              //       )
+              //     }, subscribedTraders)
+              //   ),
+              //   $metricLabel($text('Traders')),
+              // ),
 
               // $seperator2,
 
@@ -152,7 +152,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
 
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
         $column(
-          $heading1('Open Positions'),
+          $heading2('Open Positions'),
           $Table({
             dataSource: openTrades,
             columns: [
@@ -174,7 +174,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
         $seperator2,
 
         $column(
-          $heading1('Settled Positions'),
+          $heading2('Settled Positions'),
           $Table({
             dataSource: settledTrades,
             columns: [

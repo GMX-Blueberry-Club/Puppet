@@ -12,7 +12,7 @@ import { connectContract, wagmiWriteContract } from "../logic/common"
 import { $seperator2 } from "../pages/common"
 import { fadeIn } from "../transitions/enter"
 import { nativeBalance } from "../wallet/walletLink"
-import { $accountPreview } from "./$AccountProfile"
+import { $accountPreview, $discoverAvatar } from "./$AccountProfile"
 import { $IntermediateConnectButton } from "./$ConnectAccount"
 import { $ButtonSecondary, $defaultMiniButtonSecondary, $ButtonPrimaryCtx } from "./form/$Button"
 import { Stream } from "@most/types"
@@ -21,6 +21,7 @@ import * as PUPPET from "puppet-middleware-const"
 import * as GMX from "gmx-middleware-const"
 import { $Popover } from "./$Popover"
 import { $TextField } from "../common/$TextField"
+import { $defaultBerry } from "./$DisplayBerry"
 
 interface ISubscribeDrawer {
   subscribeList: Stream<ITraderSubscritpion[]>
@@ -56,7 +57,7 @@ export const $SubscriberDrawer = (config: ISubscribeDrawer) => component((
               
               return $column(layoutSheet.spacing)(
                 $row(layoutSheet.spacingSmall)(
-                  $text(style({ fontWeight: 'bold', fontSize: '1.45rem', }))('Add Subscriptions'),
+                  $text(style({ fontWeight: 'bold', fontSize: '1.45rem', }))('Modify Subscriptions'),
                 ),
 
                 ...routeMap.map(([routeKey, traders]) => {
@@ -142,7 +143,7 @@ export const $SubscriberDrawer = (config: ISubscribeDrawer) => component((
                         $column(style({ flex: 1 }))(
                           ...traders.map(subsc => {
                             return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: `10px 0` }))(
-                              $accountPreview({ address: subsc.trader }),
+                              $discoverAvatar({ address: subsc.trader, $profileContainer: $defaultBerry(style({ minWidth: '30px', margin: '0 -4px', maxWidth: '30px' })) }),
                               $text(style({ flex: 1 }))(subsc.subscribed ? 'Subscribe' : 'Unsubscribe'),
                               $text(readableFixedBsp(subsc.allowance))
                             )

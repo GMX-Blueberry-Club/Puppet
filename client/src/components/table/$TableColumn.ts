@@ -95,6 +95,7 @@ export const pnlSlotColumn = (processData: Stream<IGmxProcessSeed>, puppet?: vie
 
 export const traderColumn = (click: Op<string, string>, route: router.Route): TableColumn<IMirrorTraderSummary> => ({
   $head: $text('Trader'),
+  gridTemplate: 'minmax(110px, 120px)',
   columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
   $$body: map(pos => {
 
