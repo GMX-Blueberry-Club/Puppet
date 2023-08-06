@@ -1,7 +1,7 @@
 import { combineObject } from "@aelea/core"
-import { fromPromise, map, now, switchLatest, tap } from "@most/core"
+import { fromPromise, map, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { ILogEvent, ILogOrdered, ILogOrderedEvent, Optional, getEventOrderIdentifier, max, min, switchMap } from "gmx-middleware-utils"
+import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, max, min, switchMap } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { zipArray } from "../../logic/utils"
 import * as indexDB from "../storage/indexDB"
@@ -25,7 +25,7 @@ export interface IProcessSourceConfig<TLog extends ILogOrdered, TState> {
 
 
 export interface IProcessorConfig<TSeed, TParentName extends string> {
-  seedFile: Stream<IProcessedStore<TSeed>>,
+  seed: Stream<IProcessedStore<TSeed>>,
   blueprint: IProcessedStore<TSeed>,
 
   parentScope: store.IStoreconfig<TParentName>,
@@ -57,10 +57,10 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
     }
 
     return store.get(scope, storeState)
-  }, config.seedFile)
+  }, config.seed)
   const state = map(s => s.state, seed)
   
-  return {  ...config, processList, scope, state, seedFile: seed, scopeKey  }
+  return {  ...config, processList, scope, state, seed, scopeKey  }
 }
 
 
@@ -77,7 +77,7 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
   const sync = switchMap(params => {
     const startblock = params.processState.startBlock
     const processNextLog = config.processList.map(processConfig => {
-      const rangeKey = IDBKeyRange.bound(params.processState.orderId, 1e20)
+      const rangeKey = IDBKeyRange.bound(params.processState.orderId, 1e20, true)
       const nextStoredLog: Stream<ILogOrderedEvent[]> = indexDB.getAll(processConfig.source.scope, rangeKey)
 
       return switchMap(stored => {
@@ -152,7 +152,7 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
                     const storeObj = {  ...ev, orderId: getEventOrderIdentifier(ev) } as ILogOrderedEvent
                     return storeObj
                   })
-                  .filter(ev => ev.orderId > (lstEvent ? lstEvent.orderId : params.processState.orderId))
+                  .filter(ev => ev.orderId > Math.max(params.processState.orderId, lstEvent ? lstEvent.orderId : 0))
 
                 return indexDB.add(processConfig.source.scope, filtered)
               }, queryLogs)
@@ -162,48 +162,45 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
           )
           : now([])
 
-        return map(log => [...log.prev, ...stored, ...log.next], combineObject({ prev, next }))
+        return map(log => {
+
+          return [...log.prev, ...stored, ...log.next]
+        }, combineObject({ prev, next }))
       }, nextStoredLog)
     })
 
     return switchLatest(zipArray((...nextLogEvents) => {
       const orderedNextEvents = nextLogEvents.flat().sort((a, b) => a.orderId - b.orderId)
 
-      let processState = params.processState
-
-      let hasThrown = false
-
-      for (let evIdx = 0; evIdx < orderedNextEvents.length; evIdx++) {
-        const nextEvent = orderedNextEvents[evIdx]
-        if (hasThrown) break
-
-        for (let processIdx = 0; processIdx < config.processList.length; processIdx++) {
-          const processEventLogList = nextLogEvents[processIdx]
-          const processSrc = config.processList[processIdx]
-
-          if (processEventLogList.includes(nextEvent)) {
-            try {
-              const nextStepState = processSrc.step(processState.state, nextEvent)
-              processState = { 
-                state: nextStepState,
-                orderId: nextEvent.orderId,
-                chainId: processState.chainId,
-                startBlock: processState.startBlock,
-                endBlock: nextEvent.blockNumber 
-              }
-            } catch (err){
-              console.error('Error processing event ', nextEvent, err)
-              hasThrown = true
-              break
-            }
+      const nextState = orderedNextEvents.reduce((acc, next) => {
+        const eventProcessor = config.processList.find(processConfig => {
+          if ('eventName' in next) {
+            return processConfig.source.eventName === next.eventName
           }
-        }
-      }
 
-      return indexDB.set(config.scope, processState)
+          throw new Error('Event is not an ILogOrderedEvent')
+        })
+
+        if (!eventProcessor) {
+          throw new Error('Event processor not found')
+        }
+
+
+        acc.orderId = next.orderId
+        acc.endBlock = next.blockNumber
+        acc.state = eventProcessor.step(acc.state, next)
+
+        return acc
+      }, params.processState)
+
+      nextState.endBlock = config.syncBlock
+
+      console.log(config.syncBlock)
+
+      return indexDB.set(config.scope, nextState)
     }, ...processNextLog))
 
-  }, combineObject({ processState: config.seedFile }))
+  }, combineObject({ processState: config.seed }))
 
   return sync
 }

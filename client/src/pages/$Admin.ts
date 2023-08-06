@@ -33,7 +33,7 @@ export const $Admin = component((
   }, combineObject({ changeStartBlock, publicClient }), clickSyncProcess))
 
   const processState = replayLatest(multicast(mergeArray([
-    take(1, gmxProcess.seedFile),
+    take(1, gmxProcess.seed),
     changedSyncedProcess
   ])))
 
@@ -70,7 +70,7 @@ export const $Admin = component((
 
           switchMap(seed => {
             return $ProcessDetails({ seed, title: 'Runtime Seed' })({})
-          }, gmxProcess.seedFile),
+          }, gmxProcess.seed),
           $row(layoutSheet.spacing)(
           ),
 
@@ -93,7 +93,7 @@ export const $Admin = component((
                       href: URL.createObjectURL(blob),
                       hash: await getBlobHash(blob)
                     }
-                  }, jsonBlob(gmxProcess.seedFile))),
+                  }, jsonBlob(gmxProcess.seed))),
                   awaitPromises,
                   map(params => {
                     return { href: params.href, download: `${params.hash}.json` }
@@ -173,7 +173,7 @@ export const $Admin = component((
                 const hoverB = hoverDownloadBtnTether(
                   nodeEvent('pointerover'),
                   switchMap(() => {
-                    return map(blob => URL.createObjectURL(blob), jsonBlob(gmxProcess.seedFile))
+                    return map(blob => URL.createObjectURL(blob), jsonBlob(gmxProcess.seed))
                   }),
                   map(href => {
                     return { href, download: `DB-${log.eventName}.json` }

@@ -6,7 +6,7 @@
         ".dist"
     ],
     "scripts": {
-        "dev": "rimraf .dist && DEBUG=vite-plugin-pwa SW_DEV=true vite --force",
+        "dev": "rimraf .dist && SW_DEV=true vite --force",
         "dev-destroy": "rimraf .dist && DEBUG=vite-plugin-pwa SW_DESTROY=true SW_DEV=true vite --force",
         "build": "vite build",
         "preview": "vite preview --port=4173"

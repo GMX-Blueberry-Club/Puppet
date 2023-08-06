@@ -8,9 +8,9 @@ const reloadSW = '__RELOAD_SW__'
 
 const reload = registerSW({
   async onNeedRefresh() {
-    const res = window.prompt('new update is pending, respond with "X" to reload')
+    const confirm = window.confirm('new update is pending, click Ok to reload')
 
-    if (res === 'X') {
+    if (confirm) {
       await reload(true)
       console.log('Done reloading')
     }
@@ -42,14 +42,8 @@ const date = '__DATE__'
   
 // })
 
-console.log(date)
 
-const updateSW = registerSW({
-  onNeedRefresh() {
-    window.prompt('wakwakka')
-  },
-  onOfflineReady() {},
-})
+
 
 runBrowser()(
   $Main({})({})

@@ -94,19 +94,18 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
   const isMobileScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
 
-  const processData = replayLatest(multicast(switchMap(seed => {
-    const mode = (import.meta as any).env
-    const refreshThreshold = mode === 'development' ? TIME_INTERVAL_MAP.MIN5 : TIME_INTERVAL_MAP.MIN / 6
-    const timeNow = unixTimestampNow()
+  const processData = replayLatest(multicast(switchMap(params => {
+    const mode = (import.meta as any).env.MODE
+    const refreshThreshold = mode === 'development' ? 5000 : 50
+    const blockDelta = params.block - params.seed.endBlock
 
-    if (timeNow - seed.approximatedTimestamp > refreshThreshold) {
-      return replayLatest(multicast(switchMap(params => {
-        return map(seedState => seedState.state, syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.block }))
-      }, combineObject({ publicClient, block: blockCache }))))
+    if (blockDelta > refreshThreshold) {
+      const newLocal = map(seed => seed.state, syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.block }))
+      return newLocal
     }
 
-    return now(seed)
-  }, gmxProcess.state)))
+    return now(params.seed.state)
+  }, combineObject({ publicClient, block: blockCache, seed: gmxProcess.seed }))))
 
   const subscribeList = replayLatest(map(l => [l], subscribeTrader), [] as ITraderSubscritpion[])
 

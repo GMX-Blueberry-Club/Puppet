@@ -68,12 +68,15 @@ export const fetchTradesRecur = <
     const nextToBlock = params.fromBlock + params.rangeSize
 
     if (nextToBlock >= params.toBlock) {
+      console.log(res)
       return now(res)
     }
 
     const newPage = fetchTradesRecur({ ...params, fromBlock: nextToBlock }, getList)
 
-    return map(nextPage => [...res, ...nextPage], newPage)
+    return map(nextPage => {
+      return [...res, ...nextPage]
+    }, newPage)
   }, getList(params))
 
 

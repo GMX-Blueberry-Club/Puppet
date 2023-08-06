@@ -80,8 +80,6 @@ const blueprint: IProcessedStore<IGmxProcessSeed> = {
   state: state,
 }
 
-console.log(jsonStringify(blueprint))
-
 
 export const seedFile: Stream<IProcessedStore<IGmxProcessSeed>> = importGlobal(async () => {
   const req = await import('../../data/db/sha256-mNRHdIqqQz5b0dn+zdfi6cD6dzN3JSWcr5CXC8Fkhvk=.json')
@@ -91,7 +89,7 @@ export const seedFile: Stream<IProcessedStore<IGmxProcessSeed>> = importGlobal(a
 
 export const gmxProcess = defineProcess(
   {
-    seedFile,
+    seed: seedFile,
     blueprint: blueprint,
     parentScope: rootStoreScope,
     queryBlockSegmentLimit: 100000n,
