@@ -10,8 +10,10 @@ import { IIndexEventLogScopeParams, fetchTradesRecur } from "./rpc"
 
 export interface IProcessedStore<T> {
   state: T
-  blockNumber: bigint
   orderId: number
+  startBlock: bigint
+  endBlock: bigint
+  chainId: number
 }
 
 
@@ -23,11 +25,8 @@ export interface IProcessSourceConfig<TLog extends ILogOrdered, TState> {
 
 
 export interface IProcessorConfig<TSeed, TParentName extends string> {
-  startBlock: bigint
-  chainId: number
-
-  seed: Stream<IProcessedStore<TSeed>>,
-  blueprint: TSeed,
+  seedFile: Stream<IProcessedStore<TSeed>>,
+  blueprint: IProcessedStore<TSeed>,
 
   parentScope: store.IStoreconfig<TParentName>,
   queryBlockSegmentLimit: bigint
@@ -48,7 +47,7 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
   ...processList: { [P in keyof TProcessConfigList]: IProcessSourceConfig<TProcessConfigList[P], TSeed>; }
 ): IProcessParams<TSeed, TProcessConfigList, TParentName> {
 
-  const scopeKey = processList.reduce((acc, next) => `${acc}:${next.source.eventName}`, `processor:${config.chainId}:${config.startBlock}`)
+  const scopeKey = processList.reduce((acc, next) => `${acc}:${next.source.eventName}`, `processor:${config.blueprint.chainId}:${config.blueprint.startBlock}`)
   const scope = store.createStoreScope(config.parentScope, scopeKey)
 
   const seed = switchMap(seedEvent => {
@@ -58,16 +57,16 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
     }
 
     return store.get(scope, storeState)
-  }, config.seed)
+  }, config.seedFile)
   const state = map(s => s.state, seed)
   
-  return {  ...config, processList, scope, state, seed, scopeKey  }
+  return {  ...config, processList, scope, state, seedFile: seed, scopeKey  }
 }
 
 
 export interface IProcessorSeedConfig<TSeed, TProcessConfigList extends ILogOrdered[], TParentName extends string> extends IProcessParams<TSeed, TProcessConfigList, TParentName> {
   publicClient: viem.PublicClient<viem.Transport, viem.Chain>
-  endBlock: bigint
+  syncBlock: bigint
 }
 
 
@@ -76,6 +75,7 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
 ): Stream<IProcessedStore<TSeed>> {
  
   const sync = switchMap(params => {
+    const startblock = params.processState.startBlock
     const processNextLog = config.processList.map(processConfig => {
       const rangeKey = IDBKeyRange.bound(params.processState.orderId, 1e20)
       const nextStoredLog: Stream<ILogOrderedEvent[]> = indexDB.getAll(processConfig.source.scope, rangeKey)
@@ -84,15 +84,15 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
         const fstEvent = stored[0] as ILogOrderedEvent | undefined
         const lstEvent = stored[stored.length - 1] as ILogOrderedEvent | undefined
 
-        const startGapBlockRange = fstEvent ? config.startBlock - fstEvent.blockNumber : 0n
+        const startGapBlockRange = fstEvent ? startblock - fstEvent.blockNumber : 0n
         const event = processConfig.source.abi.find((ev: any) => ev.type === 'event' && ev.name === processConfig.source.eventName)
 
         const prev = startGapBlockRange > 0n
           ? fetchTradesRecur(
             {
               ...processConfig.source,
-              fromBlock: config.startBlock,
-              toBlock: config.startBlock + startGapBlockRange,
+              fromBlock: startblock,
+              toBlock: startblock + startGapBlockRange,
               publicClient: config.publicClient,
               rangeSize: processConfig.rangeSize || config.queryBlockSegmentLimit,
             },
@@ -124,14 +124,14 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
           )
           : now([])
 
-        const fromBlock = max(config.startBlock, max(params.processState.blockNumber, lstEvent ? lstEvent.blockNumber : 0n))
+        const fromBlock = max(startblock, max(params.processState.endBlock, lstEvent ? lstEvent.blockNumber : 0n))
 
-        const next = fromBlock < config.endBlock
+        const next = fromBlock < config.syncBlock
           ? fetchTradesRecur(
             {
               ...processConfig.source,
               fromBlock: fromBlock,
-              toBlock: config.endBlock,
+              toBlock: config.syncBlock,
               publicClient: config.publicClient,
               rangeSize: processConfig.rangeSize || config.queryBlockSegmentLimit,
             },
@@ -184,7 +184,13 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
           if (processEventLogList.includes(nextEvent)) {
             try {
               const nextStepState = processSrc.step(processState.state, nextEvent)
-              processState = { state: nextStepState, orderId: nextEvent.orderId, blockNumber: config.endBlock }
+              processState = { 
+                state: nextStepState,
+                orderId: nextEvent.orderId,
+                chainId: processState.chainId,
+                startBlock: processState.startBlock,
+                endBlock: nextEvent.blockNumber 
+              }
             } catch (err){
               console.error('Error processing event ', nextEvent, err)
               hasThrown = true
@@ -197,7 +203,7 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
       return indexDB.set(config.scope, processState)
     }, ...processNextLog))
 
-  }, combineObject({ processState: config.seed }))
+  }, combineObject({ processState: config.seedFile }))
 
   return sync
 }

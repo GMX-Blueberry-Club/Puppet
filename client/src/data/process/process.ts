@@ -13,7 +13,7 @@ import { rootStoreScope } from "../../rootStore"
 import { IProcessedStore, defineProcess } from "../../utils/indexer/processor"
 import { puppetLog } from "../scope"
 import * as gmxLog from "../scope/gmx"
-import { transformBigints } from "../../utils/storage/storeScope"
+import { jsonStringify, transformBigints } from "../../utils/storage/storeScope"
 import { nullSink } from "@aelea/core"
 import { newDefaultScheduler } from "@most/scheduler"
 
@@ -50,21 +50,19 @@ export interface IGmxProcessSeed {
   subscription: IPuppetSubscritpion[]
 }
 
-const processMetrics: IProcessMetrics = {
-  cumulativeBlocks: 0n,
-  cumulativeDeltaTime: 0n,
 
-  height: 0n,
-  timestamp: 0n,
-  avgDeltaTime: 0n,
-}
 
-const gmxSeedData: IGmxProcessSeed = {
-  blockMetrics: processMetrics,
+
+const state: IGmxProcessSeed = {
+  blockMetrics: {
+    cumulativeBlocks: 0n,
+    cumulativeDeltaTime: 0n,
+
+    height: 0n,
+    timestamp: 0n,
+    avgDeltaTime: 0n,
+  },
   approximatedTimestamp: 0,
-  // positionSlot: {},
-  // positionsSettled: {},
-  // leaderboard: {},
   pricefeed: {},
   latestPrice: {},
 
@@ -74,20 +72,27 @@ const gmxSeedData: IGmxProcessSeed = {
   subscription: [],
 }
 
+const blueprint: IProcessedStore<IGmxProcessSeed> = {
+  startBlock: 114838028n,
+  endBlock: 118649616n,
+  orderId: 0,
+  chainId: arbitrum.id,
+  state: state,
+}
 
-const seedProcess =  importGlobal(async () => {
-  const req = await import('../../data/db/sha256-w9wMeTD1weowD5_n86aDyKg9M_HofhCG4g9mQTzuuy0=.json')
-  return req
+console.log(jsonStringify(blueprint))
+
+
+export const seedFile: Stream<IProcessedStore<IGmxProcessSeed>> = importGlobal(async () => {
+  const req = await import('../../data/db/sha256-mNRHdIqqQz5b0dn+zdfi6cD6dzN3JSWcr5CXC8Fkhvk=.json')
+  const newLocal = transformBigints(req.default)
+  return newLocal
 })
 
 export const gmxProcess = defineProcess(
   {
-    startBlock: 114838028n,
-    chainId: arbitrum.id,
-
-    seed: seedProcess,
-    blueprint: gmxSeedData,
-
+    seedFile,
+    blueprint: blueprint,
     parentScope: rootStoreScope,
     queryBlockSegmentLimit: 100000n,
   },

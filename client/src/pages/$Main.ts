@@ -73,7 +73,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   const leaderboardRoute = appRoute.create({ fragment: 'leaderboard' })
 
 
-
   const $liItem = $element('li')(style({ marginBottom: '14px' }))
 
 
@@ -102,7 +101,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
     if (timeNow - seed.approximatedTimestamp > refreshThreshold) {
       return replayLatest(multicast(switchMap(params => {
-        return map(seedState => seedState.state, syncProcess({ ...gmxProcess, publicClient: params.publicClient, endBlock: params.block }))
+        return map(seedState => seedState.state, syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.block }))
       }, combineObject({ publicClient, block: blockCache }))))
     }
 

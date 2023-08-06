@@ -17,6 +17,7 @@ import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
 import { entryColumn, pnlSlotColumn, settledPnlColumn, settledSizeColumn, settledTimeColumn, slotSizeColumn, timeSlotColumn } from "../table/$TableColumn"
 import { $ProfilePerformanceCard } from "../trade/$ProfilePerformanceCard"
+import { $heading1 } from "../../common/$text"
 
 
 
@@ -68,7 +69,6 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
   const $metricLabel = $row(style({ color: pallete.foreground, letterSpacing: '1px', fontSize: '.85rem' }))
   const $metricValue = $row(style({ fontWeight: 900, letterSpacing: '1px', fontSize: '1.75rem' }))
 
-  const $heading = $text(style({ fontSize: '1.15rem', fontWeight: '900', marginBottom: '6px', letterSpacing: '1px', marginLeft: '-13px', color: pallete.foreground }))
 
 
   return [
@@ -152,7 +152,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
 
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
         $column(
-          $heading('Open Positions'),
+          $heading1('Open Positions'),
           $Table({
             dataSource: openTrades,
             columns: [
@@ -174,7 +174,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
         $seperator2,
 
         $column(
-          $heading('Settled Positions'),
+          $heading1('Settled Positions'),
           $Table({
             dataSource: settledTrades,
             columns: [
