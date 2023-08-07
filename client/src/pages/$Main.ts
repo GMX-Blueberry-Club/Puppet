@@ -91,7 +91,11 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       fontWeight: 400,
       overflowX: 'hidden',
       flexDirection: 'row',
-    })
+    }),
+
+    screenUtils.isMobileScreen
+      ? style({ userSelect: 'none' })
+      : style({}),
   )
 
   const isMobileScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
