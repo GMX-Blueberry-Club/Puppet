@@ -58,7 +58,7 @@ export const entryColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSl
 export const puppetsColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSlot> = {
   $head: $text('Puppets'),
   $$body: map((pos) => {
-    // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
+    // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))w
     // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
 
     return $puppets(pos.puppets, empty())
@@ -83,8 +83,8 @@ export const pnlSlotColumn = (processData: Stream<IGmxProcessSeed>, puppet?: vie
 
 export const traderColumn = (click: Op<string, string>, route: router.Route): TableColumn<IMirrorTraderSummary> => ({
   $head: $text('Trader'),
-  gridTemplate: 'minmax(110px, 120px)',
-  columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
+  // gridTemplate: 'minmax(110px, 120px)',
+  columnOp: style({ alignItems: 'center' }),
   $$body: map(pos => {
 
     return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(

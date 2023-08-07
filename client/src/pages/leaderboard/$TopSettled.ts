@@ -146,10 +146,6 @@ export const $TopSettled = (config: ITopSettled) => component((
                 $head: $text('Puppets'),
                 columnOp: O(layoutSheet.spacingTiny),
                 $$body: map((pos: IMirrorTraderSummary) => {
-                  // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
-                  // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
-
-
 
                   const $copyBtn = switchMap(params => {
                     if (!params.wallet || params.subscriptionList.find(s => s.trader === pos.account) !== undefined) {
@@ -198,7 +194,7 @@ export const $TopSettled = (config: ITopSettled) => component((
             ? [
               {
                 $head: $text('Win / Loss'),
-                gridTemplate: 'minmax(110px, 120px)',
+                // gridTemplate: 'minmax(110px, 120px)',
                 columnOp: style({ alignItems: 'center', placeContent: 'center' }),
                 $$body: map((pos: IMirrorTraderSummary) => {
                   return $row(
@@ -216,7 +212,7 @@ export const $TopSettled = (config: ITopSettled) => component((
               $text(style({ fontSize: '.85rem' }))('Return %'),
             ),
             sortBy: 'pnl',
-            // gridTemplate: 'minmax(70px, 120px)',
+            gridTemplate: '2fr',
             columnOp: style({ placeContent: 'flex-end' }),
             $$body: map(pos => {
 
@@ -230,7 +226,7 @@ export const $TopSettled = (config: ITopSettled) => component((
                     return $ProfilePerformanceGraph({
                       processData,
                       positionList: settledList,
-                      width: 150,
+                      width: 120,
                     })({})
                   }, config.processData)
                   : empty(),

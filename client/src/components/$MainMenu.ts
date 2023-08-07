@@ -37,45 +37,7 @@ export const $MainMenu = ({ parentRoute, chainList, isMenuOpen, showAccount = tr
   const routeChangeMulticast = multicast(routeChange)
 
 
-  const $pageLink = (config: Omit<IAnchor, '$anchor'> & { $iconPath: $Branch<SVGPathElement>, text: string | Stream<string> }) => {
-
-
-    
-
-    return component((
-      [click, clickTether]: Behavior<string, string>,
-      [active, containsTether]: Behavior<boolean, boolean>,
-      [focus, focusTether]: Behavior<boolean, boolean>,
-    ) => {
-      const $anchorEl = $anchor(
-        style({ borderRadius: '50px' }),
-        styleBehavior(
-          combineArray((isActive, isFocus): StyleCSS | null => {
-            return isActive ? { backgroundColor: `${pallete.background} !important`, fill: pallete.middleground, cursor: 'default' }
-              : isFocus ? { backgroundColor: `${pallete.background} !important`, fill: pallete.middleground }
-                : null
-          }, active, focus)
-        ),
-        // styleBehavior(map(isDisabled => (isDisabled ?  { pointerEvents: 'none', opacity: .3 } : {}), disabled))
-      )(
-        $row(style({ alignItems: 'center', cursor: 'pointer', borderRadius: '50px' }))(
-          $icon({ $content: config.$iconPath, svgOps: style({ padding: '0px 12px', minWidth: '54px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),
-          $text(style({ padding: '16px 12px' }))(config.text)
-        )
-      )
-
-
-      return [
-        $RouterAnchor({ $anchor: $anchorEl, url: config.url, route: config.route })({
-          click: clickTether(),
-          focus: focusTether(),
-          contains: containsTether()
-        }),
-
-        { click, active, focus }
-      ]
-    }) 
-  }
+  
 
 
   const $circleButtonAnchor = $anchor(
@@ -124,9 +86,7 @@ export const $MainMenu = ({ parentRoute, chainList, isMenuOpen, showAccount = tr
 
         $ButtonSecondary({
           $content: $Picker([light, dark])({})
-        })({
-
-        }),
+        })({}),
 
 
         switchLatest(snapshot((_, wallet) => {
@@ -168,8 +128,11 @@ export const $MainMenu = ({ parentRoute, chainList, isMenuOpen, showAccount = tr
     )(
 
       
-      O(clickToggleMenuTether(nodeEvent('pointerdown')), style({ cursor: 'pointer', transform: 'rotate(270deg)', aspectRatio: `1 / 1` }))(
-        $icon({ $content: $caretDown, svgOps: style({ minWidth: '56px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' })
+      $row(
+        clickToggleMenuTether(nodeEvent('pointerdown')),
+        style({ cursor: 'pointer', transform: 'rotate(270deg)', aspectRatio: `1 / 1`, alignItems: 'center', height: '50px', placeContent: 'center', borderRadius: '50px' })
+      )(
+        $icon({ $content: $caretDown, svgOps: style({ minWidth: '36px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' })
       ),
       // $column(layoutSheet.spacingBig, style({ alignItems: 'center' }))(
       //   $RouterAnchor({
@@ -399,3 +362,43 @@ export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: 
 })
 
 
+
+
+const $pageLink = (config: Omit<IAnchor, '$anchor'> & { $iconPath: $Branch<SVGPathElement>, text: string | Stream<string> }) => {
+
+  return component((
+    [click, clickTether]: Behavior<string, string>,
+    [active, containsTether]: Behavior<boolean, boolean>,
+    [focus, focusTether]: Behavior<boolean, boolean>,
+  ) => {
+    const $anchorEl = $anchor(
+      style({ borderRadius: '50px' }),
+      styleBehavior(
+        combineArray((isActive, isFocus): StyleCSS | null => {
+          return isActive ? { backgroundColor: `${pallete.background} !important`, fill: pallete.middleground, cursor: 'default' }
+            : isFocus ? { backgroundColor: `${pallete.background} !important`, fill: pallete.middleground }
+              : null
+        }, active, focus)
+      ),
+      // styleBehavior(map(isDisabled => (isDisabled ?  { pointerEvents: 'none', opacity: .3 } : {}), disabled))
+    )(
+      $row(style({ alignItems: 'center', cursor: 'pointer', borderRadius: '50px' }))(
+        $icon({ $content: config.$iconPath, svgOps: style({ padding: '0px 12px', minWidth: '54px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),
+        $text(style({ padding: '16px 12px' }))(config.text)
+      )
+    )
+
+
+    return [
+      $RouterAnchor({ $anchor: $anchorEl, url: config.url, route: config.route })({
+        click: clickTether(),
+        focus: focusTether(),
+        contains: containsTether()
+      }),
+
+      { click, active, focus }
+    ]
+  }) 
+}
+
+  

@@ -18,7 +18,7 @@ export function $svgContent(content: string): $Node[] {
 
 
 export const $defaultBerry = $column(style({
-  minHeight: '40px',
+  minHeight: '50px',
   aspectRatio: '1 / 1',
   borderRadius: '50%',
   overflow: 'hidden'
