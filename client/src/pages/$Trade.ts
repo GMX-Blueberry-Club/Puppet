@@ -172,7 +172,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const collateralTokenPrice = latestTokenPrice(config.processData, collateralToken)
 
 
-  const route = switchMap(params => {
+  const route = multicast(switchMap(params => {
     if (!params.wallet) {
       throw new Error('wallet is required')
     }
@@ -182,7 +182,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
       return route === GMX.AddressZero ? null : route
     }, orchestrator.read('getRoute', key))
-  }, combineObject({ inputToken, collateralToken, indexToken, isLong, wallet }))
+  }, combineObject({ inputToken, collateralToken, indexToken, isLong, wallet })))
 
 
   const newLocal2 = debounce(50, combineObject({ route, indexToken, collateralToken, isLong }))
@@ -284,7 +284,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const inputTokenDebtUsd = vault.read('usdgAmounts', inputToken)
 
   const inputTokenDescription = combineArray((network, token) => {
-    if (network.id || token === GMX.AddressZero) {
+    if (token === GMX.AddressZero) {
       return getNativeTokenDescription(network.id)
     }
 

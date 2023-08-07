@@ -23,8 +23,12 @@ const prefixedParentEnv = Object.fromEntries(
 const pwaOptions: Partial<VitePWAOptions> = {
   registerType: 'prompt',
   strategies: 'injectManifest',
+  injectManifest: {
+    maximumFileSizeToCacheInBytes: 3000000
+  },
   srcDir: 'src',
   filename: 'sw.ts',
+  
 
   includeAssets: ['pwa-192x192.png', 'pwa-512x512.png', 'metamask-fox.svg'],
   manifest: {
