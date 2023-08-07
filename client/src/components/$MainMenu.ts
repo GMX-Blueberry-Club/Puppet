@@ -16,6 +16,8 @@ import { $WalletProfileDisplay } from "./$WalletProfileDisplay"
 import { $ButtonSecondary } from "./form/$Button"
 import { disconnect } from "@wagmi/core"
 import { walletLink } from "../wallet"
+import { switchMap } from "gmx-middleware-utils"
+import { fadeIn } from "../transitions/enter"
 
 
 interface MainMenu {
@@ -115,6 +117,7 @@ export const $MainMenu = ({ parentRoute, chainList, isMenuOpen, showAccount = tr
     // overlayClick: clickPopoverClaimTether()
   })
 
+  
 
   return [
 
@@ -128,11 +131,31 @@ export const $MainMenu = ({ parentRoute, chainList, isMenuOpen, showAccount = tr
     )(
 
       
-      $row(
-        clickToggleMenuTether(nodeEvent('pointerdown')),
-        style({ cursor: 'pointer', transform: 'rotate(270deg)', aspectRatio: `1 / 1`, alignItems: 'center', height: '50px', placeContent: 'center', borderRadius: '50px' })
-      )(
-        $icon({ $content: $caretDown, svgOps: style({ minWidth: '36px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' })
+      $column(style({ placeContent: 'center', position: 'relative' }))(
+
+        switchMap(isOpen => {
+
+          if (isOpen)  {
+            return $row(style({ position: 'relative', placeContent: 'center'  }))(
+              fadeIn($icon({ $content: $puppetLogo, svgOps: style({ minWidth: '50px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' })),
+              fadeIn($row(
+                clickToggleMenuTether(nodeEvent('pointerdown')),
+                style({ position: 'absolute', right: 0, cursor: 'pointer', alignSelf: 'flex-end', border: `1px solid ${colorAlpha(pallete.foreground, .25)}`, aspectRatio: `1 / 1`, alignItems: 'center', maxWidth: '36px', height: '36px', placeContent: 'center', borderRadius: '50px' })
+              )(
+                $icon({ $content: $caretDown, svgOps : style({ fill: pallete.foreground, transform: 'rotate(90deg)' }), viewBox: '0 0 32 32' })
+              )),
+            )
+          }
+
+
+          return fadeIn($row(
+            clickToggleMenuTether(nodeEvent('pointerdown')),
+            style({ cursor: 'pointer', alignSelf: 'flex-end', border: `1px solid ${colorAlpha(pallete.foreground, .25)}`, aspectRatio: `1 / 1`, alignItems: 'center', maxWidth: '50px', height: '50px', placeContent: 'center', borderRadius: '50px' })
+          )(
+            $icon({ $content: $caretDown, svgOps : style({ fill: pallete.foreground, transform: 'rotate(270deg)' }), viewBox: '0 0 32 32' })
+          ))
+        }, isMenuOpen)
+        
       ),
       // $column(layoutSheet.spacingBig, style({ alignItems: 'center' }))(
       //   $RouterAnchor({
