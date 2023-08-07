@@ -407,7 +407,7 @@ const $pageLink = (config: Omit<IAnchor, '$anchor'> & { $iconPath: $Branch<SVGPa
     )(
       $row(style({ alignItems: 'center', cursor: 'pointer', borderRadius: '50px' }))(
         $icon({ $content: config.$iconPath, svgOps: style({ padding: '0px 12px', minWidth: '54px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),
-        $text(style({ padding: '16px 12px' }))(config.text)
+        $text(style({ padding: '16px 12px', fontSize: '1.15rem' }))(config.text)
       )
     )
 

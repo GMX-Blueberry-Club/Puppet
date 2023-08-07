@@ -45,6 +45,7 @@ import { resolveAddress } from "../../logic/utils.js"
 import { account } from "../../wallet/walletLink.js"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown.js"
+import { $heading2, $heading3 } from "../../common/$text"
 
 
 
@@ -474,17 +475,26 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
               return $Dropdown({
                 $container: $row(style({ position: 'relative', alignSelf: 'center' })),
-                $selection: switchLatest(map(option => {
+                $selection: switchLatest(map(tokenDesc => {
+                  // const tokenDesc = getTokenDescription(option)
+
                   return $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
-                    $icon({
-                      $content: $tokenIconMap[option.symbol],
-                      svgOps: styleBehavior(map(isIncrease => ({ fill: isIncrease ? pallete.message : pallete.indeterminate }), config.tradeConfig.isIncrease)),
-                      width: '34px', viewBox: '0 0 32 32'
-                    }),
-                    // $text(option.symbol),
-                    $icon({ $content: $caretDown, width: '14px', svgOps: style({ marginTop: '3px' }), viewBox: '0 0 32 32' }),
+                    $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '34px', svgOps: style({ paddingRight: '4px' }), viewBox: '0 0 32 32' }),
+                    $heading2(tokenDesc.symbol),
+                    $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' }),
                   )
-                }, config.tradeState.inputTokenDescription)),
+                }, inputTokenDescription)),
+                // $selection: switchLatest(map(option => {
+                //   return $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
+                //     $icon({
+                //       $content: $tokenIconMap[option.symbol],
+                //       svgOps: styleBehavior(map(isIncrease => ({ fill: isIncrease ? pallete.message : pallete.indeterminate }), config.tradeConfig.isIncrease)),
+                //       width: '34px', viewBox: '0 0 32 32'
+                //     }),
+                //     // $text(option.symbol),
+                //     $icon({ $content: $caretDown, width: '14px', svgOps: style({ marginTop: '3px' }), viewBox: '0 0 32 32' }),
+                //   )
+                // }, config.tradeState.inputTokenDescription)),
                 value: {
                   value: config.tradeConfig.inputToken,
                   $container: $defaultSelectContainer(style({ minWidth: '290px', left: 0 })),
@@ -756,8 +766,9 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 const tokenDesc = getTokenDescription(option)
 
                 return $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
-                  $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '34px', viewBox: '0 0 32 32' }),
-                  $icon({ $content: $caretDown, width: '14px', svgOps: style({ marginTop: '3px' }), viewBox: '0 0 32 32' }),
+                  $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '34px', svgOps: style({ paddingRight: '4px' }), viewBox: '0 0 32 32' }),
+                  $heading2(tokenDesc.symbol),
+                  $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' }),
                 )
               }, config.tradeConfig.indexToken)),
               value: {

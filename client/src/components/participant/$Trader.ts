@@ -16,7 +16,7 @@ import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
 import { entryColumn, settledPnlColumn, puppetsColumn, positionTimeColumn, slotSizeColumn, pnlSlotColumn, positionTimeColumn, settledSizeColumn } from "../table/$TableColumn"
 import { $ProfilePerformanceCard } from "../trade/$ProfilePerformanceCard"
-import { $heading1, $heading2 } from "../../common/$text"
+import { $heading1, $heading2, $heading3 } from "../../common/$text"
 
 
 
@@ -93,24 +93,20 @@ export const $TraderProfile = (config: ITraderProfile) => component((
               $metricLabel($text('Puppets')),
             ),
             $metricRow(
-              $metricValue(
-                $text(map(seed => {
+              $heading2(map(seed => {
 
-                  if (seed === null) return '-'
+                if (seed === null) return '-'
 
-                  return `${seed.winCount} / ${seed.lossCount}`
-                }, summary))
-              ),
+                return `${seed.winCount} / ${seed.lossCount}`
+              }, summary)),
               $metricLabel($text('Win / Loss')),
             ),
             $metricRow(
-              $metricValue(
-                $text(map(seed => {
-                  if (seed === null) return '-'
+              $heading2(map(seed => {
+                if (seed === null) return '-'
 
-                  return leverageLabel(seed.avgLeverage)
-                }, summary))
-              ),
+                return leverageLabel(seed.avgLeverage)
+              }, summary)),
               $metricLabel($text('Avg Leverage')),
             ),
           ),
@@ -136,7 +132,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
         $column(
-          $heading2('Open Positions'),
+          $heading3('Open Positions'),
           $Table({
             dataSource: openTrades,
             columns: [
@@ -152,7 +148,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
         $seperator2,
 
         $column(
-          $heading2('Settled Positions'),
+          $heading3('Settled Positions'),
           $Table({
             dataSource: settledTrades,
             columns: [

@@ -356,7 +356,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
   return [
     config.$container(
-      $column(style({ padding: '16px', margin: 'auto 0', placeContent: 'space-between' }), styleInline(map(mode => ({ height: '140px', display: mode ? 'flex' : 'none' }), inTradeMode)))(
+      $column(style({ padding: '16px', placeContent: 'space-between' }), styleInline(map(mode => ({ height: '140px', display: mode ? 'flex' : 'none' }), inTradeMode)))(
         $column(layoutSheet.spacingSmall)(
           // $TextField({
           //   label: 'Slippage %',

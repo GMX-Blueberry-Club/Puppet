@@ -17,7 +17,7 @@ import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
 import { entryColumn, pnlSlotColumn, settledPnlColumn, settledSizeColumn, positionTimeColumn, slotSizeColumn, positionTimeColumn } from "../table/$TableColumn"
 import { $ProfilePerformanceCard, $ProfilePerformanceGraph } from "../trade/$ProfilePerformanceCard"
-import { $heading1, $heading2 } from "../../common/$text"
+import { $heading1, $heading2, $heading3 } from "../../common/$text"
 import { ROUTE_TYPE_DESCRIPTIN } from "puppet-middleware-const"
 import { $RouteDepositInfo } from "../$common"
 
@@ -59,7 +59,6 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
 
   const $metricRow = $column(style({ placeContent: 'center', alignItems: 'center' }))
   const $metricLabel = $row(style({ color: pallete.foreground, letterSpacing: '1px', fontSize: '.85rem' }))
-  const $metricValue = $row(style({ fontWeight: 900, letterSpacing: '1px', fontSize: '1.75rem' }))
 
 
 
@@ -95,26 +94,22 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
             // $seperator2,
 
             $metricRow(
-              $metricValue(
-                $text(map(seed => {
-                  if (seed === null) return '-'
+              $heading2(map(seed => {
+                if (seed === null) return '-'
 
-                  return `${seed.winCount} / ${seed.lossCount}`
-                }, summary))
-              ),
+                return `${seed.winCount} / ${seed.lossCount}`
+              }, summary)),
               $metricLabel($text('Win / Loss')),
             ),
 
             // $seperator2,
 
             $metricRow(
-              $metricValue(
-                $text(map(seed => {
-                  if (seed === null) return '-'
+              $heading2(map(seed => {
+                if (seed === null) return '-'
 
-                  return leverageLabel(seed.avgLeverage)
-                }, summary))
-              ),
+                return leverageLabel(seed.avgLeverage)
+              }, summary)),
               $metricLabel($text('Avg Leverage')),
             ),
           ),
@@ -138,7 +133,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
       $node(),
 
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
-        $heading2('Routes'),
+        $heading3('Routes'),
 
         switchMap(processData => {
 
@@ -201,7 +196,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
 
         $column(
-          $heading2('Open Positions'),
+          $heading3('Open Positions'),
           $Table({
             dataSource: openTrades,
             columns: [
@@ -221,7 +216,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
         ),
               
         $column(
-          $heading2('Settled Positions'),
+          $heading3('Settled Positions'),
           $Table({
             dataSource: settledTrades,
             columns: [

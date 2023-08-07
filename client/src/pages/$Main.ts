@@ -228,9 +228,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
           $SubscriberDrawer({
             subscribeList,
             subscribeTrader
-          })({
-              
-          }),
+          })({}),
 
 
           router.match(tradeRoute)(
