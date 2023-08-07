@@ -1,14 +1,14 @@
 import { Behavior, O, combineObject, replayLatest } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
-import { $column, $row, layoutSheet } from "@aelea/ui-components"
+import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { constant, empty, map } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Link, $Table, ISortBy } from "gmx-middleware-ui-components"
 import { ITraderSummary, pagingQuery, switchMap } from "gmx-middleware-utils"
 import { getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-const"
-import { IPuppetSubscritpion, ITraderSubscritpion, leaderboardMirrorTrader } from "puppet-middleware-utils"
+import { IPuppetRouteTrades, IPuppetRouteSubscritpion, leaderboardMirrorTrader, IMirrorTraderSummary } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { IProfileActiveTab } from "../$Profile"
 import { $pnlValue, $puppets, $size } from "../../common/$common"
@@ -27,13 +27,13 @@ export type ITopSettled = {
   route: router.Route
   processData: Stream<IGmxProcessSeed>
 
-  subscription: Stream<IPuppetSubscritpion[]>
-  subscribeList: Stream<ITraderSubscritpion[]>
+  subscription: Stream<IPuppetRouteTrades[]>
+  subscribeList: Stream<IPuppetRouteSubscritpion[]>
 }
 
 export const $TopSettled = (config: ITopSettled) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
-  [subscribeTrader, subscribeTraderTether]: Behavior<any, ITraderSubscritpion>,
+  [subscribeTrader, subscribeTraderTether]: Behavior<any, IPuppetRouteSubscritpion>,
   
   [pageIndex, pageIndexTether]: Behavior<number, number>,
   [sortByChange, sortByChangeTether]: Behavior<ISortBy<ITraderSummary>>,
@@ -140,78 +140,100 @@ export const $TopSettled = (config: ITopSettled) => component((
         sortBy,
         columns: [
           traderColumn(routeChangeTether(), config.route),
-          {
-            $head: $text('Puppets'),
-            columnOp: O(layoutSheet.spacingTiny, style({ width: '160px' })),
-            $$body: map((pos) => {
-              // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
-              // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
+          ...screenUtils.isDesktopScreen
+            ? [
+              {
+                $head: $text('Puppets'),
+                columnOp: O(layoutSheet.spacingTiny),
+                $$body: map((pos: IMirrorTraderSummary) => {
+                  // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
+                  // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
 
 
 
-              const $copyBtn = switchMap(params => {
-                if (!params.wallet || params.subscriptionList.find(s => s.trader === pos.account) !== undefined) {
-                  return empty()
-                }
+                  const $copyBtn = switchMap(params => {
+                    if (!params.wallet || params.subscriptionList.find(s => s.trader === pos.account) !== undefined) {
+                      return empty()
+                    }
 
-                const routeTypeKey = getRouteTypeKey(GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, true)
-                const puppetSubscriptionKey = getPuppetSubscriptionKey(params.wallet.account.address, pos.account, routeTypeKey)
+                    const routeTypeKey = getRouteTypeKey(GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, true)
+                    const puppetSubscriptionKey = getPuppetSubscriptionKey(params.wallet.account.address, pos.account, routeTypeKey)
 
-                const isSubscribed = params.subscription.find(x => x.puppetSubscriptionKey === puppetSubscriptionKey) === undefined
-                const subsc: ITraderSubscritpion = {
-                  trader: pos.account,
-                  puppet: params.wallet.account.address,
-                  allowance: 1000n,
-                  routeTypeKey,
-                  puppetSubscriptionKey,
-                  // subscribed: false,
-                  subscribed: isSubscribed,
-                }
+                    const isSubscribed = params.subscription.find(x => x.puppetSubscriptionKey === puppetSubscriptionKey) === undefined
+                    const subsc: IPuppetRouteSubscritpion = {
+                      trader: pos.account,
+                      puppet: params.wallet.account.address,
+                      allowance: 1000n,
+                      routeTypeKey,
+                      puppetSubscriptionKey,
+                      // subscribed: false,
+                      subscribed: isSubscribed,
+                    }
 
-                return  $ButtonSecondary({ $content: $text(isSubscribed ? 'Copy' : 'Unsub'), $container: $defaultMiniButtonSecondary })({
-                  click: subscribeTraderTether(constant(subsc))
-                })
-              }, combineObject({ wallet, subscription: config.subscription, subscriptionList: config.subscribeList })) 
+                    return  $ButtonSecondary({ $content: $text(isSubscribed ? 'Copy' : 'Unsub'), $container: $defaultMiniButtonSecondary })({
+                      click: subscribeTraderTether(constant(subsc))
+                    })
+                  }, combineObject({ wallet, subscription: config.subscription, subscriptionList: config.subscribeList })) 
                 
-              return $puppets(pos.puppets, $copyBtn)
-            })
-          },
+                  return $puppets(pos.puppets, $copyBtn)
+                })
+              },
+            ]
+            : [
+
+            ],
+          
           {
             $head: $column(style({ textAlign: 'right' }))(
-              $text('Cum. Size $'),
-              $text(style({ fontSize: '.85rem' }))('Avg. Leverage'),
+              $text('Size'),
+              $text(style({ fontSize: '.85rem' }))('Leverage'),
             ),
             sortBy: 'size',
-            columnOp: style({ placeContent: 'flex-end', width: '120px' }),
+            columnOp: style({ placeContent: 'flex-end' }),
             $$body: map((pos) => {
               return $size(pos.size, pos.collateral)
             })
           },
-          {
-            $head: $text('Win / Loss'),
-            gridTemplate: 'minmax(110px, 120px)',
-            columnOp: style({ alignItems: 'center', width: '120px', placeContent: 'center' }),
-            $$body: map((pos) => {
-              return $row(
-                $text(`${pos.winCount} / ${pos.lossCount}`)
-              )
-            })
-          },
+          ...screenUtils.isDesktopScreen
+            ? [
+              {
+                $head: $text('Win / Loss'),
+                gridTemplate: 'minmax(110px, 120px)',
+                columnOp: style({ alignItems: 'center', placeContent: 'center' }),
+                $$body: map((pos: IMirrorTraderSummary) => {
+                  return $row(
+                    $text(`${pos.winCount} / ${pos.lossCount}`)
+                  )
+                })
+              },
+            ]
+            : [
+
+            ],
           {
             $head: $column(style({ textAlign: 'right' }))(
               $text('PnL $'),
               $text(style({ fontSize: '.85rem' }))('Return %'),
             ),
             sortBy: 'pnl',
-            columnOp: style({ placeContent: 'flex-end', width: '190px' }),
-            $$body: map((pos) => {
+            // gridTemplate: 'minmax(70px, 120px)',
+            columnOp: style({ placeContent: 'flex-end' }),
+            $$body: map(pos => {
 
               return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-                $ProfilePerformanceGraph({
-                  processData: config.processData,
-                  trader: pos.account,
-                  width: 150,
-                })({}),
+
+                screenUtils.isDesktopScreen
+                  ? switchMap(processData => {
+                    const traderPos = processData.mirrorPositionSettled[pos.account] || {}
+                    const settledList = Object.values(traderPos).flat() //.slice(-1)
+
+                    return $ProfilePerformanceGraph({
+                      processData,
+                      positionList: settledList,
+                      width: 150,
+                    })({})
+                  }, config.processData)
+                  : empty(),
                 $pnlValue(pos.pnl)
                 // $column(style({ gap: '3px', textAlign: 'right' }))(
                 //   $pnlValue(pos.pnl),

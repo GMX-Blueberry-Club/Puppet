@@ -5,7 +5,7 @@ import { $column, layoutSheet } from "@aelea/ui-components"
 import { empty, map, mergeArray, multicast, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { $ButtonToggle } from "gmx-middleware-ui-components"
-import { IPuppetSubscritpion, ITraderSubscritpion } from "puppet-middleware-utils"
+import { IPuppetRouteTrades, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import { IGmxProcessSeed } from "../../data/process/process"
 import { $card } from "../../elements/$common"
 import { wallet } from "../../wallet/walletLink"
@@ -19,7 +19,7 @@ export type ILeaderboard = {
   route: router.Route
   processData: Stream<IGmxProcessSeed>
 
-  subscribeList: Stream<ITraderSubscritpion[]>
+  subscribeList: Stream<IPuppetRouteSubscritpion[]>
 }
 
 type IRouteOption = {
@@ -30,7 +30,7 @@ type IRouteOption = {
 export const $Leaderboard = (config: ILeaderboard) => component((
   [changeTab, changeTabTether]: Behavior<IRouteOption, string>,
   [routeChange, routeChangeTether]: Behavior<string, string>,
-  [subscribeTrader, subscribeTraderTether]: Behavior<ITraderSubscritpion>,
+  [subscribeTrader, subscribeTraderTether]: Behavior<IPuppetRouteSubscritpion>,
 ) => {
   const settledRoute = config.route.create({ fragment: 'settled', title: 'Leaderboard' })
   const topOpenRoute = config.route.create({ fragment: 'open', title: 'Leaderboard' })
@@ -56,7 +56,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
 
 
-  const subscription: Stream<IPuppetSubscritpion[]> = switchLatest(map(w3p => {
+  const subscription: Stream<IPuppetRouteTrades[]> = switchLatest(map(w3p => {
     if (!w3p) {
       return empty()
     }

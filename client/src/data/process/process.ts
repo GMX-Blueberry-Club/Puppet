@@ -6,7 +6,7 @@ import {
   IPriceIntervalIdentity, createPricefeedCandle, div, getIntervalIdentifier, importGlobal, switchMap
 } from "gmx-middleware-utils"
 import { getPuppetSubscriptionKey } from "puppet-middleware-const"
-import { IAccountToRouteMap, IPositionMirrorSettled, IPositionMirrorSlot, IPositionRequest, IPuppetSubscritpion } from "puppet-middleware-utils"
+import { IAccountToRouteMap, IPositionMirrorSettled, IPositionMirrorSlot, IPositionRequest, IPuppetRouteTrades } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { rootStoreScope } from "../../rootStore"
@@ -47,7 +47,7 @@ export interface IGmxProcessSeed {
   mirrorPositionRequest: Record<viem.Hex, IPositionRequest>
   mirrorPositionSlot: Record<viem.Hex, IPositionMirrorSlot>
   mirrorPositionSettled: IAccountToRouteMap<IPositionMirrorSettled[]>
-  subscription: IPuppetSubscritpion[]
+  subscription: IPuppetRouteTrades[]
 }
 
 

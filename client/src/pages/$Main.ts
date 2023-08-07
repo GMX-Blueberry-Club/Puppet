@@ -1,5 +1,5 @@
 import { Behavior, combineObject, replayLatest } from "@aelea/core"
-import { $element, $node, $text, component, eventElementTarget, style } from "@aelea/dom"
+import { $element, $node, $text, component, eventElementTarget, style, styleBehavior } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { pallete } from "@aelea/ui-components-theme"
@@ -23,7 +23,7 @@ import * as wagmi from "@wagmi/core"
 import { $Profile } from "./$Profile"
 import * as viem from 'viem'
 import { $SubscriberDrawer } from "../components/$SubscriberDrawer"
-import { ITraderSubscritpion } from "puppet-middleware-utils"
+import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import { rootStoreScope } from "../rootStore"
 import * as store from "../utils/storage/storeScope"
 
@@ -41,7 +41,7 @@ interface Website {
 
 export const $Main = ({ baseRoute = '' }: Website) => component((
   [routeChanges, linkClickTether]: Behavior<any, string>,
-  [subscribeTrader, subscribeTraderTether]: Behavior<ITraderSubscritpion>,
+  [subscribeTrader, subscribeTraderTether]: Behavior<IPuppetRouteSubscritpion>,
   [toggleMenu, toggleMenuTether]: Behavior<boolean>,
 
   // [resizeScreen, resizeScreenTether]: Behavior<any, ResizeObserverEntry[]>,
@@ -85,6 +85,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       // backgroundImage: `radial-gradient(570% 71% at 50% 15vh, ${pallete.background} 0px, ${pallete.horizon} 100%)`,
       backgroundColor: pallete.horizon,
       fontSize: '1.15rem',
+      // fontSize: screenUtils.isDesktopScreen ? '1.15rem' : '1rem',
       minHeight: '100vh',
       fontWeight: 400,
       overflowX: 'hidden',
@@ -107,7 +108,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
     return now(params.seed.state)
   }, combineObject({ publicClient, block: blockCache, seed: gmxProcess.seed }))))
 
-  const subscribeList = replayLatest(map(l => [l], subscribeTrader), [] as ITraderSubscritpion[])
+  const subscribeList = replayLatest(map(l => [l], subscribeTrader), [] as IPuppetRouteSubscritpion[])
 
 
   return [
@@ -128,6 +129,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       ),
       router.contains(appRoute)(
         $rootContainer(
+          styleBehavior(map(isMobile => ({ flexDirection: isMobile ? 'row' : 'column' }), isMobileScreen)),
           screenUtils.isDesktopScreen
             ? style({
               display: 'flex', flexDirection: 'row',
@@ -150,9 +152,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
           }, isMobileScreen),
           
           $column(
-            // styleBehavior(map(isMobile => ({ flexDirection: isMobile ? 'row' : 'column' }), isMobileScreen)),
             style({
-              margin: '0 auto', maxWidth: '1240px', position: 'relative', gap: screenUtils.isDesktopScreen ? '50px' : '50px', width: '100%', padding: '45px 15px 15px',
+              margin: '0 auto', maxWidth: '940px', position: 'relative', gap: screenUtils.isDesktopScreen ? '50px' : '50px', width: '100%',
               flex: 1, 
             }),
           )(
@@ -255,7 +256,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 ),
 
                 $node(style({ height: '100px' }))(),
-
               ),
 
             ),

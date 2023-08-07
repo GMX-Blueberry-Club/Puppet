@@ -72,11 +72,8 @@ export const $discoverAvatar = (config: IAccountPreview) => {
 
   return switchLatest(map(profile => {
     return profile?.profile
-      ? style({ borderRadius: '50%' }, $berryByToken(profile.profile, config.$profileContainer))
-      : $jazzicon({
-        address,
-        $container: config.$profileContainer
-      })
+      ? $berryByToken(profile.profile, config.$profileContainer)
+      : $jazzicon({ address, $container: config.$profileContainer })
   }, profileEv))
 }
 

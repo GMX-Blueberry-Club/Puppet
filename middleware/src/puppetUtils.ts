@@ -3,7 +3,7 @@ import * as viem from "viem"
 import { IAccountToRouteMap, IMirrorTraderSummary, IPositionMirrorSettled, IPositionMirrorSlot } from "./types.js"
 
 
-export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]): IMirrorTraderSummary {
+export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[], shareTarget?: viem.Address): IMirrorTraderSummary {
   const account = settledTradeList[0].trader
   const route = settledTradeList[0].route
 
@@ -32,17 +32,20 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
 
     const position = next.position
 
-    const size = seed.size + position.maxSize
-    const collateral = seed.collateral + position.maxCollateral
-    const leverage = seed.leverage + div(position.maxSize, position.maxCollateral)
+    const share = getParticiapntMpShare(next, shareTarget)
+
+
+    const size = seed.size + getParticiapntMpPortion(next, position.maxSize, shareTarget)
+    const collateral = seed.collateral + getParticiapntMpPortion(next, position.maxCollateral, shareTarget)
+    const leverage = seed.leverage + getParticiapntMpPortion(next, div(position.maxSize, position.maxCollateral), shareTarget)
 
     const avgSize = size / idxBn
     const avgCollateral = collateral / idxBn
     const avgLeverage = leverage / idxBn
 
 
-    const fee = seed.fee + position.cumulativeFee
-    const pnl = seed.pnl + position.realisedPnl
+    const fee = seed.fee + getParticiapntMpPortion(next, position.cumulativeFee, shareTarget)
+    const pnl = seed.pnl + getParticiapntMpPortion(next, position.realisedPnl, shareTarget)
 
 
     const winCount = seed.winCount + (position.realisedPnl > 0n ? 1 : 0)

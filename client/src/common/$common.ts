@@ -51,7 +51,7 @@ export const $entry = (pos: IPosition) => {
   )
 }
 
-export const $route = (pos: IAbstractRouteIdentity, size = '28px') => {
+export const $route = (pos: IAbstractRouteIdentity, size = '34px') => {
   return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
     $tokenIcon(pos.indexToken, { width: size }),
     $text(getTokenDescription(pos.indexToken).symbol),
@@ -79,23 +79,16 @@ export const $settledSizeDisplay = (pos: IPositionSettled | IPositionSlot) => {
 }
 
 
-export const $traderDisplay = (route: Route ,pos: IPositionMirrorSlot | IPositionMirrorSettled, changeRoute: Tether<string, string>) => {
+export const $traderDisplay = (route: Route, trader: viem.Address, changeRoute: Tether<string, string>) => {
   return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-    // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
     $Link({
       $content: $discoverIdentityDisplay({
-        address: pos.trader,
+        address: trader,
         $profileContainer: $defaultBerry(style({ width: '50px' }))
       }),
       route: route.create({ fragment: 'fefwef' }),
-      url: `/app/profile/${pos.trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
+      url: `/app/profile/${trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
     })({ click: changeRoute() }),
-    // $anchor(clickAccountBehaviour)(
-    //   $accountPreview({ address: pos.account })
-    // )
-    // style({ zoom: '0.7' })(
-    //   $alert($text('Unclaimed'))
-    // )
   )
 }
 
@@ -134,7 +127,7 @@ export const $puppets = (puppets: readonly viem.Address[], $content: $Node) => {
                 
   return $row(layoutSheet.spacingSmall, style({ }))(
     ...puppets.map(address => {
-      return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minWidth: '30px', maxWidth: '30px' })) })
+      return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minHeight: '30px', borderRadius: '50%' })) })
     }),
     $content
   )

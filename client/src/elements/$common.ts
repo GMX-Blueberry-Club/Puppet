@@ -11,7 +11,7 @@ import { $trash } from "./$icons"
 export const $TrashBtn = $ButtonIcon($trash)
 
 export const $card = $column(layoutSheet.spacing,
-  style({ borderRadius: '20px', padding: '36px' }),
+  style({ borderRadius: '20px', padding: screenUtils.isDesktopScreen ? '36px': '12px' }),
   theme.name === 'dark'
     ? style({
       backgroundColor: pallete.background,
@@ -19,7 +19,7 @@ export const $card = $column(layoutSheet.spacing,
     })
     : style({
       boxShadow: 'rgb(0 0 0 / 25%) 0px 0px 1px, rgb(59 60 74 / 15%) 0px 15px 20px, rgb(0 0 0 / 8%) 0px 1px 12px',
-      backgroundColor: pallete.background, padding: '22px', borderRadius: '20px', flex: 1
+      backgroundColor: pallete.background, borderRadius: '20px', flex: 1
     })
 )
 

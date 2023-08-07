@@ -5,11 +5,11 @@ import { $row } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, map, mergeArray, now, snapshot, switchLatest } from "@most/core"
 import { $anchor } from "gmx-middleware-ui-components"
-import { $seperator2 } from "../pages/common"
-import { account, web3Modal } from "../wallet/walletLink"
-import { $disconnectedWalletDisplay, $discoverIdentityDisplay } from "./$AccountProfile"
-import { $SwitchNetworkDropdown } from "./$ConnectAccount"
-import { $defaultBerry } from "./$DisplayBerry"
+import { $seperator2 } from "../pages/common.js"
+import { account, web3Modal } from "../wallet/walletLink.js"
+import { $disconnectedWalletDisplay, $discoverIdentityDisplay } from "./$AccountProfile.js"
+import { $SwitchNetworkDropdown } from "./$ConnectAccount.js"
+import { $defaultBerry } from "./$DisplayBerry.js"
 
 
 export interface IWalletDisplay {
@@ -45,7 +45,7 @@ export const $WalletProfileDisplay = ({ $container = $row, parentRoute }: IWalle
                 })
               )
             )(
-              $discoverIdentityDisplay({ address: accountResult.address, $container, $profileContainer: $defaultBerry(style({ width: '50px' })) })
+              $discoverIdentityDisplay({ address: accountResult.address, $container, $profileContainer: $defaultBerry(style({ minWidth: '50px', width: '50px' })) })
             )
             : walletChangeTether(
               nodeEvent('click'),

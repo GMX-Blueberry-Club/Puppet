@@ -68,7 +68,7 @@ export const $TopOpen = (config: ITopOpen) => component((
                   $Link({
                     $content: $discoverIdentityDisplay({
                       address: pos.trader,
-                      $profileContainer: $defaultBerry(style({ width: '50px' }))
+                      // $profileContainer: $defaultBerry(style({ width: '50px' }))
                     }),
                     route: config.route.create({ fragment: 'fefwef' }),
                     url: `/app/profile/${pos.trader}/${IProfileActiveTab.TRADER.toLowerCase()}`

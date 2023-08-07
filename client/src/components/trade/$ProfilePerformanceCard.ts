@@ -280,8 +280,8 @@ export const $ProfilePerformanceCard = (config: IParticipantPerformanceCard) => 
 
 
 export const $ProfilePerformanceGraph = (config: {
-  processData: Stream<IGmxProcessSeed>
-  trader: viem.Address
+  positionList: (IPositionMirrorSettled | IPositionMirrorSlot)[],
+  processData: IGmxProcessSeed,
   width: number,
   targetShare?: viem.Address
 }) => component((
@@ -289,63 +289,39 @@ export const $ProfilePerformanceGraph = (config: {
 ) => {
 
   const tickCount = config.width / 5
-  const timeline = map(
-    params => {
-      const traderPos = params.processData.mirrorPositionSettled[config.trader] || {}
-      const settledList = Object.values(traderPos).flat() //.slice(-1)
-
-      return performanceTimeline(settledList, params.processData, tickCount, config.targetShare)
-    },
-    combineObject({ processData: config.processData })
-  )
-
-  const $container = $row(style({   }))
-  // const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
-
-
-  // const hoverChartPnl = filterNull(map(params => {
-  //   if (params.pnlCrossHairTimeChange?.point) {
-  //     const value = params.pnlCrossHairTimeChange.seriesData.values().next().value.value
-  //     return value
-  //   }
-
-  //   const data = params.timeline.data
-  //   const value = data[data.length - 1].value
-  //   return value || null
-  // }, combineObject({ pnlCrossHairTimeChange, timeline })))
+  const timeline = performanceTimeline(config.positionList, config.processData, tickCount, config.targetShare)
+  const $container = $row(style({  width: `${config.width}px`,  }))
 
 
   return [
     $container(
-      switchMap((data) => {
-        return $Baseline({
-          chartConfig: {
-            crosshair: {
-              horzLine: {
-                visible: false,
-              },
-              vertLine: {
-                visible: false,
-              }
+      $Baseline({
+        chartConfig: {
+          crosshair: {
+            horzLine: {
+              visible: false,
             },
-            height: 40,
-            width: config.width,
-            timeScale :{
-              visible: false
+            vertLine: {
+              visible: false,
             }
           },
-          data: data as any as BaselineData[],
-          containerOp: style({  inset: '0px 0px 0px 0px' }),
-          baselineOptions: {
-            lineWidth: 1,
-            lineType: LineType.Curved,
-          },
-        })({
-          crosshairMove: crosshairMoveTether(
-            skipRepeatsWith((a, b) => a.point?.x === b.point?.x)
-          )
-        })
-      }, timeline),
+          height: 40,
+          width: config.width,
+          timeScale :{
+            visible: false
+          }
+        },
+        data: timeline as any as BaselineData[],
+        containerOp: style({  inset: '0px 0px 0px 0px' }),
+        baselineOptions: {
+          lineWidth: 1,
+          lineType: LineType.Curved,
+        },
+      })({
+        crosshairMove: crosshairMoveTether(
+          skipRepeatsWith((a, b) => a.point?.x === b.point?.x)
+        )
+      }),
     ),
 
     {

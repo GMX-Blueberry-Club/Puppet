@@ -46,19 +46,7 @@ export const settledSizeColumn = (processData: Stream<IGmxProcessSeed>, puppet?:
 })
 
 
-export const timeSlotColumn: TableColumn<IPositionMirrorSlot> = {
-  $head: $text('Settle Time'),
-  gridTemplate: 'minmax(110px, 150px)',
-  $$body: map((pos) => {
 
-    const timestamp = pos.blockTimestamp
-
-    return $column(layoutSheet.spacingTiny)(
-      $text(readableDate(timestamp)),
-      $text(style({ fontSize: '.85rem' }))(timeSince(timestamp) + ' ago'),
-    )
-  })
-}
 
 export const entryColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSlot> = {
   $head: $text('Entry'),
@@ -104,7 +92,7 @@ export const traderColumn = (click: Op<string, string>, route: router.Route): Ta
       $Link({
         $content: $discoverIdentityDisplay({
           address: pos.account,
-          $profileContainer: $defaultBerry(style({ width: '50px' }))
+          // $profileContainer: $defaultBerry(style({ width: '50px' }))
         }),
         route: route.create({ fragment: 'baseRoute' }),
         url: `/app/profile/${pos.account}/${IProfileActiveTab.TRADER.toLowerCase()}`
@@ -125,12 +113,12 @@ export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IPositionMi
 
 
 
-export const settledTimeColumn: TableColumn<IPositionMirrorSettled>  = {
-  $head: $text('Open Time'),
-  gridTemplate: 'minmax(110px, 150px)',
+export const positionTimeColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSlot>  = {
+  $head: $text('Timestamp'),
+  gridTemplate: 'minmax(110px, 120px)',
   $$body: map((pos) => {
 
-    const timestamp = pos.blockTimestamp
+    const timestamp = 'settlement' in pos ? pos.blockTimestamp : pos.position.blockTimestamp
 
     return $column(layoutSheet.spacingTiny)(
       $text(readableDate(timestamp)),

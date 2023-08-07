@@ -1,7 +1,7 @@
 import { Behavior } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
-import { $column, $row, layoutSheet } from "@aelea/ui-components"
+import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { empty, map } from "@most/core"
 import { Stream } from "@most/types"
@@ -14,7 +14,7 @@ import { $defaultBerry } from "../$DisplayBerry"
 import { IGmxProcessSeed } from "../../data/process/process"
 import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
-import { entryColumn, settledPnlColumn, puppetsColumn, settledTimeColumn, slotSizeColumn, pnlSlotColumn, timeSlotColumn, settledSizeColumn } from "../table/$TableColumn"
+import { entryColumn, settledPnlColumn, puppetsColumn, positionTimeColumn, slotSizeColumn, pnlSlotColumn, positionTimeColumn, settledSizeColumn } from "../table/$TableColumn"
 import { $ProfilePerformanceCard } from "../trade/$ProfilePerformanceCard"
 import { $heading1, $heading2 } from "../../common/$text"
 
@@ -65,76 +65,71 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
 
   return [
-    $column(layoutSheet.spacingBig, style({ width: '100%', margin: '0 auto', alignItems: 'center' }))(
+    $column(layoutSheet.spacingBig, style({ width: '100%', margin: '0 auto' }))(
 
-      $row(style({ gap: '45px', alignItems: 'center' }))(
-
-        $card2(style({ padding: 0, position: 'relative' }))(
-          $row(layoutSheet.spacing, style({ marginBottom: '-10px', flex: 1, placeContent: 'space-between', position: 'absolute', bottom: '100%', left: '20px', right: 0 }))(
-            $row(
-              $discoverIdentityDisplay({
-                address: config.address,
-                $container: $row(
-                  style({ minWidth: '120px', })
-                ),
-                $profileContainer: $defaultBerry(style({ width: '100px', }))
-              })
-            ),
-
-            $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end', paddingBottom: '32px' }))(
-              $metricRow(
-                $metricValue(
-                  switchMap(puppets => {
-                    return $row(style({ flex: 1, padding: '2px 0 4px' }))(
-                      ...puppets.map(address => {
-                        return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minWidth: '30px', margin: '0 -4px', maxWidth: '30px' })) })
-                      })
-                    )
-                  }, subscribedPuppets)
-                ),
-                $metricLabel($text('Puppets')),
+      $card2(style({ padding: 0, position: 'relative' }))(
+        $row(layoutSheet.spacing, style({ marginBottom: '-10px', flex: 1, placeContent: 'space-between', position: 'absolute', bottom: '100%', left: '20px', right: 0 }))(
+          $row(
+            $discoverIdentityDisplay({
+              address: config.address,
+              $container: $row(
+                style({ minWidth: '120px', })
               ),
-              $metricRow(
-                $metricValue(
-                  $text(map(seed => {
-
-                    if (seed === null) return '-'
-
-                    return `${seed.winCount} / ${seed.lossCount}`
-                  }, summary))
-                ),
-                $metricLabel($text('Win / Loss')),
-              ),
-              $metricRow(
-                $metricValue(
-                  $text(map(seed => {
-                    if (seed === null) return '-'
-
-                    return leverageLabel(seed.avgLeverage)
-                  }, summary))
-                ),
-                $metricLabel($text('Avg Leverage')),
-              ),
-            ),
-
+              $profileContainer: $defaultBerry(style({ width: '100px', }))
+            })
           ),
-          
-          $ProfilePerformanceCard({
-            $container: $column(style({ width: '700px', height: '200px', padding: 0 })),
-            processData: config.processData,
-            positionList: map(processData => {
-              const traderPos = Object.values(processData.mirrorPositionSettled[config.address] || {}).flat() //.slice(1, 2) // .slice(-1)
-              // const traderPos = [] as any
-              const openList = Object.values(processData.mirrorPositionSlot).filter(pos => pos.trader === config.address) //.flatMap(t => t.position.link.updateList)
-              // const openList = [] as any
 
-              return [...traderPos, ...openList]
-            }, config.processData)
-            // trader: config.address,
-          })({ }),
+          $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end', paddingBottom: '32px' }))(
+            $metricRow(
+              $metricValue(
+                switchMap(puppets => {
+                  return $row(style({ flex: 1, padding: '2px 0 4px' }))(
+                    ...puppets.map(address => {
+                      return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minHeight: '30px', margin: '0 -4px' })) })
+                    })
+                  )
+                }, subscribedPuppets)
+              ),
+              $metricLabel($text('Puppets')),
+            ),
+            $metricRow(
+              $metricValue(
+                $text(map(seed => {
+
+                  if (seed === null) return '-'
+
+                  return `${seed.winCount} / ${seed.lossCount}`
+                }, summary))
+              ),
+              $metricLabel($text('Win / Loss')),
+            ),
+            $metricRow(
+              $metricValue(
+                $text(map(seed => {
+                  if (seed === null) return '-'
+
+                  return leverageLabel(seed.avgLeverage)
+                }, summary))
+              ),
+              $metricLabel($text('Avg Leverage')),
+            ),
+          ),
+
         ),
+          
+        $ProfilePerformanceCard({
+          $container: $column(style({ width: '100%', height: '200px', padding: 0 })),
+          processData: config.processData,
+          positionList: map(processData => {
+            const traderPos = Object.values(processData.mirrorPositionSettled[config.address] || {}).flat() //.slice(1, 2) // .slice(-1)
+            // const traderPos = [] as any
+            const openList = Object.values(processData.mirrorPositionSlot).filter(pos => pos.trader === config.address) //.flatMap(t => t.position.link.updateList)
+            // const openList = [] as any
 
-        
+            return [...traderPos, ...openList]
+          }, config.processData)
+          // trader: config.address,
+        })({ }),
       ),
 
       $node(),
@@ -145,7 +140,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
           $Table({
             dataSource: openTrades,
             columns: [
-              timeSlotColumn,
+              ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
               entryColumn,
               puppetsColumn,
               slotSizeColumn(config.processData),
@@ -161,7 +156,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
           $Table({
             dataSource: settledTrades,
             columns: [
-              settledTimeColumn,
+              ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
               entryColumn,
               puppetsColumn,
               settledSizeColumn(config.processData),

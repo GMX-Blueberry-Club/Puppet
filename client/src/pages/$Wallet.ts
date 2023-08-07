@@ -14,7 +14,7 @@ import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
 import { connectContract } from "../logic/common"
 import { ARBITRUM_ADDRESS } from "gmx-middleware-const"
-import { IPositionMirrorSettled, IPositionMirrorSlot, IPuppetSubscritpion } from "puppet-middleware-utils"
+import { IPositionMirrorSettled, IPositionMirrorSlot, IPuppetRouteTrades } from "puppet-middleware-utils"
 import { Stream } from "@most/types"
 import { IGmxProcessSeed } from "../data/process/process"
 
@@ -80,7 +80,7 @@ export const $Wallet = (config: IProfile) => component((
 
   return [
 
-    $column(layoutSheet.spacingBig, style({ paddingTop: '30px', maxWidth: '550px', margin: '0 auto', alignItems: 'center' }))(
+    $column(layoutSheet.spacingBig)(
       $ButtonToggle({
         $container: $defaulButtonToggleContainer(style({ alignSelf: 'center', })),
         selected: mergeArray([selectProfileMode, now(options[0])]),

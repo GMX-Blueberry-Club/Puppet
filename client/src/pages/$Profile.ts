@@ -15,7 +15,7 @@ import { IGmxProcessSeed } from "../data/process/process"
 import { connectTrade } from "../logic/trade"
 import * as viem from 'viem'
 import { $TraderProfile } from "../components/participant/$Trader"
-import { ITraderSubscritpion } from "puppet-middleware-utils"
+import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import { $PuppetProfile } from "../components/participant/$Puppet"
 
 export enum IProfileActiveTab {
@@ -42,7 +42,7 @@ export const $Profile = (config: IProfile) => component((
   [selectProfileMode, selectProfileModeTether]: Behavior<IRouteOption, IRouteOption>,
   [requestAccountTradeList, requestAccountTradeListTether]: Behavior<number, IRequestAccountTradeListApi>,
 
-  [subscribeTreader, subscribeTreaderTether]: Behavior<ITraderSubscritpion>,
+  [subscribeTreader, subscribeTreaderTether]: Behavior<IPuppetRouteSubscritpion>,
 ) => {
 
   const profileAddressRoute = config.route.create({ title: 'Profile', fragment: ETH_ADDRESS_REGEXP })
@@ -66,7 +66,7 @@ export const $Profile = (config: IProfile) => component((
 
   return [
 
-    $column(layoutSheet.spacingBig, style({ margin: '0 auto', alignItems: 'center' }))(
+    $column(layoutSheet.spacingBig)(
 
       $ButtonToggle({
         $container: $defaulButtonToggleContainer(style({ alignSelf: 'center', })),

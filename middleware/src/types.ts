@@ -3,6 +3,12 @@ import * as viem from "viem"
 
 
 
+export interface IRouteDescription {
+  collateralToken: viem.Address
+  indexToken: viem.Address
+  isLong: boolean
+}
+
 export interface IMirrorPosition {
   requestKey: viem.Hex
   puppets: readonly viem.Address[]
@@ -33,7 +39,7 @@ export interface IMirrorTraderSummary extends ITraderSummary {
 }
 
 
-export type ITraderSubscritpion = {
+export type IPuppetRouteSubscritpion = {
   trader: viem.Address
   puppet: viem.Address
   subscribed: boolean
@@ -42,7 +48,7 @@ export type ITraderSubscritpion = {
   puppetSubscriptionKey: viem.Hex
 }
 
-export type IPuppetSubscritpion = ITraderSubscritpion & {
+export type IPuppetRouteTrades = IPuppetRouteSubscritpion & {
   settled: IPositionMirrorSettled[]
   open: IPositionMirrorSlot[]
 }
