@@ -13,7 +13,7 @@ import { invertColor } from "gmx-middleware-utils"
 
 export const $defaultButtonPrimary = $defaultButtonCore(
   style({
-    color: invertColor(pallete.message), whiteSpace: 'nowrap', fill: 'white', borderRadius: '30px',
+    color: pallete.message, whiteSpace: 'nowrap', fill: 'white', borderRadius: '30px',
     boxShadow: `0px 0px 0px 0 ${pallete.primary} inset`,
     alignSelf: 'flex-end',
     padding: '15px 24px', fontWeight: 'bold', borderWidth: '0px', backgroundColor: pallete.primary,

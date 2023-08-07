@@ -26,6 +26,7 @@ import { $SubscriberDrawer } from "../components/$SubscriberDrawer"
 import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import { rootStoreScope } from "../rootStore"
 import * as store from "../utils/storage/storeScope"
+import { $midContainer } from "../common/$common"
 
 
 const popStateEvent = eventElementTarget('popstate', window)
@@ -84,7 +85,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       // position: 'relative',
       // backgroundImage: `radial-gradient(570% 71% at 50% 15vh, ${pallete.background} 0px, ${pallete.horizon} 100%)`,
       backgroundColor: pallete.horizon,
-      fontSize: '1.15rem',
+      fontSize: '1rem',
       // fontSize: screenUtils.isDesktopScreen ? '1.15rem' : '1rem',
       minHeight: '100vh',
       fontWeight: 400,
@@ -111,6 +112,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   const subscribeList = replayLatest(map(l => [l], subscribeTrader), [] as IPuppetRouteSubscritpion[])
 
 
+
   return [
 
     mergeArray([
@@ -118,6 +120,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
         $rootContainer(
           style({
             scrollSnapType: 'y mandatory',
+            fontSize: '1.15rem',
             margin: '0 auto', width: '100%'
           })
         )(
@@ -150,28 +153,23 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 routeChange: linkClickTether(),
               })
           }, isMobileScreen),
-          
-          $column(
-            style({
-              margin: '0 auto', maxWidth: '940px', position: 'relative', gap: screenUtils.isDesktopScreen ? '50px' : '50px', width: '100%',
-              flex: 1, 
-            }),
-          )(
 
-            router.contains(walletRoute)(
-              $IntermediateConnectButton({
-                $$display: map(wallet => {
-                  return $Wallet({
+          router.contains(walletRoute)(
+            $IntermediateConnectButton({
+              $$display: map(wallet => {
+                return $midContainer(
+                  $Wallet({
                     route: walletRoute,
                     processData,
                     wallet: wallet,
                   })({
                     changeRoute: linkClickTether(),
-                  })
-                })
-              })({})
-            ),
-            router.contains(leaderboardRoute)(
+                  }))
+              })
+            })({})
+          ),
+          router.contains(leaderboardRoute)(
+            $midContainer(
               fadeIn($Leaderboard({
                 subscribeList,
                 route: leaderboardRoute,
@@ -182,8 +180,10 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 ),
                 changeSubscribeList: subscribeTraderTether()
               }))
-            ),
-            router.contains(profileRoute)(
+            )
+          ),
+          router.contains(profileRoute)(
+            $midContainer(
               fadeIn($Profile({
                 route: profileRoute,
                 processData
@@ -191,85 +191,89 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 subscribeTreader: subscribeTraderTether(),
                 changeRoute: linkClickTether()
               }))
-            ),
-            router.match(tradeRoute)(
-              $IntermediateConnectButton({
-                $$display: map(wallet => {
-                  return $Trade({
-                    chain: wallet.chain,
-                    processData,
-                    referralCode: BLUEBERRY_REFFERAL_CODE,
-                    tokenIndexMap: {
-                      [CHAIN.ARBITRUM]: [
-                        ARBITRUM_ADDRESS.NATIVE_TOKEN,
-                        ARBITRUM_ADDRESS.WBTC,
-                        ARBITRUM_ADDRESS.LINK,
-                        ARBITRUM_ADDRESS.UNI,
-                      ],
-                      [CHAIN.AVALANCHE]: [
-                        AVALANCHE_ADDRESS.NATIVE_TOKEN,
-                        AVALANCHE_ADDRESS.WETHE,
-                        AVALANCHE_ADDRESS.WBTCE,
-                        AVALANCHE_ADDRESS.BTCB,
-                      ]
-                    },
-                    tokenStableMap: {
-                      [CHAIN.ARBITRUM]: [
-                        ARBITRUM_ADDRESS.USDC,
-                        ARBITRUM_ADDRESS.USDT,
-                        ARBITRUM_ADDRESS.DAI,
-                        ARBITRUM_ADDRESS.FRAX,
-                        // ARBITRUM_ADDRESS.MIM,
-                      ],
-                      [CHAIN.AVALANCHE]: [
-                        AVALANCHE_ADDRESS.USDC,
-                        AVALANCHE_ADDRESS.USDCE,
-                        // AVALANCHE_ADDRESS.MIM,
-                      ]
-                    },
-                    parentRoute: tradeRoute
-                  })({
-                    changeRoute: linkClickTether()
-                  })
-                })
-              })({})
-            ),
-            router.match(tradeTermsAndConditions)(
-              $column(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
-                $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
-                $node(),
-                $text(style({ fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
-                $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host + '/app/' + TRADEURL} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
-                $element('ul')(layoutSheet.spacing, style({  }))(
-                  $liItem(
-                    $text(`I am not a United States person or entity;`),
-                  ),
-                  $liItem(
-                    $text(`I am not a resident, national, or agent of any country to which the United States, the United Kingdom, the United Nations, or the European Union embargoes goods or imposes similar sanctions, including without limitation the U.S. Office of Foreign Asset Control, Specifically Designated Nationals and Blocked Person List;`),
-                  ),
-                  $liItem(
-                    $text(`I am legally entitled to access the Interface under the laws of the jurisdiction where I am located;`),
-                  ),
-                  $liItem(
-                    $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
-                  ),
+            )
+          ),
+            
+          router.match(tradeTermsAndConditions)(
+            $midContainer(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
+              $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
+              $node(),
+              $text(style({ fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
+              $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host + '/app/' + TRADEURL} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
+              $element('ul')(layoutSheet.spacing, style({  }))(
+                $liItem(
+                  $text(`I am not a United States person or entity;`),
                 ),
-
-                $node(style({ height: '100px' }))(),
+                $liItem(
+                  $text(`I am not a resident, national, or agent of any country to which the United States, the United Kingdom, the United Nations, or the European Union embargoes goods or imposes similar sanctions, including without limitation the U.S. Office of Foreign Asset Control, Specifically Designated Nationals and Blocked Person List;`),
+                ),
+                $liItem(
+                  $text(`I am legally entitled to access the Interface under the laws of the jurisdiction where I am located;`),
+                ),
+                $liItem(
+                  $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
+                ),
               ),
 
-            ),
-            router.match(adminRoute)(
-              $Admin({}),
+              $node(style({ height: '100px' }))(),
             ),
 
-            $SubscriberDrawer({
-              subscribeList,
-              subscribeTrader
-            })({
+          ),
+          router.match(adminRoute)(
+            $midContainer(
+              $Admin({})
+            ),
+          ),
+
+          $SubscriberDrawer({
+            subscribeList,
+            subscribeTrader
+          })({
               
-            }),
+          }),
 
+
+          router.match(tradeRoute)(
+            $IntermediateConnectButton({
+              $$display: map(wallet => {
+                return $Trade({
+                  chain: wallet.chain,
+                  processData,
+                  referralCode: BLUEBERRY_REFFERAL_CODE,
+                  tokenIndexMap: {
+                    [CHAIN.ARBITRUM]: [
+                      ARBITRUM_ADDRESS.NATIVE_TOKEN,
+                      ARBITRUM_ADDRESS.WBTC,
+                      ARBITRUM_ADDRESS.LINK,
+                      ARBITRUM_ADDRESS.UNI,
+                    ],
+                    [CHAIN.AVALANCHE]: [
+                      AVALANCHE_ADDRESS.NATIVE_TOKEN,
+                      AVALANCHE_ADDRESS.WETHE,
+                      AVALANCHE_ADDRESS.WBTCE,
+                      AVALANCHE_ADDRESS.BTCB,
+                    ]
+                  },
+                  tokenStableMap: {
+                    [CHAIN.ARBITRUM]: [
+                      ARBITRUM_ADDRESS.USDC,
+                      ARBITRUM_ADDRESS.USDT,
+                      ARBITRUM_ADDRESS.DAI,
+                      ARBITRUM_ADDRESS.FRAX,
+                      // ARBITRUM_ADDRESS.MIM,
+                    ],
+                    [CHAIN.AVALANCHE]: [
+                      AVALANCHE_ADDRESS.USDC,
+                      AVALANCHE_ADDRESS.USDCE,
+                      // AVALANCHE_ADDRESS.MIM,
+                    ]
+                  },
+                  parentRoute: tradeRoute
+                })({
+                  changeRoute: linkClickTether()
+                })
+              })
+            })({})
           ),
           
         )

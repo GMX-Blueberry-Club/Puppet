@@ -4,35 +4,38 @@ import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-compon
 import {
   IPositionDecrease, IPositionIncrease,
   IPositionSlot,
-  abs, filterNull,
+  abs, div, filterNull,
   formatFixed,
   getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getIntervalIdentifier, getLiquidationPrice, getMappedValue,
   getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getPnL, getPositionKey,
   getTokenAmount, getTokenDescription,
+  getTokenUsd,
   readableDate,
   readableFixedBsp,
   readableFixedUSD30,
-  readableUnitAmount, switchMap, timeSince, unixTimestampNow
+  readableUnitAmount,
+  switchMap, timeSince, unixTimestampNow
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, combine, constant, debounce, empty, filter, fromPromise, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, take, zip } from "@most/core"
+import { awaitPromises, combine, constant, debounce, delay, empty, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
 import * as GMX from "gmx-middleware-const"
-import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $infoTooltip, $spinner, $target, $txHashRef } from "gmx-middleware-ui-components"
+import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $target, $txHashRef } from "gmx-middleware-ui-components"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
 import { getRouteKey } from "puppet-middleware-const"
 import * as viem from "viem"
+import { $midContainer } from "../common/$common"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $CardTable } from "../components/$common"
 import { $ButtonSecondary } from "../components/form/$Button"
 import { $Dropdown } from "../components/form/$Dropdown"
-import { $TradeBox, IRequestTrade, ITradeBoxParams, ITradeFocusMode } from "../components/trade/$TradeBox"
+import { $PositionDetailsPanel, IRequestTrade } from "../components/trade/$PositionDetailsPanel"
+import { $PositionEditor, IPositionEditorAbstractParams, ITradeFocusMode } from "../components/trade/$PositionEditor"
 import { createPositionSlot, latestTokenPrice } from "../data/process/process"
-import { $card } from "../elements/$common"
 import { $caretDown } from "../elements/$icons"
 import { connectContract } from "../logic/common"
 import * as trade from "../logic/trade"
@@ -41,25 +44,10 @@ import { rootStoreScope } from "../rootStore"
 import * as store from "../utils/storage/storeScope"
 import { walletLink } from "../wallet"
 import { wallet } from "../wallet/walletLink"
+import { $card2 } from "../elements/$common"
 
 
-export type ITradeComponent = ITradeBoxParams
-
-
-// const res = readContract({
-//   address: '0x33',
-  
-//   abi: GMX.abi.vault,
-//   functionName: 'positions',
-//   args: ['0xA0Cf798816D4b9b9866b5330EEa46a18382f251e'],
-// })
-
-
-// type RequestTrade = {
-//   ctx: TransactionReceipt
-//   state: ITradeState
-//   acceptablePrice: bigint
-// }
+export type ITradeComponent = IPositionEditorAbstractParams
 
 
 
@@ -116,8 +104,10 @@ export const $Trade = (config: ITradeComponent) => component((
   [changefocusPrice, changefocusPriceTether]: Behavior<number | null>,
   [changeIsFocused, changeIsFocusedTether]: Behavior<boolean>,
 
+  
   [chartVisibleLogicalRangeChange, chartVisibleLogicalRangeChangeTether]: Behavior<LogicalRange | null>,
 
+  [clickResetPosition, clickResetPositionTether]: Behavior<any, any>,
 
 ) => {
 
@@ -133,11 +123,10 @@ export const $Trade = (config: ITradeComponent) => component((
   const positionRouter = connectContract(gmxContractMap.PositionRouter)
   const usdg = connectContract(gmxContractMap.USDG)
   const orchestrator = connectContract(puppetContractMap.Orchestrator)
-
-
+  const router = connectContract(GMX.CONTRACT[config.chain.id].Router)
+  
 
   const executionFee = replayLatest(multicast(positionRouter.read('minExecutionFee')))
-
   const tradingStore = store.createStoreScope(rootStoreScope, 'tradeBox' as const)
 
 
@@ -157,43 +146,9 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   const collateralDeltaUsd = replayLatest(changeCollateralDeltaUsd, 0n)
-  // const collateralDeltaUsd = database.createStoreScope(focusMode, 0n, tap(console.log, changeCollateralDeltaUsd))
   const sizeDeltaUsd = replayLatest(changeSizeDeltaUsd, 0n)
-  // const sizeDeltaUsd = database.createStoreScope(collateralDeltaUsd, 0n, changeSizeDeltaUsd)
 
 
-
-  // const inputToken: Stream<ITokenInput> = inputTokenStore.storeReplay(
-  //   changeInputToken,
-  //   map(token => {
-  //     if (token === GMX.AddressZero) {
-  //       return token
-  //     }
-
-  //     const allTokens = [...config.tokenIndexMap[chainId] || [], ...config.tokenStableMap[chainId] || []]
-  //     const matchedToken = allTokens?.find(t => t === token)
-
-  //     return matchedToken || nativeToken
-  //   })
-  // )
-
-  // const indexToken: Stream<ITokenIndex> = indexTokenStore.storeReplay(
-  //   mergeArray([map(t => t.indexToken, switchTrade), changeIndexToken]),
-  //   map(token => {
-  //     const matchedToken = config.tokenIndexMap[chainId]?.find(t => t === token)
-
-  //     return matchedToken || nativeToken
-  //   })
-  // )
-
-  // const collateralTokenReplay: Stream<ITokenStable> = collateralTokenStore.storeReplay(
-  //   mergeArray([map(t => t.collateralToken, switchTrade), changeCollateralToken]),
-  //   map(token => {
-  //     const matchedToken = config.tokenStableMap[chainId]?.find(t => t === token)
-
-  //     return matchedToken || GMX.CHAIN_ADDRESS_MAP[chainId].USDC
-  //   })
-  // )
 
   const collateralToken: Stream<viem.Address> = map(params => {
     return params.isLong ? params.indexToken : params.shortCollateralToken
@@ -500,8 +455,12 @@ export const $Trade = (config: ITradeComponent) => component((
     return Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.route === params.route).map(p => p.position)
   }, combineObject({ processData: config.processData, route }))
 
-  const openPositionList: Stream<Promise<IPositionSlot[]>> = mergeArray([
-    combineArray(async (pos, posList) => {
+  // const position = map(params => {
+  //   return params.processData.mirrorPositionSlot[params.positionKey.key]
+  // }, combineObject({ processData: config.processData, positionKey }))
+
+  const openPositionList: Stream<IPositionSlot[]> = mergeArray([
+    combineArray((pos, posList) => {
 
       if (pos.averagePrice === 0n || posList.length === 0) {
         return []
@@ -524,7 +483,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const activePosition = zip((tradeList, pos) => {
     const trade = tradeList.find(t => t.key === pos.key) || null
     return { trade, positionId: pos }
-  }, awaitPromises(openPositionList), positionKey)
+  }, openPositionList, positionKey)
 
 
   const pricefeed = map(params => {
@@ -539,385 +498,398 @@ export const $Trade = (config: ITradeComponent) => component((
   const isFocused = replayLatest(multicast(changeIsFocused), false)
 
 
+  const tradeState = {
+    route,
+
+    position,
+    collateralTokenPoolInfo,
+    isTradingEnabled,
+    isInputTokenApproved,
+    availableIndexLiquidityUsd,
+
+    inputTokenPrice,
+    indexTokenPrice,
+    collateralTokenPrice,
+    collateralTokenDescription,
+    indexTokenDescription,
+    inputTokenDescription,
+    fundingFee,
+    marginFee,
+    swapFee,
+    averagePrice,
+    liquidationPrice,
+    executionFee,
+    walletBalance,
+  }
+  const $tradebox = $PositionEditor({
+    ...config,
+    openPositionList,
+    tradeConfig,
+    tradeState,
+    $container: $card2(style({ padding: 0, gap: 0 })) 
+  })({
+    leverage: changeLeverageTether(),
+    switchIsIncrease: switchIsIncreaseTether(),
+    changeCollateralDeltaUsd: changeCollateralDeltaUsdTether(),
+    changeSizeDeltaUsd: changeSizeDeltaUsdTether(),
+    changeInputToken: changeInputTokenTether(),
+    changeCollateralToken: changeShortCollateralTokenTether(),
+    changeIndexToken: changeIndexTokenTether(),
+    switchIsLong: switchIsLongTether(),
+    changeSlippage: changeSlippageTether(),
+    // switchFocusMode: 
+  })
+
+
+  const $tradeMidContainer = $midContainer(layoutSheet.spacing, style({ maxWidth: '1240px' }))
 
 
   return [
-    $node(
-      style({
-        display: 'flex',
-        ...screenUtils.isDesktopScreen
-          ? { flexDirection: 'row-reverse', gap: '45px' }
-          : { flexDirection: 'column' }
-      })
-    )(
-      $node(
-        layoutSheet.spacingBig, style({ userSelect: 'none', display: 'flex' }),
+    $column(screenUtils.isDesktopScreen ? style({  flex: 1, marginLeft: '-26px' }) : style({}))(
+
+      $column(
         screenUtils.isDesktopScreen
-          ? style({ width: '455px', paddingBottom: '50px', flexDirection: 'column' })
-          : style({ paddingBottom: '24px', flexDirection: 'column-reverse' })
+          ? style({ 
+            // paddingLeft: '26px'
+          })
+          : style({}),
+        style({ height: 'min(650px, 60vh)', position: 'relative', backgroundColor: pallete.background }),
+        // screenUtils.isDesktopScreen
+        //   ? style({ height: '500px' })
+        //   : style({ height: '500px' })
       )(
 
-        // filterNull(
-        //   constant(null, adjustPosition)
-        // ) as Stream<any>,
-
-        $column(layoutSheet.spacingSmall)(
-          $TradeBox({
-            ...config,
-            pricefeed,
-
-            trade: zip(async (list, pos) => {
-              const trade = (await list).find(t => t.key === pos.key) || null
 
 
-              return trade
-            }, openPositionList, position),
-            // positionChange,
-            openTradeListQuery: openPositionList,
+        $tradeMidContainer(
+          layoutSheet.spacing,
+          screenUtils.isDesktopScreen
+            ? style({ pointerEvents: 'none', flexDirection: 'row', marginTop: '12px', zIndex: 20, placeContent: 'space-between', alignItems: 'flex-start' })
+            : style({ pointerEvents: 'none', flex: 0, flexDirection: 'row', zIndex: 20, margin: '8px', alignItems: 'flex-start' })
+        )(
+          screenUtils.isDesktopScreen
+            ? style({ pointerEvents: 'all' })(
+              $ButtonToggle({
+                selected: chartInterval,
+                options: [
+                  GMX.TIME_INTERVAL_MAP.MIN5,
+                  GMX.TIME_INTERVAL_MAP.MIN15,
+                  GMX.TIME_INTERVAL_MAP.MIN60,
+                  GMX.TIME_INTERVAL_MAP.HR4,
+                  GMX.TIME_INTERVAL_MAP.HR24,
+                // GMX.TIME_INTERVAL_MAP.DAY7,
+                ],
+                $$option: map(option => {
+                  const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
 
-            tradeConfig,
-            tradeState: {
-              route,
+                  return $text(timeframeLabel)
+                })
+              })({ select: selectTimeFrameTether() })
+            )
+            : $Dropdown({
+              $selection: switchLatest(map((option) => {
+                const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
 
-              position,
-              collateralTokenPoolInfo,
-              isTradingEnabled,
-              isInputTokenApproved,
-              availableIndexLiquidityUsd,
+                return style({ padding: '8px', alignSelf: 'center' })(
+                  $ButtonSecondary({
+                    $content: $row(
+                      $text(timeframeLabel),
+                      $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
+                    )
+                  })({})
+                )
+              }, chartInterval)),
+              value: {
+                value: chartInterval,
+                $$option: map((option) => {
+                  const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
 
-              inputTokenPrice,
-              indexTokenPrice,
-              collateralTokenPrice,
-              collateralTokenDescription,
-              indexTokenDescription,
-              inputTokenDescription,
-              fundingFee,
-              marginFee,
-              swapFee,
-              averagePrice,
-              liquidationPrice,
-              executionFee,
-              walletBalance,
+                  return $text(style({ fontSize: '.85rem' }))(timeframeLabel)
+                }),
+                list: [
+                  GMX.TIME_INTERVAL_MAP.MIN5,
+                  GMX.TIME_INTERVAL_MAP.MIN15,
+                  GMX.TIME_INTERVAL_MAP.MIN60,
+                  GMX.TIME_INTERVAL_MAP.HR4,
+                  GMX.TIME_INTERVAL_MAP.HR24,
+                  // GMX.TIME_INTERVAL_MAP.DAY7,
+                ],
+              }
+            })({
+              select: selectTimeFrameTether()
+            }),
+          $row(layoutSheet.spacing)(
+            $column(layoutSheet.spacingSmall)(
+              $infoLabel('Borrow Rate'),
+              $row(style({ whiteSpace: 'pre' }))(
+                $text(map(poolInfo => readableFixedBsp(poolInfo.rate), collateralTokenPoolInfo)),
+                $text(style({ color: pallete.foreground }))(' / hr')
+              )
+            ),
+            $column(layoutSheet.spacingSmall)(
+              $infoLabel('Available Liquidity'),
+              $text(map(amountUsd => readableFixedUSD30(amountUsd), availableIndexLiquidityUsd))
+            )
+          ),
+
+          screenUtils.isDesktopScreen
+            ? $column(style({ position: 'absolute', pointerEvents: 'all', zIndex: 20, bottom: '40px', width: '440px', left: '0' }))(
+              $tradebox,
+            ) : empty(),
+        ),
+
+        switchLatest(snapshot( (params, pricefeed) => {
+
+          const tf = params.timeframe
+
+          const fst = pricefeed[pricefeed.length - 1]
+          const initialTick = {
+            open: formatFixed(fst.o, 30),
+            high: formatFixed(fst.h, 30),
+            low: formatFixed(fst.l, 30),
+            close: formatFixed(fst.c, 30),
+            time: fst.blockTimestamp as Time
+          }
+
+
+          return $CandleSticks({
+            $content: $row(
+              $row(
+                styleBehavior(map(state => {
+                  return { border: `1px solid ${state ? pallete.primary : pallete.horizon}` }
+                }, isFocused)),
+                style({
+                  backgroundColor: pallete.background,
+                  transition: 'border-color .15s ease-in-out',
+                  fontSize: '.85rem',
+                  padding: '6px 8px',
+                  borderRadius: '30px',
+                })
+              )(
+
+                switchMap(state => {
+                  if (!state) {
+                    return empty()
+                  }
+
+                  return $row(layoutSheet.spacingSmall)(
+                    $infoLabeledValue('Size', $text(map(value => `${readableFixedUSD30(value)}`, sizeDeltaUsd))),
+                    $infoLabeledValue('Collateral', $text(map(value => `${readableFixedUSD30(value)}`, collateralDeltaUsd))),
+                  )
+                }, isFocused),
+                $icon({ $content: $target, width: '16px', svgOps: style({ margin: '0 6px' }), viewBox: '0 0 32 32' }),
+
+                $text(map(ev => {
+                  return readableUnitAmount(ev)
+                }, filterNull(focusPrice)))
+              )
+            ),
+            data: pricefeed.map(({ o, h, l, c, blockTimestamp }) => {
+              const open = formatFixed(o, 30)
+              const high = formatFixed(h, 30)
+              const low = formatFixed(l, 30)
+              const close = formatFixed(c, 30)
+
+              return { open, high, low, close, time: Number(blockTimestamp) as Time }
+            }),
+            seriesConfig: {
+              // priceFormat: {
+              //   type: 'custom',
+              //   formatter: (priceValue: BarPrice) => readableNumber(priceValue.valueOf())
+              // },
+              // lastValueVisible: false,
+              // autoscaleInfoProvider: original => {
+              //   debugger
+              //   const res = original();
+              //   if (res !== null) {
+              //     res.priceRange.minValue -= 10;
+              //     res.priceRange.maxValue += 10;
+              //   }
+              //   return res;
+              // },
+
+              priceLineColor: pallete.foreground,
+              baseLineStyle: LineStyle.SparseDotted,
+
+              upColor: pallete.middleground,
+              borderUpColor: pallete.middleground,
+              wickUpColor: pallete.middleground,
+
+              downColor: 'transparent',
+              borderDownColor: colorAlpha(pallete.middleground, .5),
+              wickDownColor: colorAlpha(pallete.middleground, .5),
+            },
+            priceLines: [
+              map(val => {
+                if (val === 0n) {
+                  return null
+                }
+
+                return {
+                  price: formatFixed(val, 30),
+                  color: pallete.middleground,
+                  lineVisible: true,
+                  // axisLabelColor: '#fff',
+                  // axisLabelTextColor: 'red',
+                  // axisLabelVisible: true,
+                  lineWidth: 1,
+                  title: `Entry`,
+                  lineStyle: LineStyle.SparseDotted,
+                }
+              }, averagePrice),
+              map(val => {
+                if (val === 0n) {
+                  return null
+                }
+
+                return {
+                  price: formatFixed(val, 30),
+                  color: pallete.negative,
+                  lineVisible: true,
+                  // axisLabelColor: 'red',
+                  // axisLabelVisible: true,
+                  // axisLabelTextColor: 'red',
+                  lineWidth: 1,
+                  title: `Liquidation`,
+                  lineStyle: LineStyle.SparseDotted,
+                }
+              }, liquidationPrice)
+
+            ],
+            appendData: scan((prev: CandlestickData, next): CandlestickData => {
+              const marketPrice = formatFixed(next.indexTokenPrice, 30)
+              const timeNow = unixTimestampNow()
+
+              const prevTimeSlot = Math.floor(prev.time as number / tf)
+              const nextTimeSlot = Math.floor(timeNow / tf)
+              const time = nextTimeSlot * tf as Time
+
+              const isNext = nextTimeSlot > prevTimeSlot
+
+              document.title = `${next.indexTokenDescription.symbol} ${readableUnitAmount(marketPrice)}`
+
+              if (isNext) {
+                return {
+                  open: marketPrice,
+                  high: marketPrice,
+                  low: marketPrice,
+                  close: marketPrice,
+                  time
+                }
+              }
+
+              return {
+                open: prev.open,
+                high: marketPrice > prev.high ? marketPrice : prev.high,
+                low: marketPrice < prev.low ? marketPrice : prev.low,
+                close: marketPrice,
+                time
+              }
+            }, initialTick, combineObject({ indexTokenPrice, indexTokenDescription })),
+            containerOp: style({ position: 'absolute', inset: 0, borderRadius: '20px', overflow: 'hidden' }),
+            chartConfig: {
+              rightPriceScale: {
+                visible: true,
+                autoScale: true,
+                entireTextOnly: true,
+                borderVisible: false,
+                scaleMargins: {
+                  top: 0.15,
+                  bottom: 0.15
+                }
+              },
+              timeScale: {
+                timeVisible: true,
+                secondsVisible: false,
+                borderVisible: false,
+                rightOffset: 13,
+                shiftVisibleRangeOnNewBar: true,
+              }
+            },
+            yAxisState: {
+              price: focusPrice,
+              isFocused: isFocused,
+              coords: yAxisCoords
             }
           })({
-            leverage: changeLeverageTether(),
-            switchTrade: switchTradeTether(),
-            switchIsIncrease: switchIsIncreaseTether(),
-            changeCollateralDeltaUsd: changeCollateralDeltaUsdTether(),
-            changeSizeDeltaUsd: changeSizeDeltaUsdTether(),
-            changeInputToken: changeInputTokenTether(),
-            changeCollateralToken: changeShortCollateralTokenTether(),
-            changeIndexToken: changeIndexTokenTether(),
-            switchIsLong: switchIsLongTether(),
-            changeRoute: changeRouteTether(),
-            // changeCollateralRatio: changeCollateralRatioTether(),
-            requestTrade: requestTradeTether(),
-            changeSlippage: changeSlippageTether(),
-            enableTrading: enableTradingTether(),
-            approveInputToken: changeInputTokenApprovedTether(),
-            switchFocusMode: switchFocusModeTether(),
-          }),
-        ),
-
-        screenUtils.isDesktopScreen ? $node() : empty(),
-
-      ),
-
-      $column(layoutSheet.spacingSmall, style({ flex: 2 }))(
-        $card(style({ padding: 0, position: 'relative' }))(
-
-          $row(
-            style({ height: '500px', position: 'relative' }),
-            // screenUtils.isDesktopScreen
-            //   ? style({ height: '500px' })
-            //   : style({ height: '500px' })
-          )(
-            $row(layoutSheet.spacing, style({ fontSize: '.85rem', zIndex: 5, margin: '8px', alignSelf: 'flex-start', placeContent: 'center', alignItems: 'center' }))(
-              screenUtils.isDesktopScreen
-                ? $ButtonToggle({
-                  selected: chartInterval,
-                  options: [
-                    GMX.TIME_INTERVAL_MAP.MIN5,
-                    GMX.TIME_INTERVAL_MAP.MIN15,
-                    GMX.TIME_INTERVAL_MAP.MIN60,
-                    GMX.TIME_INTERVAL_MAP.HR4,
-                    GMX.TIME_INTERVAL_MAP.HR24,
-                    // GMX.TIME_INTERVAL_MAP.DAY7,
-                  ],
-                  $$option: map(option => {
-                    const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
-
-                    return $text(timeframeLabel)
-                  })
-                })({ select: selectTimeFrameTether() })
-                : $Dropdown({
-                  $selection: switchLatest(map((option) => {
-                    const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
-
-                    return style({ padding: '8px', alignSelf: 'center' })(
-                      $ButtonSecondary({
-                        $content: $row(
-                          $text(timeframeLabel),
-                          $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
-                        )
-                      })({})
-                    )
-                  }, chartInterval)),
-                  value: {
-                    value: chartInterval,
-                    $$option: map((option) => {
-                      const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
-
-                      return $text(style({ fontSize: '.85rem' }))(timeframeLabel)
-                    }),
-                    list: [
-                      GMX.TIME_INTERVAL_MAP.MIN5,
-                      GMX.TIME_INTERVAL_MAP.MIN15,
-                      GMX.TIME_INTERVAL_MAP.MIN60,
-                      GMX.TIME_INTERVAL_MAP.HR4,
-                      GMX.TIME_INTERVAL_MAP.HR24,
-                      // GMX.TIME_INTERVAL_MAP.DAY7,
-                    ],
-                  }
-                })({
-                  select: selectTimeFrameTether()
-                }),
-              $column(layoutSheet.spacingSmall)(
-                $infoLabel('Borrow Rate'),
-                $row(style({ whiteSpace: 'pre' }))(
-                  $text(map(poolInfo => readableFixedBsp(poolInfo.rate), collateralTokenPoolInfo)),
-                  $text(style({ color: pallete.foreground }))(' / hr')
-                )
-              ),
-              $column(layoutSheet.spacingSmall)(
-                $infoLabel('Available Liquidity'),
-                $text(map(amountUsd => readableFixedUSD30(amountUsd), availableIndexLiquidityUsd))
-              ),
-            ),
-
-            switchLatest(snapshot( (params, pricefeed) => {
-
-              const tf = params.timeframe
-
-              const fst = pricefeed[pricefeed.length - 1]
-              const initialTick = {
-                open: formatFixed(fst.o, 30),
-                high: formatFixed(fst.h, 30),
-                low: formatFixed(fst.l, 30),
-                close: formatFixed(fst.c, 30),
-                time: fst.blockTimestamp as Time
-              }
-
-
-              return $CandleSticks({
-                $content: $row(
-                  $row(
-                    styleBehavior(map(state => {
-                      return { border: `1px solid ${state ? pallete.primary : pallete.horizon}` }
-                    }, isFocused)),
-                    style({
-                      backgroundColor: pallete.background,
-                      transition: 'border-color .15s ease-in-out',
-                      fontSize: '.85rem',
-                      padding: '6px 8px',
-                      borderRadius: '30px',
-                    })
-                  )(
-
-                    switchMap(state => {
-                      if (!state) {
-                        return empty()
-                      }
-
-                      return $row(layoutSheet.spacingSmall)(
-                        $infoLabeledValue('Size', $text(map(value => `${readableFixedUSD30(value)}`, sizeDeltaUsd))),
-                        $infoLabeledValue('Collateral', $text(map(value => `${readableFixedUSD30(value)}`, collateralDeltaUsd))),
-                      )
-                    }, isFocused),
-                    $icon({ $content: $target, width: '16px', svgOps: style({ margin: '0 6px' }), viewBox: '0 0 32 32' }),
-
-                    $text(map(ev => {
-                      return readableUnitAmount(ev)
-                    }, filterNull(focusPrice)))
-                  )
-                ),
-                data: pricefeed.map(({ o, h, l, c, blockTimestamp }) => {
-                  const open = formatFixed(o, 30)
-                  const high = formatFixed(h, 30)
-                  const low = formatFixed(l, 30)
-                  const close = formatFixed(c, 30)
-
-                  return { open, high, low, close, time: Number(blockTimestamp) as Time }
-                }),
-                seriesConfig: {
-                  // priceFormat: {
-                  //   type: 'custom',
-                  //   formatter: (priceValue: BarPrice) => readableNumber(priceValue.valueOf())
-                  // },
-                  // lastValueVisible: false,
-                  // autoscaleInfoProvider: original => {
-                  //   debugger
-                  //   const res = original();
-                  //   if (res !== null) {
-                  //     res.priceRange.minValue -= 10;
-                  //     res.priceRange.maxValue += 10;
-                  //   }
-                  //   return res;
-                  // },
-
-                  priceLineColor: pallete.foreground,
-                  baseLineStyle: LineStyle.SparseDotted,
-
-                  upColor: pallete.middleground,
-                  borderUpColor: pallete.middleground,
-                  wickUpColor: pallete.middleground,
-
-                  downColor: 'transparent',
-                  borderDownColor: colorAlpha(pallete.middleground, .5),
-                  wickDownColor: colorAlpha(pallete.middleground, .5),
-                },
-                priceLines: [
-                  map(val => {
-                    if (val === 0n) {
-                      return null
-                    }
-
-                    return {
-                      price: formatFixed(val, 30),
-                      color: pallete.middleground,
-                      lineVisible: true,
-                      // axisLabelColor: '#fff',
-                      // axisLabelTextColor: 'red',
-                      // axisLabelVisible: true,
-                      lineWidth: 1,
-                      title: `Entry`,
-                      lineStyle: LineStyle.SparseDotted,
-                    }
-                  }, averagePrice),
-                  map(val => {
-                    if (val === 0n) {
-                      return null
-                    }
-
-                    return {
-                      price: formatFixed(val, 30),
-                      color: pallete.negative,
-                      lineVisible: true,
-                      // axisLabelColor: 'red',
-                      // axisLabelVisible: true,
-                      // axisLabelTextColor: 'red',
-                      lineWidth: 1,
-                      title: `Liquidation`,
-                      lineStyle: LineStyle.SparseDotted,
-                    }
-                  }, liquidationPrice)
-
-                ],
-                appendData: scan((prev: CandlestickData, next): CandlestickData => {
-                  const marketPrice = formatFixed(next.indexTokenPrice, 30)
-                  const timeNow = unixTimestampNow()
-
-                  const prevTimeSlot = Math.floor(prev.time as number / tf)
-                  const nextTimeSlot = Math.floor(timeNow / tf)
-                  const time = nextTimeSlot * tf as Time
-
-                  const isNext = nextTimeSlot > prevTimeSlot
-
-                  document.title = `${next.indexTokenDescription.symbol} ${readableUnitAmount(marketPrice)}`
-
-                  if (isNext) {
-                    return {
-                      open: marketPrice,
-                      high: marketPrice,
-                      low: marketPrice,
-                      close: marketPrice,
-                      time
-                    }
-                  }
-
-                  return {
-                    open: prev.open,
-                    high: marketPrice > prev.high ? marketPrice : prev.high,
-                    low: marketPrice < prev.low ? marketPrice : prev.low,
-                    close: marketPrice,
-                    time
-                  }
-                }, initialTick, combineObject({ indexTokenPrice, indexTokenDescription })),
-                containerOp: style({ position: 'absolute', inset: 0, borderRadius: '20px', overflow: 'hidden' }),
-                chartConfig: {
-                  rightPriceScale: {
-                    visible: true,
-                    autoScale: true,
-                    entireTextOnly: true,
-                    borderVisible: false,
-                    scaleMargins: {
-                      top: 0.15,
-                      bottom: 0.15
-                    }
-                  },
-                  timeScale: {
-                    timeVisible: true,
-                    secondsVisible: false,
-                    borderVisible: false,
-                    rightOffset: 13,
-                    shiftVisibleRangeOnNewBar: true,
-                  }
-                },
-                yAxisState: {
-                  price: focusPrice,
-                  isFocused: isFocused,
-                  coords: yAxisCoords
-                }
-              })({
-                yAxisCoords: changeYAxisCoordsTether(),
-                focusPrice: changefocusPriceTether(),
-                isFocused: changeIsFocusedTether(),
-                // crosshairMove: chartCrosshairMoveTether(),
-                click: chartClickTether(),
-                visibleLogicalRangeChange: chartVisibleLogicalRangeChangeTether(),
-              })
+            yAxisCoords: changeYAxisCoordsTether(),
+            focusPrice: changefocusPriceTether(),
+            isFocused: changeIsFocusedTether(),
+            // crosshairMove: chartCrosshairMoveTether(),
+            click: chartClickTether(),
+            visibleLogicalRangeChange: chartVisibleLogicalRangeChangeTether(),
+          })
 
               
-            }, combineObject({ timeframe: chartInterval, indexToken }), pricefeed)),
-
-            // $IntermediatePromise({
-            //   query: requestPricefeed,
-            //   $loader: style({ inset: 0, position: 'absolute' })($spinner),
-            //   $$done: map(params => {}),
-            // })({})
+        }, combineObject({ timeframe: chartInterval, indexToken }), pricefeed)),
 
 
-          )
-        ),
-
-        $column(style({ position: 'relative' }))(
-
-          $IntermediateConnectButton({
-            $$display: combine((params, w3p) => {
-
-              const tokenDesc = getTokenDescription(params.activeTrade.positionId.indexToken)
-              const route = params.activeTrade.positionId.isLong ? `Long-${tokenDesc.symbol}` : `Short-${tokenDesc.symbol}/${getTokenDescription(params.activeTrade.positionId.collateralToken).symbol}`
-
-              if (!params.activeTrade.trade) {
-                return $column(layoutSheet.spacingSmall, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
-                  $text(style({ fontSize: '1.5rem' }))('Trade History'),
-                  $text(style({ color: pallete.foreground }))(
-                    `No active ${route} position`
-                  )
-                )
-              }
 
 
-              const initalList = params.activeTrade ? [...params.activeTrade.trade.link.increaseList, ...params.activeTrade.trade.link.decreaseList] : []
+        screenUtils.isDesktopScreen
+          ? $node(style({
+            background: `linear-gradient(to right, ${pallete.background} 0%, ${colorAlpha(pallete.background, .9)} 32%, transparent 45%)`,
+            position: 'absolute',
+            inset: 0,
+            zIndex: 10,
+            pointerEvents: 'none',
+          }))()
+          : empty(),
+      ),
 
-              return $CardTable({
+      screenUtils.isMobileScreen
+        ? $midContainer(style({}))(
+          $tradebox,
+        )
+        : empty(),
+
+      $tradeMidContainer(layoutSheet.spacingSmall)(
+        $IntermediateConnectButton({
+          $$display: combine((params, w3p) => {
+
+            const tokenDesc = getTokenDescription(params.activeTrade.positionId.indexToken)
+            const route = params.activeTrade.positionId.isLong ? `Long-${tokenDesc.symbol}` : `Short-${tokenDesc.symbol}/${getTokenDescription(params.activeTrade.positionId.collateralToken).symbol}`
+
+              
+            const $notrade = !params.activeTrade.trade && $column(layoutSheet.spacingSmall, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
+              $text(style({ fontSize: '1.5rem' }))('Trade History'),
+              $text(style({ color: pallete.foreground }))(
+                `No active ${route} position`
+              )
+            )
+              
+
+
+              
+
+            return $row(style({ flex: 1 }))(
+              
+              $PositionDetailsPanel({
+                ...config,
+                chain: config.chain,
+                openPositionList,
+                parentRoute: config.parentRoute,
+                pricefeed,
+                tradeConfig,
+                wallet: w3p,
+                tradeState,
+                $container: $column(style({ width: '440px', borderRight: `1px solid ${colorAlpha(pallete.foreground, .20)}` }))
+              })({
+                clickResetPosition: clickResetPositionTether(),
+                approveInputToken: changeInputTokenApprovedTether(),
+                enableTrading: enableTradingTether(),
+                requestTrade: requestTradeTether(),
+                switchTrade: switchTradeTether(),
+                leverage: changeLeverageTether(),
+              }),
+              $notrade || $CardTable({
                 // $rowContainer: screenUtils.isDesktopScreen
                 //   ? $row(layoutSheet.spacing, style({ padding: `2px 26px` }))
                 //   : $row(layoutSheet.spacingSmall, style({ padding: `2px 10px` })),
                 // headerCellOp: style({ padding: screenUtils.isDesktopScreen ? '15px 15px' : '6px 4px' }),
                 // cellOp: style({ padding: screenUtils.isDesktopScreen ? '4px 15px' : '6px 4px' }),
                 dataSource: mergeArray([
-                  now(initalList) as Stream<(IRequestTrade | IPositionIncrease | IPositionDecrease)[]>,
+                  now(params.activeTrade ? [...params.activeTrade.trade.link.increaseList, ...params.activeTrade.trade.link.decreaseList] : []) as Stream<(IRequestTrade | IPositionIncrease | IPositionDecrease)[]>,
                   // constant(initalList, periodic(3000)),
                   requestTradeRow
                 ]),
@@ -1032,9 +1004,10 @@ export const $Trade = (config: ITradeComponent) => component((
                   },
                 ]
               })({})
-            }, combineObject({ activeTrade: activePosition }))
-          })({}),
-        )
+            )
+
+          }, combineObject({ activeTrade: activePosition }))
+        })({})
       )
 
     ),

@@ -6,8 +6,11 @@ import { Stream } from "@most/types"
 import { CHAIN } from "gmx-middleware-const"
 import { $Baseline } from "gmx-middleware-ui-components"
 import {
+  IPositionClose,
+  IPositionLiquidated,
   IPositionSettled,
   IPositionSlot,
+  IPositionUpdate,
   IPriceInterval,
   createTimeline,
   formatFixed, getDeltaPercentage, getPnL,
@@ -15,14 +18,14 @@ import {
   unixTimestampNow
 } from "gmx-middleware-utils"
 import { ChartOptions, DeepPartial, MouseEventParams, Time } from "lightweight-charts"
+import { IGmxProcessSeed } from "../../data/process/process"
 
 interface ITradePnlPreview {
   $container: NodeComposeFn<$Node>
-  position: IPositionSlot | IPositionSettled
-  latestPrice: Stream<bigint>
+  updateList: (IPositionUpdate | IPositionClose | IPositionLiquidated)[]
   chartConfig?: DeepPartial<ChartOptions>
   pixelsPerBar?: number
-  pricefeed: IPriceInterval[]
+  processData: Stream<IGmxProcessSeed>
   chain: CHAIN
 }
 
@@ -49,20 +52,26 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
 
   const historicPnL = multicast(combineArray((displayColumnCount) => {
 
-    const startPrice = config.position.link.updateList[0].averagePrice
-    const startTime = config.position.blockTimestamp
-    const endtime = isPositionSettled(config.position) ? config.position.settlement.blockTimestamp : unixTimestampNow()
+    const fstUpdate = config.updateList[0]
+
+    if (fstUpdate.__typename !== 'UpdatePosition') {
+      throw new Error('Invalid update list')
+    }
+
+    const lstUpdate = config.updateList[config.updateList.length - 1]
+    const startPrice = fstUpdate.averagePrice
+    const startTime = fstUpdate.blockTimestamp
+    const endtime = lstUpdate.__typename === 'ClosePosition' || lstUpdate.__typename === 'LiquidatePosition' ? lstUpdate.blockTimestamp : unixTimestampNow()
     const timeRange = endtime - startTime
     const interval = Math.floor(timeRange / displayColumnCount) || 1
 
-    const initalUpdate = config.position.link.updateList[0]
 
     const initialTick: IPricefeedTick = {
       time: startTime,
       price: startPrice,
-      collateral: initalUpdate.collateral,
-      size: initalUpdate.size,
-      averagePrice: initalUpdate.averagePrice,
+      collateral: fstUpdate.collateral,
+      size: fstUpdate.size,
+      averagePrice: fstUpdate.averagePrice,
       pnl: 0n,
       realisedPnl: 0n,
       fee: 0n,
@@ -73,8 +82,7 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
 
     const data = createTimeline({
       source: [
-        ...pricefeedFramed,
-        ...config.position.link.updateList
+        ...config.updateList
       ],
       // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
       interval,

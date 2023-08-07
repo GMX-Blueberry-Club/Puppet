@@ -1,7 +1,7 @@
 import { isStream, O, Tether } from "@aelea/core"
 import { $Node, $text, style, styleBehavior, styleInline } from "@aelea/dom"
 import { Route } from "@aelea/router"
-import { $column, $icon, $row, $seperator, layoutSheet } from "@aelea/ui-components"
+import { $column, $icon, $row, $seperator, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
@@ -27,6 +27,17 @@ import { $defaultBerry } from "../components/$DisplayBerry"
 import { IProfileActiveTab } from "../pages/$Profile"
 import { $seperator2 } from "../pages/common"
 
+
+export const $midContainer = $column(
+  style({
+    margin: '0 auto',
+    maxWidth: '940px',
+    position: 'relative',
+    gap: screenUtils.isDesktopScreen ? '50px' : '50px',
+    flex: 1,
+    width: '100%',
+  })
+)
 
 export const $size = (size: bigint, collateral: bigint) => {
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(

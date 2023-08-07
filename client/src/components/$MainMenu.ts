@@ -126,7 +126,7 @@ export const $MainMenu = ({ parentRoute, chainList, isMenuOpen, showAccount = tr
       layoutSheet.spacingBig,
       style({
         transition: 'width .3s ease-in-out', overflow: 'hidden',
-        backgroundColor: pallete.horizon, zIndex: 1, padding: '18px 12px', maxHeight: '100vh', flexShrink: 0,
+        backgroundColor: pallete.horizon, zIndex: 22, padding: '18px 12px', maxHeight: '100vh', flexShrink: 0,
         borderRadius: '0 30px 30px', borderRight: `1px solid ${colorAlpha(pallete.foreground, .20)}`, placeContent: 'space-between' })
     )(
 
