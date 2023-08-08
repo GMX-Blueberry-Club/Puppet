@@ -1,12 +1,12 @@
 import { Stream } from "@most/types"
-import { AddressZero, CHAIN, CHAIN_ADDRESS_MAP, TOKEN_ADDRESS_DESCRIPTION } from "gmx-middleware-const"
+import { ADDRESS_ZERO, CHAIN, CHAIN_ADDRESS_MAP, TOKEN_ADDRESS_DESCRIPTION } from "gmx-middleware-const"
 import { StreamInputArray, getSafeMappedValue } from "gmx-middleware-utils"
 import { zipArray as zipArrayMost } from "@most/core"
 import * as viem from "viem"
 
 
 export function resolveAddress(chain: CHAIN, indexToken: viem.Address): viem.Address {
-  if (indexToken === AddressZero) {
+  if (indexToken === ADDRESS_ZERO) {
     return getSafeMappedValue(CHAIN_ADDRESS_MAP, chain, CHAIN.ARBITRUM).NATIVE_TOKEN
   }
 

@@ -14,7 +14,7 @@ import {
   readableFixedBsp,
   readableFixedUSD30,
   readableUnitAmount,
-  switchMap, timeSince, unixTimestampNow
+  switchMap, timeSince, unixTimestampNow, zipState
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
@@ -45,6 +45,7 @@ import * as store from "../utils/storage/storeScope"
 import { walletLink } from "../wallet"
 import { wallet } from "../wallet/walletLink"
 import { $card2 } from "../elements/$common"
+import * as indexDB from "../utils/storage/indexDB"
 
 
 export type ITradeComponent = IPositionEditorAbstractParams
@@ -136,7 +137,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const isIncrease = store.replayWrite(tradingStore, true, switchIsIncrease, 'isIncrease')
   const focusMode = store.replayWrite(tradingStore, ITradeFocusMode.collateral, switchFocusMode, 'focusMode')
   const slippage = store.replayWrite(tradingStore, '0.35', changeSlippage, 'slippage')
-  const inputToken = store.replayWrite(tradingStore, GMX.AddressZero, changeInputToken, 'inputToken')
+  const inputToken = store.replayWrite(tradingStore, GMX.ADDRESS_ZERO, changeInputToken, 'inputToken')
   const indexToken = store.replayWrite(tradingStore, nativeToken, changeIndexToken, 'indexToken')
   const shortCollateralToken = store.replayWrite(tradingStore, GMX.ARBITRUM_ADDRESS.USDC as viem.Address | null, changeShortCollateralToken, 'shortCollateralToken')
   const leverage = mergeArray([
@@ -172,29 +173,38 @@ export const $Trade = (config: ITradeComponent) => component((
   const collateralTokenPrice = latestTokenPrice(config.processData, collateralToken)
 
 
-  const route = multicast(switchMap(params => {
-    if (!params.wallet) {
+  const route = replayLatest(multicast(switchMap(params => {
+    const w3p = params.wallet
+    if (!w3p) {
       throw new Error('wallet is required')
     }
 
-    const key = getRouteKey(params.wallet.account.address, params.collateralToken, params.indexToken, params.isLong)
-    return map(route => {
+    const key = getRouteKey(w3p.account.address, params.collateralToken, params.indexToken, params.isLong)
+    const storedRouteKey = store.get(tradingStore, GMX.ADDRESS_ZERO as viem.Address, key)
+    const fallbackGetRoute = switchMap(address => {
 
-      return route === GMX.AddressZero ? null : route
-    }, orchestrator.read('getRoute', key))
-  }, combineObject({ inputToken, collateralToken, indexToken, isLong, wallet })))
+      if (address === GMX.ADDRESS_ZERO) {
+        return switchMap(res => {
+          return address === GMX.ADDRESS_ZERO ? now(res) : indexDB.set(tradingStore, res, key)
+        }, orchestrator.read('getRoute', key))
+      }
+
+      return now(address)
+    }, storedRouteKey)
+
+    return fallbackGetRoute
+  }, combineObject({ wallet, collateralToken, indexToken, isLong }))))
 
 
-  const newLocal2 = debounce(50, combineObject({ route, indexToken, collateralToken, isLong }))
 
   const newLocal_1 = map(params => {
     const collateralToken = params.isLong ? params.indexToken : params.collateralToken
-    const address = params.route || GMX.AddressZero
+    const address = params.route || GMX.ADDRESS_ZERO
     const key = getPositionKey(address, collateralToken, params.indexToken, params.isLong)
 
 
     return { ...params, key, account: address, isLong: params.isLong, collateralToken }
-  }, newLocal2)
+  }, combineObject({ route, indexToken, collateralToken, isLong }))
 
   const positionKey = skipRepeatsWith((prev, next) => {
     return prev.key === next.key
@@ -284,7 +294,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const inputTokenDebtUsd = vault.read('usdgAmounts', inputToken)
 
   const inputTokenDescription = combineArray((network, token) => {
-    if (token === GMX.AddressZero) {
+    if (token === GMX.ADDRESS_ZERO) {
       return getNativeTokenDescription(network.id)
     }
 
@@ -421,7 +431,7 @@ export const $Trade = (config: ITradeComponent) => component((
       }
 
 
-      if (params.inputToken === GMX.AddressZero || !params.isIncrease) {
+      if (params.inputToken === GMX.ADDRESS_ZERO || !params.isIncrease) {
         return true
       }
 
@@ -526,7 +536,7 @@ export const $Trade = (config: ITradeComponent) => component((
     openPositionList,
     tradeConfig,
     tradeState,
-    $container: $card2(style({ padding: 0, gap: 0 })) 
+    $container: $column 
   })({
     leverage: changeLeverageTether(),
     switchIsIncrease: switchIsIncreaseTether(),

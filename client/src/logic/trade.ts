@@ -139,9 +139,9 @@ export function latestPriceFromExchanges(indexToken: viem.Address): Stream<bigin
 }
 
 
-export function getErc20Balance(chain: Chain, token: viem.Address | typeof GMX.AddressZero, address: Address): Stream<bigint> {
+export function getErc20Balance(chain: Chain, token: viem.Address | typeof GMX.ADDRESS_ZERO, address: Address): Stream<bigint> {
 
-  if (token === GMX.AddressZero) {
+  if (token === GMX.ADDRESS_ZERO) {
     return fromPromise(fetchBalance({ address }).then(res => res.value))
   }
 

@@ -153,7 +153,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
   const walletBalanceUsd = skipRepeats(combineArray(params => {
     const amountUsd = getTokenUsd(params.walletBalance, params.inputTokenPrice, params.inputTokenDescription.decimals)
 
-    return params.inputToken === GMX.AddressZero ? amountUsd - GMX.DEDUCT_USD_FOR_GAS : amountUsd
+    return params.inputToken === GMX.ADDRESS_ZERO ? amountUsd - GMX.DEDUCT_USD_FOR_GAS : amountUsd
   }, combineObject({ walletBalance, inputTokenPrice, inputToken, inputTokenDescription })))
 
 
@@ -267,7 +267,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
     const acceptablePrice = params.indexTokenPrice * priceBasisPoints / GMX.BASIS_POINTS_DIVISOR
 
-    const isNative = req.inputToken === GMX.AddressZero
+    const isNative = req.inputToken === GMX.ADDRESS_ZERO
 
 
     const swapParams = {
@@ -285,20 +285,8 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
     const value = isNative ? params.executionFee + req.collateralDelta : params.executionFee
 
-    const request = params.route
+    const request = params.route === GMX.ADDRESS_ZERO
       ? wagmiWriteContract({
-        ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
-        functionName: 'requestPosition',
-        value,
-        args: [
-          tradeParams,
-          swapParams,
-          getRouteTypeKey(req.collateralToken, req.indexToken, req.isLong),
-          params.executionFee,
-          req.isIncrease
-        ]
-      })
-      : wagmiWriteContract({
         ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
         value,
         functionName: 'registerRouteAndRequestPosition',
@@ -309,6 +297,18 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
           req.collateralToken,
           req.indexToken,
           req.isLong
+        ]
+      })
+      : wagmiWriteContract({
+        ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
+        functionName: 'requestPosition',
+        value,
+        args: [
+          tradeParams,
+          swapParams,
+          getRouteTypeKey(req.collateralToken, req.indexToken, req.isLong),
+          params.executionFee,
+          req.isIncrease
         ]
       })
 

@@ -168,7 +168,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   const walletBalanceUsd = skipRepeats(combineArray(params => {
     const amountUsd = getTokenUsd(params.walletBalance, params.inputTokenPrice, params.inputTokenDescription.decimals)
 
-    return params.inputToken === GMX.AddressZero ? amountUsd - GMX.DEDUCT_USD_FOR_GAS : amountUsd
+    return params.inputToken === GMX.ADDRESS_ZERO ? amountUsd - GMX.DEDUCT_USD_FOR_GAS : amountUsd
   }, combineObject({ walletBalance, inputTokenPrice, inputToken, inputTokenDescription })))
 
 
@@ -297,32 +297,14 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
           paddingBottom: `${BOX_SPACING + 8}px`,
           placeContent: 'space-between',
           alignItems: 'center',
-          // backgroundColor: pallete.horizon,
-          // border: `1px solid ${colorAlpha(pallete.foreground, .20)}`,
+          backgroundColor: pallete.background,
+          border: `1px solid ${colorAlpha(pallete.foreground, .20)}`,
           borderBottom: 'none',
           // borderTop: 'none',
           borderRadius: `${BOX_SPACING}px ${BOX_SPACING}px 0px 0px`,
         })
       )(
 
-
-
-        // $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-        //   style({ padding: '2px', fontSize: '.85rem' })(
-        //     $ButtonSecondary({
-        //       $content: $icon({ $content: $xCross, width: '24px', svgOps: style({ padding: '4px' }), viewBox: '0 0 32 32' })
-        //     })({
-        //       click: clickResetTradeModeTether()
-        //     })
-        //   ),
-        //   $text(style({ fontWeight: 'bold' }))(map(state => {
-        //     if (state.position.averagePrice > 0n) {
-        //       return state.isIncrease ? 'Increase' : 'Decrease'
-        //     }
-
-        //     return 'Open'
-        //   }, combineObject({ position, isIncrease }))),
-        // ),
 
         // $Popover({
         //   $target: $row(clickOpenTradeConfigTether(nodeEvent('click')), style({ padding: '6px 12px', border: `2px solid ${pallete.horizon}`, borderRadius: '30px' }))(
@@ -365,7 +347,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
       ),
 
-      $column(style({ borderRadius: `${BOX_SPACING}px` }))(
+      $column(style({ borderRadius: `${BOX_SPACING}px`, backgroundColor: pallete.horizon }))(
         $column(layoutSheet.spacingSmall, style({ padding: '16px', borderRadius: '20px 20px 0 0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}` }),
           styleInline(now({ borderBottom: 'none' })),
           styleInline(combineArray((focus, isIncrease) => {
@@ -502,7 +484,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                     const token = resolveAddress(chainId, option)
                     const balanceAmount = trade.getErc20Balance(config.chain, option, address)
                     const price = pricefeed.read('getPrimaryPrice', token, false)
-                    const tokenDesc = option === GMX.AddressZero ? getNativeTokenDescription(chainId) : getTokenDescription(option)
+                    const tokenDesc = option === GMX.ADDRESS_ZERO ? getNativeTokenDescription(chainId) : getTokenDescription(option)
 
                     return $row(style({ placeContent: 'space-between', flex: 1 }))(
                       $tokenLabelFromSummary(tokenDesc),
@@ -515,7 +497,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                     )
                   }),
                   list: [
-                    GMX.AddressZero,
+                    GMX.ADDRESS_ZERO,
                     ...config.tokenIndexMap[chainId] || [],
                     ...config.tokenStableMap[chainId] || [],
                   ],
