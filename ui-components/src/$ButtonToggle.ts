@@ -23,7 +23,7 @@ export const $defaulButtonToggleBtn = $row(style({
 }))
 
 export const $defaulButtonToggleContainer = $row(layoutSheet.spacingSmall, style({
-  borderRadius: '442px', padding: '12px',
+  borderRadius: '442px', padding: '8px 12px',
   border: `1px solid ${pallete.horizon}`, backgroundColor: pallete.background
 }))
 

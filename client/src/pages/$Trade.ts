@@ -4,21 +4,21 @@ import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-compon
 import {
   IPositionDecrease, IPositionIncrease,
   IPositionSlot,
-  abs, div, filterNull,
+  abs,
+  filterNull,
   formatFixed,
   getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getIntervalIdentifier, getLiquidationPrice, getMappedValue,
   getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getPnL, getPositionKey,
   getTokenAmount, getTokenDescription,
-  getTokenUsd,
   readableDate,
   readableFixedBsp,
   readableFixedUSD30,
   readableUnitAmount,
-  switchMap, timeSince, unixTimestampNow, zipState
+  switchMap, timeSince, unixTimestampNow
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, combine, constant, debounce, delay, empty, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, zip } from "@most/core"
+import { awaitPromises, combine, constant, debounce, empty, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
@@ -41,11 +41,10 @@ import { connectContract } from "../logic/common"
 import * as trade from "../logic/trade"
 import { resolveAddress } from "../logic/utils"
 import { rootStoreScope } from "../rootStore"
+import * as indexDB from "../utils/storage/indexDB"
 import * as store from "../utils/storage/storeScope"
 import { walletLink } from "../wallet"
 import { wallet } from "../wallet/walletLink"
-import { $card2 } from "../elements/$common"
-import * as indexDB from "../utils/storage/indexDB"
 
 
 export type ITradeComponent = IPositionEditorAbstractParams
@@ -108,7 +107,7 @@ export const $Trade = (config: ITradeComponent) => component((
   
   [chartVisibleLogicalRangeChange, chartVisibleLogicalRangeChangeTether]: Behavior<LogicalRange | null>,
 
-  [clickResetPosition, clickResetPositionTether]: Behavior<any, any>,
+  [clickResetPosition, clickResetPositionTether]: Behavior<null>,
 
 ) => {
 
@@ -142,7 +141,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const shortCollateralToken = store.replayWrite(tradingStore, GMX.ARBITRUM_ADDRESS.USDC as viem.Address | null, changeShortCollateralToken, 'shortCollateralToken')
   const leverage = mergeArray([
     changeLeverage,
-    debounce(500, store.replayWrite(tradingStore, GMX.LIMIT_LEVERAGE / 4n, changeLeverage, 'leverage')),
+    store.replayWrite(tradingStore, GMX.LIMIT_LEVERAGE / 4n, debounce(100, changeLeverage), 'leverage'),
   ])
 
 
@@ -197,18 +196,15 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
 
-  const newLocal_1 = map(params => {
-    const collateralToken = params.isLong ? params.indexToken : params.collateralToken
+  const positionKeyAbs = map(params => {
+    const resolvedCollateralToken = params.isLong ? params.indexToken : params.collateralToken
     const address = params.route || GMX.ADDRESS_ZERO
-    const key = getPositionKey(address, collateralToken, params.indexToken, params.isLong)
+    const key = getPositionKey(address, resolvedCollateralToken, params.indexToken, params.isLong)
 
-
-    return { ...params, key, account: address, isLong: params.isLong, collateralToken }
+    return { ...params, key, account: address, isLong: params.isLong, collateralToken: resolvedCollateralToken }
   }, combineObject({ route, indexToken, collateralToken, isLong }))
 
-  const positionKey = skipRepeatsWith((prev, next) => {
-    return prev.key === next.key
-  }, newLocal_1)
+  const positionKey = skipRepeatsWith((prev, next) => prev.key === next.key, positionKeyAbs)
 
 
   const keeperExecuteIncrease = positionRouter.listen('ExecuteIncreasePosition')
@@ -530,6 +526,7 @@ export const $Trade = (config: ITradeComponent) => component((
     liquidationPrice,
     executionFee,
     walletBalance,
+    requestReset: clickResetPosition,
   }
   const $tradebox = $PositionEditor({
     ...config,
@@ -547,11 +544,14 @@ export const $Trade = (config: ITradeComponent) => component((
     changeIndexToken: changeIndexTokenTether(),
     switchIsLong: switchIsLongTether(),
     changeSlippage: changeSlippageTether(),
+    switchFocusMode: switchFocusModeTether(),
     // switchFocusMode: 
   })
 
 
-  const $tradeMidContainer = $midContainer(layoutSheet.spacing, style({ maxWidth: '1240px' }))
+  const CONTAINER_WIDTH = 1240
+
+  const $tradeMidContainer = $midContainer(layoutSheet.spacing, style({ maxWidth: `${CONTAINER_WIDTH}px` }))
 
 
   return [
@@ -662,6 +662,8 @@ export const $Trade = (config: ITradeComponent) => component((
           }
 
 
+          const rightOffset = ((document.body.clientWidth - CONTAINER_WIDTH) / 2) / 8
+
           return $CandleSticks({
             $content: $row(
               $row(
@@ -703,21 +705,6 @@ export const $Trade = (config: ITradeComponent) => component((
               return { open, high, low, close, time: Number(blockTimestamp) as Time }
             }),
             seriesConfig: {
-              // priceFormat: {
-              //   type: 'custom',
-              //   formatter: (priceValue: BarPrice) => readableNumber(priceValue.valueOf())
-              // },
-              // lastValueVisible: false,
-              // autoscaleInfoProvider: original => {
-              //   debugger
-              //   const res = original();
-              //   if (res !== null) {
-              //     res.priceRange.minValue -= 10;
-              //     res.priceRange.maxValue += 10;
-              //   }
-              //   return res;
-              // },
-
               priceLineColor: pallete.foreground,
               baseLineStyle: LineStyle.SparseDotted,
 
@@ -812,7 +799,7 @@ export const $Trade = (config: ITradeComponent) => component((
                 timeVisible: true,
                 secondsVisible: false,
                 borderVisible: false,
-                rightOffset: 13,
+                rightOffset: rightOffset,
                 shiftVisibleRangeOnNewBar: true,
               }
             },
@@ -891,6 +878,8 @@ export const $Trade = (config: ITradeComponent) => component((
                 requestTrade: requestTradeTether(),
                 switchTrade: switchTradeTether(),
                 leverage: changeLeverageTether(),
+                // changeCollateralDeltaUsd: changeCollateralDeltaUsdTether(),
+                // changeSizeDeltaUsd: changeSizeDeltaUsdTether(),
               }),
               $notrade || $CardTable({
                 // $rowContainer: screenUtils.isDesktopScreen

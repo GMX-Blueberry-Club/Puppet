@@ -117,7 +117,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
   [clickApproveInputToken, clickApproveInputTokenTether]: Behavior<PointerEvent, { route: viem.Address, inputToken: viem.Address }>,
 
-  [clickResetPosition, clickResetPositionTether]: Behavior<any, any>,
+  [clickResetPosition, clickResetPositionTether]: Behavior<any, null>,
 
   [clickProposeTrade, clickProposeTradeTether]: Behavior<PointerEvent, IWalletClient>,
   [switchTrade, switchTradeTether]: Behavior<any, IPositionSlot>,
@@ -351,8 +351,6 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
     return recpt
   }, clickApproveInputToken))
 
-  const resetTrade = constant(0n, mergeArray([delay(50, config.tradeState.position), clickResetPosition]))
-
 
   return [
     config.$container(
@@ -560,7 +558,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
               ),
               style({ padding: '8px', alignSelf: 'center' })(
                 $ButtonSecondary({ $content: $text('Reset') })({
-                  click: clickResetPositionTether()
+                  click: clickResetPositionTether(constant(null))
                 })
               ),
               $ButtonPrimaryCtx({
@@ -763,7 +761,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
         }
 
         return div(state.position.size, state.position.collateral - state.fundingFee)
-      }, combineObject({ position, fundingFee }), clickResetPosition)),
+      }, combineObject({ position, fundingFee }), delay(50, clickResetPosition))),
       requestTrade
 
     }

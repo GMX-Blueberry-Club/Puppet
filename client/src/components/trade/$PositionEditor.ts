@@ -1,5 +1,5 @@
 import { Behavior, combineArray, combineObject, O } from "@aelea/core"
-import { $element, $Node, $text, attr, component, INode, NodeComposeFn, nodeEvent, style, styleBehavior, styleInline, stylePseudo } from "@aelea/dom"
+import { $element, $Node, $text, attr, component, INode, NodeComposeFn, nodeEvent, style, styleBehavior, styleInline } from "@aelea/dom"
 import { Route } from "@aelea/router"
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
@@ -31,13 +31,13 @@ import {
   readableFixedUSD30,
   readableNumber,
   readableUnitAmount,
-  StateStream, switchMap, zipState
+  StateStream, switchMap
 } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { $Slider } from "../$Slider.js"
+import { $heading2 } from "../../common/$text"
 import { IGmxProcessSeed } from "../../data/process/process.js"
-import { $card2 } from "../../elements/$common.js"
 import { $caretDown } from "../../elements/$icons.js"
 import { connectContract } from "../../logic/common.js"
 import * as trade from "../../logic/trade.js"
@@ -45,7 +45,6 @@ import { resolveAddress } from "../../logic/utils.js"
 import { account } from "../../wallet/walletLink.js"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown.js"
-import { $heading2, $heading3 } from "../../common/$text"
 
 
 
@@ -80,6 +79,8 @@ export interface ITradeParams {
   liquidationPrice: bigint | null
 
   collateralTokenPoolInfo: trade.ITokenPoolInfo
+
+  requestReset: null
 }
 
 export interface ITradeConfig {
@@ -161,9 +162,11 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
     collateralTokenPoolInfo, collateralTokenPrice, executionFee, fundingFee,
     indexTokenDescription, indexTokenPrice, inputTokenDescription, inputTokenPrice,
     isInputTokenApproved, isTradingEnabled, liquidationPrice, marginFee, route,
-    position, swapFee, walletBalance
+    position, swapFee, walletBalance, requestReset
   } = config.tradeState
 
+
+  const resetTrade = constant(0n, mergeArray([delay(50, config.tradeState.position), requestReset]))
 
   const walletBalanceUsd = skipRepeats(combineArray(params => {
     const amountUsd = getTokenUsd(params.walletBalance, params.inputTokenPrice, params.inputTokenDescription.decimals)
@@ -201,6 +204,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
   const autoFillCollateralUsd = mergeArray([
     clickMaxCollateralUsd,
+    constant(0n, requestReset),
     skipRepeats(snapshot((state, sizeDeltaUsd) => {
       const size = sizeDeltaUsd + state.position.size
       const collateral = div(size, state.leverage)
@@ -240,6 +244,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   }, config.tradeConfig.focusMode))
 
   const autoFillSizeUsd = mergeArray([
+    constant(0n, requestReset),
     skipRepeats(filterNull(snapshot((state, collateralDeltaUsd) => {
       const positionCollateral = state.position.collateral - state.fundingFee
 
@@ -278,13 +283,6 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   }, combineObject({ indexTokenDescription, indexTokenPrice }), autoFillSizeUsd)
 
 
-  const $defualtSelectContainer = $row(
-    style({ width: '95px', cursor: 'pointer', position: 'relative', alignSelf: 'center', border: `1px solid ${pallete.middleground}`, borderRadius: '12px' }),
-    stylePseudo(':hover', { borderColor: `${pallete.primary}` })
-  )
-  const $defaultSelectionContainer = $row(layoutSheet.spacingTiny, style({ alignItems: 'center', flex: 1, padding: '6px 10px' }))
-
- 
 
 
   return [
@@ -341,14 +339,14 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
             false,
           ],
           $$option: map(option => {
-            return $text(style({}))(option ? 'Deposit' : 'Withdraw')
+            return $text(style({}))(option ? 'Increase' : 'Decrease')
           })
         })({ select: switchisIncreaseTether() }),
 
       ),
 
       $column(style({ borderRadius: `${BOX_SPACING}px`, backgroundColor: pallete.horizon }))(
-        $column(layoutSheet.spacingSmall, style({ padding: '16px', borderRadius: '20px 20px 0 0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}` }),
+        $column(layoutSheet.spacingSmall, style({ padding: '18px', borderRadius: '20px 20px 0 0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}` }),
           styleInline(now({ borderBottom: 'none' })),
           styleInline(combineArray((focus, isIncrease) => {
             return focus === ITradeFocusMode.collateral ? { borderColor: isIncrease ? `${pallete.middleground}` : `${pallete.indeterminate}` } : { borderColor: '' }
@@ -700,7 +698,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
         ),
 
 
-        $column(layoutSheet.spacingSmall, style({ padding: '16px', borderRadius: '0 0 20px 20px', border: `1px solid ${colorAlpha(pallete.foreground, .20)}` }),
+        $column(layoutSheet.spacingSmall, style({ padding: '18px', borderRadius: '0 0 20px 20px', border: `1px solid ${colorAlpha(pallete.foreground, .20)}` }),
           styleInline(now({ borderTopStyle: 'none' })),
           // style({ backgroundColor: pallete.horizon, padding: '12px', border: `1px solid ${colorAlpha(pallete.foreground, .20)}` }),
 
