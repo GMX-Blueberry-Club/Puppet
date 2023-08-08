@@ -8,9 +8,8 @@ import { erc20Abi } from "abitype/test"
 import * as GMX from "gmx-middleware-const"
 import {
   IAbstractPositionIdentity, IAbstractPositionKey, IPriceInterval, IRequestPricefeedApi, ITokenSymbol, IVaultPosition,
-  div, filterNull, getMappedValue,
-  getTokenDescription, parseFixed, periodicRun,
-  safeDiv
+  filterNull, getMappedValue,
+  getTokenDescription, parseFixed, periodicRun
 } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { Address, Chain } from "viem"
@@ -22,9 +21,8 @@ import { resolveAddress } from "./utils"
 
 export type IPositionGetter = IVaultPosition & IAbstractPositionKey & IAbstractPositionIdentity
 
+
 export interface ITokenPoolInfo {
-  rate: bigint
-  rateFactor: bigint
   cumulativeRate: bigint
   reservedAmount: bigint
   poolAmounts: bigint
@@ -183,32 +181,26 @@ export function connectTrade(chain: ISupportedChain) {
   const positionLiquidateEvent = vault.listen('LiquidatePosition')
 
 
+  // const getTokenFundingRate = (token: Stream<viem.Address>) => {
+  //   const reservedAmounts = vault.read('reservedAmounts', token)
+  //   const poolAmounts = vault.read('poolAmounts', token)
 
-  const getTokenFundingRate = (token: Stream<viem.Address>) => {
-    const reservedAmounts = vault.read('reservedAmounts', token)
-    const poolAmounts = vault.read('poolAmounts', token)
+  //   return map(params => {
+  //     return div(params.fundingRateFactor * params.reservedAmounts, params.poolAmounts)
+  //   }, combineObject({ fundingRateFactor: getFundingRateFactor(token), poolAmounts, reservedAmounts, token }))
+  // }
 
-    return map(params => {
-      return div(params.fundingRateFactor * params.reservedAmounts, params.poolAmounts)
-    }, combineObject({ fundingRateFactor: getFundingRateFactor(token), poolAmounts, reservedAmounts, token }))
-  }
+  // const getFundingRateFactor = () => {
+  //   const stableFundingRateFactor = vault.read('stableFundingRateFactor')
+  //   const fundingRateFactor = vault.read('fundingRateFactor')
 
-  const getFundingRateFactor = (token: Stream<viem.Address>) => {
-    const stableFundingRateFactor = vault.read('stableFundingRateFactor')
-    const fundingRateFactor = vault.read('fundingRateFactor')
+  //   return map((params) => {
+  //     return params.isLong ? params.stableFundingRateFactor : params.fundingRateFactor
+  //   }, combineObject({  stableFundingRateFactor, fundingRateFactor }))
+  // }
 
-    return map((params) => {
-      const tokenDescription = getTokenDescription(params.token)
-      const rate = tokenDescription.isStable
-        ? params.stableFundingRateFactor
-        : params.fundingRateFactor
-
-      return rate
-    }, combineObject({ token, stableFundingRateFactor, fundingRateFactor }))
-  }
 
   const getTokenPoolInfo = (token: Stream<viem.Address>): Stream<ITokenPoolInfo> => {
-    const rateFactor = getFundingRateFactor(token)
     const cumulativeRate = vault.read('cumulativeFundingRates', token)
     const reservedAmount = vault.read('reservedAmounts', token)
     const poolAmounts = vault.read('poolAmounts', token)
@@ -216,12 +208,8 @@ export function connectTrade(chain: ISupportedChain) {
     const maxUsdgAmounts = vault.read('maxUsdgAmounts', token)
     const tokenWeights = vault.read('tokenWeights', token)
 
-    const dataRead = combineObject({ rateFactor, maxUsdgAmounts, cumulativeRate, usdgAmounts, tokenWeights, reservedAmount, poolAmounts })
-
-    return map(params => {
-      const rate = safeDiv(params.rateFactor * params.reservedAmount, params.poolAmounts)
-      return { ...params, rate }
-    }, dataRead)
+    const dataRead = combineObject({ maxUsdgAmounts, cumulativeRate, usdgAmounts, tokenWeights, reservedAmount, poolAmounts })
+    return dataRead
   }
 
   const getAvailableLiquidityUsd = (indexToken: Stream<viem.Address>, collateralToken: Stream<viem.Address>) => {
@@ -259,8 +247,8 @@ export function connectTrade(chain: ISupportedChain) {
 
   return {
     positionSettled,
-    getTokenFundingRate,
-    getFundingRateFactor,
+    // getTokenFundingRate,
+    // getFundingRateFactor,
     getTokenPoolInfo,
     getAvailableLiquidityUsd,
 

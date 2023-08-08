@@ -241,7 +241,7 @@ export const $Home = (config: ITreasury) => component((
         ),
         $text(style({ whiteSpace: 'pre-wrap', maxWidth: '878px' }))(` A Mirror Trading Platform for Simplified and Reduced-Risk-Managed Portfolio
 
-Puppet, developed by the GBC Foundation (blueberry.club), is a mirror trading platform built on top of the GMX leveraging trading platform. It offers investors, known as Puppets, the opportunity to actively manage their portfolios by mirroring the trades of multiple high-performing traders, all with a single deposit. This reduces risk and streamlines the investment process. Puppet is a key component of the GBC ecosystem and can be accessed at https://blueberry.club/ until perfected and released fully with it's own tokenomics and revenue flywheel on https://puppet.finance/.
+Puppet, is a mirror trading platform built on top of the GMX leveraging trading platform. It offers investors, known as Puppets, the opportunity to actively manage their portfolios by mirroring the trades of multiple high-performing traders, all with a single deposit. This reduces risk and streamlines the investment process. Puppet is a key component of the GBC ecosystem and can be accessed at https://blueberry.club/ until perfected and released fully with it's own tokenomics and revenue flywheel on https://puppet.finance/.
 
 Puppet is designed for two types of participants: Traders and Puppets.
 

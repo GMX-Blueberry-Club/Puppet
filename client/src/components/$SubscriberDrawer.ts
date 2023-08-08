@@ -4,7 +4,7 @@ import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { map, multicast, snapshot } from "@most/core"
 import { Stream } from "@most/types"
-import { groupArrayMany, readableFixedBsp, switchMap } from "gmx-middleware-utils"
+import { formatBps, groupArrayMany, readableFixedBsp, switchMap } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -12,11 +12,10 @@ import { $card2 } from "../elements/$common"
 import { wagmiWriteContract } from "../logic/common"
 import { $seperator2 } from "../pages/common"
 import { fadeIn } from "../transitions/enter"
-import { $discoverAvatar, $discoverIdentityDisplay } from "./$AccountProfile"
+import { $discoverIdentityDisplay } from "./$AccountProfile"
 import { $IntermediateConnectButton } from "./$ConnectAccount"
-import { $defaultBerry } from "./$DisplayBerry"
-import { $ButtonPrimaryCtx } from "./form/$Button"
 import { $RouteDepositInfo } from "./$common"
+import { $ButtonPrimaryCtx } from "./form/$Button"
 
 interface ISubscribeDrawer {
   subscribeList: Stream<IPuppetRouteSubscritpion[]>
@@ -45,7 +44,7 @@ export const $SubscriberDrawer = (config: ISubscribeDrawer) => component((
       const routeMap = Object.entries(groupArrayMany(list, x => x.routeTypeKey)) as [viem.Hex, IPuppetRouteSubscritpion[]][]
         
       return fadeIn(
-        $card2(style({ position: 'absolute', zIndex: 11, inset: 'auto 0 0 0', bottom: '0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderBottom: 'none', padding: '26px', borderRadius: '20px 20px 0 0' }))(
+        $card2(style({ position: 'absolute', maxWidth: '1024px', margin: '0 auto', zIndex: 11, inset: 'auto 0 0 0', bottom: '0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderBottom: 'none', padding: '26px', borderRadius: '20px 20px 0 0' }))(
           $IntermediateConnectButton({
             $$display: map(w3p => {
               
@@ -74,7 +73,7 @@ export const $SubscriberDrawer = (config: ISubscribeDrawer) => component((
                                 // $profileContainer: $defaultBerry(style({ width: '50px' }))
                               }),
                               $text(style({ flex: 1 }))(subsc.subscribed ? 'Subscribe' : 'Unsubscribe'),
-                              $text(readableFixedBsp(subsc.allowance))
+                              $text(readableFixedBsp(subsc.allowance)),
                             )
                           })
                         )

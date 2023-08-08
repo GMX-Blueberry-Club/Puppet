@@ -78,6 +78,9 @@ export interface ITradeParams {
   averagePrice: bigint | null
   liquidationPrice: bigint | null
 
+  stableFundingRateFactor: bigint
+  fundingRateFactor: bigint
+
   collateralTokenPoolInfo: trade.ITokenPoolInfo
 
   requestReset: null

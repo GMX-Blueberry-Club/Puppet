@@ -5,6 +5,7 @@ import {
   IPositionDecrease, IPositionIncrease,
   IPositionSlot,
   abs,
+  div,
   filterNull,
   formatFixed,
   getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getIntervalIdentifier, getLiquidationPrice, getMappedValue,
@@ -14,6 +15,7 @@ import {
   readableFixedBsp,
   readableFixedUSD30,
   readableUnitAmount,
+  safeDiv,
   switchMap, timeSince, unixTimestampNow
 } from "gmx-middleware-utils"
 
@@ -286,6 +288,9 @@ export const $Trade = (config: ITradeComponent) => component((
     ))
   ])))
 
+  const stableFundingRateFactor = replayLatest(multicast(vault.read('stableFundingRateFactor')))
+  const fundingRateFactor = replayLatest(multicast(vault.read('fundingRateFactor')))
+
   const inputTokenWeight = vault.read('tokenWeights', inputToken)
   const inputTokenDebtUsd = vault.read('usdgAmounts', inputToken)
 
@@ -526,6 +531,10 @@ export const $Trade = (config: ITradeComponent) => component((
     liquidationPrice,
     executionFee,
     walletBalance,
+
+    stableFundingRateFactor,
+    fundingRateFactor,
+
     requestReset: clickResetPosition,
   }
   const $tradebox = $PositionEditor({
@@ -551,7 +560,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const CONTAINER_WIDTH = 1240
 
-  const $tradeMidContainer = $midContainer(layoutSheet.spacing, style({ maxWidth: `${CONTAINER_WIDTH}px` }))
+  const $tradeMidContainer = $midContainer(layoutSheet.spacing, style({ flex: 1, maxWidth: `${CONTAINER_WIDTH}px` }))
 
 
   return [
@@ -632,7 +641,11 @@ export const $Trade = (config: ITradeComponent) => component((
             $column(layoutSheet.spacingSmall)(
               $infoLabel('Borrow Rate'),
               $row(style({ whiteSpace: 'pre' }))(
-                $text(map(poolInfo => readableFixedBsp(poolInfo.rate), collateralTokenPoolInfo)),
+                $text(map(params => {
+                  const rateFactor = params.isLong ? params.fundingRateFactor : params.stableFundingRateFactor
+                  const rate = safeDiv(rateFactor * params.collateralTokenPoolInfo.reservedAmount, params.collateralTokenPoolInfo.poolAmounts)
+                  return readableFixedBsp(rate)
+                }, combineObject({ isLong, collateralTokenPoolInfo, stableFundingRateFactor, fundingRateFactor }))),
                 $text(style({ color: pallete.foreground }))(' / hr')
               )
             ),
@@ -835,7 +848,7 @@ export const $Trade = (config: ITradeComponent) => component((
       ),
 
       screenUtils.isMobileScreen
-        ? $midContainer(style({}))(
+        ? $midContainer(style({ }))(
           $tradebox,
         )
         : empty(),
@@ -855,8 +868,6 @@ export const $Trade = (config: ITradeComponent) => component((
               )
             )
               
-
-
               
 
             return $row(style({ flex: 1 }))(
@@ -1016,8 +1027,4 @@ export const $Trade = (config: ITradeComponent) => component((
     }
   ]
 })
-
-
-
-
 

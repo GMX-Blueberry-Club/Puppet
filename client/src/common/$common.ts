@@ -34,7 +34,6 @@ export const $midContainer = $column(
     maxWidth: '940px',
     position: 'relative',
     gap: screenUtils.isDesktopScreen ? '50px' : '50px',
-    flex: 1,
     width: '100%',
   })
 )

@@ -143,7 +143,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
   const { collateralDeltaUsd, collateralToken, collateralDelta, sizeDelta, focusMode, indexToken, inputToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage } = config.tradeConfig
   const {
     availableIndexLiquidityUsd, averagePrice, collateralTokenDescription,
-    collateralTokenPoolInfo, collateralTokenPrice, executionFee, fundingFee,
+    collateralTokenPoolInfo, collateralTokenPrice, stableFundingRateFactor, fundingRateFactor, executionFee, fundingFee,
     indexTokenDescription, indexTokenPrice, inputTokenDescription, inputTokenPrice,
     isInputTokenApproved, isTradingEnabled, liquidationPrice, marginFee, route,
     position, swapFee, walletBalance
@@ -387,7 +387,10 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
                   const depositTokenNorm = resolveAddress(config.chain.id, params.inputToken)
                   const outputToken = params.isLong ? params.indexToken : params.collateralToken
                   const totalSizeUsd = params.position.size + params.sizeDeltaUsd
-                  const nextSize = totalSizeUsd * params.collateralTokenPoolInfo.rate / GMX.BASIS_POINTS_DIVISOR / 100n
+
+                  const rateFactor = params.isLong ? params.fundingRateFactor : params.stableFundingRateFactor
+                  const rate = safeDiv(rateFactor * params.collateralTokenPoolInfo.reservedAmount, params.collateralTokenPoolInfo.poolAmounts)
+                  const nextSize = totalSizeUsd * rate / GMX.BASIS_POINTS_DIVISOR / 100n
 
                   return $column(
                     depositTokenNorm !== outputToken ? $row(layoutSheet.spacingTiny)(
@@ -403,7 +406,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
                       )
                     )
                   )
-                }, combineObject({ sizeDeltaUsd, collateralToken, indexToken, swapFee, collateralTokenPoolInfo, position, isLong, inputToken, marginFee })))
+                }, combineObject({ sizeDeltaUsd, collateralToken, indexToken, swapFee, collateralTokenPoolInfo, position, isLong, inputToken, marginFee, stableFundingRateFactor, fundingRateFactor })))
 
               ),
               'Fees'
@@ -491,7 +494,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
                 $popContent: map(() => {
 
                   return $column(layoutSheet.spacing, style({ maxWidth: '400px' }))(
-                    $text(style({ fontWeight: 'bold', fontSize: '1em' }))(`By using GBC Trading, I agree to the following Disclaimer`),
+                    $text(style({ fontWeight: 'bold', fontSize: '1em' }))(`By using Puppet, I agree to the following Disclaimer`),
                     $text(style({}))(`By accessing, I agree that ${document.location.href} is an interface that interacts with external GMX smart contracts, and does not have access to my funds.`),
 
                     $alert(
@@ -617,8 +620,9 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
           }, pnlCrossHairTime))
 
-
-          const nextSize = params.position.size * params.collateralTokenPoolInfo.rate / GMX.BASIS_POINTS_DIVISOR / 100n
+          const rateFactor = params.isLong ? params.fundingRateFactor : params.stableFundingRateFactor
+          const rate = safeDiv(rateFactor * params.collateralTokenPoolInfo.reservedAmount, params.collateralTokenPoolInfo.poolAmounts)
+          const nextSize = params.position.size * rate / GMX.BASIS_POINTS_DIVISOR / 100n
 
 
           return $column(style({ position: 'relative' }))(
@@ -680,7 +684,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
             //   // requestPricefeed: requestTradePricefeedTether()
             // })
           )
-        }, combineObject({ position, collateralTokenPoolInfo }))
+        }, combineObject({ position, collateralTokenPoolInfo, fundingRateFactor, stableFundingRateFactor, isLong,  }))
       ),
 
       switchMap(posList => {
