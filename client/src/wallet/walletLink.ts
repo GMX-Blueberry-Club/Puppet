@@ -13,6 +13,10 @@ import { Web3Modal } from '@web3modal/html'
 import { switchMap } from "gmx-middleware-utils"
 import { PublicClient, Transport } from "viem"
 import { arbitrum, avalanche } from "viem/chains"
+import { Core } from '@walletconnect/core'
+import SignClient from '@walletconnect/sign-client'
+import { DappClient as PushDappClient } from '@walletconnect/push-client'
+
 
 const chains = [
   arbitrum,
@@ -31,7 +35,10 @@ export type IWalletClient = WalletClient<Transport, ISupportedChain>
 
 const storage = createStorage({ storage: window.localStorage })
 
-const projectId = 'fdc797f2e6a68e01b9e17843c939673e'
+
+const projectId = import.meta.env.VITE_WC_PROJECT_ID || 'fdc797f2e6a68e01b9e17843c939673e'
+
+console.log(import.meta.env)
 
 
 
@@ -170,4 +177,29 @@ export const web3Modal = new Web3Modal({
   }
 }, ethereumClient)
 
+
+
+
+const core = new Core({ projectId })
+
+// e.g. for SignClient. See the "Shared Core" guide linked above for details.
+const signClient = await SignClient.init({
+  core,
+  metadata: {
+    url: 'https://localhost',
+    name: 'My Sign-Enabled Dapp',
+    icons: ['https://my-dapp.com/icons/logo.png'],
+    description: 'ff'
+  }
+})
+
+const pushDappClient = await PushDappClient.init({
+  core,
+  metadata: {
+    name: 'My Push-Enabled Dapp',
+    description: 'A dapp using WalletConnect PushClient',
+    url: 'https://my-dapp.com',
+    icons: ['https://my-dapp.com/icons/logo.png']
+  }
+})
 

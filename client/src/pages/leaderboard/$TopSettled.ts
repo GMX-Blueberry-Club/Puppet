@@ -2,7 +2,7 @@ import { Behavior, O, combineObject, replayLatest } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { constant, empty, map } from "@most/core"
+import { constant, empty, map, mergeArray } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Link, $Table, ISortBy } from "gmx-middleware-ui-components"
@@ -52,15 +52,27 @@ export const $TopSettled = (config: ITopSettled) => component((
     pageIndex,
   })
 
-  const datass = switchMap(params => {
-    return map(data => {
-      console.log(data)
+  const datass = mergeArray([
+    switchMap(params => {
+      return map(data => {
+        console.log(data)
 
-      const summaryList = leaderboardMirrorTrader(data.mirrorPositionSettled)
+        const summaryList = leaderboardMirrorTrader(data.mirrorPositionSettled)
 
-      return pagingQuery({ ...params.sortBy, offset: params.pageIndex * 20, pageSize: 20 }, summaryList)
-    }, config.processData)
-  }, qparams)
+        return pagingQuery({ ...params.sortBy, offset: params.pageIndex * 20, pageSize: 20 }, summaryList)
+      }, config.processData)
+    }, qparams),
+    switchMap(params => {
+      return map(data => {
+        console.log(data)
+
+        const summaryList = leaderboardMirrorTrader(data.mirrorPositionSettled)
+
+        return pagingQuery({ ...params.sortBy, offset: params.pageIndex * 20, pageSize: 20 }, summaryList)
+      }, config.processData)
+    }, qparams)
+
+  ])
 
   
 

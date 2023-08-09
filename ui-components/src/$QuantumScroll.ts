@@ -59,7 +59,7 @@ export const $QuantumScroll = ({
 
   const dataLoadingMc = multicast(dataSource)
 
-  const $itemLoader = snapshot((sidx, nextResponse) => {
+  const $itemLoader = map((nextResponse) => {
     const itemCount = Array.isArray(nextResponse) ? nextResponse.length : nextResponse.$items.length
 
     if (Array.isArray(nextResponse)) {
@@ -76,9 +76,10 @@ export const $QuantumScroll = ({
       ? [...nextResponse.$items, until(dataLoadingMc, $observerloader )]
       : nextResponse.$items
 
+    const initNextScroll = filter(res => 'offset' in res && res.offset === 0, dataLoadingMc)
 
-    return mergeArray($items)
-  }, scrollIndex, dataLoadingMc)
+    return until(initNextScroll, mergeArray($items))
+  }, dataLoadingMc)
 
 
   return [

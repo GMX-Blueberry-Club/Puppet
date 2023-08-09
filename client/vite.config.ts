@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv, env } from 'vite'
 import { ManifestOptions, VitePWA, VitePWAOptions } from 'vite-plugin-pwa'
 import replace from '@rollup/plugin-replace'
 
@@ -79,7 +79,8 @@ if (selfDestroying)
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  define: { ...prefixedParentEnv },
+  // define: { ...prefixedParentEnv },
+  envDir: '../',
   publicDir: 'assets',
   plugins: [
     VitePWA(pwaOptions),
