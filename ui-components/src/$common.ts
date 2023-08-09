@@ -25,7 +25,7 @@ export const $anchor = $element('a')(
 export const $alertContainer = $row(layoutSheet.spacingSmall, style({
   minWidth: 0, maxWidth: '100%',
   borderRadius: '100px', alignItems: 'center', fontSize: '.85rem',
-  border: `1px dashed ${pallete.negative}`, padding: '8px',
+  border: `1px dashed ${pallete.negative}`, padding: '8px 12px',
 }))
 
 export const $alert = ($content: $Node) => $alertContainer(style({ alignSelf: 'flex-start' }))(

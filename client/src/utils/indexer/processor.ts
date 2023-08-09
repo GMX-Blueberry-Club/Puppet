@@ -73,11 +73,12 @@ export interface IProcessorSeedConfig<TSeed, TProcessConfigList extends ILogOrde
 export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TParentName extends string>(
   config: IProcessorSeedConfig<TSeed, TProcessConfigList, TParentName>,
 ): Stream<IProcessedStore<TSeed>> {
- 
-  const sync = switchMap(params => {
-    const startblock = params.processState.startBlock
+
+
+  const nextLogs = map(processState => {
+    const startblock = processState.startBlock
     const processNextLog = config.processList.map(processConfig => {
-      const rangeKey = IDBKeyRange.bound(params.processState.orderId, 1e20, true)
+      const rangeKey = IDBKeyRange.bound(processState.orderId, 1e20, true)
       const nextStoredLog: Stream<ILogOrderedEvent[]> = indexDB.getAll(processConfig.source.scope, rangeKey)
 
       return switchMap(stored => {
@@ -124,7 +125,7 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
           )
           : now([])
 
-        const fromBlock = max(startblock, max(params.processState.endBlock, lstEvent ? lstEvent.blockNumber : 0n))
+        const fromBlock = max(startblock, max(processState.endBlock, lstEvent ? lstEvent.blockNumber : 0n))
 
         const next = fromBlock < config.syncBlock
           ? fetchTradesRecur(
@@ -152,7 +153,7 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
                     const storeObj = {  ...ev, orderId: getEventOrderIdentifier(ev) } as ILogOrderedEvent
                     return storeObj
                   })
-                  .filter(ev => ev.orderId > Math.max(params.processState.orderId, lstEvent ? lstEvent.orderId : 0))
+                  .filter(ev => ev.orderId > Math.max(processState.orderId, lstEvent ? lstEvent.orderId : 0))
 
                 return indexDB.add(processConfig.source.scope, filtered)
               }, queryLogs)
@@ -168,6 +169,11 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
         }, combineObject({ prev, next }))
       }, nextStoredLog)
     })
+
+    return { processNextLog, processState }
+  }, config.seed)
+ 
+  const sync = switchMap(params => {
 
     return switchLatest(zipArray((...nextLogEvents) => {
       const orderedNextEvents = nextLogEvents.flat().sort((a, b) => a.orderId - b.orderId)
@@ -198,9 +204,9 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
       console.log(config.syncBlock)
 
       return indexDB.set(config.scope, nextState)
-    }, ...processNextLog))
+    }, ...params.processNextLog))
 
-  }, combineObject({ processState: config.seed }))
+  }, nextLogs)
 
   return sync
 }

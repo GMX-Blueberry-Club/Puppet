@@ -27,7 +27,7 @@ export const $WalletProfileDisplay = ({ $container = $row, parentRoute }: IWalle
 
   return [
     $container(style({ backgroundColor: `${pallete.background}`, gap: '8px', borderRadius: '30px', placeContent: 'center' }))(
-      $row(style({ flex: 1 }))(
+      $row(style({ flex: 1, fontFamily: `var(--font-monospace)` }))(
         switchLatest(snapshot((_, accountResult) => {
           return accountResult.address
             ? $anchor(
@@ -45,7 +45,7 @@ export const $WalletProfileDisplay = ({ $container = $row, parentRoute }: IWalle
                 })
               )
             )(
-              $discoverIdentityDisplay({ address: accountResult.address, $container, $profileContainer: $defaultBerry(style({ minWidth: '50px', width: '50px' })) })
+              $discoverIdentityDisplay({ address: accountResult.address, $container }),
             )
             : walletChangeTether(
               nodeEvent('click'),
@@ -64,7 +64,6 @@ export const $WalletProfileDisplay = ({ $container = $row, parentRoute }: IWalle
       $seperator2,
 
       $SwitchNetworkDropdown()({}),
-      $node(),
     ),
 
     {

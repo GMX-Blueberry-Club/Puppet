@@ -1,12 +1,12 @@
 import { Behavior, combineObject, replayLatest } from "@aelea/core"
 import { $element, $node, $text, component, eventElementTarget, style, styleBehavior } from "@aelea/dom"
 import * as router from '@aelea/router'
-import { $column, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
-import { pallete } from "@aelea/ui-components-theme"
+import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
+import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
-import { fromPromise, map, merge, mergeArray, multicast, now, skipRepeats, startWith, tap } from '@most/core'
+import { constant, empty, fromPromise, join, map, merge, mergeArray, multicast, now, skipRepeats, snapshot, startWith, switchLatest, tap } from '@most/core'
 import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN, TIME_INTERVAL_MAP } from "gmx-middleware-const"
-import { ETH_ADDRESS_REGEXP, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { ETH_ADDRESS_REGEXP, switchMap, timeSince, unixTimestampNow } from "gmx-middleware-utils"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu'
 import { fadeIn } from "../transitions/enter"
@@ -17,7 +17,7 @@ import { $Wallet } from "./$Wallet"
 import { $Leaderboard } from "./leaderboard/$Leaderboard"
 import { gmxProcess } from "../data/process/process"
 import { syncProcess } from "../utils/indexer/processor"
-import { publicClient, block, blockCache, chain } from "../wallet/walletLink"
+import { publicClient, block, blockCache, chain, IWalletClient, blockChange } from "../wallet/walletLink"
 import { getBlockNumberCache } from "viem/public"
 import * as wagmi from "@wagmi/core"
 import { $Profile } from "./$Profile"
@@ -27,6 +27,8 @@ import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import { rootStoreScope } from "../rootStore"
 import * as store from "../utils/storage/storeScope"
 import { $midContainer } from "../common/$common"
+import { $heading2, $heading3 } from "../common/$text"
+import { $alert, $defaultVScrollLoader, $spinner } from "gmx-middleware-ui-components"
 
 
 const popStateEvent = eventElementTarget('popstate', window)
@@ -40,13 +42,33 @@ interface Website {
   baseRoute?: string
 }
 
+
+
+
+
 export const $Main = ({ baseRoute = '' }: Website) => component((
   [routeChanges, linkClickTether]: Behavior<any, string>,
   [subscribeTrader, subscribeTraderTether]: Behavior<IPuppetRouteSubscritpion>,
+  [changeSubscribeList, changeSubscribeListTether]: Behavior<IPuppetRouteSubscritpion[]>,
   [toggleMenu, toggleMenuTether]: Behavior<boolean>,
+
+  [clickCloseSubscPanel, clickCloseSubscPanelTether]: Behavior<any>,
+  [syncProcessData, syncProcessDataTether]: Behavior<any, bigint>,
 
   // [resizeScreen, resizeScreenTether]: Behavior<any, ResizeObserverEntry[]>,
 ) => {
+
+
+  const syncProcessEvent = multicast(switchMap(params => {
+    if (params.syncProcessData > params.seed.endBlock) {
+      return syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncProcessData })
+    }
+
+    return now(params.seed)
+  }, combineObject({ publicClient, seed: gmxProcess.seed, syncProcessData })))
+
+  const process = mergeArray([gmxProcess.seed, syncProcessEvent])
+  const processData = map(p => p.state, process)
 
   const tradingStore = store.createStoreScope(rootStoreScope, 'tradeBox' as const)
   const isMenuOpen = store.replayWrite(tradingStore, true, toggleMenu, 'isLong')
@@ -75,8 +97,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
 
   const $liItem = $element('li')(style({ marginBottom: '14px' }))
-
-
   const $rootContainer = $column(
     designSheet.main,
     style({
@@ -97,23 +117,14 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       ? style({ userSelect: 'none' })
       : style({}),
   )
-
   const isMobileScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
 
-  const processData = replayLatest(multicast(switchMap(params => {
-    const mode = (import.meta as any).env.MODE
-    const refreshThreshold = mode === 'development' ? 5000 : 50
-    const blockDelta = params.block - params.seed.endBlock
+  
+  const subscribeListAtom = replayLatest(empty(), [] as IPuppetRouteSubscritpion[])
 
-    if (blockDelta > refreshThreshold) {
-      const newLocal = map(seed => seed.state, syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.block }))
-      return newLocal
-    }
-
-    return now(params.seed.state)
-  }, combineObject({ publicClient, block: blockCache, seed: gmxProcess.seed }))))
-
-  const subscribeList = replayLatest(map(l => [l], subscribeTrader), [] as IPuppetRouteSubscritpion[])
+  const subscribeList = snapshot((list, add) => {
+    return [...list, add]
+  }, subscribeListAtom, subscribeTrader)
 
 
 
@@ -146,7 +157,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               gap: '35px',
             })
         )(
-          $text(map(x => '', processData)),
           switchMap(isMobile => {
             return isMobile
               ? $MainMenu({ isMenuOpen, parentRoute: appRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
@@ -159,81 +169,81 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
           }, isMobileScreen),
 
 
-          $column(style({ flex: 1, position: 'relative' }))(
-            router.contains(walletRoute)(
-              $IntermediateConnectButton({
-                $$display: map(wallet => {
-                  return $midContainer(
-                    $Wallet({
-                      route: walletRoute,
-                      processData,
-                      wallet: wallet,
-                    })({
-                      changeRoute: linkClickTether(),
-                    }))
-                })
-              })({})
-            ),
-            router.contains(leaderboardRoute)(
-              $midContainer(
-                fadeIn($Leaderboard({
-                  subscribeList,
-                  route: leaderboardRoute,
-                  processData
-                })({
-                  routeChange: linkClickTether(
-                    tap(console.log)
-                  ),
-                  changeSubscribeList: subscribeTraderTether()
-                }))
-              )
-            ),
-            router.contains(profileRoute)(
-              $midContainer(
-                fadeIn($Profile({
-                  route: profileRoute,
-                  processData
-                })({
-                  subscribeTreader: subscribeTraderTether(),
-                  changeRoute: linkClickTether()
-                }))
-              )
-            ),
+          switchMap(chainEvent => {
+            return $column(style({ flex: 1, position: 'relative' }))(
+              router.contains(walletRoute)(
+                $IntermediateConnectButton({
+                  $$display: map(wallet => {
+                    return $midContainer(
+                      $Wallet({
+                        route: walletRoute,
+                        processData,
+                        wallet: wallet,
+                      })({
+                        changeRoute: linkClickTether(),
+                      }))
+                  })
+                })({})
+              ),
+              router.contains(leaderboardRoute)(
+                $midContainer(
+                  fadeIn($Leaderboard({
+                    subscribeList,
+                    route: leaderboardRoute,
+                    processData
+                  })({
+                    routeChange: linkClickTether(
+                      tap(console.log)
+                    ),
+                    subscribeTrader: subscribeTraderTether()
+                  }))
+                )
+              ),
+              router.contains(profileRoute)(
+                $midContainer(
+                  fadeIn($Profile({
+                    route: profileRoute,
+                    processData
+                  })({
+                    subscribeTreader: subscribeTraderTether(),
+                    changeRoute: linkClickTether()
+                  }))
+                )
+              ),
             
-            router.match(tradeTermsAndConditions)(
-              $midContainer(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
-                $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
-                $node(),
-                $text(style({ fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
-                $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host + '/app/' + TRADEURL} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
-                $element('ul')(layoutSheet.spacing, style({  }))(
-                  $liItem(
-                    $text(`I am not a United States person or entity;`),
+              router.match(tradeTermsAndConditions)(
+                $midContainer(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
+                  $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
+                  $node(),
+                  $text(style({ fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
+                  $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host + '/app/' + TRADEURL} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
+                  $element('ul')(layoutSheet.spacing, style({  }))(
+                    $liItem(
+                      $text(`I am not a United States person or entity;`),
+                    ),
+                    $liItem(
+                      $text(`I am not a resident, national, or agent of any country to which the United States, the United Kingdom, the United Nations, or the European Union embargoes goods or imposes similar sanctions, including without limitation the U.S. Office of Foreign Asset Control, Specifically Designated Nationals and Blocked Person List;`),
+                    ),
+                    $liItem(
+                      $text(`I am legally entitled to access the Interface under the laws of the jurisdiction where I am located;`),
+                    ),
+                    $liItem(
+                      $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
+                    ),
                   ),
-                  $liItem(
-                    $text(`I am not a resident, national, or agent of any country to which the United States, the United Kingdom, the United Nations, or the European Union embargoes goods or imposes similar sanctions, including without limitation the U.S. Office of Foreign Asset Control, Specifically Designated Nationals and Blocked Person List;`),
-                  ),
-                  $liItem(
-                    $text(`I am legally entitled to access the Interface under the laws of the jurisdiction where I am located;`),
-                  ),
-                  $liItem(
-                    $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
-                  ),
+
+                  $node(style({ height: '100px' }))(),
                 ),
 
-                $node(style({ height: '100px' }))(),
               ),
-
-            ),
-            router.match(adminRoute)(
-              $midContainer(
-                $Admin({})
+              router.match(adminRoute)(
+                $midContainer(
+                  $Admin({})
+                ),
               ),
-            ),
-            router.match(tradeRoute)(
-              switchMap(c => {
-                return $Trade({
-                  chain: c,
+              router.match(tradeRoute)(
+                $Trade({
+                  chain: chainEvent,
                   processData,
                   referralCode: BLUEBERRY_REFFERAL_CODE,
                   tokenIndexMap: {
@@ -256,27 +266,63 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                       ARBITRUM_ADDRESS.USDT,
                       ARBITRUM_ADDRESS.DAI,
                       ARBITRUM_ADDRESS.FRAX,
-                      // ARBITRUM_ADDRESS.MIM,
+                    // ARBITRUM_ADDRESS.MIM,
                     ],
                     [CHAIN.AVALANCHE]: [
                       AVALANCHE_ADDRESS.USDC,
                       AVALANCHE_ADDRESS.USDCE,
-                      // AVALANCHE_ADDRESS.MIM,
+                    // AVALANCHE_ADDRESS.MIM,
                     ]
                   },
                   parentRoute: tradeRoute
                 })({
                   changeRoute: linkClickTether()
                 })
-              }, chain)
-            ),
+              ),
+            
+
+              switchMap(params => {
+                const mode = (import.meta as any).env.MODE
+                const refreshThreshold = mode === 'development' ? 5000 : 50
+                const blockDelta = params.syncBlock - params.process.endBlock
 
 
-            $SubscriberDrawer({
-              subscribeList,
-              subscribeTrader
-            })({}),
-          )
+                const lastUpdate = timeSince(params.process.state.approximatedTimestamp) + ' old'
+                if (blockDelta < refreshThreshold) {
+                  return empty()
+                }
+
+
+                const newLocal = `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
+                return switchLatest(mergeArray([
+                  now(
+                    fadeIn($row(
+                      style({ position: 'absolute', bottom: '18px', left: `50%` }),
+                      syncProcessDataTether(
+                        constant(params.syncBlock)
+                      )
+                    )(
+                      style({  transform: 'translateX(-50%)' })(
+                        $column(layoutSheet.spacingTiny, style({ border: `1px solid`, padding: '20px', animation: `borderRotate var(--d) linear infinite forwards`, borderImage: newLocal }))(
+                          $text(`Syncing Blockchain Data....`),
+                          $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(`${lastUpdate} data is displayed`),
+                        )
+                      )
+                    ))
+                  ),
+                // map(seed => empty(), syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlock }))
+                ]))
+              }, combineObject({ process, syncBlock: block })),
+
+              $SubscriberDrawer({
+                subscribeList,
+                subscribeTrader
+              })({
+                clickClose: clickCloseSubscPanelTether(),
+                changeSubscribeList: changeSubscribeListTether()
+              }),
+            )
+          }, chain),
           
         )
       ),

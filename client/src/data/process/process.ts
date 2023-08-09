@@ -33,7 +33,7 @@ export const PRICEFEED_INTERVAL = [
   TIME_INTERVAL_MAP.HR24,
 ] as const
 
-export interface IGmxProcessSeed {
+export interface IGmxProcessState {
   blockMetrics: IProcessMetrics,
   // positionSlot: Record<viem.Hex, IPositionSlot>
   // positionsSettled: Record<viem.Hex, IPositionSettled>
@@ -51,7 +51,7 @@ export interface IGmxProcessSeed {
 
 
 
-const state: IGmxProcessSeed = {
+const state: IGmxProcessState = {
   blockMetrics: {
     cumulativeBlocks: 0n,
     cumulativeDeltaTime: 0n,
@@ -70,7 +70,7 @@ const state: IGmxProcessSeed = {
   subscription: [],
 }
 
-const blueprint: IProcessedStore<IGmxProcessSeed> = {
+const blueprint: IProcessedStore<IGmxProcessState> = {
   startBlock: 114838028n,
   endBlock: 118649616n,
   orderId: 0,
@@ -79,7 +79,7 @@ const blueprint: IProcessedStore<IGmxProcessSeed> = {
 }
 
 
-export const seedFile: Stream<IProcessedStore<IGmxProcessSeed>> = importGlobal(async () => {
+export const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
   const req = await import('../../data/db/sha256-mNRHdIqqQz5b0dn+zdfi6cD6dzN3JSWcr5CXC8Fkhvk=.json')
   const newLocal = transformBigints(req.default)
   return newLocal
@@ -445,13 +445,13 @@ export const gmxProcess = defineProcess(
 )
 
 
-export interface IPuppetProcess extends IGmxProcessSeed {
+export interface IPuppetProcess extends IGmxProcessState {
 
 }
 
 
 
-function storeCandle(seed: IGmxProcessSeed, token: viem.Address, interval: IntervalTime, price: bigint) {
+function storeCandle(seed: IGmxProcessState, token: viem.Address, interval: IntervalTime, price: bigint) {
   const id = getIntervalIdentifier(token, interval)
 
   seed.pricefeed[id] ??= {}
@@ -515,7 +515,7 @@ export function createMirrorPositionSlot(blockTimestamp: number, transactionHash
 
 
 
-export const latestTokenPrice = (process: Stream<IGmxProcessSeed>, tokenEvent: Stream<viem.Address>) => {
+export const latestTokenPrice = (process: Stream<IGmxProcessState>, tokenEvent: Stream<viem.Address>) => {
   return switchMap(token => map(seed => seed.latestPrice[token], process), tokenEvent)
 }
 

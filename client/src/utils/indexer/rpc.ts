@@ -89,7 +89,7 @@ export const fetchTradesRecur = <
     }
 
     if (err.code !== -32602 || retryAmount > 3) {
-      throw new Error(`Failed to fetch trades after 3 retries`)
+      throw err
     }
 
     retryAmount++

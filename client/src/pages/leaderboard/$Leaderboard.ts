@@ -6,7 +6,7 @@ import { empty, map, mergeArray, multicast, now, switchLatest } from "@most/core
 import { Stream } from "@most/types"
 import { $ButtonToggle } from "gmx-middleware-ui-components"
 import { IPuppetRouteTrades, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
-import { IGmxProcessSeed } from "../../data/process/process"
+import { IGmxProcessState } from "../../data/process/process"
 import { $card } from "../../elements/$common"
 import { wallet } from "../../wallet/walletLink"
 import { $TopOpen } from "./$TopOpen"
@@ -17,7 +17,7 @@ import { $TopSettled } from "./$TopSettled"
 
 export type ILeaderboard = {
   route: router.Route
-  processData: Stream<IGmxProcessSeed>
+  processData: Stream<IGmxProcessState>
 
   subscribeList: Stream<IPuppetRouteSubscritpion[]>
 }
@@ -57,6 +57,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
 
   const subscription: Stream<IPuppetRouteTrades[]> = switchLatest(map(w3p => {
+    
     if (!w3p) {
       return empty()
     }
@@ -118,7 +119,8 @@ export const $Leaderboard = (config: ILeaderboard) => component((
     ),
 
     {
-      routeChange: mergeArray([routeChange, routeChangeState]), changeSubscribeList: subscribeTrader
+      routeChange: mergeArray([routeChange, routeChangeState]),
+      subscribeTrader
     }
   ]
 })

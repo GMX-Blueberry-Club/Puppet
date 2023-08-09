@@ -29,12 +29,7 @@ export interface IAccountClaim extends IAccountPreview {
 }
 
 
-export const $AccountLabel = (address: string, fontSize = '1em') => {
-  return $column(style({ fontSize }))(
-    $text(style({ fontSize: '.85rem' }))(address.slice(0, 6)),
-    $text(style({ fontSize: '1em' }))(address.slice(address.length - 4, address.length))
-  )
-}
+
 
 export const $ProfileLabel = (ens: IEnsRegistration) => {
   const hasTwitter = ens.domain.resolver?.texts?.find(t => t === 'com.twitter')
@@ -110,21 +105,27 @@ export const $profilePreview = ({
 }
 
 
-export const $disconnectedWalletDisplay = ($container = $row) => {
-  const sizePx = '38px'
-  const $wrapper = $node(style({ width: sizePx, height: sizePx, minWidth: sizePx, minHeight: sizePx, borderRadius: '50%' }))
+export const $disconnectedWalletDisplay = ($container = $row, size = 50) => {
+  const $wrapper = $node(style({ width: `${size}px`, aspectRatio: '1 / 1', borderRadius: '50%' }))
 
   return $container(layoutSheet.spacingSmall, style({ alignItems: 'center', textDecoration: 'none' }))(
     $wrapper(style({ display: 'flex', border: `1px solid ${pallete.foreground}`, placeContent: 'center', alignItems: 'center' }))(
       $text(style({ fontWeight: 800, color: pallete.foreground }))('?')
     ),
-    $column(style({ whiteSpace: 'nowrap', fontSize: '16px' }))(
-      $text(style({ fontSize: '.85rem' }))('0x----'),
-      $text(style({ fontSize: '1em' }))('----')
+    $column(style({ whiteSpace: 'nowrap', fontSize: '.85rem', alignItems: 'center' }))(
+      $text(style({  }))('0x----'),
+      $text(style({ fontSize: '1.55em', lineHeight: 1 }))('----')
     )
   )
 }
 
+
+export const $AccountLabel = (address: string, fontSize = '1em') => {
+  return $column(style({ fontSize: '.75rem', alignItems: 'center' }))(
+    $text(style({  }))(address.slice(0, 6)),
+    $text(style({ fontSize: '1.15rem' }))(address.slice(address.length - 4, address.length))
+  )
+}
 
 
 

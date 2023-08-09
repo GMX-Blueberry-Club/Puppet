@@ -10,7 +10,7 @@ export interface IJazzicon {
   $container?: NodeComposeFn<$Node>
 }
 
-export const $defaultProfileContainer = $row(style({ minWidth: '40px', aspectRatio: '1 / 1' }))
+export const $defaultProfileContainer = $row(style({ minWidth: '50px', aspectRatio: '1 / 1' }))
 
 export function $jazzicon({
   address,

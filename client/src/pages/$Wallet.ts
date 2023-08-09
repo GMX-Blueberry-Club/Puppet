@@ -16,7 +16,7 @@ import { connectContract } from "../logic/common"
 import { ARBITRUM_ADDRESS } from "gmx-middleware-const"
 import { IPositionMirrorSettled, IPositionMirrorSlot, IPuppetRouteTrades } from "puppet-middleware-utils"
 import { Stream } from "@most/types"
-import { IGmxProcessSeed } from "../data/process/process"
+import { IGmxProcessState } from "../data/process/process"
 
 export enum IProfileActiveTab {
   BERRIES = 'Trader',
@@ -26,7 +26,7 @@ export enum IProfileActiveTab {
 export interface IProfile {
   wallet: IWalletClient
   route: router.Route
-  processData: Stream<IGmxProcessSeed>
+  processData: Stream<IGmxProcessState>
 }
 
 const $title = $text(style({ fontWeight: 'bold', fontSize: '1.35em' }))

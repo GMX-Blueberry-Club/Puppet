@@ -1,13 +1,15 @@
-import { Behavior, combineArray } from "@aelea/core"
-import { $element, $text, component, style, stylePseudo } from "@aelea/dom"
-import { $column, $icon, $row, layoutSheet } from "@aelea/ui-components"
+import { Behavior, O, combineArray } from "@aelea/core"
+import { $Branch, $element, $text, INode, attrBehavior, component, nodeEvent, style, styleBehavior, stylePseudo } from "@aelea/dom"
+import { $column, $icon, $row, Control, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { $alertIcon, $Tooltip } from "gmx-middleware-ui-components"
-import { awaitPromises, constant, map, mergeArray, multicast, never, now, recoverWith, skipRepeats, switchLatest } from "@most/core"
+import { awaitPromises, constant, empty, map, mergeArray, multicast, never, now, recoverWith, skipRepeats, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { $ButtonCore, $defaultButtonCore, IButtonCore } from "./$ButtonCore"
 import * as viem from "viem"
 import { invertColor } from "gmx-middleware-utils"
+import { $iconCircular } from "../../elements/$common"
+import { $IntermediateConnectButton, $SwitchNetworkDropdown } from "../$ConnectAccount"
 
 
 
@@ -93,21 +95,59 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
   ]))
 
   return [
-    $ButtonCore({
-      $container: config.$container || $defaultButtonPrimary(
-        style({ alignItems: 'center' }),
-        stylePseudo(':hover', { backgroundColor: pallete.middleground })
-      ),
-      disabled: mergeArray([
-        combineArray((isDisabled, isCtxPending) => {
-          return isDisabled || isCtxPending
-        }, config.disabled || now(false), duringRequest)
-      ]),
-      $content: config.$content
-    })({
-      click: clickTether()
-    }),
+    $column(
+      $ButtonCore({
+        $container: config.$container || $defaultButtonPrimary(
+          style({ alignItems: 'center' }),
+          stylePseudo(':hover', { backgroundColor: pallete.middleground })
+        ),
+        disabled: mergeArray([
+          combineArray((isDisabled, isCtxPending) => {
+            return isDisabled || isCtxPending
+          }, config.disabled || now(false), duringRequest)
+        ]),
+        $content: config.$content
+      })({
+        click: clickTether()
+      }),
+    ),
 
+
+    {
+      click
+    }
+  ]
+})
+
+
+interface IButtonCircular extends Control {
+  $iconPath: $Branch<SVGPathElement>
+}
+
+export const $ButtonCircular = ({ $iconPath, disabled = empty() }: IButtonCircular) => component((
+  [click, clickTether]: Behavior<INode, PointerEvent>
+) => {
+
+
+  const ops = O(
+    clickTether(
+      nodeEvent('pointerup')
+    ),
+    styleBehavior(
+      map(isDisabled => isDisabled ? { opacity: .4, pointerEvents: 'none' } : null, disabled)
+    ),
+    attrBehavior(
+      map(d => {
+        return { disabled: d ? 'true' : null }
+      }, disabled)
+    ),
+  )
+
+
+  return [
+    ops(
+      $iconCircular($iconPath)
+    ),
 
     {
       click

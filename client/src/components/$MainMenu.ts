@@ -270,7 +270,7 @@ export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: 
   ]
 
   const $circleButtonAnchor = $anchor(
-    style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, display: 'flex', borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' })
+    style({ padding: '0 4px', border: `2px solid ${colorAlpha(pallete.foreground, .25)}`, display: 'flex', borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' })
   )
 
   const $extraMenuPopover = $Popover({
@@ -356,7 +356,7 @@ export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: 
 
   return [
 
-    $row(layoutSheet.spacingBig, style({ padding: '14px', paddingLeft: '0', flexShrink: 0, alignItems: 'flex-end', borderRadius: '30px', placeContent: 'space-between' }))(
+    $row(layoutSheet.spacingBig, style({ padding: '14px', flexShrink: 0, alignItems: 'flex-end', borderRadius: '30px', placeContent: 'space-between' }))(
       $row(layoutSheet.spacingBig, style({ alignItems: 'center', flex: 1 }))(
         $RouterAnchor({ url: '/', route: parentRoute, $anchor: $element('a')($icon({ $content: $puppetLogo, width: '45px', viewBox: '0 0 32 32' })) })({
           click: routeChangeTether()
@@ -366,7 +366,7 @@ export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: 
       $row(layoutSheet.spacing, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
 
         $WalletProfileDisplay({
-          $container: $row(style({ minWidth: '140px', minHeight: '38px' })),
+          $container: $row(style({ minHeight: '38px' })),
           parentRoute
         })({
           routeChange: routeChangeTether(),

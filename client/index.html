@@ -12,7 +12,15 @@
 
     <style>
         :root {
-            --font-familiy: 'VAG Rounded', -apple-system, BlinkMacSystemFont, Trebuchet MS, Roboto, Ubuntu, sans-serif;
+            --font-monospace: -apple-system, BlinkMacSystemFont, Trebuchet MS, Roboto, Ubuntu, sans-serif;
+            --font: 'VAG Rounded', -apple-system, BlinkMacSystemFont, Trebuchet MS, Roboto, Ubuntu, sans-serif;
+
+            --d: 2500ms;
+            --angle: 90deg;
+            --gradX: 100%;
+            --gradY: 50%;
+            --c1: rgba(168, 239, 255, 1);
+            --c2: rgba(168, 239, 255, 0.1);
         }
 
         * {
@@ -37,7 +45,7 @@
         html,
         button,
         input {
-            font-family: var(--font-familiy);
+            font-family: var(--font);
             text-rendering: geometricPrecision;
             font-size: 100%;
             font-feature-settings: "tnum" on, "lnum" on;
@@ -57,6 +65,59 @@
             font-weight: 900;
             font-style: bold;
             font-display: swap;
+        }
+
+        @property --angle {
+            syntax: '<angle>';
+            initial-value: 90deg;
+            inherits: true;
+        }
+
+        @property --gradX {
+            syntax: '<percentage>';
+            initial-value: 50%;
+            inherits: true;
+        }
+
+        @property --gradY {
+            syntax: '<percentage>';
+            initial-value: 0%;
+            inherits: true;
+        }
+
+
+
+        @keyframes borderRotate {
+            100% {
+                --angle: 420deg;
+            }
+        }
+
+        @keyframes borderRadial {
+            20% {
+                --gradX: 100%;
+                --gradY: 50%;
+            }
+
+            40% {
+                --gradX: 100%;
+                --gradY: 100%;
+            }
+
+            60% {
+                --gradX: 50%;
+                --gradY: 100%;
+            }
+
+            80% {
+                --gradX: 0%;
+                --gradY: 50%;
+            }
+
+            100% {
+                --gradX: 50%;
+                --gradY: 0%;
+            }
         }
     </style>
 

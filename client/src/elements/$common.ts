@@ -106,14 +106,14 @@ ${config.location ? '&location=' + config.location : ''}
 
 
 
-export const $iconCircular = ($iconPath: $Branch<SVGPathElement>, backgroundColor = pallete.horizon) => {
+export const $iconCircular = ($iconPath: $Branch<SVGPathElement>, size = '30px') => {
   return $icon({
     $content: $iconPath,
     svgOps: style({
-      backgroundColor: backgroundColor, zIndex: 10, borderRadius: '50%', cursor: 'pointer',
-      height: '22px', width: '22px', fontSize: '11px', textAlign: 'center', lineHeight: '15px', fontWeight: 'bold', color: pallete.message,
+      zIndex: 10, borderRadius: '50%', cursor: 'pointer', border: `1px solid ${colorAlpha(pallete.foreground, .25)}`,
+      width: size, aspectRatio: '1 / 1', height: 'auto', fontSize: '11px', textAlign: 'center', lineHeight: '15px', fontWeight: 'bold', color: pallete.message,
     }),
-    width: '18px', viewBox: '0 0 32 32'
+    viewBox: '0 0 32 32'
   })
 }
 

@@ -16,7 +16,7 @@ import { $discoverIdentityDisplay } from "../../components/$AccountProfile"
 import { $defaultBerry } from "../../components/$DisplayBerry"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../../components/form/$Button"
 import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceCard"
-import { IGmxProcessSeed } from "../../data/process/process"
+import { IGmxProcessState } from "../../data/process/process"
 import { wallet } from "../../wallet/walletLink"
 import { traderColumn } from "../../components/table/$TableColumn"
 
@@ -25,7 +25,7 @@ import { traderColumn } from "../../components/table/$TableColumn"
 
 export type ITopSettled = {
   route: router.Route
-  processData: Stream<IGmxProcessSeed>
+  processData: Stream<IGmxProcessState>
 
   subscription: Stream<IPuppetRouteTrades[]>
   subscribeList: Stream<IPuppetRouteSubscritpion[]>
@@ -54,6 +54,8 @@ export const $TopSettled = (config: ITopSettled) => component((
 
   const datass = switchMap(params => {
     return map(data => {
+      console.log(data)
+
       const summaryList = leaderboardMirrorTrader(data.mirrorPositionSettled)
 
       return pagingQuery({ ...params.sortBy, offset: params.pageIndex * 20, pageSize: 20 }, summaryList)
@@ -139,7 +141,24 @@ export const $TopSettled = (config: ITopSettled) => component((
         dataSource: datass,
         sortBy,
         columns: [
-          traderColumn(routeChangeTether(), config.route),
+          traderColumn(routeChangeTether(), config.route),         
+          
+          ...screenUtils.isDesktopScreen
+            ? [
+              {
+                $head: $text('Win / Loss'),
+                // gridTemplate: 'minmax(110px, 120px)',
+                columnOp: style({ alignItems: 'center', placeContent: 'center' }),
+                $$body: map((pos: IMirrorTraderSummary) => {
+                  return $row(
+                    $text(`${pos.winCount} / ${pos.lossCount}`)
+                  )
+                })
+              },
+            ]
+            : [
+
+            ],
           ...screenUtils.isDesktopScreen
             ? [
               {
@@ -178,7 +197,6 @@ export const $TopSettled = (config: ITopSettled) => component((
             : [
 
             ],
-          
           {
             $head: $column(style({ textAlign: 'right' }))(
               $text('Size'),
@@ -190,22 +208,6 @@ export const $TopSettled = (config: ITopSettled) => component((
               return $size(pos.size, pos.collateral)
             })
           },
-          ...screenUtils.isDesktopScreen
-            ? [
-              {
-                $head: $text('Win / Loss'),
-                // gridTemplate: 'minmax(110px, 120px)',
-                columnOp: style({ alignItems: 'center', placeContent: 'center' }),
-                $$body: map((pos: IMirrorTraderSummary) => {
-                  return $row(
-                    $text(`${pos.winCount} / ${pos.lossCount}`)
-                  )
-                })
-              },
-            ]
-            : [
-
-            ],
           {
             $head: $column(style({ textAlign: 'right' }))(
               $text('PnL $'),

@@ -93,20 +93,24 @@ export const $SwitchNetworkDropdown = (showLabel = false) => component((
   return [
     switchLatest(snapshot((_, network) => {
 
-      if (network === null) {
-        return $alertContainer(changeNetworkTether(
-          nodeEvent('click'),
-          tap(async () => {
-            await web3Modal.openModal({ route: 'SelectNetwork' })
+      if (network === null || network.unsupported) {
+        const $customAlert = $alertContainer(
+          changeNetworkTether(
+            nodeEvent('click'),
+            tap(async () => {
+              await web3Modal.openModal({ route: 'SelectNetwork' })
 
-            return CHAIN.BSC
-          }),
-        ), style({ cursor: 'pointer' }))(
+              return CHAIN.BSC
+            })
+          ),
+          style({ cursor: 'pointer', padding: '8px' })
+        )
+        return $customAlert(
           $icon({
-            $content: $alertIcon, viewBox: '0 0 24 24', width: '36px',
+            $content: $alertIcon, viewBox: '0 0 24 24', width: '32px',
             svgOps: style({ fill: pallete.negative, placeSelf: 'center', padding: '3px', filter: 'drop-shadow(black 0px 0px 10px) drop-shadow(black 0px 0px 10px) drop-shadow(black 0px 0px 1px)' })
           }),
-          showLabel ? $text(`${getNetwork().chain?.name} is not supported`) : empty()
+          showLabel ? $text(`Switch to supported chain`) : empty()
         )
       }
 
@@ -123,7 +127,7 @@ export const $SwitchNetworkDropdown = (showLabel = false) => component((
           }),
         )
       )(
-        $element('img')(attr({ src: `/chain/${network.id}.svg` }), style({ width: '28px', placeSelf: 'center' }))(),
+        $element('img')(attr({ src: `/chain/${network.id}.svg` }), style({ width: '32px', marginBottom: '8px', aspectRatio: '1 / 1', placeSelf: 'center' }))(),
       )
 
       // return style({ zoom: 1.1 })($alertTooltip($text('www')))

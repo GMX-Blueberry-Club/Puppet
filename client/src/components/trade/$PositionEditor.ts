@@ -37,7 +37,7 @@ import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { $Slider } from "../$Slider.js"
 import { $heading2 } from "../../common/$text"
-import { IGmxProcessSeed } from "../../data/process/process.js"
+import { IGmxProcessState } from "../../data/process/process.js"
 import { $caretDown } from "../../elements/$icons.js"
 import { connectContract } from "../../logic/common.js"
 import * as trade from "../../logic/trade.js"
@@ -112,7 +112,7 @@ export interface IPositionEditorAbstractParams {
   tokenStableMap: Partial<Record<number, viem.Address[]>>
   parentRoute: Route
   chain: typeof arbitrum
-  processData: Stream<IGmxProcessSeed>
+  processData: Stream<IGmxProcessState>
 }
 
 interface IPositionEditorConfig extends IPositionEditorAbstractParams {
@@ -373,7 +373,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
             //   })),
             // ),
             $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-              $infoLabel(`Wallet`),
+              $infoLabel(`Balance`),
               $text(
                 map(params => {
                   const newLocal = formatFixed(params.walletBalance, params.inputTokenDescription.decimals)
@@ -834,15 +834,15 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
                   $infoTooltipLabel(
                     `${tokenDesc.symbol} will be deposited & borrowed to maintain a Long Position`,
-                    screenUtils.isDesktopScreen ? 'Indexed' : undefined
+                    screenUtils.isDesktopScreen ? 'Collateral In' : undefined
                   ),
                 )
               }
 
               return $row(layoutSheet.spacingSmall)(
                 $infoTooltipLabel(
-                  $text(map(token => `${getTokenDescription(token).symbol} will be borrowed to maintain a Short Position. you can switch with other USD tokens to receive it later`, config.tradeConfig.collateralToken)),
-                  screenUtils.isDesktopScreen ? 'Indexed' : undefined,
+                  $text(map(token => `${getTokenDescription(token).symbol} will be borrowed to maintain a Short Position`, config.tradeConfig.collateralToken)),
+                  screenUtils.isDesktopScreen ? 'Collateral In' : undefined,
                 ),
                 switchLatest(map(params => {
 

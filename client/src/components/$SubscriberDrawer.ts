@@ -2,20 +2,21 @@ import { Behavior } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { map, multicast, snapshot } from "@most/core"
+import { empty, map, multicast, snapshot } from "@most/core"
 import { Stream } from "@most/types"
 import { formatBps, groupArrayMany, readableFixedBsp, switchMap } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { $card2 } from "../elements/$common"
+import { $card2, $iconCircular } from "../elements/$common"
 import { wagmiWriteContract } from "../logic/common"
 import { $seperator2 } from "../pages/common"
 import { fadeIn } from "../transitions/enter"
 import { $discoverIdentityDisplay } from "./$AccountProfile"
 import { $IntermediateConnectButton } from "./$ConnectAccount"
 import { $RouteDepositInfo } from "./$common"
-import { $ButtonPrimaryCtx } from "./form/$Button"
+import { $ButtonCircular, $ButtonPrimaryCtx } from "./form/$Button"
+import { $xCross } from "gmx-middleware-ui-components"
 
 interface ISubscribeDrawer {
   subscribeList: Stream<IPuppetRouteSubscritpion[]>
@@ -30,17 +31,21 @@ export const $SubscriberDrawer = (config: ISubscribeDrawer) => component((
 
   [openDepositPopover, openDepositPopoverTether]: Behavior<any>,
   [clickMaxDeposit, clickMaxDepositTether]: Behavior<any>,
+  [clickClose, clickCloseTether]: Behavior<any>,
 
 ) => {
 
 
-  const lstate = snapshot((list, add) => {
-    return [...list, add]
-  }, config.subscribeList, config.subscribeTrader)
+
 
 
   return [
     switchMap(list => {
+      if (list.length === 0) {
+        return empty()
+      }
+
+      
       const routeMap = Object.entries(groupArrayMany(list, x => x.routeTypeKey)) as [viem.Hex, IPuppetRouteSubscritpion[]][]
         
       return fadeIn(
@@ -49,8 +54,14 @@ export const $SubscriberDrawer = (config: ISubscribeDrawer) => component((
             $$display: map(w3p => {
               
               return $column(layoutSheet.spacing)(
-                $row(layoutSheet.spacingSmall)(
+                $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between' }))(
                   $text(style({ fontWeight: 'bold', fontSize: '1.45rem', }))('Modify Subscriptions'),
+
+                  $ButtonCircular({
+                    $iconPath: $xCross,
+                  })({
+                    click: clickCloseTether()
+                  })
                 ),
 
                 ...routeMap.map(([routeKey, traders]) => {
@@ -82,7 +93,7 @@ export const $SubscriberDrawer = (config: ISubscribeDrawer) => component((
                     )
                   )
                 }),
-                // $seperator2,
+
                 $ButtonPrimaryCtx({
                   $content: $text('Subscribe'),
                   request: requestChangeSubscription
@@ -109,10 +120,11 @@ export const $SubscriberDrawer = (config: ISubscribeDrawer) => component((
           })({})
         )
       )
-    }, lstate),
+    }, config.subscribeList),
 
     {
-      changeSubscribeList
+      changeSubscribeList,
+      clickClose
     }
   ]
 })

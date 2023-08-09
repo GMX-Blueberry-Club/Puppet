@@ -2,25 +2,14 @@ import { Behavior, O, combineArray, combineObject, replayLatest } from "@aelea/c
 import { $node, $text, component, style, styleBehavior } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import {
-  IPositionDecrease, IPositionIncrease,
-  IPositionSlot,
-  abs,
-  div,
-  filterNull,
-  formatFixed,
+  IPositionDecrease, IPositionIncrease, IPositionSlot, abs, filterNull, formatFixed,
   getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getIntervalIdentifier, getLiquidationPrice, getMappedValue,
   getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getPnL, getPositionKey,
-  getTokenAmount, getTokenDescription,
-  readableDate,
-  readableFixedBsp,
-  readableFixedUSD30,
-  readableUnitAmount,
-  safeDiv,
-  switchMap, timeSince, unixTimestampNow
+  getTokenAmount, getTokenDescription, readableDate, readableFixedBsp, readableFixedUSD30, readableUnitAmount, safeDiv, switchMap, timeSince, unixTimestampNow
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, combine, constant, debounce, empty, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, zip } from "@most/core"
+import { awaitPromises, combine, debounce, empty, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
@@ -176,8 +165,8 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const route = replayLatest(multicast(switchMap(params => {
     const w3p = params.wallet
-    if (!w3p) {
-      throw new Error('wallet is required')
+    if (w3p === null) {
+      return now(GMX.ADDRESS_ZERO)
     }
 
     const key = getRouteKey(w3p.account.address, params.collateralToken, params.indexToken, params.isLong)
@@ -564,7 +553,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   return [
-    $column(screenUtils.isDesktopScreen ? style({  flex: 1, marginLeft: '-26px' }) : style({}))(
+    $column(screenUtils.isDesktopScreen ? style({  flex: 1 }) : style({  }))(
 
       $column(
         screenUtils.isDesktopScreen
@@ -581,7 +570,6 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
         $tradeMidContainer(
-          layoutSheet.spacing,
           screenUtils.isDesktopScreen
             ? style({ pointerEvents: 'none', flexDirection: 'row', marginTop: '12px', zIndex: 20, placeContent: 'space-between', alignItems: 'flex-start' })
             : style({ pointerEvents: 'none', flex: 0, flexDirection: 'row', zIndex: 20, margin: '8px', alignItems: 'flex-start' })
@@ -841,6 +829,7 @@ export const $Trade = (config: ITradeComponent) => component((
             background: `linear-gradient(to right, ${pallete.background} 0%, ${colorAlpha(pallete.background, .9)} 32%, transparent 45%)`,
             position: 'absolute',
             inset: 0,
+            margin: `0px -100px`,
             zIndex: 10,
             pointerEvents: 'none',
           }))()

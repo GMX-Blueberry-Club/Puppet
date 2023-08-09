@@ -24,7 +24,7 @@ import {
 import { BaselineData, ChartOptions, DeepPartial, LineType, MouseEventParams } from "lightweight-charts"
 import { IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion, getParticiapntMpShare } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { IGmxProcessSeed, PRICEFEED_INTERVAL } from "../../data/process/process"
+import { IGmxProcessState, PRICEFEED_INTERVAL } from "../../data/process/process"
 
 
 interface IParticipantPerformanceCard {
@@ -32,7 +32,7 @@ interface IParticipantPerformanceCard {
   chartConfig?: DeepPartial<ChartOptions>
   pixelsPerBar?: number
   positionList: Stream<(IPositionMirrorSettled | IPositionMirrorSlot)[]>
-  processData: Stream<IGmxProcessSeed>
+  processData: Stream<IGmxProcessState>
   targetShare?: viem.Address
 }
 
@@ -65,7 +65,7 @@ function getTime(tickItem: (IPositionClose | IPositionLiquidated | IPositionUpda
 
 function performanceTimeline(
   positionList: (IPositionMirrorSettled | IPositionMirrorSlot)[],
-  processData: IGmxProcessSeed,
+  processData: IGmxProcessState,
   tickCount: number,
   shareTarget?: viem.Address,
 ) {
@@ -281,7 +281,7 @@ export const $ProfilePerformanceCard = (config: IParticipantPerformanceCard) => 
 
 export const $ProfilePerformanceGraph = (config: {
   positionList: (IPositionMirrorSettled | IPositionMirrorSlot)[],
-  processData: IGmxProcessSeed,
+  processData: IGmxProcessState,
   width: number,
   targetShare?: viem.Address
 }) => component((

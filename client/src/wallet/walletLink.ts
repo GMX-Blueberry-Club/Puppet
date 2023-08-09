@@ -1,6 +1,6 @@
 import { combineObject, fromCallback } from "@aelea/core"
 import { pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, map, mergeArray, now } from "@most/core"
+import { awaitPromises, debounce, map, mergeArray, now, skip } from "@most/core"
 import { Stream } from "@most/types"
 import {
   Address, GetAccountResult, GetNetworkResult,
@@ -14,7 +14,10 @@ import { switchMap } from "gmx-middleware-utils"
 import { PublicClient, Transport } from "viem"
 import { arbitrum, avalanche } from "viem/chains"
 
-const chains = [arbitrum, avalanche]
+const chains = [
+  arbitrum,
+  // avalanche
+]
 
 export type ISupportedChain = (typeof arbitrum) & { unsupported?: boolean }
 export type ISupportedId = ISupportedChain['id']
@@ -33,7 +36,7 @@ const projectId = 'fdc797f2e6a68e01b9e17843c939673e'
 
 
 const configChain = configureChains(
-  [arbitrum, avalanche],
+  chains,
   [
     // alchemyProvider({ apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low' }),
     // infuraProvider({ apiKey: '6d7e461ad6644743b92327579860b662' }),
@@ -66,7 +69,13 @@ const configChain = configureChains(
 
 export const wcConnector = new WalletConnectConnector({
   chains,
-  options: { projectId, showQrModal: false }
+  options: {
+    projectId,
+    showQrModal: false,
+    qrModalOptions: {
+
+    }
+  }
 })
 
 
@@ -89,15 +98,14 @@ export const accountChange = fromCallback<GetAccountResult>(watchAccount)
 
 const networkQuery = map(() => getNetwork(), now(null))
 export const chain: Stream<ISupportedChain> = map(getNetworkResult => {
-  if (!getNetworkResult) {
-    throw new Error('network is null')
+  if (!getNetworkResult.chain) {
+    return arbitrum
   }
 
-  const defChain = chains.find(chain => chain.id == getNetworkResult.chain?.id) || arbitrum
+  const defChain = chains.find(chain => chain.id == getNetworkResult.chain?.id) || null
 
   return defChain
-  // return mergeArray([networkChange, now(defChain)])
-}, networkQuery)
+}, mergeArray([skip(1, networkChange), networkQuery]))
 
 export const account = mergeArray([
   map(() => getAccount(), now(null)),
@@ -105,18 +113,17 @@ export const account = mergeArray([
 ])
 
 export const publicClient: Stream<PublicClient<Transport, ISupportedChain>> = map(params => {
-  if (params.chain == null) {
-    throw new Error('network is null')
-  }
-
-  const chainId = params.chain.id
-  const wsc = getWebSocketPublicClient({ chainId }) || getWebSocketPublicClient({ chainId: arbitrum.id })
-  const clientAvaialble = wsc || getPublicClient({ chainId }) || getPublicClient({ chainId: arbitrum.id })
+  const chainId = params.chain?.id || arbitrum.id
+  const wsc = getWebSocketPublicClient({ chainId }) || getWebSocketPublicClient({ chainId })
+  const clientAvaialble = wsc || getPublicClient({ chainId }) || getPublicClient({ chainId })
 
   return clientAvaialble
 }, combineObject({ chain }))
 
 export const wallet = awaitPromises(map(async params => {
+  if (params.chain == null) {
+    return null
+  }
 
   const clientAvaialble = await getWalletClient({ chainId: params.chain.id })
 
@@ -124,9 +131,7 @@ export const wallet = awaitPromises(map(async params => {
 }, combineObject({ chain, account })))
 
 export const nativeBalance = awaitPromises(map(params => {
-  if (params.wallet === null) {
-    return 0n
-  }
+  if (params.wallet === null) return 0n
 
   return params.publicClient.getBalance({ address: params.wallet.account.address })
 }, combineObject({ publicClient, wallet })))

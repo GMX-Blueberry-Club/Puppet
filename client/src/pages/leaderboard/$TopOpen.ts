@@ -9,7 +9,7 @@ import { pagingQuery, switchMap } from "gmx-middleware-utils"
 import { IProfileActiveTab } from "../$Profile"
 import { $tradePnl, $openPositionPnlBreakdown, $size } from "../../common/$common"
 import { $accountPreview, $discoverIdentityDisplay } from "../../components/$AccountProfile"
-import { IGmxProcessSeed, latestTokenPrice } from "../../data/process/process"
+import { IGmxProcessState, latestTokenPrice } from "../../data/process/process"
 import { IPositionMirrorSlot } from "puppet-middleware-utils"
 import { $defaultBerry } from "../../components/$DisplayBerry"
 
@@ -20,7 +20,7 @@ import { $defaultBerry } from "../../components/$DisplayBerry"
 export type ITopOpen = {
   route: router.Route
 
-  processData: Stream<IGmxProcessSeed>
+  processData: Stream<IGmxProcessState>
 }
 
 export const $TopOpen = (config: ITopOpen) => component((

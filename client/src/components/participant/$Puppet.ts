@@ -12,7 +12,7 @@ import * as viem from 'viem'
 import { $discoverAvatar, $discoverIdentityDisplay } from "../$AccountProfile"
 import { $defaultBerry } from "../$DisplayBerry"
 import { $pnlValue, $route, $tokenIcon, $traderDisplay } from "../../common/$common"
-import { IGmxProcessSeed } from "../../data/process/process"
+import { IGmxProcessState } from "../../data/process/process"
 import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
 import { entryColumn, pnlSlotColumn, settledPnlColumn, settledSizeColumn, positionTimeColumn, slotSizeColumn, positionTimeColumn } from "../table/$TableColumn"
@@ -26,7 +26,7 @@ import { $RouteDepositInfo } from "../$common"
 export interface ITraderProfile {
   route: router.Route
   address: viem.Address
-  processData: Stream<IGmxProcessSeed>
+  processData: Stream<IGmxProcessState>
 }
 
 

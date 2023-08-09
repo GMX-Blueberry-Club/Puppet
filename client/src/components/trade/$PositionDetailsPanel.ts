@@ -50,6 +50,7 @@ import { resolveAddress } from "../../logic/utils.js"
 import { IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { IPositionEditorAbstractParams, ITradeParams } from "./$PositionEditor"
+import { $heading2 } from "../../common/$text"
 
 
 export enum ITradeFocusMode {
@@ -494,7 +495,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
                 $popContent: map(() => {
 
                   return $column(layoutSheet.spacing, style({ maxWidth: '400px' }))(
-                    $text(style({ fontWeight: 'bold', fontSize: '1em' }))(`By using Puppet, I agree to the following Disclaimer`),
+                    $heading2(`By using Puppet, I agree to the following Disclaimer`),
                     $text(style({}))(`By accessing, I agree that ${document.location.href} is an interface that interacts with external GMX smart contracts, and does not have access to my funds.`),
 
                     $alert(

@@ -11,7 +11,7 @@ import {
 } from "gmx-middleware-utils"
 import { Address } from "viem"
 import { gmxData } from "../data/process"
-import { IGmxProcessSeed } from "../data/process/process"
+import { IGmxProcessState } from "../data/process/process"
 import { connectTrade } from "../logic/trade"
 import * as viem from 'viem'
 import { $TraderProfile } from "../components/participant/$Trader"
@@ -25,7 +25,7 @@ export enum IProfileActiveTab {
 
 export interface IProfile {
   route: router.Route
-  processData: Stream<IGmxProcessSeed>
+  processData: Stream<IGmxProcessState>
 }
 
 const $title = $text(style({ fontWeight: 'bold', fontSize: '1.35em' }))

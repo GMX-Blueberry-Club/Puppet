@@ -11,7 +11,7 @@ import { ITraderSubscritpion, summariesMirrorTrader } from "puppet-middleware-ut
 import * as viem from 'viem'
 import { $discoverAvatar, $discoverIdentityDisplay } from "../$AccountProfile"
 import { $defaultBerry } from "../$DisplayBerry"
-import { IGmxProcessSeed } from "../../data/process/process"
+import { IGmxProcessState } from "../../data/process/process"
 import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
 import { entryColumn, settledPnlColumn, puppetsColumn, positionTimeColumn, slotSizeColumn, pnlSlotColumn, positionTimeColumn, settledSizeColumn } from "../table/$TableColumn"
@@ -23,7 +23,7 @@ import { $heading1, $heading2, $heading3 } from "../../common/$text"
 export interface ITraderProfile {
   route: router.Route
   address: viem.Address
-  processData: Stream<IGmxProcessSeed>
+  processData: Stream<IGmxProcessState>
 }
 
 

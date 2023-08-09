@@ -18,14 +18,14 @@ import {
   unixTimestampNow
 } from "gmx-middleware-utils"
 import { ChartOptions, DeepPartial, MouseEventParams, Time } from "lightweight-charts"
-import { IGmxProcessSeed } from "../../data/process/process"
+import { IGmxProcessState } from "../../data/process/process"
 
 interface ITradePnlPreview {
   $container: NodeComposeFn<$Node>
   updateList: (IPositionUpdate | IPositionClose | IPositionLiquidated)[]
   chartConfig?: DeepPartial<ChartOptions>
   pixelsPerBar?: number
-  processData: Stream<IGmxProcessSeed>
+  processData: Stream<IGmxProcessState>
   chain: CHAIN
 }
 

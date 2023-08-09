@@ -8,7 +8,7 @@ import { readableDate, timeSince } from "gmx-middleware-utils"
 import { IMirrorTraderSummary, IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $entry, $openPositionPnlBreakdown, $pnlValue, $puppets, $size, $sizeAndLiquidation, $tradePnl } from "../../common/$common"
-import { IGmxProcessSeed, latestTokenPrice } from "../../data/process/process"
+import { IGmxProcessState, latestTokenPrice } from "../../data/process/process"
 import { $txnIconLink } from "../../elements/$common"
 import { $discoverIdentityDisplay } from "../$AccountProfile"
 import { $defaultBerry } from "../$DisplayBerry"
@@ -16,7 +16,7 @@ import { IProfileActiveTab } from "../../pages/$Profile"
 import * as router from '@aelea/router'
 
 
-export const slotSizeColumn = (processData: Stream<IGmxProcessSeed>, shareTarget?: viem.Address): TableColumn<IPositionMirrorSettled | IPositionMirrorSlot> => ({
+export const slotSizeColumn = (processData: Stream<IGmxProcessState>, shareTarget?: viem.Address): TableColumn<IPositionMirrorSettled | IPositionMirrorSlot> => ({
   $head: $column(style({ textAlign: 'right' }))(
     $text('Size'),
     $text(style({ fontSize: '.85rem' }))('Leverage'),
@@ -31,7 +31,7 @@ export const slotSizeColumn = (processData: Stream<IGmxProcessSeed>, shareTarget
   })
 })
 
-export const settledSizeColumn = (processData: Stream<IGmxProcessSeed>, puppet?: viem.Address): TableColumn<IPositionMirrorSettled> => ({
+export const settledSizeColumn = (processData: Stream<IGmxProcessState>, puppet?: viem.Address): TableColumn<IPositionMirrorSettled> => ({
   $head: $column(style({ textAlign: 'right' }))(
     $text('Size'),
     $text(style({ fontSize: '.85rem' }))('Leverage'),
@@ -65,7 +65,7 @@ export const puppetsColumn: TableColumn<IPositionMirrorSettled | IPositionMirror
   })
 }
 
-export const pnlSlotColumn = (processData: Stream<IGmxProcessSeed>, puppet?: viem.Address): TableColumn<IPositionMirrorSlot> => ({
+export const pnlSlotColumn = (processData: Stream<IGmxProcessState>, puppet?: viem.Address): TableColumn<IPositionMirrorSlot> => ({
   $head: $text('PnL'),
   columnOp: style({ placeContent: 'flex-end' }),
   $$body: map((pos) => {
