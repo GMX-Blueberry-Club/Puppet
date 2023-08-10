@@ -17,6 +17,7 @@ import { $IntermediateConnectButton } from "./$ConnectAccount"
 import { $RouteDepositInfo } from "./$common"
 import { $ButtonCircular, $ButtonPrimaryCtx } from "./form/$Button"
 import { $xCross } from "gmx-middleware-ui-components"
+import { $heading2, $heading3 } from "../common/$text"
 
 interface ISubscribeDrawer {
   subscribeList: Stream<IPuppetRouteSubscritpion[]>
@@ -49,13 +50,13 @@ export const $SubscriberDrawer = (config: ISubscribeDrawer) => component((
       const routeMap = Object.entries(groupArrayMany(list, x => x.routeTypeKey)) as [viem.Hex, IPuppetRouteSubscritpion[]][]
         
       return fadeIn(
-        $card2(style({ position: 'absolute', maxWidth: '1024px', margin: '0 auto', zIndex: 21, inset: 'auto 0 0 0', bottom: '0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderBottom: 'none', padding: '26px', borderRadius: '20px 20px 0 0' }))(
+        $card2(style({ position: 'absolute', maxWidth: '624px', margin: '0 auto', zIndex: 21, inset: 'auto 0 0 0', bottom: '0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderBottom: 'none', padding: '18px', borderRadius: '20px 20px 0 0' }))(
           $IntermediateConnectButton({
             $$display: map(w3p => {
               
               return $column(layoutSheet.spacing)(
-                $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between' }))(
-                  $text(style({ fontWeight: 'bold', fontSize: '1.45rem', }))('Modify Subscriptions'),
+                $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between', alignItems: 'center' }))(
+                  $heading3('Modify Subscriptions'),
 
                   $ButtonCircular({
                     $iconPath: $xCross,
