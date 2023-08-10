@@ -3,20 +3,20 @@ import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map } from "@most/core"
+import { map } from "@most/core"
 import { Stream } from "@most/types"
 import { $Table } from "gmx-middleware-ui-components"
-import { IRequestAccountTradeListApi, leverageLabel, switchMap } from "gmx-middleware-utils"
-import { ITraderSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
+import { leverageLabel, switchMap } from "gmx-middleware-utils"
+import { IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $discoverAvatar, $discoverIdentityDisplay } from "../$AccountProfile"
 import { $defaultBerry } from "../$DisplayBerry"
+import { $heading2, $heading3 } from "../../common/$text"
 import { IGmxProcessState } from "../../data/process/process"
 import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
-import { entryColumn, settledPnlColumn, puppetsColumn, positionTimeColumn, slotSizeColumn, pnlSlotColumn, positionTimeColumn, settledSizeColumn } from "../table/$TableColumn"
+import { entryColumn, pnlSlotColumn, positionTimeColumn, puppetsColumn, settledPnlColumn, settledSizeColumn, slotSizeColumn } from "../table/$TableColumn"
 import { $ProfilePerformanceCard } from "../trade/$ProfilePerformanceCard"
-import { $heading1, $heading2, $heading3 } from "../../common/$text"
 
 
 
@@ -31,7 +31,7 @@ export interface ITraderProfile {
 
 export const $TraderProfile = (config: ITraderProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
-  [subscribeTreader, subscribeTreaderTether]: Behavior<PointerEvent, ITraderSubscritpion>,
+  [subscribeTreader, subscribeTreaderTether]: Behavior<PointerEvent, IPuppetRouteSubscritpion>,
 
 ) => {
 
@@ -67,19 +67,18 @@ export const $TraderProfile = (config: ITraderProfile) => component((
   return [
     $column(layoutSheet.spacingBig, style({ width: '100%', margin: '0 auto' }))(
 
-      $card2(style({ padding: 0, position: 'relative' }))(
-        $row(layoutSheet.spacing, style({ marginBottom: '-10px', flex: 1, placeContent: 'space-between', position: 'absolute', bottom: '100%', left: '20px', right: 0 }))(
+      $column(
+        $row(layoutSheet.spacing, style({ marginBottom: screenUtils.isDesktopScreen ? '-16px' : '-4px', zIndex: 10, placeContent: 'space-between', alignItems: 'center', padding: '0 8px' }))(
           $row(
             $discoverIdentityDisplay({
               address: config.address,
               $container: $row(
                 style({ minWidth: '120px', })
               ),
-              $profileContainer: $defaultBerry(style({ width: '100px', }))
+              $profileContainer: $defaultBerry(style({ width: screenUtils.isDesktopScreen ? '100px' : '70px', }))
             })
           ),
-
-          $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end', paddingBottom: '32px' }))(
+          $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end' }))(
             $metricRow(
               $metricValue(
                 switchMap(puppets => {
@@ -110,22 +109,24 @@ export const $TraderProfile = (config: ITraderProfile) => component((
               $metricLabel($text('Avg Leverage')),
             ),
           ),
-
         ),
-          
-        $ProfilePerformanceCard({
-          $container: $column(style({ width: '100%', height: '200px', padding: 0 })),
-          processData: config.processData,
-          positionList: map(processData => {
-            const traderPos = Object.values(processData.mirrorPositionSettled[config.address] || {}).flat() //.slice(1, 2) // .slice(-1)
-            // const traderPos = [] as any
-            const openList = Object.values(processData.mirrorPositionSlot).filter(pos => pos.trader === config.address) //.flatMap(t => t.position.link.updateList)
-            // const openList = [] as any
 
-            return [...traderPos, ...openList]
-          }, config.processData)
+        $card2(style({ padding: 0, position: 'relative' }))(
+          
+          $ProfilePerformanceCard({
+            $container: $column(style({ width: '100%', height: '200px', padding: 0 })),
+            processData: config.processData,
+            positionList: map(processData => {
+              const traderPos = Object.values(processData.mirrorPositionSettled[config.address] || {}).flat() //.slice(1, 2) // .slice(-1)
+              // const traderPos = [] as any
+              const openList = Object.values(processData.mirrorPositionSlot).filter(pos => pos.trader === config.address) //.flatMap(t => t.position.link.updateList)
+              // const openList = [] as any
+
+              return [...traderPos, ...openList]
+            }, config.processData)
           // trader: config.address,
-        })({ }),
+          })({ }),
+        ),
       ),
 
       $node(),

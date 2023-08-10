@@ -1,6 +1,6 @@
 import { Behavior, Op } from "@aelea/core"
 import { $Node, $element, $text, attr, component, nodeEvent, style } from "@aelea/dom"
-import { $icon, $row, layoutSheet } from "@aelea/ui-components"
+import { $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { CHAIN } from "gmx-middleware-const"
 import { $alertContainer, $alertIcon, $walletConnectLogo } from "gmx-middleware-ui-components"
@@ -127,7 +127,7 @@ export const $SwitchNetworkDropdown = (showLabel = false) => component((
           }),
         )
       )(
-        $element('img')(attr({ src: `/chain/${network.id}.svg` }), style({ width: '32px', marginBottom: '8px', aspectRatio: '1 / 1', placeSelf: 'center' }))(),
+        $element('img')(attr({ src: `/chain/${network.id}.svg` }), style({ width: '32px', margin: screenUtils.isDesktopScreen ? '0px 0px 8px 0px' : '0px 8px 0 0', aspectRatio: '1 / 1', placeSelf: 'center' }))(),
       )
 
       // return style({ zoom: 1.1 })($alertTooltip($text('www')))

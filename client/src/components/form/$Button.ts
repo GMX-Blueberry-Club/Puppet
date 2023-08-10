@@ -99,6 +99,12 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
       $ButtonCore({
         $container: config.$container || $defaultButtonPrimary(
           style({ alignItems: 'center' }),
+          style({
+            border: `1px solid`,
+            padding: '20px',
+            animation: `borderRotate var(--d) linear infinite forwards`,
+            borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
+          }),
           stylePseudo(':hover', { backgroundColor: pallete.middleground })
         ),
         disabled: mergeArray([
@@ -146,7 +152,9 @@ export const $ButtonCircular = ({ $iconPath, disabled = empty() }: IButtonCircul
 
   return [
     ops(
-      $iconCircular($iconPath)
+      $row(style({ cursor: 'pointer', padding: '6px' }))(
+        $iconCircular($iconPath)
+      )
     ),
 
     {

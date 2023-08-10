@@ -31,6 +31,8 @@ export const $Leaderboard = (config: ILeaderboard) => component((
   [changeTab, changeTabTether]: Behavior<IRouteOption, string>,
   [routeChange, routeChangeTether]: Behavior<string, string>,
   [subscribeTrader, subscribeTraderTether]: Behavior<IPuppetRouteSubscritpion>,
+  [changeSubscribeList, changeSubscribeListTether]: Behavior<IPuppetRouteSubscritpion[]>,
+
 ) => {
   const settledRoute = config.route.create({ fragment: 'settled', title: 'Leaderboard' })
   const topOpenRoute = config.route.create({ fragment: 'open', title: 'Leaderboard' })
@@ -111,7 +113,8 @@ export const $Leaderboard = (config: ILeaderboard) => component((
             subscription,
           })({
             routeChange: routeChangeTether(),
-            subscribeTrader: subscribeTraderTether(multicast)
+            subscribeTrader: subscribeTraderTether(multicast),
+            changeSubscribeList: changeSubscribeListTether()
           })
         )
       ),
@@ -120,7 +123,8 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
     {
       routeChange: mergeArray([routeChange, routeChangeState]),
-      subscribeTrader
+      subscribeTrader,
+      changeSubscribeList
     }
   ]
 })

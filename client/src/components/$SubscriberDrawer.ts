@@ -49,7 +49,7 @@ export const $SubscriberDrawer = (config: ISubscribeDrawer) => component((
       const routeMap = Object.entries(groupArrayMany(list, x => x.routeTypeKey)) as [viem.Hex, IPuppetRouteSubscritpion[]][]
         
       return fadeIn(
-        $card2(style({ position: 'absolute', maxWidth: '1024px', margin: '0 auto', zIndex: 11, inset: 'auto 0 0 0', bottom: '0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderBottom: 'none', padding: '26px', borderRadius: '20px 20px 0 0' }))(
+        $card2(style({ position: 'absolute', maxWidth: '1024px', margin: '0 auto', zIndex: 21, inset: 'auto 0 0 0', bottom: '0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderBottom: 'none', padding: '26px', borderRadius: '20px 20px 0 0' }))(
           $IntermediateConnectButton({
             $$display: map(w3p => {
               

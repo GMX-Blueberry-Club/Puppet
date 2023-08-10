@@ -80,11 +80,6 @@ export const $Profile = (config: IProfile) => component((
         })
       })({ select: selectProfileModeTether() }),
 
-      $node(),
-      $node(),
-      $node(),
-      $node(),
-
       router.match(traderRoute)(
         {
           run(sink, scheduler) {

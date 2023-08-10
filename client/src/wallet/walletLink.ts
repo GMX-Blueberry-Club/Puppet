@@ -180,26 +180,26 @@ export const web3Modal = new Web3Modal({
 
 
 
-const core = new Core({ projectId })
+// const core = new Core({ projectId })
 
-// e.g. for SignClient. See the "Shared Core" guide linked above for details.
-const signClient = await SignClient.init({
-  core,
-  metadata: {
-    url: 'https://localhost',
-    name: 'My Sign-Enabled Dapp',
-    icons: ['https://my-dapp.com/icons/logo.png'],
-    description: 'ff'
-  }
-})
+// // e.g. for SignClient. See the "Shared Core" guide linked above for details.
+// const signClient = await SignClient.init({
+//   core,
+//   metadata: {
+//     url: 'https://localhost',
+//     name: 'My Sign-Enabled Dapp',
+//     icons: ['https://my-dapp.com/icons/logo.png'],
+//     description: 'ff'
+//   }
+// })
 
-const pushDappClient = await PushDappClient.init({
-  core,
-  metadata: {
-    name: 'My Push-Enabled Dapp',
-    description: 'A dapp using WalletConnect PushClient',
-    url: 'https://my-dapp.com',
-    icons: ['https://my-dapp.com/icons/logo.png']
-  }
-})
+// const pushDappClient = await PushDappClient.init({
+//   core,
+//   metadata: {
+//     name: 'My Push-Enabled Dapp',
+//     description: 'A dapp using WalletConnect PushClient',
+//     url: 'https://my-dapp.com',
+//     icons: ['https://my-dapp.com/icons/logo.png']
+//   }
+// })
 

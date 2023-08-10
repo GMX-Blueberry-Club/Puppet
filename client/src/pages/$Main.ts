@@ -120,11 +120,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   const isMobileScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
 
   
-  const subscribeListAtom = replayLatest(empty(), [] as IPuppetRouteSubscritpion[])
-
-  const subscribeList = snapshot((list, add) => {
-    return [...list, add]
-  }, subscribeListAtom, subscribeTrader)
+  const subscribeList = replayLatest(changeSubscribeList, [] as IPuppetRouteSubscritpion[])
 
 
 
@@ -170,7 +166,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
 
           switchMap(chainEvent => {
-            return $column(style({ flex: 1, position: 'relative' }))(
+            return $column(style({ flex: 1, position: 'relative', padding: '0 8px' }))(
               router.contains(walletRoute)(
                 $IntermediateConnectButton({
                   $$display: map(wallet => {
@@ -195,7 +191,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                     routeChange: linkClickTether(
                       tap(console.log)
                     ),
-                    subscribeTrader: subscribeTraderTether()
+                    subscribeTrader: subscribeTraderTether(),
+                    changeSubscribeList: changeSubscribeListTether(),
                   }))
                 )
               ),
@@ -293,7 +290,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 }
 
 
-                const newLocal = `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
                 return switchLatest(mergeArray([
                   now(
                     fadeIn($row(
@@ -303,7 +299,12 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                       )
                     )(
                       style({  transform: 'translateX(-50%)' })(
-                        $column(layoutSheet.spacingTiny, style({ border: `1px solid`, padding: '20px', animation: `borderRotate var(--d) linear infinite forwards`, borderImage: newLocal }))(
+                        $column(layoutSheet.spacingTiny, style({
+                          border: `1px solid`,
+                          padding: '20px',
+                          animation: `borderRotate var(--d) linear infinite forwards`,
+                          borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
+                        }))(
                           $text(`Syncing Blockchain Data....`),
                           $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(`${lastUpdate} data is displayed`),
                         )

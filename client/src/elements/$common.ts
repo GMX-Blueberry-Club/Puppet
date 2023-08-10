@@ -110,7 +110,7 @@ export const $iconCircular = ($iconPath: $Branch<SVGPathElement>, size = '30px')
   return $icon({
     $content: $iconPath,
     svgOps: style({
-      zIndex: 10, borderRadius: '50%', cursor: 'pointer', border: `1px solid ${colorAlpha(pallete.foreground, .25)}`,
+      zIndex: 10, borderRadius: '50%', border: `1px solid ${colorAlpha(pallete.foreground, .25)}`,
       width: size, aspectRatio: '1 / 1', height: 'auto', fontSize: '11px', textAlign: 'center', lineHeight: '15px', fontWeight: 'bold', color: pallete.message,
     }),
     viewBox: '0 0 32 32'
