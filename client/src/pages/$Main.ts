@@ -315,7 +315,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 subscribeList,
                 subscribeTrader
               })({
-                clickClose: clickCloseSubscPanelTether(),
+                // clickClose: clickCloseSubscPanelTether(),
                 changeSubscribeList: changeSubscribeListTether()
               }),
             )

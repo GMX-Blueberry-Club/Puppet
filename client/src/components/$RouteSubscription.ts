@@ -2,7 +2,7 @@ import { Behavior, combineObject } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { empty, map, mergeArray, multicast, now, sample, snapshot, startWith } from "@most/core"
+import { constant, empty, map, mergeArray, multicast, now, sample, skipRepeats, snapshot, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { $xCross } from "gmx-middleware-ui-components"
 import { formatBps, groupArrayMany, parseBps, readableFixedBsp, replayState, switchMap } from "gmx-middleware-utils"
@@ -37,94 +37,102 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
 
 
 
+  const openIfEmpty = skipRepeats(map(l => l.length > 0, config.subscribeList))
+
 
 
   return [
-    switchMap(list => {
-      if (list.length === 0) {
+    switchMap(isOpen => {
+      if (!isOpen) {
         return empty()
       }
 
       
-      const routeMap = Object.entries(groupArrayMany(list, x => x.routeTypeKey)) as [viem.Hex, IPuppetRouteSubscritpion[]][]
         
-      return fadeIn(
-        $card2(style({ position: 'absolute', maxWidth: '624px', margin: '0 auto', zIndex: 21, inset: 'auto 0 0 0', bottom: '0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderBottom: 'none', padding: '18px', borderRadius: '20px 20px 0 0' }))(
-          $IntermediateConnectButton({
-            $$display: map(w3p => {
+      return $card2(style({ position: 'absolute', maxWidth: '624px', margin: '0 auto', zIndex: 21, inset: 'auto 0 0 0', bottom: '0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderBottom: 'none', padding: '18px', borderRadius: '20px 20px 0 0' }))(
+        $IntermediateConnectButton({
+          $$display: map(w3p => {
               
-              return $column(layoutSheet.spacing)(
-                $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between', alignItems: 'center' }))(
-                  $heading3('Modify Subscriptions'),
+            return $column(layoutSheet.spacing)(
+              $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between', alignItems: 'center' }))(
+                $heading3('Modify Subscriptions'),
 
-                  $ButtonCircular({
-                    $iconPath: $xCross,
-                  })({
-                    click: clickCloseTether()
-                  })
-                ),
-
-                ...routeMap.map(([routeKey, traders]) => {
-                  const routeType = PUPPET.ROUTE_DESCRIPTIN_MAP[routeKey]
-
-                  return $column(layoutSheet.spacing)(
-                    $RouteDepositInfo({
-                      routeDescription: routeType,
-                      wallet: w3p
-                    })({}),
-
-                    $column(style({ paddingLeft: '15px' }))(
-                      $row(layoutSheet.spacing)(
-                        $seperator2,
-                        $column(style({ flex: 1 }))(
-                          ...traders.map(subsc => {
-                            return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: `10px 0` }))(
-                              $discoverIdentityDisplay({
-                                address: subsc.trader,
-                                // $profileContainer: $defaultBerry(style({ width: '50px' }))
-                              }),
-                              $iconCircular($xCross),
-                              $text(readableFixedBsp(subsc.allowance)),
-                            )
-                          })
-                        )
-                      ),
-                      $seperator2,
-                    )
-                  )
-                }),
-
-                $ButtonPrimaryCtx({
-                  $content: $text('Subscribe'),
-                  request: requestChangeSubscription
+                $ButtonCircular({
+                  $iconPath: $xCross,
                 })({
-                  click: requestChangeSubscriptionTether(
-                    map(() => {
-
-                      const allowance = list.map(x => x.allowance)
-                      const traders = list.map(a => a.trader)
-                      const routeTypes = list.map(x => x.routeTypeKey)
-                      const subscribe = list.map(x => x.subscribed)
-
-                      return wagmiWriteContract({
-                        ...PUPPET.CONTRACT[42161].Orchestrator,
-                        functionName: 'batchSubscribeRoute',
-                        args: [allowance, traders, routeTypes, subscribe]
-                      })
-                    }),
-                    multicast
-                  )
+                  click: clickCloseTether()
                 })
-              )
-            })
-          })({})
-        )
+              ),
+
+              switchMap(list => {
+                const routeMap = Object.entries(groupArrayMany(list, x => x.routeTypeKey)) as [viem.Hex, IPuppetRouteSubscritpion[]][]
+
+                return $column(
+                  ...routeMap.map(([routeKey, traders]) => {
+                    const routeType = PUPPET.ROUTE_DESCRIPTIN_MAP[routeKey]
+
+                    return $column(layoutSheet.spacing)(
+                      $RouteDepositInfo({
+                        routeDescription: routeType,
+                        wallet: w3p
+                      })({}),
+
+                      $column(style({ paddingLeft: '15px' }))(
+                        $row(layoutSheet.spacing)(
+                          $seperator2,
+                          $column(style({ flex: 1 }))(
+                            ...traders.map(subsc => {
+                              return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: `10px 0` }))(
+                                $discoverIdentityDisplay({
+                                  address: subsc.trader,
+                                  // $profileContainer: $defaultBerry(style({ width: '50px' }))
+                                }),
+                                $iconCircular($xCross),
+                                $text(readableFixedBsp(subsc.allowance * 100n)),
+                              )
+                            })
+                          )
+                        ),
+                        $seperator2,
+                      )
+                    )
+                  })
+                )
+              }, config.subscribeList),
+
+              $ButtonPrimaryCtx({
+                $content: $text('Subscribe'),
+                request: requestChangeSubscription
+              })({
+                click: requestChangeSubscriptionTether(
+                  snapshot(list => {
+
+                    const allowance = list.map(x => x.allowance)
+                    const traders = list.map(a => a.trader)
+                    const routeTypes = list.map(x => x.routeTypeKey)
+                    const subscribe = list.map(x => x.subscribed)
+
+                    return wagmiWriteContract({
+                      ...PUPPET.CONTRACT[42161].Orchestrator,
+                      functionName: 'batchSubscribeRoute',
+                      args: [allowance, traders, routeTypes, subscribe]
+                    })
+                  }, config.subscribeList),
+                  multicast
+                )
+              })
+            )
+          })
+        })({})
       )
-    }, config.subscribeList),
+      
+    }, openIfEmpty),
 
     {
-      changeSubscribeList,
-      clickClose
+      changeSubscribeList: mergeArray([
+        changeSubscribeList,
+        constant([], clickClose)
+      ])
     }
   ]
 })
@@ -161,17 +169,22 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
 
       $text(style({ width: '340px' }))('The following rules will apply to this trader whenever they open and maintain a position'),
 
-      $Dropdown({
-        value: {
-          list: routes,
-          $$option: map(([option, route]) => $route(route)),
-          value: now(routes[0]),
-        },
-        $selection: $route(selectedRoute[1]),
-      })({}),
+      
 
       $row(layoutSheet.spacing, style({ alignItems: 'flex-start', width: '325px' }))(
         style({ flex: 6 })(
+
+          $Dropdown({
+            value: {
+              list: routes,
+              $$option: map(([option, route]) => $route(route)),
+              value: now(routes[0]),
+            },
+            $selection: $route(selectedRoute[1]),
+          })({}),
+          
+        ),
+        style({ flex: 7 })(
           $TextField({
             label: 'Allow',
             value: map(x => readableFixedBsp(x * 100n), allowance),
@@ -181,18 +194,16 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
               map(x => parseBps(x.slice(0, -1)) / 100n)
             )
           })
-        ),
-        style({ flex: 7 })(
-          $TextField({
-            label: 'End Date',
-            hint: 'limit the amount of time you are subscribed',
-            placeholder: 'never',
-            value: map(x => '', endDate),
-          })({
-            change: inputEndDateTether(
-              map(x => parseBps(Number(x)))
-            )
-          })
+          // $TextField({
+          //   label: 'End Date',
+          //   hint: 'limit the amount of time you are subscribed',
+          //   placeholder: 'never',
+          //   value: map(x => '', endDate),
+          // })({
+          //   change: inputEndDateTether(
+          //     map(x => parseBps(Number(x)))
+          //   )
+          // })
         )
       ),
 
