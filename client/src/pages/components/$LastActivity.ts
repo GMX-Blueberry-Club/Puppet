@@ -19,7 +19,7 @@ export const $LastAtivity = (activityTimeframe: Stream<GMX.IntervalTime>) => com
 
     $row(layoutSheet.spacing)(
       $text(style({ color: pallete.foreground }))('Last Activity:'),
-      $row(layoutSheet.spacingSmall)(
+      $row(layoutSheet.spacing)(
         $anchor(
           styleBehavior(map(tf => tf === GMX.TIME_INTERVAL_MAP.HR24 ? ({ color: pallete.primary }) : null, activityTimeframe)),
           changeActivityTimeframeTether(nodeEvent('click'), constant(GMX.TIME_INTERVAL_MAP.HR24))

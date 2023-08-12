@@ -66,7 +66,7 @@ export const $Popover = ({ $popContent, margin = 30, padding = 76, dismiss = emp
         const popDown = bottomSpace > bottom
         const top = (popDown ? y + (height / 2) : y - ((height - padding) / 2)) + 'px'
 
-        const backgroundImage = `radial-gradient(${width}px ${height + padding * 2}px at top ${top} left ${left}, ${pallete.horizon} ${width / 2}px, ${colorAlpha(pallete.background, .25)})`
+        const backgroundImage = `radial-gradient(${width}px ${height + padding * 2}px at top ${top} left ${left}, ${pallete.horizon} ${width / 2}px, ${colorAlpha(pallete.background, .35)})`
 
 
         return { backgroundImage, visibility: 'visible' }

@@ -126,6 +126,7 @@ export const $TopSettled = (config: ITopSettled) => component((
                 trader: pos.trader,
               })({ 
                 changeRouteSubscription: changeRouteSubscriptionTether(),
+                clickTrader: routeChangeTether()
               })
             })
           },         
