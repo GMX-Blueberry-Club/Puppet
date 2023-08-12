@@ -1,21 +1,15 @@
-import { div, getPnL, groupArrayMany } from "gmx-middleware-utils"
+import { IPositionListSummary, div, getPnL } from "gmx-middleware-utils"
 import * as viem from "viem"
-import { IAccountToRouteMap, IMirrorTraderSummary, IPositionMirrorSettled, IPositionMirrorSlot } from "./types.js"
+import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot } from "./types.js"
 
 
-export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[], shareTarget?: viem.Address): IMirrorTraderSummary {
-  const account = settledTradeList[0].trader
-  const route = settledTradeList[0].route
+export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[], shareTarget?: viem.Address): IMirrorPositionListSummary {
 
-  const seedAccountSummary: IMirrorTraderSummary = {
-    route: route,
-    account,
+  const seedAccountSummary: IMirrorPositionListSummary = {
     size: 0n,
     collateral: 0n,
     leverage: 0n,
-
     puppets: [],
-    settledTradeList,
 
     avgLeverage: 0n,
     avgCollateral: 0n,
@@ -27,13 +21,10 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
     winCount: 0,
   }
 
-  return settledTradeList.reduce((seed, next, idx): IMirrorTraderSummary => {
+  const summary = settledTradeList.reduce((seed, next, idx): IMirrorPositionListSummary => {
     const idxBn = BigInt(idx) + 1n
 
     const position = next.position
-
-    const share = getParticiapntMpShare(next, shareTarget)
-
 
     const size = seed.size + getParticiapntMpPortion(next, position.maxSize, shareTarget)
     const collateral = seed.collateral + getParticiapntMpPortion(next, position.maxCollateral, shareTarget)
@@ -54,12 +45,9 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
     const puppets = [...seed.puppets, ...next.puppets.filter(x => !seed.puppets.includes(x))]
 
     return {
-      route: seed.route,
-      account,
       size,
       collateral,
       leverage,
-      settledTradeList,
       avgLeverage,
       avgCollateral,
       avgSize,
@@ -70,6 +58,9 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
       puppets,
     }
   }, seedAccountSummary)
+
+
+  return summary
 }
 
 
@@ -102,14 +93,6 @@ export function getMpPnL(mp: IPositionMirrorSettled | IPositionMirrorSlot, markP
   return openPnl
 }
 
-
-export function leaderboardMirrorTrader(positionMap: IAccountToRouteMap<IPositionMirrorSettled[]>): IMirrorTraderSummary[] {
-  const flattenMapMap = Object.values(positionMap).flatMap(x => Object.values(x).flat())
-  const tradeListMap = groupArrayMany(flattenMapMap, a => a.trader)
-  const tradeListEntries = Object.values(tradeListMap)
-
-  return tradeListEntries.map(settledTradeList => summariesMirrorTrader(settledTradeList))
-}
 
 export function getPortion(supply: bigint, share: bigint, amount: bigint): bigint {
   if (amount == 0n) throw new Error("amount cannot be 0")

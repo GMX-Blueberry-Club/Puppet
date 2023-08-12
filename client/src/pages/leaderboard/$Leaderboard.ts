@@ -1,7 +1,7 @@
 import { Behavior } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
-import { $column, layoutSheet } from "@aelea/ui-components"
+import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { empty, map, mergeArray, multicast, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { $ButtonToggle } from "gmx-middleware-ui-components"
@@ -11,14 +11,14 @@ import { $card } from "../../elements/$common"
 import { wallet } from "../../wallet/walletLink"
 import { $TopOpen } from "./$TopOpen"
 import { $TopSettled } from "./$TopSettled"
-
+import * as GMX from "gmx-middleware-const"
+import { $LastAtivity } from "../components/$LastActivity"
 
 
 
 export type ILeaderboard = {
   route: router.Route
   processData: Stream<IGmxProcessState>
-
   subscribeList: Stream<IPuppetRouteSubscritpion[]>
 }
 
@@ -34,6 +34,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
   [changeSubscribeList, changeSubscribeListTether]: Behavior<IPuppetRouteSubscritpion[]>,
 
 ) => {
+
   const settledRoute = config.route.create({ fragment: 'settled', title: 'Leaderboard' })
   const topOpenRoute = config.route.create({ fragment: 'open', title: 'Leaderboard' })
 
@@ -54,12 +55,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
   ]
 
 
-
-
-
-
   const subscription: Stream<IPuppetRouteTrades[]> = switchLatest(map(w3p => {
-    
     if (!w3p) {
       return empty()
     }
@@ -70,37 +66,35 @@ export const $Leaderboard = (config: ILeaderboard) => component((
   }, wallet))
   
 
-  
+
 
 
   return [
     $column(
       layoutSheet.spacingBig,
-      style({
-        alignItems: 'center',
-        paddingTop: '50px',
-        flex: 1,
-      // margin: '0 -50vw', backgroundColor: pallete.background
-      })
+      style({ alignItems: 'center', paddingTop: '50px', flex: 1 })
     )(
-      $ButtonToggle({
-        options,
-        // $container: $row,
-        selected: mergeArray([
-          router.match<IRouteOption>(topOpenRoute)(now(options[1])),
-          router.match<IRouteOption>(settledRoute)(now(options[0])),
-        ]),
-        $$option: map(option => $text(option.label)),
-      })({
-        select: changeTabTether(
-          map(option => {
-            return option.url
-          })
-        )
-      }),
+
+      $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
+        $ButtonToggle({
+          options,
+          // $container: $row,
+          selected: mergeArray([
+            router.match<IRouteOption>(topOpenRoute)(now(options[1])),
+            router.match<IRouteOption>(settledRoute)(now(options[0])),
+          ]),
+          $$option: map(option => $text(option.label)),
+        })({
+          select: changeTabTether(
+            map(option => {
+              return option.url
+            })
+          )
+        }),
+      ),
 
 
-      $card(
+      $card(style({ width: '100%' }))(
         router.match(topOpenRoute)(
           $TopOpen({ ...config })({
             routeChange: routeChangeTether()

@@ -14,7 +14,13 @@ export interface TextField extends Field {
 
 
 export const $label = $element('label')(
-  style({ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: pallete.foreground })
+  style({ 
+    cursor: 'pointer',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    color: pallete.foreground
+  })
 )
 
 

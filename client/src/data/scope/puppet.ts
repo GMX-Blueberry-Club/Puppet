@@ -1,5 +1,5 @@
 import * as PUPPET from "puppet-middleware-const"
-import { rootStoreScope } from "../../rootStore"
+import { rootStoreScope } from "../store/store"
 import * as store from "../../utils/indexer/rpc"
 
 

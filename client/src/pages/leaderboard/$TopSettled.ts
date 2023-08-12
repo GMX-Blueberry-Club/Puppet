@@ -1,24 +1,21 @@
-import { Behavior, O, combineObject, replayLatest } from "@aelea/core"
+import { Behavior, combineObject, replayLatest } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { constant, empty, map, mergeArray, snapshot } from "@most/core"
+import { empty, map, snapshot } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
-import { $Link, $Table, ISortBy } from "gmx-middleware-ui-components"
-import { ITraderSummary, pagingQuery, switchMap } from "gmx-middleware-utils"
-import { getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-const"
-import { IPuppetRouteTrades, IPuppetRouteSubscritpion, leaderboardMirrorTrader, IMirrorTraderSummary } from "puppet-middleware-utils"
+import { $Table, ISortBy, TableColumn } from "gmx-middleware-ui-components"
+import { IPositionListSummary, groupArrayMany, pagingQuery, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetRouteSubscritpion, IPuppetRouteTrades, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { IProfileActiveTab } from "../$Profile"
-import { $pnlValue, $puppets, $size } from "../../common/$common"
-import { $discoverIdentityDisplay } from "../../components/$AccountProfile"
-import { $defaultBerry } from "../../components/$DisplayBerry"
-import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../../components/form/$Button"
+import { $TraderDisplay, $pnlValue, $size } from "../../common/$common"
+import { puppetsColumn } from "../../components/table/$TableColumn"
 import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceCard"
 import { IGmxProcessState } from "../../data/process/process"
-import { wallet } from "../../wallet/walletLink"
-import { traderColumn } from "../../components/table/$TableColumn"
+import * as store from "../../data/store/store"
+import * as storage from "../../utils/storage/storeScope"
+import { $LastAtivity } from "../components/$LastActivity"
 
 
 
@@ -26,47 +23,38 @@ import { traderColumn } from "../../components/table/$TableColumn"
 export type ITopSettled = {
   route: router.Route
   processData: Stream<IGmxProcessState>
-
-  subscription: Stream<IPuppetRouteTrades[]>
-  subscribeList: Stream<IPuppetRouteSubscritpion[]>
+  subscribeList: Stream<IPuppetRouteTrades[]>
 }
+
+type FilterTable =  { activityTimeframe: GMX.IntervalTime } | null
 
 export const $TopSettled = (config: ITopSettled) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
-  [subscribeTrader, subscribeTraderTether]: Behavior<any, IPuppetRouteSubscritpion>,
+  [changeRouteSubscription, changeRouteSubscriptionTether]: Behavior<IPuppetRouteSubscritpion>,
   
-  [pageIndex, pageIndexTether]: Behavior<number, number>,
-  [sortByChange, sortByChangeTether]: Behavior<ISortBy<ITraderSummary>>,
-
+  [changePageIndex, changePageIndexTether]: Behavior<number, number>,
+  [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionListSummary>>,
+  [changeFilter, changeFilterTether]: Behavior<FilterTable>,
+  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<GMX.IntervalTime>,
 
 ) => {
 
 
+  const sortBy = replayLatest(sortByChange, { direction: 'desc', selector: 'pnl' } as ISortBy<IPositionListSummary>)
+  // const filter = combineObject({ activityTimeframe: config.activityTimeframe })
 
 
+  const activityTimeframe = storage.replayWrite(store.mainMenuOpen, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
 
-  const sortBy: Stream<ISortBy<ITraderSummary>> = replayLatest(sortByChange, { direction: 'desc', selector: 'pnl' })
-
-  const qparams = combineObject({
-    sortBy,
-    pageIndex,
-  })
-
-  const datass = switchMap(params => {
-    return map(data => {
-
-      const summaryList = leaderboardMirrorTrader(data.mirrorPositionSettled)
-
-      return pagingQuery({ ...params.sortBy, offset: params.pageIndex * 20, pageSize: 20 }, summaryList)
-    }, config.processData)
-  }, qparams)
-
-  
 
 
 
   return [
     $column(layoutSheet.spacingBig, style({ flex: 1 }))(
+
+      $LastAtivity(activityTimeframe)({
+        changeActivityTimeframe: changeActivityTimeframeTether()
+      }),
 
 
       // switchLatest(
@@ -106,96 +94,56 @@ export const $TopSettled = (config: ITopSettled) => component((
       //   }, gmxTradingSubgraph)
       // ),
 
-      // $column(
-      //   $row(layoutSheet.spacing)(
-      //     $text(style({ color: pallete.foreground }))('Period:'),
-      //     $anchor(
-      //       styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.HR24 ? activeTimeframe : null, timeframe)),
-      //       topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.HR24))
-      //     )(
-      //       $text('Day')
-      //     ),
-      //     $anchor(
-      //       styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.DAY7 ? activeTimeframe : null, timeframe)),
-      //       topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.DAY7))
-      //     )(
-      //       $text('Week')
-      //     ),
-      //     $anchor(
-      //       styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.MONTH ? activeTimeframe : null, timeframe)),
-      //       topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.MONTH))
-      //     )(
-      //       $text('Month')
-      //     ),
-      //     $anchor(
-      //       styleBehavior(map(tf => tf === TIME_INTERVAL_MAP.MONTH ? activeTimeframe : null, timeframe)),
-      //       topPnlTimeframeChangeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.MONTH))
-      //     )(
-      //       $text('Year')
-      //     )
-      //   )
-      // ),
 
-      $Table({
-        dataSource: datass,
-        sortBy,
-        columns: [
-          traderColumn(routeChangeTether(), config.route),         
-          
+      switchMap(params => {
+        const dataSource =  map(pageIndex => {
+          const filterStartTime = unixTimestampNow() - params.activityTimeframe
+
+          const flattenMapMap = Object.values(params.data.mirrorPositionSettled).flatMap(x => Object.values(x).flat()).filter(x => x.position.blockTimestamp > filterStartTime)
+          const tradeListMap = groupArrayMany(flattenMapMap, a => a.trader)
+          const tradeListEntries = Object.values(tradeListMap)
+          const filterestPosList = tradeListEntries.map(settledTradeList => {
+
+            return { trader: settledTradeList[0].trader, settledTradeList, ...summariesMirrorTrader(settledTradeList) }
+          })
+
+          return pagingQuery({ ...params.sortBy, offset: pageIndex * 20, pageSize: 20 }, filterestPosList)
+        }, changePageIndex)
+
+
+
+
+        const columns: TableColumn<IMirrorPositionListSummary & { trader: viem.Address, settledTradeList: IPositionMirrorSettled[] }>[] = [
+          {
+            $head: $text('Trader'),
+            gridTemplate: 'minmax(140px, 180px)',
+            columnOp: style({ alignItems: 'center' }),
+            $$body: map(pos => {
+
+              return $TraderDisplay({
+                route: config.route,
+                subscriptionList: config.subscribeList,
+                trader: pos.trader,
+              })({ 
+                changeRouteSubscription: changeRouteSubscriptionTether(),
+              })
+            })
+          },         
           ...screenUtils.isDesktopScreen
             ? [
               {
                 $head: $text('Win / Loss'),
                 // gridTemplate: 'minmax(110px, 120px)',
                 columnOp: style({ alignItems: 'center', placeContent: 'center' }),
-                $$body: map((pos: IMirrorTraderSummary) => {
+                $$body: map((pos: IMirrorPositionListSummary) => {
                   return $row(
                     $text(`${pos.winCount} / ${pos.lossCount}`)
                   )
                 })
               },
+              puppetsColumn,
             ]
-            : [
-
-            ],
-          ...screenUtils.isDesktopScreen
-            ? [
-              {
-                $head: $text('Puppets'),
-                columnOp: O(layoutSheet.spacingTiny),
-                $$body: map((pos: IMirrorTraderSummary) => {
-
-                  const $copyBtn = switchMap(params => {
-                    if (!params.wallet || params.subscriptionList.find(s => s.trader === pos.account) !== undefined) {
-                      return empty()
-                    }
-
-                    const routeTypeKey = getRouteTypeKey(GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, true)
-                    const puppetSubscriptionKey = getPuppetSubscriptionKey(params.wallet.account.address, pos.account, routeTypeKey)
-
-                    const isSubscribed = params.subscription.find(x => x.puppetSubscriptionKey === puppetSubscriptionKey) === undefined
-                    const subsc: IPuppetRouteSubscritpion = {
-                      trader: pos.account,
-                      puppet: params.wallet.account.address,
-                      allowance: 1000n,
-                      routeTypeKey,
-                      puppetSubscriptionKey,
-                      // subscribed: false,
-                      subscribed: isSubscribed,
-                    }
-
-                    return  $ButtonSecondary({ $content: $text(isSubscribed ? 'Copy' : 'Unsub'), $container: $defaultMiniButtonSecondary })({
-                      click: subscribeTraderTether(constant(subsc))
-                    })
-                  }, combineObject({ wallet, subscription: config.subscription, subscriptionList: config.subscribeList })) 
-                
-                  return $puppets(pos.puppets, $copyBtn)
-                })
-              },
-            ]
-            : [
-
-            ],
+            : [],
           {
             $head: $column(style({ textAlign: 'right' }))(
               $text('Size'),
@@ -220,16 +168,12 @@ export const $TopSettled = (config: ITopSettled) => component((
               return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
 
                 screenUtils.isDesktopScreen
-                  ? switchMap(processData => {
-                    const traderPos = processData.mirrorPositionSettled[pos.account] || {}
-                    const settledList = Object.values(traderPos).flat() //.slice(-1)
-
-                    return $ProfilePerformanceGraph({
-                      processData,
-                      positionList: settledList,
-                      width: 120,
-                    })({})
-                  }, config.processData)
+                  ? $ProfilePerformanceGraph({
+                    processData: params.data,
+                    positionList: pos.settledTradeList,
+                    width: 180,
+                    activityTimeframe: params.activityTimeframe,
+                  })({})
                   : empty(),
                 $pnlValue(pos.pnl)
                 // $column(style({ gap: '3px', textAlign: 'right' }))(
@@ -240,20 +184,27 @@ export const $TopSettled = (config: ITopSettled) => component((
               )
             })
           },
-        ],
-      })({
-        sortBy: sortByChangeTether(),
-        scrollIndex: pageIndexTether()
-      })
+        ]
+
+        return $Table({
+          dataSource,
+          columns,
+        })({
+          sortBy: sortByChangeTether(),
+          scrollIndex: changePageIndexTether(),
+          filter: changeFilterTether(),
+        })
+      }, combineObject({ data: config.processData, sortBy, activityTimeframe })),
+
       
     ),
 
     {
       routeChange,
-      subscribeTrader,
+      subscribeTrader: changeRouteSubscription,
       changeSubscribeList: snapshot((params, subsc): IPuppetRouteSubscritpion[] => {
         return [...params.subscriptionList, subsc]
-      }, combineObject({ subscriptionList: config.subscribeList, subscription: config.subscription }), subscribeTrader),
+      }, combineObject({ subscriptionList: config.subscribeList, subscription: config.subscription }), changeRouteSubscription),
       // unSubscribeSelectedTraders: snapshot((params, trader) => {
       //   const selectedIdx = params.selection.indexOf(trader)
       //   selectedIdx === -1 ? params.selection.push(trader) : params.selection.splice(selectedIdx, 1)

@@ -29,8 +29,6 @@ export const $TopOpen = (config: ITopOpen) => component((
   
   [pageIndex, pageIndexTether]: Behavior<number, number>,
   [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionMirrorSlot>, ISortBy<IPositionMirrorSlot>>,
-
-
 ) => {
 
   const sortBy: Stream<ISortBy<IPositionMirrorSlot>> = replayLatest(sortByChange, { direction: 'desc', selector: 'blockTimestamp' })
@@ -53,84 +51,82 @@ export const $TopOpen = (config: ITopOpen) => component((
     $column(layoutSheet.spacingBig)(
 
 
-      $column(style({ alignItems: 'center' }))(
-        $Table({
-          dataSource: datass,
-          sortBy,
-          columns: [
-            {
-              $head: $text('Account'),
-              columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
-              $$body: map((pos) => {
+      $Table({
+        dataSource: datass,
+        sortBy,
+        columns: [
+          {
+            $head: $text('Account'),
+            columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
+            $$body: map((pos) => {
 
-                return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+              return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
                 // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
-                  $Link({
-                    $content: $discoverIdentityDisplay({
-                      address: pos.trader,
-                      // $profileContainer: $defaultBerry(style({ width: '50px' }))
-                    }),
-                    route: config.route.create({ fragment: 'fefwef' }),
-                    url: `/app/profile/${pos.trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
-                  })({ click: routeChangeTether() }),
-                )
+                $Link({
+                  $content: $discoverIdentityDisplay({
+                    address: pos.trader,
+                    // $profileContainer: $defaultBerry(style({ width: '50px' }))
+                  }),
+                  route: config.route.create({ fragment: 'fefwef' }),
+                  url: `/app/profile/${pos.trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
+                })({ click: routeChangeTether() }),
+              )
 
-              })
-            },
+            })
+          },
 
-            // {
-            //   $head: $text('Win / Loss'),
-            //   columnOp: style({ alignItems: 'center', placeContent: 'center' }),
-            //   $$body: map((pos) => {
-            //     return $row(
-            //       $text(`${pos.winCount} / ${pos.lossCount}`)
-            //     )
-            //   })
-            // },
+          // {
+          //   $head: $text('Win / Loss'),
+          //   columnOp: style({ alignItems: 'center', placeContent: 'center' }),
+          //   $$body: map((pos) => {
+          //     return $row(
+          //       $text(`${pos.winCount} / ${pos.lossCount}`)
+          //     )
+          //   })
+          // },
 
-            {
-              $head: $column(style({ textAlign: 'right' }))(
-                $text('Cum. Size $'),
-                $text(style({ fontSize: '.85rem' }))('Avg. Leverage'),
-              ),
-              // sortBy: 'size',
-              columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
-              $$body: map((pos) => {
-                return $size(pos.position.size, pos.position.collateral)
-              })
-            },
-            {
-              $head: $text('PnL'),
-              columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
-              $$body: map((pos) => {
-                // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
-                // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
+          {
+            $head: $column(style({ textAlign: 'right' }))(
+              $text('Cum. Size $'),
+              $text(style({ fontSize: '.85rem' }))('Avg. Leverage'),
+            ),
+            // sortBy: 'size',
+            columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
+            $$body: map((pos) => {
+              return $size(pos.position.size, pos.position.collateral)
+            })
+          },
+          {
+            $head: $text('PnL'),
+            columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
+            $$body: map((pos) => {
+              // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
+              // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
 
-                return $infoTooltipLabel(
-                  $openPositionPnlBreakdown(pos.position, now(0n)),
-                  $tradePnl(pos.position, latestTokenPrice(config.processData, now(pos.position.indexToken)))
-                )
-              })
-            },
-            {
-              $head: $text('Puppet'),
-              columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
-              $$body: map((pos) => {
-                // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
-                // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
+              return $infoTooltipLabel(
+                $openPositionPnlBreakdown(pos.position, now(0n)),
+                $tradePnl(pos.position, latestTokenPrice(config.processData, now(pos.position.indexToken)))
+              )
+            })
+          },
+          {
+            $head: $text('Puppet'),
+            columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
+            $$body: map((pos) => {
+              // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
+              // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
 
-                return $column(
-                  $text(String(pos.puppets.length)),
-                )
-              })
-            },
+              return $column(
+                $text(String(pos.puppets.length)),
+              )
+            })
+          },
             
-          ],
-        })({
-          sortBy: sortByChangeTether(),
-          scrollIndex: pageIndexTether()
-        })
-      )
+        ],
+      })({
+        sortBy: sortByChangeTether(),
+        scrollIndex: pageIndexTether()
+      })
     ),
 
     {

@@ -96,7 +96,7 @@ export const $Wallet = (config: IProfile) => component((
 
         return $column(
           ...subscList.map((subsc) => {
-            const routeType = PUPPET.ROUTE_TYPE_DESCRIPTIN[subsc.routeTypeKey]
+            const routeType = PUPPET.ROUTE_DESCRIPTIN_MAP[subsc.routeTypeKey]
 
             return $text(routeType.indexToken)
           })

@@ -18,27 +18,29 @@ import { disconnect } from "@wagmi/core"
 import { walletLink } from "../wallet"
 import { switchMap } from "gmx-middleware-utils"
 import { fadeIn } from "../transitions/enter"
-
+import * as storage from "../utils/storage/storeScope"
+import * as store from "../data/store/store"
 
 interface MainMenu {
   chainList: CHAIN[]
   parentRoute: Route
   showAccount?: boolean
-  isMenuOpen: Stream<boolean>
 }
 
 
 
-export const $MainMenu = ({ parentRoute, chainList, isMenuOpen, showAccount = true }: MainMenu) => component((
+export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMenu) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
   [clickPopoverClaim, clickPopoverClaimTether]: Behavior<any, any>,
   [walletChange, walletChangeTether]: Behavior<any, any>,
-  [clickToggleMenu, clickToggleMenuTether]: Behavior<any>,
+  [clickToggleMenu, clickToggleMenuTether]: Behavior<any, boolean>,
 ) => {
 
   const routeChangeMulticast = multicast(routeChange)
 
 
+
+  const isMenuOpen = storage.replayWrite(store.mainMenuOpen, false, clickToggleMenu)
   
 
 

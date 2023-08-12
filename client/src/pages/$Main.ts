@@ -1,11 +1,11 @@
 import { Behavior, combineObject, replayLatest } from "@aelea/core"
-import { $element, $node, $text, component, eventElementTarget, style, styleBehavior } from "@aelea/dom"
+import { $element, $node, $text, component, eventElementTarget, nodeEvent, style, styleBehavior } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
 import { constant, empty, fromPromise, join, map, merge, mergeArray, multicast, now, skipRepeats, snapshot, startWith, switchLatest, tap } from '@most/core'
-import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN, TIME_INTERVAL_MAP } from "gmx-middleware-const"
+import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN, IntervalTime, TIME_INTERVAL_MAP } from "gmx-middleware-const"
 import { ETH_ADDRESS_REGEXP, switchMap, timeSince, unixTimestampNow } from "gmx-middleware-utils"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu'
@@ -17,19 +17,20 @@ import { $Wallet } from "./$Wallet"
 import { $Leaderboard } from "./leaderboard/$Leaderboard"
 import { gmxProcess } from "../data/process/process"
 import { syncProcess } from "../utils/indexer/processor"
-import { publicClient, block, blockCache, chain, IWalletClient, blockChange } from "../wallet/walletLink"
+import { publicClient, block, blockCache, chain, IWalletClient, blockChange, wallet } from "../wallet/walletLink"
 import { getBlockNumberCache } from "viem/public"
 import * as wagmi from "@wagmi/core"
 import { $Profile } from "./$Profile"
 import * as viem from 'viem'
-import { $SubscriberDrawer } from "../components/$SubscriberDrawer"
-import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
-import { rootStoreScope } from "../rootStore"
+import { $RouteSubscriptionDrawer } from "../components/$RouteSubscription"
+import { IPuppetRouteSubscritpion, IPuppetRouteTrades } from "puppet-middleware-utils"
+import { rootStoreScope } from "../data/store/store"
 import * as store from "../utils/storage/storeScope"
 import { $midContainer } from "../common/$common"
 import { $heading2, $heading3 } from "../common/$text"
-import { $alert, $defaultVScrollLoader, $spinner } from "gmx-middleware-ui-components"
-
+import { $alert, $anchor, $defaultVScrollLoader, $spinner } from "gmx-middleware-ui-components"
+import * as GMX from "gmx-middleware-const"
+import { Stream } from "@most/types"
 
 const popStateEvent = eventElementTarget('popstate', window)
 const initialLocation = now(document.location)
@@ -50,12 +51,9 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   [routeChanges, linkClickTether]: Behavior<any, string>,
   [subscribeTrader, subscribeTraderTether]: Behavior<IPuppetRouteSubscritpion>,
   [changeSubscribeList, changeSubscribeListTether]: Behavior<IPuppetRouteSubscritpion[]>,
-  [toggleMenu, toggleMenuTether]: Behavior<boolean>,
-
   [clickCloseSubscPanel, clickCloseSubscPanelTether]: Behavior<any>,
   [syncProcessData, syncProcessDataTether]: Behavior<any, bigint>,
 
-  // [resizeScreen, resizeScreenTether]: Behavior<any, ResizeObserverEntry[]>,
 ) => {
 
 
@@ -70,8 +68,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   const process = mergeArray([gmxProcess.seed, syncProcessEvent])
   const processData = map(p => p.state, process)
 
-  const tradingStore = store.createStoreScope(rootStoreScope, 'tradeBox' as const)
-  const isMenuOpen = store.replayWrite(tradingStore, true, toggleMenu, 'isLong')
 
   const changes = merge(locationChange, multicast(routeChanges))
   const fragmentsChange = map(() => {
@@ -155,11 +151,10 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
         )(
           switchMap(isMobile => {
             return isMobile
-              ? $MainMenu({ isMenuOpen, parentRoute: appRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
-                routeChange: linkClickTether(),
-                toggleMenu: toggleMenuTether()
+              ? $MainMenu({ parentRoute: appRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+                routeChange: linkClickTether()
               })
-              : $MainMenuMobile({ isMenuOpen, parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+              : $MainMenuMobile({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
                 routeChange: linkClickTether(),
               })
           }, isMobileScreen),
@@ -167,6 +162,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
           switchMap(chainEvent => {
             return $column(style({ flex: 1, position: 'relative', padding: '0 8px' }))(
+
               router.contains(walletRoute)(
                 $IntermediateConnectButton({
                   $$display: map(wallet => {
@@ -280,7 +276,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
               switchMap(params => {
                 const mode = (import.meta as any).env.MODE
-                const refreshThreshold = mode === 'development' ? 5000 : 50
+                const refreshThreshold = mode === 'development' ? 550 : 50
                 const blockDelta = params.syncBlock - params.process.endBlock
 
 
@@ -315,7 +311,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 ]))
               }, combineObject({ process, syncBlock: block })),
 
-              $SubscriberDrawer({
+              $RouteSubscriptionDrawer({
                 subscribeList,
                 subscribeTrader
               })({

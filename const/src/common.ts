@@ -14,4 +14,4 @@ export const ROUTE_DESCRIPTION = [
   },
 ]
 
-export const ROUTE_TYPE_DESCRIPTIN = mapArrayBy(ROUTE_DESCRIPTION, r => getRouteTypeKey(r.collateralToken, r.indexToken, r.isLong), r => r)
+export const ROUTE_DESCRIPTIN_MAP = mapArrayBy(ROUTE_DESCRIPTION, r => getRouteTypeKey(r.collateralToken, r.indexToken, r.isLong), r => r)

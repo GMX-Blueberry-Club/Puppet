@@ -1,4 +1,4 @@
-import { ILogTxType, IPositionSettled, IPositionSlot, ITraderSummary } from "gmx-middleware-utils"
+import { ILogTxType, IPositionSettled, IPositionSlot, IPositionListSummary } from "gmx-middleware-utils"
 import * as viem from "viem"
 
 
@@ -32,16 +32,17 @@ export interface IPositionMirrorSettled extends ILogTxType<'PositionMirrorSettle
   position: IPositionSettled
 }
 
-export interface IMirrorTraderSummary extends ITraderSummary {
-  route: viem.Address
+export interface IMirrorPositionListSummary extends IPositionListSummary {
+  // route: viem.Address
   puppets: viem.Address[]
-  settledTradeList: IPositionMirrorSettled[]
+  // settledTradeList: IPositionMirrorSettled[]
 }
 
 
 export type IPuppetRouteSubscritpion = {
   trader: viem.Address
   puppet: viem.Address
+  endDate: bigint
   subscribed: boolean
   allowance: bigint
   routeTypeKey: viem.Hex

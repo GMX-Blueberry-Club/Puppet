@@ -5,7 +5,7 @@ import { empty, map, now } from "@most/core"
 import { Stream } from "@most/types"
 import { $Link, $infoTooltipLabel, $txHashRef, TableColumn } from "gmx-middleware-ui-components"
 import { readableDate, timeSince } from "gmx-middleware-utils"
-import { IMirrorTraderSummary, IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
+import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $entry, $openPositionPnlBreakdown, $pnlValue, $puppets, $size, $sizeAndLiquidation, $tradePnl } from "../../common/$common"
 import { IGmxProcessState, latestTokenPrice } from "../../data/process/process"
@@ -55,13 +55,13 @@ export const entryColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSl
   })
 }
 
-export const puppetsColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSlot> = {
+export const puppetsColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSlot | IMirrorPositionListSummary> = {
   $head: $text('Puppets'),
   $$body: map((pos) => {
     // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))w
     // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
 
-    return $puppets(pos.puppets, empty())
+    return $puppets(pos.puppets)
   })
 }
 
@@ -81,7 +81,7 @@ export const pnlSlotColumn = (processData: Stream<IGmxProcessState>, puppet?: vi
   })
 })
 
-export const traderColumn = (click: Op<string, string>, route: router.Route): TableColumn<IMirrorTraderSummary> => ({
+export const traderColumn = (click: Op<string, string>, route: router.Route): TableColumn<IMirrorPositionListSummary & { trader: viem.Address }> => ({
   $head: $text('Trader'),
   // gridTemplate: 'minmax(110px, 120px)',
   columnOp: style({ alignItems: 'center' }),
@@ -91,11 +91,11 @@ export const traderColumn = (click: Op<string, string>, route: router.Route): Ta
       // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
       $Link({
         $content: $discoverIdentityDisplay({
-          address: pos.account,
+          address: pos.trader,
           // $profileContainer: $defaultBerry(style({ width: '50px' }))
         }),
         route: route.create({ fragment: 'baseRoute' }),
-        url: `/app/profile/${pos.account}/${IProfileActiveTab.TRADER.toLowerCase()}`
+        url: `/app/profile/${pos.trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
       })({ click: click }),
     )
   })

@@ -101,7 +101,7 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
           style({ alignItems: 'center' }),
           style({
             border: `1px solid`,
-            padding: '20px',
+            padding: '14px 18px',
             animation: `borderRotate var(--d) linear infinite forwards`,
             borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
           }),

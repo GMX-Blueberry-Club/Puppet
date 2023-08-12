@@ -1,9 +1,9 @@
 import { Behavior, combineObject, replayLatest } from "@aelea/core"
-import { $Node, $text, INode, MOTION_NO_WOBBLE, NodeComposeFn, component, motion, style } from "@aelea/dom"
-import { $NumberTicker, $column, $row, observer } from "@aelea/ui-components"
+import { $Node, $text, MOTION_NO_WOBBLE, NodeComposeFn, component, motion, style } from "@aelea/dom"
+import { $NumberTicker, $column, $row } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { map, multicast, skipRepeatsWith, startWith, take } from "@most/core"
-import { Stream } from "@most/types"
+import { empty, map, multicast, skipRepeatsWith, startWith } from "@most/core"
+import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $infoTooltipLabel } from "gmx-middleware-ui-components"
 import {
   IPositionClose,
@@ -17,23 +17,31 @@ import {
   getPnL,
   parseReadableNumber,
   readableUnitAmount,
-  switchMap,
-  unixTimestampNow,
-  zipState
+  unixTimestampNow
 } from "gmx-middleware-utils"
 import { BaselineData, ChartOptions, DeepPartial, LineType, MouseEventParams } from "lightweight-charts"
-import { IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion, getParticiapntMpShare } from "puppet-middleware-utils"
+import { IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { IGmxProcessState, PRICEFEED_INTERVAL } from "../../data/process/process"
 
 
 interface IParticipantPerformanceCard {
+  width: number
   $container?: NodeComposeFn<$Node>
   chartConfig?: DeepPartial<ChartOptions>
   pixelsPerBar?: number
-  positionList: Stream<(IPositionMirrorSettled | IPositionMirrorSlot)[]>
-  processData: Stream<IGmxProcessState>
+  positionList: (IPositionMirrorSettled | IPositionMirrorSlot)[]
+  processData: IGmxProcessState
   targetShare?: viem.Address
+  activityTimeframe: GMX.IntervalTime
+}
+
+interface IProfilePerformanceGraph {
+  width: number,
+  positionList: (IPositionMirrorSettled | IPositionMirrorSlot)[],
+  targetShare?: viem.Address
+  processData: IGmxProcessState;
+  activityTimeframe: GMX.IntervalTime;
 }
 
 
@@ -67,6 +75,7 @@ function performanceTimeline(
   positionList: (IPositionMirrorSettled | IPositionMirrorSlot)[],
   processData: IGmxProcessState,
   tickCount: number,
+  activityTimeframe: GMX.IntervalTime,
   shareTarget?: viem.Address,
 ) {
 
@@ -86,28 +95,27 @@ function performanceTimeline(
   }).sort((a, b) => getTime(a) - getTime(b))
     
 
-  const startTime = sourceList[0].blockTimestamp
-  const timeRange = now - startTime
-  const interval = findClosest(PRICEFEED_INTERVAL, timeRange / tickCount)
+  const startTime = now - activityTimeframe
+  const interval = findClosest(PRICEFEED_INTERVAL, activityTimeframe / tickCount)
 
 
   const initialTick: IPerformanceTick = {
-    time: startTime - interval,
+    time: startTime,
     value: 0,
     settledPnl: 0n,
     positionSlot: {}
   }
 
+  const endTick = {
+    end: true,
+    blockTimestamp: now
+  }
+
+
 
 
   const data = createTimeline({
-    source: [
-      ...sourceList,
-      {
-        end: true,
-        blockTimestamp: now
-      }
-    ],
+    source: [ ...sourceList, endTick ],
     // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
     interval,
     seed: initialTick,
@@ -170,20 +178,13 @@ function getClosestpricefeedCandle(pricefeed: Record<IPriceIntervalIdentity, Rec
 }
 
 export const $ProfilePerformanceCard = (config: IParticipantPerformanceCard) => component((
-  [containerDimension, sampleContainerDimension]: Behavior<INode, ResizeObserverEntry[]>,
-  [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
+  [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams>
 ) => {
 
   const pixelsPerBar = config.pixelsPerBar || 5
-  const tickCount = map(([container]) => container.contentRect.width / pixelsPerBar, containerDimension)
-  const timeline = multicast(map(
-    params => {
-      return performanceTimeline(params.positionList, params.processData, params.tickCount, config.targetShare)
-    },
-    zipState({ processData: config.processData, positionList: config.positionList, tickCount })
-  ))
-
   const $container = config.$container || $column(style({ height: '80px', minWidth: '100px' }))
+  const tickCount = config.width / pixelsPerBar
+  const timeline = performanceTimeline(config.positionList, config.processData, tickCount, config.activityTimeframe, config.targetShare,)
   const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
 
 
@@ -193,16 +194,20 @@ export const $ProfilePerformanceCard = (config: IParticipantPerformanceCard) => 
       return value
     }
 
-    const data = params.timeline
+    const data = timeline
     const value = data[data.length - 1]?.value
     return value || null
-  }, combineObject({ pnlCrossHairTimeChange, timeline })))
+  }, combineObject({ pnlCrossHairTimeChange })))
 
 
   return [
-
-    $container(sampleContainerDimension(observer.resize()))(
+    $container(
       $row(style({ position: 'absolute', placeContent: 'center',  top: '10px', alignSelf: 'center', zIndex: 11, alignItems: 'center', placeSelf: 'center' }))(
+        config.positionList.length === 0
+          ? $text(style({ 
+            fontSize: '.85rem', color: pallete.foreground, textAlign: 'center',
+          }))('No trades yet')
+          : empty(),
         $column(style({ alignItems: 'center' }))(
           $NumberTicker({
             textStyle: {
@@ -219,56 +224,47 @@ export const $ProfilePerformanceCard = (config: IParticipantPerformanceCard) => 
             decrementColor: pallete.negative
           }),
           $infoTooltipLabel('The total combined settled and open trades', $text(style({ fontSize: '.85rem' }))('PnL'))
-        )
+        ),
       ),
-      
-      switchMap(timeline => {
-        if (timeline.length === 0) {
-          return $text(style({ 
-            fontSize: '.85rem', color: pallete.foreground, textAlign: 'center',
-          }))('No trades yet')
-        }
-
-        return $Baseline({
-          chartConfig: {
-            leftPriceScale: {
-              autoScale: true,
-              ticksVisible: true,
-              scaleMargins: {
-                top: 0.35,
-                bottom: 0.05,
-              }
-            },
+      $Baseline({
+        chartConfig: {
+          leftPriceScale: {
+            autoScale: true,
+            ticksVisible: true,
+            scaleMargins: {
+              top: 0.35,
+              bottom: 0.05,
+            }
           },
-          baselineOptions: {
-            baseLineColor: pallete.message,
-            baseLineVisible: true,
-            lineWidth: 2,
-            baseValue: {
-              price: 0,
-              type: 'price',
-            },
+        },
+        baselineOptions: {
+          baseLineColor: pallete.message,
+          baseLineVisible: true,
+          lineWidth: 2,
+          baseValue: {
+            price: 0,
+            type: 'price',
           },
-          // appendData: scan((prev, next) => {
-          //   const marketPrice = formatFixed(next.indexTokenPrice, 30)
-          //   const timeNow = unixTimestampNow()
-          //   const prevTimeSlot = Math.floor(prev.time as number / tf)
-          //   const nextTimeSlot = Math.floor(timeNow / tf)
-          //   const time = nextTimeSlot * tf as Time
-          //   const isNext = nextTimeSlot > prevTimeSlot
+        },
+        // appendData: scan((prev, next) => {
+        //   const marketPrice = formatFixed(next.indexTokenPrice, 30)
+        //   const timeNow = unixTimestampNow()
+        //   const prevTimeSlot = Math.floor(prev.time as number / tf)
+        //   const nextTimeSlot = Math.floor(timeNow / tf)
+        //   const time = nextTimeSlot * tf as Time
+        //   const isNext = nextTimeSlot > prevTimeSlot
 
-          //   return {
-          //     value: marketPrice,
-          //     time
-          //   }
-          // }, data[data.length - 1], config.processData),
-          data: timeline as any as BaselineData[],
-        })({
-          crosshairMove: crosshairMoveTether(
-            skipRepeatsWith((a, b) => a.point?.x === b.point?.x)
-          )
-        })
-      }, timeline)
+        //   return {
+        //     value: marketPrice,
+        //     time
+        //   }
+        // }, data[data.length - 1], config.processData),
+        data: timeline as any as BaselineData[],
+      })({
+        crosshairMove: crosshairMoveTether(
+          skipRepeatsWith((a, b) => a.point?.x === b.point?.x)
+        )
+      })
     ),
 
     {
@@ -279,19 +275,13 @@ export const $ProfilePerformanceCard = (config: IParticipantPerformanceCard) => 
 })
 
 
-export const $ProfilePerformanceGraph = (config: {
-  positionList: (IPositionMirrorSettled | IPositionMirrorSlot)[],
-  processData: IGmxProcessState,
-  width: number,
-  targetShare?: viem.Address
-}) => component((
+export const $ProfilePerformanceGraph = (config: IProfilePerformanceGraph) => component((
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
 ) => {
 
-  const tickCount = config.width / 5
-  const timeline = performanceTimeline(config.positionList, config.processData, tickCount, config.targetShare)
   const $container = $row(style({  width: `${config.width}px`,  }))
-
+  const tickCount = config.width / 5
+  const timeline = performanceTimeline(config.positionList, config.processData, tickCount, config.activityTimeframe, config.targetShare)
 
   return [
     $container(

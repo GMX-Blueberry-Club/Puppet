@@ -1,10 +1,12 @@
-import { isStream, O, Tether } from "@aelea/core"
-import { $Node, $text, style, styleBehavior, styleInline } from "@aelea/dom"
+import { Behavior, combineObject, isStream, O, Tether } from "@aelea/core"
+import { $text, component, style, styleBehavior, styleInline } from "@aelea/dom"
+import * as router from '@aelea/router'
 import { Route } from "@aelea/router"
 import { $column, $icon, $row, $seperator, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { map, now, skipRepeats } from "@most/core"
+import { empty, map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
+import * as GMX from 'gmx-middleware-const'
 import { $bear, $bull, $Link, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
 import {
   bnDiv,
@@ -15,24 +17,29 @@ import {
   IAbstractRouteIdentity,
   IPosition, IPositionSettled, IPositionSlot,
   isPositionSettled,
-  IVaultPosition,
   leverageLabel,
   liquidationWeight,
-  readableFixedUSD30
+  readableFixedUSD30,
+  switchMap
 } from "gmx-middleware-utils"
-import { IPositionMirrorSettled, IPositionMirrorSlot } from "puppet-middleware-utils"
+import { getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-const"
+import { IPuppetRouteSubscritpion, IPuppetRouteTrades } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $discoverAvatar, $discoverIdentityDisplay } from "../components/$AccountProfile"
 import { $defaultBerry } from "../components/$DisplayBerry"
+import { $Popover } from "../components/$Popover"
+import { $RouteSubscriptionEditor } from "../components/$RouteSubscription"
+import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
 import { IProfileActiveTab } from "../pages/$Profile"
 import { $seperator2 } from "../pages/common"
+import { wallet } from "../wallet/walletLink"
 
 
 export const $midContainer = $column(
   style({
     margin: '0 auto',
     maxWidth: '940px',
-    position: 'relative',
+    flex: 1,
     gap: screenUtils.isDesktopScreen ? '50px' : '50px',
     width: '100%',
   })
@@ -89,19 +96,6 @@ export const $settledSizeDisplay = (pos: IPositionSettled | IPositionSlot) => {
 }
 
 
-export const $traderDisplay = (route: Route, trader: viem.Address, changeRoute: Tether<string, string>) => {
-  return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-    $Link({
-      $content: $discoverIdentityDisplay({
-        address: trader,
-        $profileContainer: $defaultBerry(style({ width: '50px' }))
-      }),
-      route: route.create({ fragment: 'fefwef' }),
-      url: `/app/profile/${trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
-    })({ click: changeRoute() }),
-  )
-}
-
 
 export const $tokenIcon = (indexToken: viem.Address, IIcon?: { width?: string }) => {
   const tokenDesc = getTokenDescription(indexToken)
@@ -130,7 +124,7 @@ export const $sizeAndLiquidation = (isLong: boolean, size: bigint, collateral: b
 }
 
 
-export const $puppets = (puppets: readonly viem.Address[], $content: $Node) => {
+export const $puppets = (puppets: readonly viem.Address[]) => {
 
   // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
   // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
@@ -139,7 +133,7 @@ export const $puppets = (puppets: readonly viem.Address[], $content: $Node) => {
     ...puppets.map(address => {
       return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minHeight: '30px', borderRadius: '50%' })) })
     }),
-    $content
+    // $content
   )
 }
 
@@ -258,4 +252,69 @@ export const $openPositionPnlBreakdown = (pos: IPositionSlot, cumulativeFee: Str
   )
 }
 
+interface ITraderDisplay {
+  trader: viem.Address
+  subscriptionList: Stream<IPuppetRouteTrades[]>
+  route: router.Route
+}
 
+export const $TraderDisplay =  (config: ITraderDisplay) => component((
+  [clickTrader, clickTraderTether]: Behavior<any, viem.Address>,
+  [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, IPuppetRouteSubscritpion>,
+  [changeRouteSubscription, changeRouteSubscriptionTether]: Behavior<IPuppetRouteSubscritpion>,
+) => {
+
+
+  const $trader = $Link({
+    $content: $discoverIdentityDisplay({
+      address: config.trader,
+      // $profileContainer: $defaultBerry(style({ width: '50px' }))
+    }),
+    route: config.route.create({ fragment: 'baseRoute' }),
+    url: `/app/profile/${config.trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
+  })({ click: clickTraderTether() })
+
+
+  return [
+    $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+    // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
+
+      switchMap(w3p => {
+        if (w3p === null) {
+          return $trader
+        }
+
+        return switchMap(params => {
+          const routeTypeKey = getRouteTypeKey(GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, true)
+          const puppetSubscriptionKey = getPuppetSubscriptionKey(w3p.account.address, config.trader, routeTypeKey)
+          const routeSubscription = params.subscriptionList.find(x => x.puppetSubscriptionKey === puppetSubscriptionKey)
+
+
+          return $Popover({
+            $target: $row(layoutSheet.spacingSmall)(
+              $trader,
+              $ButtonSecondary({
+                $content: $text(routeSubscription ? 'Change' : 'Copy'),
+                $container: $defaultMiniButtonSecondary 
+              })({
+                click: popRouteSubscriptionEditorTether()
+              }),
+            ),
+            $popContent: map(() => {
+              return $RouteSubscriptionEditor({ routeSubscription })({
+                changeRouteSubscription: changeRouteSubscriptionTether(map(partialSubsc => {
+                  return { ...partialSubsc, trader: config.trader, puppet: w3p.account.address, routeTypeKey: routeTypeKey }
+                }))
+              })
+            }, popRouteSubscriptionEditor)
+          })({
+            
+          })
+        }, combineObject({ subscriptionList: config.subscriptionList }))
+      }, wallet)
+    ),
+
+
+    { changeRouteSubscription, clickTrader }
+  ]
+})

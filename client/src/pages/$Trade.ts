@@ -31,7 +31,7 @@ import { $caretDown } from "../elements/$icons"
 import { connectContract } from "../logic/common"
 import * as trade from "../logic/trade"
 import { resolveAddress } from "../logic/utils"
-import { rootStoreScope } from "../rootStore"
+import { rootStoreScope } from "../data/store/store"
 import * as indexDB from "../utils/storage/indexDB"
 import * as store from "../utils/storage/storeScope"
 import { walletLink } from "../wallet"
@@ -549,7 +549,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const CONTAINER_WIDTH = 1240
 
-  const $tradeMidContainer = $midContainer(layoutSheet.spacing, style({ flex: 1, maxWidth: `${CONTAINER_WIDTH}px` }))
+  const $tradeMidContainer = $midContainer(layoutSheet.spacing, style({ flex: 1, position: 'relative', maxWidth: `${CONTAINER_WIDTH}px` }))
 
 
   return [

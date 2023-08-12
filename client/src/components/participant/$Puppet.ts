@@ -1,4 +1,4 @@
-import { Behavior, groupByMap } from "@aelea/core"
+import { Behavior, combineObject } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
@@ -6,20 +6,20 @@ import { pallete } from "@aelea/ui-components-theme"
 import { map } from "@most/core"
 import { Stream } from "@most/types"
 import { $Table, $infoLabel } from "gmx-middleware-ui-components"
-import { IRequestAccountTradeListApi, getMappedValue, groupArrayMany, leverageLabel, switchMap } from "gmx-middleware-utils"
-import { IPuppetRouteTrades, IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
+import { getMappedValue, groupArrayMany, leverageLabel, switchMap } from "gmx-middleware-utils"
+import { ROUTE_DESCRIPTIN_MAP } from "puppet-middleware-const"
+import { summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from 'viem'
-import { $discoverAvatar, $discoverIdentityDisplay } from "../$AccountProfile"
+import { $discoverIdentityDisplay } from "../$AccountProfile"
 import { $defaultBerry } from "../$DisplayBerry"
-import { $pnlValue, $route, $tokenIcon, $traderDisplay } from "../../common/$common"
+import { $TraderDisplay, $pnlValue, $route } from "../../common/$common"
+import { $heading2, $heading3 } from "../../common/$text"
 import { IGmxProcessState } from "../../data/process/process"
 import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
-import { entryColumn, pnlSlotColumn, settledPnlColumn, settledSizeColumn, positionTimeColumn, slotSizeColumn, positionTimeColumn } from "../table/$TableColumn"
+import { entryColumn, pnlSlotColumn, positionTimeColumn, settledPnlColumn, settledSizeColumn, slotSizeColumn } from "../table/$TableColumn"
 import { $ProfilePerformanceCard, $ProfilePerformanceGraph } from "../trade/$ProfilePerformanceCard"
-import { $heading1, $heading2, $heading3 } from "../../common/$text"
-import { ROUTE_TYPE_DESCRIPTIN } from "puppet-middleware-const"
-import { $RouteDepositInfo } from "../$common"
+import * as GMX from 'gmx-middleware-const'
 
 
 
@@ -27,6 +27,7 @@ export interface ITraderProfile {
   route: router.Route
   address: viem.Address
   processData: Stream<IGmxProcessState>
+  activityTimeframe: Stream<GMX.IntervalTime>;
 }
 
 
@@ -55,8 +56,6 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
   }, settledTrades)
 
 
-  const $itemListRow = $row(layoutSheet.spacingBig, style({ placeContent: 'space-between' }))
-
   const $metricRow = $column(style({ placeContent: 'center', alignItems: 'center' }))
   const $metricLabel = $row(style({ color: pallete.foreground, letterSpacing: '1px', fontSize: '.85rem' }))
 
@@ -65,19 +64,26 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
   return [
     $column(layoutSheet.spacingBig)(
 
-      $card2(style({ padding: 0, position: 'relative' }))(
-        $row(layoutSheet.spacing, style({ marginBottom: '-10px', flex: 1, placeContent: 'space-between', position: 'absolute', bottom: '100%', left: '20px', right: 0 }))(
-          $row(
-            $discoverIdentityDisplay({
-              address: config.address,
-              $container: $row(
-                style({ minWidth: '120px', })
-              ),
-              $profileContainer: $defaultBerry(style({ width: '100px', }))
-            })
-          ),
+      switchMap(params => {
 
-          $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end', paddingBottom: '32px' }))(
+        const tradeList = params.processData.subscription.filter(s => s.puppet === config.address)
+          .flatMap(trade => {
+            return [...trade.settled, ...trade.open]
+          }) // .slice(-1)
+
+        return $card2(style({ padding: 0, position: 'relative' }))(
+          $row(layoutSheet.spacing, style({ marginBottom: '-10px', flex: 1, placeContent: 'space-between', position: 'absolute', bottom: '100%', left: '20px', right: 0 }))(
+            $row(
+              $discoverIdentityDisplay({
+                address: config.address,
+                $container: $row(
+                  style({ minWidth: '120px', })
+                ),
+                $profileContainer: $defaultBerry(style({ width: '100px', }))
+              })
+            ),
+
+            $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end', paddingBottom: '32px' }))(
             // $metricRow(
             //   $metricValue(
             //     switchMap(puppets => {
@@ -91,59 +97,55 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
             //   $metricLabel($text('Traders')),
             // ),
 
-            // $seperator2,
+              // $seperator2,
 
-            $metricRow(
-              $heading2(map(seed => {
-                if (seed === null) return '-'
+              $metricRow(
+                $heading2(map(seed => {
+                  if (seed === null) return '-'
 
-                return `${seed.winCount} / ${seed.lossCount}`
-              }, summary)),
-              $metricLabel($text('Win / Loss')),
+                  return `${seed.winCount} / ${seed.lossCount}`
+                }, summary)),
+                $metricLabel($text('Win / Loss')),
+              ),
+
+              // $seperator2,
+
+              $metricRow(
+                $heading2(map(seed => {
+                  if (seed === null) return '-'
+
+                  return leverageLabel(seed.avgLeverage)
+                }, summary)),
+                $metricLabel($text('Avg Leverage')),
+              ),
             ),
 
-            // $seperator2,
-
-            $metricRow(
-              $heading2(map(seed => {
-                if (seed === null) return '-'
-
-                return leverageLabel(seed.avgLeverage)
-              }, summary)),
-              $metricLabel($text('Avg Leverage')),
-            ),
           ),
-
-        ),
-        $ProfilePerformanceCard({
-          $container: $column(style({ height: '200px', padding: 0 })),
-          processData: config.processData,
-          positionList: map(processData => {
-            const tradeList = processData.subscription.filter(s => s.puppet === config.address)
-              .flatMap(trade => {
-                return [...trade.settled, ...trade.open]
-              }) // .slice(-1)
-
-            return tradeList
-          }, config.processData),
-          targetShare: config.address,
-        })({ }),
-      ),
+          $ProfilePerformanceCard({
+            $container: $column(style({ height: '200px', padding: 0 })),
+            processData: params.processData,
+            positionList: tradeList,
+            width: 300,
+            targetShare: config.address,
+            activityTimeframe: params.activityTimeframe,
+          })({ }),
+        )
+      }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe })),
 
       $node(),
 
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
         $heading3('Routes'),
 
-        switchMap(processData => {
+        switchMap(params => {
 
-          const subscList = processData.subscription.filter(s => s.puppet === config.address)
+          const subscList = params.processData.subscription.filter(s => s.puppet === config.address)
           const group = Object.entries(groupArrayMany(subscList, s => s.routeTypeKey))
 
           return $column(layoutSheet.spacingBig, style({ width: '100%' }))(
             ...group.map(([key, list]) => {
 
-              const route = getMappedValue(ROUTE_TYPE_DESCRIPTIN, key)
+              const route = getMappedValue(ROUTE_DESCRIPTIN_MAP, key)
 
               return $column(layoutSheet.spacing)(
                 $route(route),
@@ -160,10 +162,12 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
                     ...list.map(sub => {
                       const settledList = [...sub.settled, ...sub.open] //.slice(-1)
 
-                      if (settledList.length === 0) return $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
-                        $traderDisplay(config.route, sub.trader, changeRouteTether),
-                        $infoLabel($text('No trades yet'))
-                      )
+                      if (settledList.length === 0) {
+                        return $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
+                          $TraderDisplay(config.route, sub.trader, changeRouteTether)({}),
+                          $infoLabel($text('No trades yet'))
+                        )
+                      }
 
 
                       const summary = summariesMirrorTrader(sub.settled, config.address)
@@ -174,9 +178,10 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
                         $node(style({ flex: 1 }))(),
 
                         $ProfilePerformanceGraph({
-                          processData,
+                          processData: params.processData,
                           positionList: settledList,
                           width: 250,
+                          activityTimeframe: params.activityTimeframe
                         })({}),
 
                         $pnlValue(summary.pnl)
@@ -189,7 +194,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
               )
             })
           )
-        }, config.processData),
+        }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe })),
 
       ),
 

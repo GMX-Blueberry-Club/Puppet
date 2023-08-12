@@ -1,4 +1,4 @@
-import { ITraderSummary, IChainParamApi, IEnsRegistration, IResponsePageApi, IRequestPagePositionApi, IRequestSortApi, IRequestTimerangeApi, IPriceInterval } from "gmx-middleware-utils"
+import { IPositionListSummary, IChainParamApi, IEnsRegistration, IResponsePageApi, IRequestPagePositionApi, IRequestSortApi, IRequestTimerangeApi, IPriceInterval } from "gmx-middleware-utils"
 import * as GMX from "gmx-middleware-const"
 import { Address } from "viem"
 
@@ -104,7 +104,7 @@ export interface IYieldInterval extends IAsset {
 }
 
 
-export interface IBlueberryLadder extends ITraderSummary {
+export interface IBlueberryLadder extends IPositionListSummary {
   profile: IOwner | null
   rank: number
   score: bigint

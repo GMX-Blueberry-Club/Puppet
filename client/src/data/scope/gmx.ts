@@ -1,5 +1,5 @@
 import * as GMX from "gmx-middleware-const"
-import { rootStoreScope } from "../../rootStore"
+import { rootStoreScope } from "../store/store"
 import * as store from "../../utils/indexer/rpc"
 
 

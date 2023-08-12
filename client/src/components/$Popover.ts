@@ -1,10 +1,12 @@
 import { $node, $Node, component, nodeEvent, INode, style, styleBehavior, NodeComposeFn } from '@aelea/dom'
 import { O, Behavior } from '@aelea/core'
 import { pallete } from "@aelea/ui-components-theme"
-import { constant, empty, map, merge, multicast, switchLatest, take, tap, until, zip } from "@most/core"
+import { constant, empty, filter, map, merge, multicast, now, switchLatest, take, tap, until, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { colorAlpha } from "@aelea/ui-components-theme"
 import { observer } from '@aelea/ui-components'
+import { switchMap } from 'gmx-middleware-utils'
+import { fadeIn } from '../transitions/enter'
 
 
 interface IPocus {
@@ -12,12 +14,12 @@ interface IPocus {
   $popContent: Stream<$Node>
 
   $container?: NodeComposeFn<$Node>
-  offset?: number
+  margin?: number
   padding?: number
   dismiss?: Stream<any>
 }
 
-export const $Popover = ({ $popContent, offset = 30, padding = 76, dismiss = empty(), $container = $node, $target }: IPocus) => component((
+export const $Popover = ({ $popContent, margin = 30, padding = 76, dismiss = empty(), $container = $node, $target }: IPocus) => component((
   [overlayClick, overlayClickTether]: Behavior<INode, any>,
   [targetIntersection, targetIntersectionTether]: Behavior<INode, IntersectionObserverEntry[]>,
   [popoverContentDimension, popoverContentDimensionTether]: Behavior<INode, ResizeObserverEntry[]>,
@@ -29,36 +31,45 @@ export const $Popover = ({ $popContent, offset = 30, padding = 76, dismiss = emp
   const $overlay = $node(
     style({
       position: 'fixed', zIndex: 99999,
-      top: 0, left: 0, right: 0, bottom: 0
+      top: 0, left: 0, right: 0, bottom: 0, visibility: 'hidden',
     }),
     overlayClickTether(
-      nodeEvent('click')
+      nodeEvent('click'),
+      filter(ev => {
+        if (ev.target instanceof HTMLElement) {
+          const computedStyle = getComputedStyle(ev.target)
+          if (computedStyle.zIndex === '99999' && computedStyle.inset === '0px'){
+            return true
+          }
+        }
+        
+        return false
+      })
     ),
     styleBehavior(
-      zip(([contentResize], [IntersectiontargetRect]) => {
-        const { y, x, bottom } = IntersectiontargetRect.intersectionRect
-        const rootWidth = IntersectiontargetRect.rootBounds?.width || 0
+      zip(([contentResizeRect], [targetIntersectionRect]) => {
+        const { y, x, bottom } = targetIntersectionRect.intersectionRect
+        const rootWidth = targetIntersectionRect.rootBounds?.width || 0
 
-        const width = Math.max(contentResize.contentRect.width, IntersectiontargetRect.intersectionRect.width) + (padding * 2) + offset
-        const targetHeight = IntersectiontargetRect.intersectionRect.height
-        const contentHeight = contentResize.contentRect.height
-        const height = contentHeight + targetHeight + offset
+        const width = Math.max(contentResizeRect.contentRect.width, targetIntersectionRect.intersectionRect.width) + (padding * 2) + margin
+        const targetHeight = targetIntersectionRect.intersectionRect.height
+        const contentHeight = contentResizeRect.contentRect.height
+        const height = contentHeight + targetHeight + margin
 
-        const placedWidth = x + contentResize.contentRect.width
+        const placedWidth = x + contentResizeRect.contentRect.width
 
         const leftOffset = placedWidth > rootWidth ? rootWidth - placedWidth - 20 : 0
 
-        const left = x + (IntersectiontargetRect.intersectionRect.width / 2) + leftOffset + 'px'
+        const left = x + (targetIntersectionRect.intersectionRect.width / 2) + leftOffset + 'px'
 
         const bottomSpace = window.innerHeight - bottom
         const popDown = bottomSpace > bottom
         const top = (popDown ? y + (height / 2) : y - ((height - padding) / 2)) + 'px'
 
+        const backgroundImage = `radial-gradient(${width}px ${height + padding * 2}px at top ${top} left ${left}, ${pallete.horizon} ${width / 2}px, ${colorAlpha(pallete.background, .25)})`
 
-        return {
-          backgroundImage: `radial-gradient(${width}px ${height + padding * 2}px at top ${top} left ${left}, ${pallete.background} ${width / 2}px, ${colorAlpha(pallete.horizon, .45)})`,
-          // backdropFilter: 'blur(2px)'
-        }
+
+        return { backgroundImage, visibility: 'visible' }
       }, popoverContentDimension, targetIntersection)
     )
   )
@@ -68,43 +79,30 @@ export const $Popover = ({ $popContent, offset = 30, padding = 76, dismiss = emp
       observer.resize({})
     ),
     styleBehavior(
-      zip(([contentRect], [rect]) => {
-        const { y, x, width, bottom } = rect.intersectionRect
-        const rootWidth = rect.rootBounds?.width || 0
+      zip(([contentRect], [targetRect]) => {
+        const screenWidth = targetRect.rootBounds!.width
+        const targetBound = targetRect.intersectionRect
+        const bottomSpcace = window.innerHeight - targetBound.bottom
+        const goDown = bottomSpcace > targetBound.bottom
 
+        const top = (goDown ? targetBound.bottom + margin : targetBound.y - margin) + 'px'
+        const width = Math.min(contentRect.contentRect.width, screenWidth - margin)
+        const center = targetBound.x + (targetBound.width / 2)
+        const centerWidth = width / 2
+        const rightOffset = center - screenWidth
+        const leftOffset = center - centerWidth + Math.min(rightOffset < 0 ? Math.abs(rightOffset) : 0, 0)
+        const left = Math.max(leftOffset, margin) + 'px'
 
-
-
-        const bottomSpcace = window.innerHeight - bottom
-        const goDown = bottomSpcace > bottom
-
-
-        if (rect.target instanceof HTMLElement && rect.target.offsetParent instanceof HTMLElement) {
-          if (rect.target.offsetParent.offsetWidth !== document.body.clientWidth)  {
-            return {
-              top: 0,
-              visibility: 'visible',
-              transform: `translate(-50%, ${goDown ? '0' : '-100%'})`
-            }
-          }
-        }
-
-
-        const top = (goDown ? bottom + offset : y - offset) + 'px'
-
-        const placedWidth = x + contentRect.contentRect.width
-        const leftOffset = placedWidth > rootWidth ? rootWidth - placedWidth - 20 : 0
-
-        const left = x + leftOffset + (width / 2) + 'px'
 
         return {
           top, left,
-          visibility: 'visible',
-          transform: `translate(-50%, ${goDown ? '0' : '-100%'})`
+          
+          transition: 'opacity .2s ease-in-out',
+          transform: `translate(0, ${goDown ? '0' : '-100%'})`
         }
       }, popoverContentDimension, targetIntersection)
     ),
-    style({ zIndex: 100000, position: 'absolute', visibility: 'hidden' }),
+    style({ position: 'absolute' }),
   )
 
   const dismissOverlay = until(merge(overlayClick, dismiss))
@@ -113,10 +111,7 @@ export const $Popover = ({ $popContent, offset = 30, padding = 76, dismiss = emp
   const $popover = switchLatest(
     map($content => {
       return dismissOverlay(
-        merge(
-          $overlay(),
-          contentOps($content),
-        )
+        $overlay(contentOps($content))
       )
     }, $$popContentMulticast)
   )
@@ -124,7 +119,12 @@ export const $Popover = ({ $popContent, offset = 30, padding = 76, dismiss = emp
 
   const targetOp = O(
     targetIntersectionTether(
-      observer.intersection()
+      observer.intersection(),
+      // map(node => {
+      //   const root = node.element instanceof HTMLElement && node.element.offsetParent || null
+      //   return observer.intersection({ root })(now(node))
+      // }),
+      // switchLatest
     ),
     styleBehavior(
       merge(
