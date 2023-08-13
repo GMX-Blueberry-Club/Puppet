@@ -85,7 +85,6 @@ export interface IRouteDepositInfoConfig {
 export const $RouteDepositInfo = (config: IRouteDepositInfoConfig) => component((
   [requestChangeSubscription, requestChangeSubscriptionTether]: Behavior<PointerEvent, Promise<viem.TransactionReceipt>>,
   [requestDepositAsset, requestDepositAssetTether]: Behavior<PointerEvent, Promise<viem.TransactionReceipt>>,
-  [changeSubscribeList, changeSubscribeListTether]: Behavior<IPuppetRouteSubscritpion[]>,
   [inputDepositAmount, inputDepositAmountTether]: Behavior<string>,
 
   [openDepositPopover, openDepositPopoverTether]: Behavior<any>,

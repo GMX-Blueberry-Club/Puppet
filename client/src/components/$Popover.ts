@@ -66,7 +66,7 @@ export const $Popover = ({ $popContent, margin = 30, padding = 76, dismiss = emp
         const popDown = bottomSpace > bottom
         const top = (popDown ? y + (height / 2) : y - ((height - padding) / 2)) + 'px'
 
-        const backgroundImage = `radial-gradient(${width}px ${height + padding * 2}px at top ${top} left ${left}, ${pallete.horizon} ${width / 2}px, ${colorAlpha(pallete.background, .35)})`
+        const backgroundImage = `radial-gradient(${width}px ${height + padding * 2}px at top ${top} left ${left}, ${pallete.horizon} ${width / 2}px, ${colorAlpha(pallete.background, .45)})`
 
 
         return { backgroundImage, visibility: 'visible' }
@@ -105,7 +105,8 @@ export const $Popover = ({ $popContent, margin = 30, padding = 76, dismiss = emp
     style({ position: 'absolute' }),
   )
 
-  const dismissOverlay = until(merge(overlayClick, dismiss))
+  const dismissEvent = merge(overlayClick, dismiss)
+  const dismissOverlay = until(dismissEvent)
 
 
   const $popover = switchLatest(
@@ -129,7 +130,7 @@ export const $Popover = ({ $popContent, margin = 30, padding = 76, dismiss = emp
     styleBehavior(
       merge(
         constant({ zIndex: 100000, position: 'relative' }, $$popContentMulticast),
-        constant(null, overlayClick)
+        constant(null, dismissEvent)
       )
     )
   )

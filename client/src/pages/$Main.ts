@@ -49,9 +49,8 @@ interface Website {
 
 export const $Main = ({ baseRoute = '' }: Website) => component((
   [routeChanges, linkClickTether]: Behavior<any, string>,
-  [subscribeTrader, subscribeTraderTether]: Behavior<IPuppetRouteSubscritpion>,
-  [changeSubscribeList, changeSubscribeListTether]: Behavior<IPuppetRouteSubscritpion[]>,
-  [clickCloseSubscPanel, clickCloseSubscPanelTether]: Behavior<any>,
+  [modifySubscriptionList, modifySubscriptionListTether]: Behavior<IPuppetRouteSubscritpion[]>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
   [syncProcessData, syncProcessDataTether]: Behavior<any, bigint>,
 
 ) => {
@@ -116,9 +115,17 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   const isMobileScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
 
   
-  const subscribeList = replayLatest(changeSubscribeList, [] as IPuppetRouteSubscritpion[])
 
+  const subscriptionList: Stream<IPuppetRouteTrades[]> = switchLatest(map(w3p => {
+    if (!w3p) {
+      return empty()
+    }
 
+    return map(data => {
+      return data.subscription.filter(s => s.puppet === w3p.account.address)
+    }, processData)
+  }, wallet))
+  
 
   return [
 
@@ -180,15 +187,14 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               router.contains(leaderboardRoute)(
                 $midContainer(
                   fadeIn($Leaderboard({
-                    subscribeList,
+                    subscriptionList,
                     route: leaderboardRoute,
                     processData
                   })({
                     routeChange: linkClickTether(
                       tap(console.log)
                     ),
-                    subscribeTrader: subscribeTraderTether(),
-                    changeSubscribeList: changeSubscribeListTether(),
+                    modifySubscriber: modifySubscriberTether(),
                   }))
                 )
               ),
@@ -198,7 +204,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                     route: profileRoute,
                     processData
                   })({
-                    subscribeTreader: subscribeTraderTether(),
+                    modifySubscriber: modifySubscriberTether(),
                     changeRoute: linkClickTether()
                   }))
                 )
@@ -312,11 +318,13 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               }, combineObject({ process, syncBlock: block })),
 
               $RouteSubscriptionDrawer({
-                subscribeList,
-                subscribeTrader
+                modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetRouteSubscritpion[]),
+                modifySubscriber,
+                subscriptionList
               })({
+                modifySubscriptionList: modifySubscriptionListTether()
                 // clickClose: clickCloseSubscPanelTether(),
-                changeSubscribeList: changeSubscribeListTether()
+                // changeSubscribeList: modifySubscriberTether()
               }),
             )
           }, chain),

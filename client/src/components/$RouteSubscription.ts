@@ -1,11 +1,11 @@
-import { Behavior, combineObject } from "@aelea/core"
-import { $text, component, style } from "@aelea/dom"
-import { $column, $row, layoutSheet } from "@aelea/ui-components"
+import { Behavior, combineObject, replayLatest } from "@aelea/core"
+import { $element, $text, attr, component, style, styleBehavior } from "@aelea/dom"
+import { $column, $row, InputType, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { constant, empty, map, mergeArray, multicast, now, sample, skipRepeats, snapshot, startWith } from "@most/core"
+import { constant, empty, map, mergeArray, multicast, never, now, sample, skipRepeats, snapshot, startWith, tap } from "@most/core"
 import { Stream } from "@most/types"
-import { $xCross } from "gmx-middleware-ui-components"
-import { formatBps, groupArrayMany, parseBps, readableFixedBsp, replayState, switchMap } from "gmx-middleware-utils"
+import { $caretDown, $icon, $xCross } from "gmx-middleware-ui-components"
+import { formatBps, getMappedValue, groupArrayMany, parseBps, readableFixedBsp, replayState, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -24,20 +24,20 @@ import { $route } from "../common/$common"
 import { $Dropdown } from "./form/$Dropdown"
 
 interface IRouteSubscribeDrawer {
-  subscribeList: Stream<IPuppetRouteSubscritpion[]>
-  subscribeTrader: Stream<IPuppetRouteSubscritpion>
+  subscriptionList: Stream<IPuppetRouteSubscritpion[]>
+  modifySubscriber: Stream<IPuppetRouteSubscritpion>
+  modifySubscriptionList: Stream<IPuppetRouteSubscritpion[]>
 }
 
 export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => component((
   [requestChangeSubscription, requestChangeSubscriptionTether]: Behavior<PointerEvent, Promise<viem.TransactionReceipt>>,
-  [changeSubscribeList, changeSubscribeListTether]: Behavior<IPuppetRouteSubscritpion[]>,
   [clickClose, clickCloseTether]: Behavior<any>,
 
 ) => {
 
 
 
-  const openIfEmpty = skipRepeats(map(l => l.length > 0, config.subscribeList))
+  const openIfEmpty = skipRepeats(map(l => l.length > 0, config.modifySubscriptionList))
 
 
 
@@ -64,10 +64,10 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
                 })
               ),
 
-              switchMap(list => {
-                const routeMap = Object.entries(groupArrayMany(list, x => x.routeTypeKey)) as [viem.Hex, IPuppetRouteSubscritpion[]][]
+              switchMap(params => {
+                const routeMap = Object.entries(groupArrayMany(params.modifySubscriptionList, x => x.routeTypeKey)) as [viem.Hex, IPuppetRouteSubscritpion[]][]
 
-                return $column(
+                return $column(layoutSheet.spacing)(
                   ...routeMap.map(([routeKey, traders]) => {
                     const routeType = PUPPET.ROUTE_DESCRIPTIN_MAP[routeKey]
 
@@ -87,7 +87,9 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
                                   address: subsc.trader,
                                   // $profileContainer: $defaultBerry(style({ width: '50px' }))
                                 }),
-                                $iconCircular($xCross),
+                                style({ color: params.subscriptionList.find(x => x.trader === subsc.trader)?.subscribed ? pallete.foreground : pallete.message })(
+                                  $iconCircular($xCross)
+                                ),
                                 $text(readableFixedBsp(subsc.allowance * 100n)),
                               )
                             })
@@ -98,7 +100,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
                     )
                   })
                 )
-              }, config.subscribeList),
+              }, combineObject({ subscriptionList: config.subscriptionList, modifySubscriptionList: config.modifySubscriptionList })),
 
               $ButtonPrimaryCtx({
                 $content: $text('Subscribe'),
@@ -117,7 +119,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
                       functionName: 'batchSubscribeRoute',
                       args: [allowance, traders, routeTypes, subscribe]
                     })
-                  }, config.subscribeList),
+                  }, config.modifySubscriptionList),
                   multicast
                 )
               })
@@ -129,10 +131,27 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
     }, openIfEmpty),
 
     {
-      changeSubscribeList: mergeArray([
-        changeSubscribeList,
+      modifySubscriptionList: mergeArray([
+        snapshot((list, modify) => {
+          const index = list.findIndex(x =>
+            x.routeTypeKey === modify.routeTypeKey && x.trader === modify.trader
+          )
+          const newList = [...list]
+
+          if (index === -1) {
+            newList.push(modify)
+            return newList
+          }
+
+          newList[index] = modify
+          return newList
+        }, config.modifySubscriptionList, config.modifySubscriber),
         constant([], clickClose)
       ])
+      // changeSubscribeList: mergeArray([
+      //   modifySubscribeList,
+      //   constant([], clickClose)
+      // ])
     }
   ]
 })
@@ -145,66 +164,78 @@ interface IRouteSubscriptionEditor {
 }
 
 export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => component((
-  [inputEndDate, inputEndDateTether]: Behavior<any, bigint>,
+  // [inputEndDate, inputEndDateTether]: Behavior<any, bigint>,
   [inputAllowance, inputAllowanceTether]: Behavior<any, bigint>,
   [clickUnsubscribe, clickUnsubscribeTether]: Behavior<any, bigint>,
   [clickSubmit, clickSubmitTether]: Behavior<any>,
+  [selectRouteType, selectRouteTypeTether]: Behavior<viem.Hex>,
 ) => {
+  const routeTypeList = Object.keys(PUPPET.ROUTE_DESCRIPTIN_MAP) as viem.Hex[]
 
-  const allowance = startWith(1000n, inputAllowance)
-  const endDate = startWith(0n, inputEndDate)
+
+  const allowance = startWith(config.routeSubscription?.allowance || 500n, inputAllowance)
+  const routeTypeKey = startWith(routeTypeList.find(key => key === config.routeSubscription?.routeTypeKey) || routeTypeList[0], selectRouteType)
+  // const initEnddate = config.routeSubscription?.endDate && config.routeSubscription.endDate > unixTimestampNow() ? config.routeSubscription?.endDate : 0n
+  // const endDate = startWith(initEnddate, inputEndDate)
   
   const form = combineObject({
     allowance,
-    endDate
+    // endDate,
+    routeTypeKey
   })
-
-  const routes = Object.entries(PUPPET.ROUTE_DESCRIPTIN_MAP)
-
-  const selectedRoute = routes.find(([key, route]) => key === config.routeSubscription?.routeTypeKey) || routes[0]
 
 
   return [
-    $column(layoutSheet.spacing)(
+    $column(layoutSheet.spacing, style({ maxWidth: '350px' }))(
 
-      $text(style({ width: '340px' }))('The following rules will apply to this trader whenever they open and maintain a position'),
+      $text('The following rules will apply to this trader whenever he opens and maintain a position'),
 
-      
+      $Dropdown({
+        // $container: $row(style({ alignSelf: 'center', position: 'relative' })),
+        value: {
+          list: routeTypeList,
+          $$option: map(key => $route(getMappedValue(PUPPET.ROUTE_DESCRIPTIN_MAP, key))),
+          value: routeTypeKey,
+        },
+        $selection: switchMap(key => {
+          return $row(layoutSheet.spacingSmall)(
+            $route(getMappedValue(PUPPET.ROUTE_DESCRIPTIN_MAP, key)),
+            $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
+          )
+        }, routeTypeKey),
+      })({
+        select: selectRouteTypeTether()
+      }),      
 
-      $row(layoutSheet.spacing, style({ alignItems: 'flex-start', width: '325px' }))(
-        style({ flex: 6 })(
+      $column(layoutSheet.spacing, style({ }))(
+        $TextField({
+          label: 'Allow %',
+          value: map(x => formatBps(x * 100n), allowance),
+          labelWidth: 100,
+          hint: `% allocated per position adjustment. Lower values decrease risk. Helps with easier management if peformance is below expectation"`,
+        })({
+          change: inputAllowanceTether(
+            map(x => parseBps(x) / 100n)
+          )
+        }),
+        // $TextField({
+        //   label: 'End Date',
+        //   $input: $element('input')(attr({ type: 'datetime-local' })),
+        //   hint: 'limit the amount of time you are subscribed',
+        //   placeholder: 'never',
+        //   labelWidth: 100,
+        //   value: map(x => {
+        //     if (x === 0n) {
+        //       return ''
+        //     }
 
-          $Dropdown({
-            value: {
-              list: routes,
-              $$option: map(([option, route]) => $route(route)),
-              value: now(routes[0]),
-            },
-            $selection: $route(selectedRoute[1]),
-          })({}),
-          
-        ),
-        style({ flex: 7 })(
-          $TextField({
-            label: 'Allow',
-            value: map(x => readableFixedBsp(x * 100n), allowance),
-            hint: 'amount taken every trade on this route',
-          })({
-            change: inputAllowanceTether(
-              map(x => parseBps(x.slice(0, -1)) / 100n)
-            )
-          })
-          // $TextField({
-          //   label: 'End Date',
-          //   hint: 'limit the amount of time you are subscribed',
-          //   placeholder: 'never',
-          //   value: map(x => '', endDate),
-          // })({
-          //   change: inputEndDateTether(
-          //     map(x => parseBps(Number(x)))
-          //   )
-          // })
-        )
+        //     return new Date(Number(x) * 1000).toISOString().slice(0, 16)
+        //   }, endDate),
+        // })({
+        //   change: inputEndDateTether(
+        //     map(x => BigInt(new Date(x).getTime() / 1000))
+        //   )
+        // })
       ),
 
       $ButtonPrimary({

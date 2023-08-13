@@ -23,14 +23,14 @@ import { $LastAtivity } from "../components/$LastActivity"
 export type ITopSettled = {
   route: router.Route
   processData: Stream<IGmxProcessState>
-  subscribeList: Stream<IPuppetRouteTrades[]>
+  subscriptionList: Stream<IPuppetRouteSubscritpion[]>
 }
 
 type FilterTable =  { activityTimeframe: GMX.IntervalTime } | null
 
 export const $TopSettled = (config: ITopSettled) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
-  [changeRouteSubscription, changeRouteSubscriptionTether]: Behavior<IPuppetRouteSubscritpion>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
   
   [changePageIndex, changePageIndexTether]: Behavior<number, number>,
   [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionListSummary>>,
@@ -122,10 +122,11 @@ export const $TopSettled = (config: ITopSettled) => component((
 
               return $TraderDisplay({
                 route: config.route,
-                subscriptionList: config.subscribeList,
+                // changeSubscriptionList: config.changeSubscriptionList,
+                subscriptionList: config.subscriptionList,
                 trader: pos.trader,
               })({ 
-                changeRouteSubscription: changeRouteSubscriptionTether(),
+                modifySubscribeList: modifySubscriberTether(),
                 clickTrader: routeChangeTether()
               })
             })
@@ -202,10 +203,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
     {
       routeChange,
-      subscribeTrader: changeRouteSubscription,
-      changeSubscribeList: snapshot((params, subsc): IPuppetRouteSubscritpion[] => {
-        return [...params.subscriptionList, subsc]
-      }, combineObject({ subscriptionList: config.subscribeList, subscription: config.subscription }), changeRouteSubscription),
+      modifySubscriber,
       // unSubscribeSelectedTraders: snapshot((params, trader) => {
       //   const selectedIdx = params.selection.indexOf(trader)
       //   selectedIdx === -1 ? params.selection.push(trader) : params.selection.splice(selectedIdx, 1)

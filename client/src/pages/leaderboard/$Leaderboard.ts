@@ -19,7 +19,7 @@ import { $LastAtivity } from "../components/$LastActivity"
 export type ILeaderboard = {
   route: router.Route
   processData: Stream<IGmxProcessState>
-  subscribeList: Stream<IPuppetRouteSubscritpion[]>
+  subscriptionList: Stream<IPuppetRouteSubscritpion[]>
 }
 
 type IRouteOption = {
@@ -30,8 +30,7 @@ type IRouteOption = {
 export const $Leaderboard = (config: ILeaderboard) => component((
   [changeTab, changeTabTether]: Behavior<IRouteOption, string>,
   [routeChange, routeChangeTether]: Behavior<string, string>,
-  [subscribeTrader, subscribeTraderTether]: Behavior<IPuppetRouteSubscritpion>,
-  [changeSubscribeList, changeSubscribeListTether]: Behavior<IPuppetRouteSubscritpion[]>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
 
 ) => {
 
@@ -55,16 +54,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
   ]
 
 
-  const subscription: Stream<IPuppetRouteTrades[]> = switchLatest(map(w3p => {
-    if (!w3p) {
-      return empty()
-    }
 
-    return map(data => {
-      return data.subscription.filter(s => s.puppet === w3p.account.address)
-    }, config.processData)
-  }, wallet))
-  
 
 
 
@@ -103,12 +93,9 @@ export const $Leaderboard = (config: ILeaderboard) => component((
         router.match(settledRoute)(
           $TopSettled({
             ...config,
-            subscribeList: config.subscribeList,
-            subscription,
           })({
             routeChange: routeChangeTether(),
-            subscribeTrader: subscribeTraderTether(multicast),
-            changeSubscribeList: changeSubscribeListTether()
+            modifySubscriber: modifySubscriberTether()
           })
         )
       ),
@@ -117,8 +104,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
     {
       routeChange: mergeArray([routeChange, routeChangeState]),
-      subscribeTrader,
-      changeSubscribeList
+      modifySubscriber,
     }
   ]
 })

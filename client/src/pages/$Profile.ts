@@ -42,8 +42,7 @@ type IRouteOption = {
 export const $Profile = (config: IProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [selectProfileMode, selectProfileModeTether]: Behavior<IRouteOption, IRouteOption>,
-  [requestAccountTradeList, requestAccountTradeListTether]: Behavior<number, IRequestAccountTradeListApi>,
-  [subscribeTreader, subscribeTreaderTether]: Behavior<IPuppetRouteSubscritpion>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
 ) => {
 
@@ -97,7 +96,7 @@ export const $Profile = (config: IProfile) => component((
             const address = urlFragments[urlFragments.length - 2] as viem.Address
 
             return $TraderProfile({ ...config, address, activityTimeframe })({
-              subscribeTreader: subscribeTreaderTether()
+              subscribeTreader: modifySubscriberTether()
             }).run(sink, scheduler)
           },
         }
@@ -132,7 +131,7 @@ export const $Profile = (config: IProfile) => component((
           return url
         }, selectProfileMode)
       ]),
-      subscribeTreader
+      modifySubscriber
     }
   ]
 })

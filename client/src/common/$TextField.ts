@@ -1,19 +1,24 @@
 import { Behavior, O } from "@aelea/core"
-import { $element, $text, attr, component, style, stylePseudo } from "@aelea/dom"
-import { $Field, $row, Field, layoutSheet } from "@aelea/ui-components"
+import { $element, $text, NodeComposeFn, attr, component, style, stylePseudo } from "@aelea/dom"
+import { $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { empty } from "@most/core"
 import { Stream } from "@most/types"
+import { $Field, Field } from "gmx-middleware-ui-components"
 
 
 export interface TextField extends Field {
   label: string
   hint?: string | Stream<string>
   placeholder?: string
+
+  $label?: NodeComposeFn<any, HTMLLabelElement>
+  labelWidth?: number
 }
 
 
-export const $label = $element('label')(
+export const $label2 = $element('label')(
+  layoutSheet.spacingTiny,
   style({ 
     cursor: 'pointer',
     display: 'flex',
@@ -41,7 +46,11 @@ const overideInputStyle = O(
 export const $TextField = (config: TextField) => component((
   [change, sampleValue]: Behavior<string, string>
 ) => {
-  const { hint } = config
+
+  const {
+    label, placeholder, hint, labelWidth,
+    $label = $label2
+  } = config
 
   const $field = overideInputStyle(
     $Field(config)({
@@ -50,10 +59,10 @@ export const $TextField = (config: TextField) => component((
   )
 
   return [
-    $label(layoutSheet.spacingTiny)(
-      $row(layoutSheet.spacingTiny)(
-        $text(style({ padding: '0 4px', alignSelf: 'flex-end', cursor: 'pointer', lineHeight: '36px', borderBottom: `2px solid ${colorAlpha(pallete.message, .1)}` }))(config.label),
-        config.placeholder ? attr({ placeholder: config.placeholder }, $field): $field,
+    $label(
+      $row(layoutSheet.spacingTiny, style({ width: '100%' }))(
+        $text(style({ padding: '0 4px', width: labelWidth ? labelWidth + 'px' : '', alignSelf: 'flex-end', cursor: 'pointer', lineHeight: '36px', borderBottom: `2px solid ${colorAlpha(pallete.message, .1)}` }))(label),
+        placeholder ? attr({ placeholder: placeholder }, $field): $field,
       ),
       $row(style({ position: 'relative' }))(
         hint ? $text(style({ fontSize: '.85rem', width: '100%' }))(hint) : empty()

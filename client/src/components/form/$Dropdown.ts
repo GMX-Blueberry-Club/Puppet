@@ -143,7 +143,7 @@ export function $Dropdown<T>({
             })
           )
 
-        }, isOpen))
+        }, delay(100, isOpen)))
       ),
 
       {

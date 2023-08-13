@@ -33,6 +33,7 @@ import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/for
 import { IProfileActiveTab } from "../pages/$Profile"
 import { $seperator2 } from "../pages/common"
 import { wallet } from "../wallet/walletLink"
+import { $puppetLogo } from "./$icons"
 
 
 export const $midContainer = $column(
@@ -254,6 +255,7 @@ export const $openPositionPnlBreakdown = (pos: IPositionSlot, cumulativeFee: Str
 
 interface ITraderDisplay {
   trader: viem.Address
+  // changeSubscriptionList: Stream<IPuppetRouteTrades[]>
   subscriptionList: Stream<IPuppetRouteTrades[]>
   route: router.Route
 }
@@ -261,7 +263,7 @@ interface ITraderDisplay {
 export const $TraderDisplay =  (config: ITraderDisplay) => component((
   [clickTrader, clickTraderTether]: Behavior<any, viem.Address>,
   [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, IPuppetRouteSubscritpion>,
-  [changeRouteSubscription, changeRouteSubscriptionTether]: Behavior<IPuppetRouteSubscritpion>,
+  [modifySubscribeList, modifySubscribeListTether]: Behavior<IPuppetRouteSubscritpion>,
 ) => {
 
 
@@ -291,10 +293,11 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
 
 
           return $Popover({
+            dismiss: modifySubscribeList,
             $target: $row(layoutSheet.spacingSmall)(
               $trader,
               $ButtonSecondary({
-                $content: $text(routeSubscription ? 'Change' : 'Copy'),
+                $content: routeSubscription ? $text('Change') : $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))($icon({ $content: $puppetLogo, width: '16px', viewBox: `0 0 32 32` }), $text('Copy')),
                 $container: $defaultMiniButtonSecondary 
               })({
                 click: popRouteSubscriptionEditorTether()
@@ -302,19 +305,19 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
             ),
             $popContent: map(() => {
               return $RouteSubscriptionEditor({ routeSubscription })({
-                changeRouteSubscription: changeRouteSubscriptionTether(map(partialSubsc => {
-                  return { ...partialSubsc, trader: config.trader, puppet: w3p.account.address, routeTypeKey: routeTypeKey }
+                changeRouteSubscription: modifySubscribeListTether(map(partialSubsc => {
+                  return { ...{ trader: config.trader, puppet: w3p.account.address, routeTypeKey: routeTypeKey }, ...partialSubsc }
                 }))
               })
             }, popRouteSubscriptionEditor)
           })({
-            
+
           })
         }, combineObject({ subscriptionList: config.subscriptionList }))
       }, wallet)
     ),
 
 
-    { changeRouteSubscription, clickTrader }
+    { modifySubscribeList, clickTrader }
   ]
 })
