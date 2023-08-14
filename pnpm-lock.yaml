@@ -131,7 +131,7 @@ importers:
         specifier: ^0.9.6
         version: 0.9.6(typescript@5.1.6)
       color:
-        specifier: '^4.2.3 '
+        specifier: ^4.2.3
         version: 4.2.3
       construct-style-sheets-polyfill:
         specifier: 3.1.0
