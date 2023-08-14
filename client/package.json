@@ -12,8 +12,6 @@
         "preview": "vite preview --port=4173"
     },
     "dependencies": {
-        "@rollup/plugin-replace": "^5.0.1",
-        "rimraf": "^5.0.1",
         "@aelea/core": "^1.3.2",
         "@aelea/dom": "^0.2.2",
         "@aelea/router": "^0.20.2",
@@ -25,7 +23,7 @@
         "@most/prelude": "^1.8.0",
         "@most/scheduler": "^1.3.0",
         "@most/types": "^1.1.0",
-        "@wagmi/core": "^1.3.8",
+        "@wagmi/core": "^1.3.9",
         "@walletconnect/auth-client": "^2.1.1",
         "@walletconnect/sign-client": "^2.9.2",
         "@walletconnect/core": "^2.9.2",
@@ -44,7 +42,7 @@
         "lightweight-charts": "^4.0.1",
         "puppet-middleware-const": "workspace:*",
         "puppet-middleware-utils": "workspace:*",
-        "viem": "^1.5.3",
+        "viem": "^1.6.0",
         "workbox-window": "^7.0.0",
         "workbox-core": "^7.0.0",
         "workbox-build": "^7.0.0",
@@ -53,6 +51,8 @@
         "workbox-precaching": "^7.0.0"
     },
     "devDependencies": {
+        "rimraf": "^5.0.1",
+        "@rollup/plugin-replace": "^5.0.1",
         "@wagmi/cli": "^1.3.0",
         "dotenv": "^16.3.1",
         "vite": "^4.4.9",

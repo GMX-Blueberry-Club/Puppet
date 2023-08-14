@@ -16,7 +16,7 @@ import { $IntermediateConnectButton, $SwitchNetworkDropdown } from "../$ConnectA
 export const $defaultButtonPrimary = $defaultButtonCore(
   style({
     color: pallete.message, whiteSpace: 'nowrap', fill: 'white', borderRadius: '30px',
-    boxShadow: `0px 0px 0px 0 ${pallete.primary} inset`,
+    boxShadow: `0px 0px 0px 0 #000 inset`,
     alignSelf: 'flex-end',
     padding: '15px 24px', fontWeight: 'bold', borderWidth: '0px', backgroundColor: pallete.primary,
   }),

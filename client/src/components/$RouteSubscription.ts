@@ -49,7 +49,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
 
       
         
-      return $card2(style({ position: 'absolute', maxWidth: '624px', margin: '0 auto', zIndex: 21, inset: 'auto 0 0 0', bottom: '0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderBottom: 'none', padding: '18px', borderRadius: '20px 20px 0 0' }))(
+      return fadeIn($card2(style({ maxWidth: '624px', margin: '0 auto', zIndex: 21, inset: 'auto 0 0 0', bottom: '0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderBottom: 'none', padding: '18px', borderRadius: '20px 20px 0 0' }))(
         $IntermediateConnectButton({
           $$display: map(w3p => {
               
@@ -126,7 +126,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
             )
           })
         })({})
-      )
+      ))
       
     }, openIfEmpty),
 

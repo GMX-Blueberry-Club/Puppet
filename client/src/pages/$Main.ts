@@ -93,7 +93,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
   const $liItem = $element('li')(style({ marginBottom: '14px' }))
   const $rootContainer = $column(
-    designSheet.main,
     style({
       color: pallete.message,
       fill: pallete.message,
@@ -167,167 +166,179 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
           }, isMobileScreen),
 
 
-          switchMap(chainEvent => {
-            return $column(style({ flex: 1, position: 'relative', padding: '0 8px' }))(
-
-              router.contains(walletRoute)(
-                $IntermediateConnectButton({
-                  $$display: map(wallet => {
-                    return $midContainer(
-                      $Wallet({
-                        route: walletRoute,
-                        processData,
-                        wallet: wallet,
-                      })({
-                        changeRoute: linkClickTether(),
-                      }))
+          $column(style({ flex: 1 }))(
+            $column(style({ flex: 1, position: 'relative' }))(
+              switchMap(chainEvent => {
+                return $column(
+                  // designSheet.main,
+                  style({
+                    flex: 1, position: 'absolute', inset: 0, padding: '0 8px',
+                    overflowY: 'scroll'
                   })
-                })({})
-              ),
-              router.contains(leaderboardRoute)(
-                $midContainer(
-                  fadeIn($Leaderboard({
-                    subscriptionList,
-                    route: leaderboardRoute,
-                    processData
-                  })({
-                    routeChange: linkClickTether(
-                      tap(console.log)
-                    ),
-                    modifySubscriber: modifySubscriberTether(),
-                  }))
-                )
-              ),
-              router.contains(profileRoute)(
-                $midContainer(
-                  fadeIn($Profile({
-                    route: profileRoute,
-                    processData
-                  })({
-                    modifySubscriber: modifySubscriberTether(),
-                    changeRoute: linkClickTether()
-                  }))
-                )
-              ),
+                )(
+
+                  router.contains(walletRoute)(
+                    $IntermediateConnectButton({
+                      $$display: map(wallet => {
+                        return $midContainer(
+                          $Wallet({
+                            route: walletRoute,
+                            processData,
+                            wallet: wallet,
+                          })({
+                            changeRoute: linkClickTether(),
+                          }))
+                      })
+                    })({})
+                  ),
+                  router.contains(leaderboardRoute)(
+                    $midContainer(
+                      fadeIn($Leaderboard({
+                        subscriptionList,
+                        route: leaderboardRoute,
+                        processData
+                      })({
+                        routeChange: linkClickTether(
+                          tap(console.log)
+                        ),
+                        modifySubscriber: modifySubscriberTether(),
+                      }))
+                    )
+                  ),
+                  router.contains(profileRoute)(
+                    $midContainer(
+                      fadeIn($Profile({
+                        route: profileRoute,
+                        processData
+                      })({
+                        modifySubscriber: modifySubscriberTether(),
+                        changeRoute: linkClickTether()
+                      }))
+                    )
+                  ),
             
-              router.match(tradeTermsAndConditions)(
-                $midContainer(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
-                  $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
-                  $node(),
-                  $text(style({ fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
-                  $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host + '/app/' + TRADEURL} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
-                  $element('ul')(layoutSheet.spacing, style({  }))(
-                    $liItem(
-                      $text(`I am not a United States person or entity;`),
+                  router.match(tradeTermsAndConditions)(
+                    $midContainer(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
+                      $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
+                      $node(),
+                      $text(style({ fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
+                      $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host + '/app/' + TRADEURL} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
+                      $element('ul')(layoutSheet.spacing, style({  }))(
+                        $liItem(
+                          $text(`I am not a United States person or entity;`),
+                        ),
+                        $liItem(
+                          $text(`I am not a resident, national, or agent of any country to which the United States, the United Kingdom, the United Nations, or the European Union embargoes goods or imposes similar sanctions, including without limitation the U.S. Office of Foreign Asset Control, Specifically Designated Nationals and Blocked Person List;`),
+                        ),
+                        $liItem(
+                          $text(`I am legally entitled to access the Interface under the laws of the jurisdiction where I am located;`),
+                        ),
+                        $liItem(
+                          $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
+                        ),
+                      ),
+
+                      $node(style({ height: '100px' }))(),
                     ),
-                    $liItem(
-                      $text(`I am not a resident, national, or agent of any country to which the United States, the United Kingdom, the United Nations, or the European Union embargoes goods or imposes similar sanctions, including without limitation the U.S. Office of Foreign Asset Control, Specifically Designated Nationals and Blocked Person List;`),
-                    ),
-                    $liItem(
-                      $text(`I am legally entitled to access the Interface under the laws of the jurisdiction where I am located;`),
-                    ),
-                    $liItem(
-                      $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
+
+                  ),
+                  router.match(adminRoute)(
+                    $midContainer(
+                      $Admin({})
                     ),
                   ),
-
-                  $node(style({ height: '100px' }))(),
-                ),
-
-              ),
-              router.match(adminRoute)(
-                $midContainer(
-                  $Admin({})
-                ),
-              ),
-              router.match(tradeRoute)(
-                $Trade({
-                  chain: chainEvent,
-                  processData,
-                  referralCode: BLUEBERRY_REFFERAL_CODE,
-                  tokenIndexMap: {
-                    [CHAIN.ARBITRUM]: [
-                      ARBITRUM_ADDRESS.NATIVE_TOKEN,
-                      ARBITRUM_ADDRESS.WBTC,
-                      ARBITRUM_ADDRESS.LINK,
-                      ARBITRUM_ADDRESS.UNI,
-                    ],
-                    [CHAIN.AVALANCHE]: [
-                      AVALANCHE_ADDRESS.NATIVE_TOKEN,
-                      AVALANCHE_ADDRESS.WETHE,
-                      AVALANCHE_ADDRESS.WBTCE,
-                      AVALANCHE_ADDRESS.BTCB,
-                    ]
-                  },
-                  tokenStableMap: {
-                    [CHAIN.ARBITRUM]: [
-                      ARBITRUM_ADDRESS.USDC,
-                      ARBITRUM_ADDRESS.USDT,
-                      ARBITRUM_ADDRESS.DAI,
-                      ARBITRUM_ADDRESS.FRAX,
-                    // ARBITRUM_ADDRESS.MIM,
-                    ],
-                    [CHAIN.AVALANCHE]: [
-                      AVALANCHE_ADDRESS.USDC,
-                      AVALANCHE_ADDRESS.USDCE,
-                    // AVALANCHE_ADDRESS.MIM,
-                    ]
-                  },
-                  parentRoute: tradeRoute
-                })({
-                  changeRoute: linkClickTether()
-                })
-              ),
+                  router.match(tradeRoute)(
+                    $Trade({
+                      chain: chainEvent,
+                      processData,
+                      referralCode: BLUEBERRY_REFFERAL_CODE,
+                      tokenIndexMap: {
+                        [CHAIN.ARBITRUM]: [
+                          ARBITRUM_ADDRESS.NATIVE_TOKEN,
+                          ARBITRUM_ADDRESS.WBTC,
+                          ARBITRUM_ADDRESS.LINK,
+                          ARBITRUM_ADDRESS.UNI,
+                        ],
+                        [CHAIN.AVALANCHE]: [
+                          AVALANCHE_ADDRESS.NATIVE_TOKEN,
+                          AVALANCHE_ADDRESS.WETHE,
+                          AVALANCHE_ADDRESS.WBTCE,
+                          AVALANCHE_ADDRESS.BTCB,
+                        ]
+                      },
+                      tokenStableMap: {
+                        [CHAIN.ARBITRUM]: [
+                          ARBITRUM_ADDRESS.USDC,
+                          ARBITRUM_ADDRESS.USDT,
+                          ARBITRUM_ADDRESS.DAI,
+                          ARBITRUM_ADDRESS.FRAX,
+                        // ARBITRUM_ADDRESS.MIM,
+                        ],
+                        [CHAIN.AVALANCHE]: [
+                          AVALANCHE_ADDRESS.USDC,
+                          AVALANCHE_ADDRESS.USDCE,
+                        // AVALANCHE_ADDRESS.MIM,
+                        ]
+                      },
+                      parentRoute: tradeRoute
+                    })({
+                      changeRoute: linkClickTether()
+                    })
+                  ),
             
 
-              switchMap(params => {
-                const mode = (import.meta as any).env.MODE
-                const refreshThreshold = mode === 'development' ? 550 : 50
-                const blockDelta = params.syncBlock - params.process.endBlock
+                  switchMap(params => {
+                    const mode = (import.meta as any).env.MODE
+                    const refreshThreshold = mode === 'development' ? 550 : 50
+                    const blockDelta = params.syncBlock - params.process.endBlock
 
 
-                const lastUpdate = timeSince(params.process.state.approximatedTimestamp) + ' old'
-                if (blockDelta < refreshThreshold) {
-                  return empty()
-                }
+                    const lastUpdate = timeSince(params.process.state.approximatedTimestamp) + ' old'
+                    if (blockDelta < refreshThreshold) {
+                      return empty()
+                    }
 
 
-                return switchLatest(mergeArray([
-                  now(
-                    fadeIn($row(
-                      style({ position: 'absolute', bottom: '18px', left: `50%` }),
-                      syncProcessDataTether(
-                        constant(params.syncBlock)
-                      )
-                    )(
-                      style({  transform: 'translateX(-50%)' })(
-                        $column(layoutSheet.spacingTiny, style({
-                          border: `1px solid`,
-                          padding: '20px',
-                          animation: `borderRotate var(--d) linear infinite forwards`,
-                          borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
-                        }))(
-                          $text(`Syncing Blockchain Data....`),
-                          $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(`${lastUpdate} data is displayed`),
-                        )
-                      )
-                    ))
-                  ),
-                // map(seed => empty(), syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlock }))
-                ]))
-              }, combineObject({ process, syncBlock: block })),
+                    return switchLatest(mergeArray([
+                      now(
+                        fadeIn($row(
+                          style({ position: 'absolute', bottom: '18px', left: `50%` }),
+                          syncProcessDataTether(
+                            constant(params.syncBlock)
+                          )
+                        )(
+                          style({  transform: 'translateX(-50%)' })(
+                            $column(layoutSheet.spacingTiny, style({
+                              border: `1px solid`,
+                              padding: '20px',
+                              animation: `borderRotate var(--d) linear infinite forwards`,
+                              borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
+                            }))(
+                              $text(`Syncing Blockchain Data....`),
+                              $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(`${lastUpdate} data is displayed`),
+                            )
+                          )
+                        ))
+                      ),
+                    // map(seed => empty(), syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlock }))
+                    ]))
+                  }, combineObject({ process, syncBlock: block })),
 
-              $RouteSubscriptionDrawer({
-                modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetRouteSubscritpion[]),
-                modifySubscriber,
-                subscriptionList
-              })({
-                modifySubscriptionList: modifySubscriptionListTether()
-                // clickClose: clickCloseSubscPanelTether(),
-                // changeSubscribeList: modifySubscriberTether()
-              }),
-            )
-          }, chain),
+                
+                )
+              }, chain)
+            ),
+
+            $RouteSubscriptionDrawer({
+              modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetRouteSubscritpion[]),
+              modifySubscriber,
+              subscriptionList
+            })({
+              modifySubscriptionList: modifySubscriptionListTether()
+              // clickClose: clickCloseSubscPanelTether(),
+              // changeSubscribeList: modifySubscriberTether()
+            }),
+          ),
           
         )
       ),

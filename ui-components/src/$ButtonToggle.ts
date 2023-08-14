@@ -45,7 +45,7 @@ export const $ButtonToggle = <T>({ options, selected, $$option = defaultOption, 
           styleBehavior(
             map(selectedOpt => {
               return selectedOpt === opt
-                ? { backgroundColor: pallete.primary, color: pallete.message, cursor: 'default' }
+                ? { backgroundColor: pallete.primary, cursor: 'default' }
                 : null
             }, selected)
           )

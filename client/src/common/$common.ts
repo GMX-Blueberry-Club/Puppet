@@ -4,7 +4,7 @@ import * as router from '@aelea/router'
 import { Route } from "@aelea/router"
 import { $column, $icon, $row, $seperator, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map, now, skipRepeats } from "@most/core"
+import { constant, empty, join, map, mergeArray, now, periodic, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $bear, $bull, $Link, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
@@ -281,40 +281,37 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
     $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
     // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
 
-      switchMap(w3p => {
+      switchMap(params => {
+        const w3p = params.wallet
         if (w3p === null) {
           return $trader
         }
 
-        return switchMap(params => {
-          const routeTypeKey = getRouteTypeKey(GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, true)
-          const puppetSubscriptionKey = getPuppetSubscriptionKey(w3p.account.address, config.trader, routeTypeKey)
-          const routeSubscription = params.subscriptionList.find(x => x.puppetSubscriptionKey === puppetSubscriptionKey)
+        const routeTypeKey = getRouteTypeKey(GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, true)
+        const puppetSubscriptionKey = getPuppetSubscriptionKey(w3p.account.address, config.trader, routeTypeKey)
+        const routeSubscription = params.subscriptionList.find(x => x.puppetSubscriptionKey === puppetSubscriptionKey)
 
 
-          return $Popover({
-            dismiss: modifySubscribeList,
-            $target: $row(layoutSheet.spacingSmall)(
-              $trader,
-              $ButtonSecondary({
-                $content: routeSubscription ? $text('Change') : $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))($icon({ $content: $puppetLogo, width: '16px', viewBox: `0 0 32 32` }), $text('Copy')),
-                $container: $defaultMiniButtonSecondary 
-              })({
-                click: popRouteSubscriptionEditorTether()
-              }),
-            ),
-            $popContent: map(() => {
-              return $RouteSubscriptionEditor({ routeSubscription })({
-                changeRouteSubscription: modifySubscribeListTether(map(partialSubsc => {
-                  return { ...{ trader: config.trader, puppet: w3p.account.address, routeTypeKey: routeTypeKey }, ...partialSubsc }
-                }))
-              })
-            }, popRouteSubscriptionEditor)
-          })({
-
-          })
-        }, combineObject({ subscriptionList: config.subscriptionList }))
-      }, wallet)
+        return $Popover({
+          dismiss: modifySubscribeList,
+          $target: $row(layoutSheet.spacingSmall)(
+            $trader,
+            $ButtonSecondary({
+              $content: routeSubscription ? $text('Change') : $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))($icon({ $content: $puppetLogo, fill: pallete.message, width: '16px', viewBox: `0 0 32 32` }), $text('Copy')),
+              $container: $defaultMiniButtonSecondary 
+            })({
+              click: popRouteSubscriptionEditorTether()
+            }),
+          ),
+          $popContent: map(() => {
+            return $RouteSubscriptionEditor({ routeSubscription })({
+              changeRouteSubscription: modifySubscribeListTether(map(partialSubsc => {
+                return { ...{ trader: config.trader, puppet: w3p.account.address, routeTypeKey: routeTypeKey }, ...partialSubsc }
+              }))
+            })
+          }, popRouteSubscriptionEditor)
+        })({})
+      }, combineObject({ subscriptionList: config.subscriptionList, wallet }))
     ),
 
 

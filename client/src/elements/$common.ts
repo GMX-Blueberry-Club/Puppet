@@ -11,15 +11,13 @@ import { $trash } from "./$icons"
 export const $TrashBtn = $ButtonIcon($trash)
 
 export const $card = $column(layoutSheet.spacing,
-  style({ borderRadius: '20px', padding: screenUtils.isDesktopScreen ? '36px': '12px' }),
+  style({ borderRadius: '20px', padding: screenUtils.isDesktopScreen ? '36px': '12px', backgroundColor: pallete.background }),
   theme.name === 'dark'
     ? style({
-      backgroundColor: pallete.background,
       boxShadow: 'rgb(0 0 0 / 25%) 0px 0px 1px, rgb(0 0 0 / 15%) 0px 15px 20px, rgb(0 0 0 / 8%) 0px 1px 12px',
     })
     : style({
       boxShadow: 'rgb(0 0 0 / 25%) 0px 0px 1px, rgb(59 60 74 / 15%) 0px 15px 20px, rgb(0 0 0 / 8%) 0px 1px 12px',
-      backgroundColor: pallete.background, borderRadius: '20px', flex: 1
     })
 )
 

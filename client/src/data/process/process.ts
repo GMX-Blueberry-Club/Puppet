@@ -428,6 +428,7 @@ export const gmxProcess = defineProcess(
           puppetSubscriptionKey: subscKey,
           routeTypeKey: args.routeTypeKey,
           subscribed: args.subscribe,
+          endDate: 0n,
           settled: [],
           open: []
         }
