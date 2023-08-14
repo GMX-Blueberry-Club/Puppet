@@ -80,7 +80,7 @@ const blueprint: IProcessedStore<IGmxProcessState> = {
 
 
 export const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
-  const req = await import('../../data/db/sha256-mNRHdIqqQz5b0dn+zdfi6cD6dzN3JSWcr5CXC8Fkhvk=.json')
+  const req = await import('../../data/db/sha256-1vmiQDr3r30w+uFntFk4TVt7NkCsQxJPusBkdIJlujM=.json')
   const newLocal = transformBigints(req.default)
   return newLocal
 })

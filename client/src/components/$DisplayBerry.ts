@@ -1,7 +1,6 @@
-import { $Node, $wrapNativeElement, style, NodeComposeFn, $svg, attr } from "@aelea/dom"
-import { tap } from "@most/core"
+import { $Node, $svg, $wrapNativeElement, attr } from "@aelea/dom"
 import { IBerryDisplayTupleMap, berryPartsToSvg } from "@gambitdao/gbc-middleware"
-import { $column } from "@aelea/ui-components"
+import { tap } from "@most/core"
 
 
 
@@ -17,28 +16,18 @@ export function $svgContent(content: string): $Node[] {
 }
 
 
-export const $defaultBerry = $column(style({
-  minHeight: '50px',
-  aspectRatio: '1 / 1',
-  borderRadius: '50%',
-  overflow: 'hidden'
-}))
-
 export const $berry = (
   displayTuple: Partial<IBerryDisplayTupleMap>,
-  $container: NodeComposeFn<$Node> = $defaultBerry
 ) => {
 
-  return $container(
-    $svg('svg')(
-      attr({ xmlns: 'http://www.w3.org/2000/svg', preserveAspectRatio: "xMidYMin meet", fill: 'none', viewBox: `0 0 1500 1500` })
-    )(
-      tap((node) => {
-        node.element.innerHTML = berryPartsToSvg(displayTuple)
-        return node
-      })
-    )()
-  )
+  return $svg('svg')(
+    attr({ xmlns: 'http://www.w3.org/2000/svg', preserveAspectRatio: "xMidYMin meet", fill: 'none', viewBox: `0 0 1500 1500` })
+  )(
+    tap((node) => {
+      node.element.innerHTML = berryPartsToSvg(displayTuple)
+      return node
+    })
+  )()
 }
 
 

@@ -8,10 +8,9 @@ import { Stream } from "@most/types"
 import { $Table, $infoLabel } from "gmx-middleware-ui-components"
 import { getMappedValue, groupArrayMany, leverageLabel, switchMap } from "gmx-middleware-utils"
 import { ROUTE_DESCRIPTIN_MAP } from "puppet-middleware-const"
-import { summariesMirrorTrader } from "puppet-middleware-utils"
+import { IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from 'viem'
-import { $discoverIdentityDisplay } from "../$AccountProfile"
-import { $defaultBerry } from "../$DisplayBerry"
+import { $profileDisplay } from "../$AccountProfile"
 import { $TraderDisplay, $pnlValue, $route } from "../../common/$common"
 import { $heading2, $heading3 } from "../../common/$text"
 import { IGmxProcessState } from "../../data/process/process"
@@ -27,7 +26,9 @@ export interface ITraderProfile {
   route: router.Route
   address: viem.Address
   processData: Stream<IGmxProcessState>
-  activityTimeframe: Stream<GMX.IntervalTime>;
+  activityTimeframe: Stream<GMX.IntervalTime>
+  subscriptionList: Stream<IPuppetRouteSubscritpion[]>
+
 }
 
 
@@ -74,12 +75,12 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
         return $card2(style({ padding: 0, position: 'relative' }))(
           $row(layoutSheet.spacing, style({ marginBottom: '-10px', flex: 1, placeContent: 'space-between', position: 'absolute', bottom: '100%', left: '20px', right: 0 }))(
             $row(
-              $discoverIdentityDisplay({
+              $profileDisplay({
                 address: config.address,
                 $container: $row(
                   style({ minWidth: '120px', })
                 ),
-                $profileContainer: $defaultBerry(style({ width: '100px', }))
+                profileSize: 100
               })
             ),
 
@@ -164,7 +165,11 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
 
                       if (settledList.length === 0) {
                         return $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
-                          $TraderDisplay(config.route, sub.trader, changeRouteTether)({}),
+                          $TraderDisplay({
+                            route: config.route,
+                            subscriptionList: config.subscriptionList,
+                            trader: sub.trader,
+                          })({}),
                           $infoLabel($text('No trades yet'))
                         )
                       }
@@ -173,7 +178,11 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
                       const summary = summariesMirrorTrader(sub.settled, config.address)
 
                       return $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
-                        $traderDisplay(config.route, sub.trader, changeRouteTether),
+                        $TraderDisplay({
+                          route: config.route,
+                          subscriptionList: config.subscriptionList,
+                          trader: sub.trader,
+                        })({}),
 
                         $node(style({ flex: 1 }))(),
 
@@ -211,7 +220,11 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
                 $head: $text('Trader'),
                 columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
                 $$body: map((pos) => {
-                  return $traderDisplay(config.route, pos.trader, changeRouteTether)
+                  return $TraderDisplay({
+                    route: config.route,
+                    subscriptionList: config.subscriptionList,
+                    trader: sub.trader,
+                  })({})
                 })
               },
               slotSizeColumn(config.processData, config.address),
@@ -231,7 +244,11 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
                 $head: $text('Trader'),
                 columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
                 $$body: map((pos) => {
-                  return $traderDisplay(config.route, pos.trader, changeRouteTether)
+                  return $TraderDisplay({
+                    route: config.route,
+                    subscriptionList: config.subscriptionList,
+                    trader: sub.trader,
+                  })({})
                 })
               },
               settledSizeColumn(config.processData, config.address),

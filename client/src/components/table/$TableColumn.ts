@@ -1,19 +1,18 @@
 import { O, Op } from "@aelea/core"
 import { $text, style } from "@aelea/dom"
+import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { empty, map, now } from "@most/core"
+import { map, now } from "@most/core"
 import { Stream } from "@most/types"
-import { $Link, $infoTooltipLabel, $txHashRef, TableColumn } from "gmx-middleware-ui-components"
+import { $Link, $infoTooltipLabel, TableColumn } from "gmx-middleware-ui-components"
 import { readableDate, timeSince } from "gmx-middleware-utils"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from 'viem'
+import { $profileDisplay } from "../$AccountProfile"
 import { $entry, $openPositionPnlBreakdown, $pnlValue, $puppets, $size, $sizeAndLiquidation, $tradePnl } from "../../common/$common"
 import { IGmxProcessState, latestTokenPrice } from "../../data/process/process"
 import { $txnIconLink } from "../../elements/$common"
-import { $discoverIdentityDisplay } from "../$AccountProfile"
-import { $defaultBerry } from "../$DisplayBerry"
 import { IProfileActiveTab } from "../../pages/$Profile"
-import * as router from '@aelea/router'
 
 
 export const slotSizeColumn = (processData: Stream<IGmxProcessState>, shareTarget?: viem.Address): TableColumn<IPositionMirrorSettled | IPositionMirrorSlot> => ({
@@ -90,7 +89,7 @@ export const traderColumn = (click: Op<string, string>, route: router.Route): Ta
     return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
       // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
       $Link({
-        $content: $discoverIdentityDisplay({
+        $content: $profileDisplay({
           address: pos.trader,
           // $profileContainer: $defaultBerry(style({ width: '50px' }))
         }),

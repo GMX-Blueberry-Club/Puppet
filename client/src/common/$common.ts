@@ -1,10 +1,9 @@
-import { Behavior, combineObject, isStream, O, Tether } from "@aelea/core"
+import { Behavior, combineObject, isStream, O } from "@aelea/core"
 import { $text, component, style, styleBehavior, styleInline } from "@aelea/dom"
 import * as router from '@aelea/router'
-import { Route } from "@aelea/router"
 import { $column, $icon, $row, $seperator, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { constant, empty, join, map, mergeArray, now, periodic, skipRepeats } from "@most/core"
+import { map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $bear, $bull, $Link, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
@@ -25,8 +24,7 @@ import {
 import { getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-const"
 import { IPuppetRouteSubscritpion, IPuppetRouteTrades } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { $discoverAvatar, $discoverIdentityDisplay } from "../components/$AccountProfile"
-import { $defaultBerry } from "../components/$DisplayBerry"
+import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile"
 import { $Popover } from "../components/$Popover"
 import { $RouteSubscriptionEditor } from "../components/$RouteSubscription"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
@@ -40,7 +38,6 @@ export const $midContainer = $column(
   style({
     margin: '0 auto',
     maxWidth: '940px',
-    flex: 1,
     gap: screenUtils.isDesktopScreen ? '50px' : '50px',
     width: '100%',
   })
@@ -132,7 +129,7 @@ export const $puppets = (puppets: readonly viem.Address[]) => {
                 
   return $row(layoutSheet.spacingSmall, style({ }))(
     ...puppets.map(address => {
-      return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minHeight: '30px', borderRadius: '50%' })) })
+      return $profileAvatar({ address, profileSize: 30 })
     }),
     // $content
   )
@@ -268,7 +265,7 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
 
 
   const $trader = $Link({
-    $content: $discoverIdentityDisplay({
+    $content: $profileDisplay({
       address: config.trader,
       // $profileContainer: $defaultBerry(style({ width: '50px' }))
     }),

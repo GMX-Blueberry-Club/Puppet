@@ -88,6 +88,7 @@ export const $Home = (config: ITreasury) => component((
     $column(
       layoutSheet.spacingBig,
       style({
+        flex: 1
         // scrollSnapType: 'y proximity',
 
       })

@@ -28,6 +28,7 @@ export enum IProfileActiveTab {
 export interface IProfile {
   route: router.Route
   processData: Stream<IGmxProcessState>
+  subscriptionList: Stream<IPuppetRouteSubscritpion[]>
 }
 
 const $title = $text(style({ fontWeight: 'bold', fontSize: '1.35em' }))

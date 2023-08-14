@@ -6,12 +6,11 @@ import { map, now } from "@most/core"
 import { Stream } from "@most/types"
 import { $Link, $Table, $infoTooltipLabel, ISortBy } from "gmx-middleware-ui-components"
 import { pagingQuery, switchMap } from "gmx-middleware-utils"
-import { IProfileActiveTab } from "../$Profile"
-import { $tradePnl, $openPositionPnlBreakdown, $size } from "../../common/$common"
-import { $accountPreview, $discoverIdentityDisplay } from "../../components/$AccountProfile"
-import { IGmxProcessState, latestTokenPrice } from "../../data/process/process"
 import { IPositionMirrorSlot } from "puppet-middleware-utils"
-import { $defaultBerry } from "../../components/$DisplayBerry"
+import { IProfileActiveTab } from "../$Profile"
+import { $openPositionPnlBreakdown, $size, $tradePnl } from "../../common/$common"
+import { $profileDisplay } from "../../components/$AccountProfile"
+import { IGmxProcessState, latestTokenPrice } from "../../data/process/process"
 
 
 
@@ -63,7 +62,7 @@ export const $TopOpen = (config: ITopOpen) => component((
               return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
                 // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
                 $Link({
-                  $content: $discoverIdentityDisplay({
+                  $content: $profileDisplay({
                     address: pos.trader,
                     // $profileContainer: $defaultBerry(style({ width: '50px' }))
                   }),

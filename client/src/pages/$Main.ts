@@ -103,7 +103,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       // fontSize: screenUtils.isDesktopScreen ? '1.15rem' : '1rem',
       minHeight: '100vh',
       fontWeight: 400,
-      overflowX: 'hidden',
+      overflow: 'hidden',
       flexDirection: 'row',
     }),
 
@@ -111,13 +111,13 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       ? style({ userSelect: 'none' })
       : style({}),
   )
-  const isMobileScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
+  const isDesktopScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
 
   
 
   const subscriptionList: Stream<IPuppetRouteTrades[]> = switchLatest(map(w3p => {
     if (!w3p) {
-      return empty()
+      return now([])
     }
 
     return map(data => {
@@ -145,7 +145,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       ),
       router.contains(appRoute)(
         $rootContainer(
-          styleBehavior(map(isMobile => ({ flexDirection: isMobile ? 'row' : 'column' }), isMobileScreen)),
+          styleBehavior(map(isDesktop => ({ flexDirection: isDesktop ? 'row' : 'column' }), isDesktopScreen)),
           screenUtils.isDesktopScreen
             ? style({
               display: 'flex', flexDirection: 'row',
@@ -155,27 +155,37 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               gap: '35px',
             })
         )(
-          switchMap(isMobile => {
-            return isMobile
-              ? $MainMenu({ parentRoute: appRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
-                routeChange: linkClickTether()
-              })
-              : $MainMenuMobile({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
-                routeChange: linkClickTether(),
-              })
-          }, isMobileScreen),
+          switchMap(isDesktop => {
+            if (!isDesktop) {
+              return empty()
+            }
+
+            return $MainMenu({ parentRoute: appRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+              routeChange: linkClickTether()
+            })
+          }, isDesktopScreen),
 
 
           $column(style({ flex: 1 }))(
             $column(style({ flex: 1, position: 'relative' }))(
               switchMap(chainEvent => {
                 return $column(
-                  // designSheet.main,
+                  designSheet.customScroll,
                   style({
-                    flex: 1, position: 'absolute', inset: 0, padding: '0 8px',
+                    flex: 1, position: 'absolute', inset: 0, padding: '0 8px 26px',
                     overflowY: 'scroll'
                   })
                 )(
+
+                  switchMap(isMobile => {
+                    if (isMobile) {
+                      return empty()
+                    }
+
+                    return  $MainMenuMobile({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+                      routeChange: linkClickTether(),
+                    })
+                  }, isDesktopScreen),
 
                   router.contains(walletRoute)(
                     $IntermediateConnectButton({
@@ -329,15 +339,17 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               }, chain)
             ),
 
-            $RouteSubscriptionDrawer({
-              modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetRouteSubscritpion[]),
-              modifySubscriber,
-              subscriptionList
-            })({
-              modifySubscriptionList: modifySubscriptionListTether()
+            $midContainer(
+              $RouteSubscriptionDrawer({
+                modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetRouteSubscritpion[]),
+                modifySubscriber,
+                subscriptionList
+              })({
+                modifySubscriptionList: modifySubscriptionListTether()
               // clickClose: clickCloseSubscPanelTether(),
               // changeSubscribeList: modifySubscriberTether()
-            }),
+              })
+            ),
           ),
           
         )

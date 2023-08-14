@@ -10,8 +10,7 @@ import { $Table } from "gmx-middleware-ui-components"
 import { leverageLabel, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from 'viem'
-import { $discoverAvatar, $discoverIdentityDisplay } from "../$AccountProfile"
-import { $defaultBerry } from "../$DisplayBerry"
+import { $profileAvatar, $profileDisplay } from "../$AccountProfile"
 import { $heading2, $heading3 } from "../../common/$text"
 import { IGmxProcessState } from "../../data/process/process"
 import { $card, $card2 } from "../../elements/$common"
@@ -68,21 +67,19 @@ export const $TraderProfile = (config: ITraderProfile) => component((
         const subscribedPuppets = params.processData.subscription.filter((sub) => sub.puppet === config.address).map(s => s.trader)
 
         return $column(
-          $row(layoutSheet.spacing, style({ marginBottom: screenUtils.isDesktopScreen ? '-16px' : '-4px', zIndex: 10, placeContent: 'space-between', alignItems: 'center', padding: '0 8px' }))(
+          $row(layoutSheet.spacing, style({ marginBottom: screenUtils.isDesktopScreen ? '-20px' : '-4px', zIndex: 10, placeContent: 'space-between', alignItems: 'center', padding: '0 8px' }))(
             $row(
-              $discoverIdentityDisplay({
+              $profileDisplay({
                 address: config.address,
-                $container: $row(
-                  style({ minWidth: '120px', })
-                ),
-                $profileContainer: $defaultBerry(style({ width: screenUtils.isDesktopScreen ? '100px' : '70px', }))
+                labelSize: '30px',
+                profileSize: screenUtils.isDesktopScreen ? 130 : 70
               })
             ),
             $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end' }))(
               $metricRow(
                 $metricValue(
                   ...subscribedPuppets.map(address => {
-                    return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minHeight: '30px', margin: '0 -4px' })) })
+                    return $profileAvatar({ address, profileSize: 30 })
                   })
                 ),
                 $metricLabel($text('Puppets')),

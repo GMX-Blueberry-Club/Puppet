@@ -1,10 +1,10 @@
-import { Behavior, combineObject, replayLatest } from "@aelea/core"
-import { $element, $text, attr, component, style, styleBehavior } from "@aelea/dom"
+import { Behavior, O, combineObject, replayLatest } from "@aelea/core"
+import { $element, $text, attr, component, nodeEvent, style, styleBehavior } from "@aelea/dom"
 import { $column, $row, InputType, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, mergeArray, multicast, never, now, sample, skipRepeats, snapshot, startWith, tap } from "@most/core"
 import { Stream } from "@most/types"
-import { $caretDown, $icon, $xCross } from "gmx-middleware-ui-components"
+import { $caretDown, $check, $icon, $target, $xCross } from "gmx-middleware-ui-components"
 import { formatBps, getMappedValue, groupArrayMany, parseBps, readableFixedBsp, replayState, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
@@ -15,13 +15,14 @@ import { $card2, $iconCircular } from "../elements/$common.js"
 import { wagmiWriteContract } from "../logic/common.js"
 import { $seperator2 } from "../pages/common.js"
 import { fadeIn } from "../transitions/enter.js"
-import { $discoverIdentityDisplay } from "./$AccountProfile.js"
+import { $profileDisplay } from "./$AccountProfile.js"
 import { $IntermediateConnectButton } from "./$ConnectAccount.js"
 import { $RouteDepositInfo } from "./$common.js"
 import { $ButtonCircular, $ButtonPrimary, $ButtonPrimaryCtx } from "./form/$Button.js"
 import { $Select } from "./form/$Select"
 import { $route } from "../common/$common"
 import { $Dropdown } from "./form/$Dropdown"
+import { $trash } from "../elements/$icons"
 
 interface IRouteSubscribeDrawer {
   subscriptionList: Stream<IPuppetRouteSubscritpion[]>
@@ -32,6 +33,7 @@ interface IRouteSubscribeDrawer {
 export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => component((
   [requestChangeSubscription, requestChangeSubscriptionTether]: Behavior<PointerEvent, Promise<viem.TransactionReceipt>>,
   [clickClose, clickCloseTether]: Behavior<any>,
+  [clickRemoveSubsc, clickRemoveSubscTether]: Behavior<any, IPuppetRouteSubscritpion >,
 
 ) => {
 
@@ -49,13 +51,13 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
 
       
         
-      return fadeIn($card2(style({ maxWidth: '624px', margin: '0 auto', zIndex: 21, inset: 'auto 0 0 0', bottom: '0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderBottom: 'none', padding: '18px', borderRadius: '20px 20px 0 0' }))(
+      return fadeIn($card2(style({ border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderBottom: 'none', padding: '18px', borderRadius: '20px 20px 0 0' }))(
         $IntermediateConnectButton({
           $$display: map(w3p => {
               
             return $column(layoutSheet.spacing)(
               $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between', alignItems: 'center' }))(
-                $heading3('Modify Subscriptions'),
+                $heading3('Change Subscriptions'),
 
                 $ButtonCircular({
                   $iconPath: $xCross,
@@ -67,9 +69,13 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
               switchMap(params => {
                 const routeMap = Object.entries(groupArrayMany(params.modifySubscriptionList, x => x.routeTypeKey)) as [viem.Hex, IPuppetRouteSubscritpion[]][]
 
+
+
                 return $column(layoutSheet.spacing)(
-                  ...routeMap.map(([routeKey, traders]) => {
+                  ...routeMap.map(([routeKey, subscList]) => {
                     const routeType = PUPPET.ROUTE_DESCRIPTIN_MAP[routeKey]
+
+
 
                     return $column(layoutSheet.spacing)(
                       $RouteDepositInfo({
@@ -77,20 +83,25 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
                         wallet: w3p
                       })({}),
 
-                      $column(style({ paddingLeft: '15px' }))(
+                      $column(style({ paddingLeft: '16px' }))(
                         $row(layoutSheet.spacing)(
                           $seperator2,
                           $column(style({ flex: 1 }))(
-                            ...traders.map(subsc => {
+                            ...subscList.map(modSubsc => {
+
+                              const subsc = params.subscriptionList.find(x => x.routeTypeKey === routeKey && x.trader === modSubsc.trader)
+
+                              const iconColorParams = subsc ? modSubsc.subscribed ? { fill: pallete.foreground, icon: $target } : { fill: pallete.negative, icon: $xCross } : { fill: pallete.positive, icon: $check }
+
                               return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: `10px 0` }))(
-                                $discoverIdentityDisplay({
-                                  address: subsc.trader,
-                                  // $profileContainer: $defaultBerry(style({ width: '50px' }))
-                                }),
-                                style({ color: params.subscriptionList.find(x => x.trader === subsc.trader)?.subscribed ? pallete.foreground : pallete.message })(
+                                O(style({ marginLeft: '-32px', backgroundColor: pallete.horizon, cursor: 'pointer' }), clickRemoveSubscTether(nodeEvent('click'), constant(modSubsc)))(
                                   $iconCircular($xCross)
                                 ),
-                                $text(readableFixedBsp(subsc.allowance * 100n)),
+                                $profileDisplay({
+                                  address: modSubsc.trader,
+                                  // $profileContainer: $defaultBerry(style({ width: '50px' }))
+                                }),
+                                $text(readableFixedBsp(modSubsc.allowance * 100n)),
                               )
                             })
                           )
@@ -146,6 +157,17 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
           newList[index] = modify
           return newList
         }, config.modifySubscriptionList, config.modifySubscriber),
+        snapshot((list, subsc) => {
+          const idx = list.indexOf(subsc)
+
+          if (idx === -1) {
+            return list
+          }
+
+          list.splice(idx, 1)
+
+          return list
+        }, config.modifySubscriptionList, clickRemoveSubsc),
         constant([], clickClose)
       ])
       // changeSubscribeList: mergeArray([

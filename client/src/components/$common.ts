@@ -43,11 +43,11 @@ export const $CardTable = <T, FilterState>(config: TableOption<T, FilterState>) 
 
 
 
-export const $berryByToken = (token: IToken, $container?: NodeComposeFn<$Node>) => {
+export const $berryByToken = (token: IToken) => {
   const display = getBerryFromItems(token.labItems.map(li => Number(li.id)))
   const tuple: Partial<IBerryDisplayTupleMap> = [...tokenIdAttributeTuple[token.id - 1]]
 
-  return $berryByLabItems(token.id, display.background, display.custom, display.badge, $container, tuple)
+  return $berryByLabItems(token.id, display.background, display.custom, display.badge, tuple)
 }
 
 export const $berryByLabItems = (
@@ -55,7 +55,6 @@ export const $berryByLabItems = (
   backgroundId: IAttributeBackground,
   labItemId: IAttributeMappings,
   badgeId: IAttributeBadge,
-  $container?: NodeComposeFn<$Node>,
   tuple: Partial<IBerryDisplayTupleMap> = [...tokenIdAttributeTuple[berryId - 1]]
 ) => {
 
@@ -73,7 +72,7 @@ export const $berryByLabItems = (
     tuple.splice(0, 1, backgroundId)
   }
 
-  return $berry(tuple, $container)
+  return $berry(tuple)
 }
 
 
@@ -106,12 +105,20 @@ export const $RouteDepositInfo = (config: IRouteDepositInfoConfig) => component(
 
       $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
         $Popover({
-          $target: $ButtonSecondary({
-            $container: $defaultMiniButtonSecondary,
-            $content: $text('Deposit')
-          })({
-            click: openDepositPopoverTether()
-          }),
+          $target: $row(layoutSheet.spacing)(
+            $ButtonSecondary({
+              $container: $defaultMiniButtonSecondary,
+              $content: $text('Deposit')
+            })({
+              click: openDepositPopoverTether()
+            }),
+            $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+              $infoTooltipLabel($text('The amount utialised by traders you subscribe'), 'Balance'),
+              switchMap(amount => {
+                return $text(tokenAmountLabel(config.routeDescription.indexToken, amount))
+              }, orchestrator.read('puppetAccountBalance', config.wallet.account.address, config.routeDescription.indexToken))
+            )
+          ),
           $popContent: map(() => {
 
             const maxBalance = multicast(join(constant(map(amount => tokenAmount(config.routeDescription.indexToken, amount), nativeBalance), clickMaxDeposit)))
@@ -159,12 +166,7 @@ export const $RouteDepositInfo = (config: IRouteDepositInfoConfig) => component(
           }, openDepositPopover)
         })({}),
 
-        $row(layoutSheet.spacingSmall)(
-          $infoTooltipLabel($text('The amount utialised by traders you subscribe'), 'Balance'),
-          switchMap(amount => {
-            return $text(tokenAmountLabel(config.routeDescription.indexToken, amount))
-          }, orchestrator.read('puppetAccountBalance', config.wallet.account.address, config.routeDescription.indexToken))
-        )
+        
       )
                       
     )
