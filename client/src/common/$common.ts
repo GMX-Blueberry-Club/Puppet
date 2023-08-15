@@ -47,7 +47,7 @@ export const $size = (size: bigint, collateral: bigint) => {
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
     $text(readableFixedUSD30(size)),   
     $seperator2,
-    $text(style({ fontWeight: 'bold', fontSize: '.85rem' }))(`${Math.round(formatBps(div(size, collateral)))}x`),
+    $leverage(size, collateral),
   )
 }
 
@@ -117,7 +117,7 @@ export const $sizeAndLiquidation = (isLong: boolean, size: bigint, collateral: b
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
     $text(readableFixedUSD30(size)),
     $liquidationSeparator(isLong, size, collateral, averagePrice, markPrice),
-    $text(style({ fontSize: '.85rem', fontWeight: 'bold' }))(leverageLabel(div(size, collateral))),
+    $leverage(size, collateral),
   )
 }
 
@@ -136,7 +136,7 @@ export const $puppets = (puppets: readonly viem.Address[]) => {
 }
 
 export const $leverage = (size: bigint, collateral: bigint) =>
-  $text(style({ fontWeight: '900' }))(`${Math.round(bnDiv(size, collateral))}x`)
+  $text(style({ fontWeight: 'bold', letterSpacing: '0.05em', fontSize: '0.85rem' }))(`${Math.round(bnDiv(size, collateral))}x`)
 
 export const $pnlValue = (pnl: Stream<bigint> | bigint, colorful = true) => {
   const pnls = isStream(pnl) ? pnl : now(pnl)

@@ -1,5 +1,5 @@
 import { Behavior, O, combineObject, replayLatest } from "@aelea/core"
-import { $element, $text, attr, component, nodeEvent, style, styleBehavior } from "@aelea/dom"
+import { $element, $node, $text, attr, component, nodeEvent, style, styleBehavior } from "@aelea/dom"
 import { $column, $row, InputType, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, mergeArray, multicast, never, now, sample, skipRepeats, snapshot, startWith, tap } from "@most/core"
@@ -57,7 +57,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
               
             return $column(layoutSheet.spacing)(
               $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between', alignItems: 'center' }))(
-                $heading3('Change Subscriptions'),
+                $heading3('Change Match-making Rules'),
 
                 $ButtonCircular({
                   $iconPath: $xCross,
@@ -91,12 +91,17 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
 
                               const subsc = params.subscriptionList.find(x => x.routeTypeKey === routeKey && x.trader === modSubsc.trader)
 
-                              const iconColorParams = subsc ? modSubsc.subscribed ? { fill: pallete.foreground, icon: $target } : { fill: pallete.negative, icon: $xCross } : { fill: pallete.positive, icon: $check }
+                              const iconColorParams = subsc
+                                ? modSubsc.subscribed
+                                  ? { fill: pallete.message, icon: $target, label: 'Edit' }: { fill: pallete.negative, icon: $xCross, label: 'Unsubscribe' }
+                                : { fill: pallete.positive, icon: $check, label: 'Subscribe' }
 
                               return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: `10px 0` }))(
                                 O(style({ marginLeft: '-32px', backgroundColor: pallete.horizon, cursor: 'pointer' }), clickRemoveSubscTether(nodeEvent('click'), constant(modSubsc)))(
                                   $iconCircular($xCross)
                                 ),
+
+                                $text(style({ color: iconColorParams.fill, width: '90px' }))(iconColorParams.label),
                                 $profileDisplay({
                                   address: modSubsc.trader,
                                   // $profileContainer: $defaultBerry(style({ width: '50px' }))

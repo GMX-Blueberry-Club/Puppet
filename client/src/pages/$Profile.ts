@@ -51,7 +51,7 @@ export const $Profile = (config: IProfile) => component((
   const traderRoute = profileAddressRoute.create({ fragment: 'trader', title: 'Trader' })
   const puppetRoute = profileAddressRoute.create({ fragment: 'puppet', title: 'Puppet' })
 
-  const activityTimeframe = storage.replayWrite(store.mainMenuOpen, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
+  const activityTimeframe = storage.replayWrite(store.activityTimeframe, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
 
   const options: IRouteOption[] = [
     {

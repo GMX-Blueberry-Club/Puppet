@@ -85,14 +85,7 @@ export const $Home = (config: ITreasury) => component((
   const bodyPointerMove = eventElementTarget('pointermove', document.body)
 
   return [
-    $column(
-      layoutSheet.spacingBig,
-      style({
-        flex: 1
-        // scrollSnapType: 'y proximity',
-
-      })
-    )(
+    $column(layoutSheet.spacingBig, style({ flex: 1 }))(
 
       $snapSection(layoutSheet.spacingBig,
         style({
@@ -240,18 +233,18 @@ export const $Home = (config: ITreasury) => component((
         $column(style({ textAlign: 'center' }))(
           $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.75rem' }))('Matching top Traders with Investors'),
         ),
-        $text(style({ whiteSpace: 'pre-wrap', maxWidth: '878px' }))(` A Mirror Trading Platform for Simplified and Reduced-Risk-Managed Portfolio
+        $text(style({ whiteSpace: 'pre-wrap', maxWidth: '878px' }))(` A Copy Trading Platform for Simplified and Reduced-Risk-Managed Portfolio
 
-Puppet, is a mirror trading platform built on top of the GMX leveraging trading platform. It offers investors, known as Puppets, the opportunity to actively manage their portfolios by mirroring the trades of multiple high-performing traders, all with a single deposit. This reduces risk and streamlines the investment process. Puppet is a key component of the GBC ecosystem and can be accessed at https://blueberry.club/ until perfected and released fully with it's own tokenomics and revenue flywheel on https://puppet.finance/.
+Puppet, is a Copy Trading platform built on top of the GMX leveraging trading platform. It offers investors, known as Puppets, the opportunity to actively manage their portfolios by copying the trades of multiple high-performing traders, all with a single deposit. This reduces risk and streamlines the investment process. Puppet is a key component of the GBC ecosystem and can be accessed at https://blueberry.club/ until perfected and released fully with it's own tokenomics and revenue flywheel on https://puppet.finance/.
 
 Puppet is designed for two types of participants: Traders and Puppets.
 
-Traders execute trades using their own collateral, inheriting the same risks as trading on GMX to have seamless experience. They are not responsible for managing Puppets' funds directly and may be unaware of the funds mirroring their trades. When traders generate profits, they receive a fraction of the Puppets profits. Each trader has a public profile page displaying their historical performance and social circle.
+Traders execute trades using their own collateral, inheriting the same risks as trading on GMX to have seamless experience. They are not responsible for managing Puppets' funds directly and may be unaware of the funds copying their trades. When traders generate profits, they receive a fraction of the Puppets profits. Each trader has a public profile page displaying their historical performance and social circle.
 
 Puppets actively manage their portfolios by:
 
 Utilizing the leaderboard to find traders. Puppets have access to a platform-wide trading activity overview, complete with historical and track record screenings. This allows them to choose traders whose strategies are likely to yield profits.
-Depositing funds into routed pools based on intent (e.g., [ETH => ETH-long], [USDC => ETH-short]) and assigning traders to use these funds. When a trader opens a trade, a configurable tiny percentage is used to maintain a mirrored position pool. The goal is to have multiple traders utilizing the same intended pools.
+Depositing funds into routed pools based on intent (e.g., [ETH => ETH-long], [USDC => ETH-short]) and assigning traders to use these funds. When a trader opens a trade, a configurable tiny percentage is used to maintain a copied position pool. The goal is to have multiple traders utilizing the same intended pools.
 Maintaining a high-performance portfolio. Puppets can view each trader's historical performance graph in their portfolio, which helps them avoid underperforming traders over time.
 Projects like https://gmx.house/ and https://blueberry.club/app/trade are integral parts of Puppet. To make it work, an active community of traders is essential. The GBC Foundation plans to roll out GBC Trading soon to maintain an active trader community, offering a better user experience and higher trading discounts to incentivize traders to switch from gmx.io to the new interface.`),
 

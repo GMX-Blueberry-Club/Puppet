@@ -9,48 +9,33 @@ import * as GMX from "gmx-middleware-const"
 import { Stream } from "@most/types"
 
 
+export const LAST_ACTIVITY_LABEL_MAP = {
+  [GMX.TIME_INTERVAL_MAP.HR24]: '24h',
+  [GMX.TIME_INTERVAL_MAP.DAY7]: '7d',
+  [GMX.TIME_INTERVAL_MAP.MONTH]: '30d',
+  [GMX.TIME_INTERVAL_MAP.YEAR]: '1y',
+}
 
 export const $LastAtivity = (activityTimeframe: Stream<GMX.IntervalTime>) => component((
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
 ) => {
   
+  const options = Object.entries(LAST_ACTIVITY_LABEL_MAP)
 
   return [
 
     $row(layoutSheet.spacing)(
       $text(style({ color: pallete.foreground }))('Last Activity:'),
       $row(layoutSheet.spacing)(
-        $anchor(
-          styleBehavior(map(tf => tf === GMX.TIME_INTERVAL_MAP.HR24 ? ({ color: pallete.primary }) : null, activityTimeframe)),
-          changeActivityTimeframeTether(nodeEvent('click'), constant(GMX.TIME_INTERVAL_MAP.HR24))
-        )(
-          $text('24h')
-        ),
-        $anchor(
-          styleBehavior(map(tf => tf === GMX.TIME_INTERVAL_MAP.DAY7 ? ({ color: pallete.primary }) : null, activityTimeframe)),
-          changeActivityTimeframeTether(nodeEvent('click'), constant(GMX.TIME_INTERVAL_MAP.DAY7))
-        )(
-          $text('7d')
-        ),
-        $anchor(
-          styleBehavior(map(tf => tf === GMX.TIME_INTERVAL_MAP.MONTH ? ({ color: pallete.primary }) : null, activityTimeframe)),
-          changeActivityTimeframeTether(nodeEvent('click'), constant(GMX.TIME_INTERVAL_MAP.MONTH))
-        )(
-          $text('30d')
-        ),
-        $anchor(
-          styleBehavior(map(tf => tf === GMX.TIME_INTERVAL_MAP.YEAR ? ({ color: pallete.primary }) : null, activityTimeframe)),
-          changeActivityTimeframeTether(nodeEvent('click'), constant(GMX.TIME_INTERVAL_MAP.YEAR))
-        )(
-          $text('1y')
-        )
+        ...options.map(([interval, label]) => {
+          return $anchor(
+            styleBehavior(map(tf => tf === Number(interval) ? ({ color: pallete.primary }) : null, activityTimeframe)),
+            changeActivityTimeframeTether(nodeEvent('click'), constant(Number(interval)))
+          )(
+            $text(label)
+          )
+        }),
       ),
-      // $anchor(
-      //   styleBehavior(map(tf => tf === 0 ? ({ color: pallete.primary }) : null, activityTimeframe)),
-      //   changeTimeframeTether(nodeEvent('click'), constant(TIME_INTERVAL_MAP.MONTH))
-      // )(
-      //   $text('all')
-      // )
     ),
 
 

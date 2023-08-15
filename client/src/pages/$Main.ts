@@ -103,7 +103,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       // fontSize: screenUtils.isDesktopScreen ? '1.15rem' : '1rem',
       minHeight: '100vh',
       fontWeight: 400,
-      overflow: 'hidden',
       flexDirection: 'row',
     }),
 
@@ -131,9 +130,12 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
     mergeArray([
       router.match(rootRoute)(
         $rootContainer(
+          designSheet.customScroll,
           style({
             scrollSnapType: 'y mandatory',
             fontSize: '1.15rem',
+            overflow: 'hidden scroll',
+            maxHeight: '100vh',
             margin: '0 auto', width: '100%'
           })
         )(
@@ -173,7 +175,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                   designSheet.customScroll,
                   style({
                     flex: 1, position: 'absolute', inset: 0, padding: '0 8px 26px',
-                    overflowY: 'scroll'
+                    overflowY: 'scroll', overflowX: 'hidden'
                   })
                 )(
 

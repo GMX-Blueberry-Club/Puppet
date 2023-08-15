@@ -9,7 +9,7 @@ const SITE_CONFIG = {
   URL:  'puppet.house',
   TWITTER_HASH:  'PuppetFinance',
   APP_NAME:  'Puppet',
-  APP_DESC_SHORT:  'Mirror Trading',
+  APP_DESC_SHORT:  'Copy Trading',
   APP_DESC_LONG:  'Traders earn more, investors minimize their risks by mirroring multiple performant traders on a single deposit.',
   THEME_PRIMARY:  dark.pallete.primary,
   THEME_BACKGROUND:  dark.pallete.background,

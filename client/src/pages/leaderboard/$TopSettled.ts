@@ -6,7 +6,7 @@ import { empty, map, snapshot } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Table, ISortBy, TableColumn } from "gmx-middleware-ui-components"
-import { IPositionListSummary, groupArrayMany, pagingQuery, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IPositionListSummary, getMappedValue, groupArrayMany, pagingQuery, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetRouteSubscritpion, IPuppetRouteTrades, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $TraderDisplay, $pnlValue, $size } from "../../common/$common"
@@ -15,7 +15,7 @@ import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerform
 import { IGmxProcessState } from "../../data/process/process"
 import * as store from "../../data/store/store"
 import * as storage from "../../utils/storage/storeScope"
-import { $LastAtivity } from "../components/$LastActivity"
+import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity"
 
 
 
@@ -44,7 +44,7 @@ export const $TopSettled = (config: ITopSettled) => component((
   // const filter = combineObject({ activityTimeframe: config.activityTimeframe })
 
 
-  const activityTimeframe = storage.replayWrite(store.mainMenuOpen, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
+  const activityTimeframe = storage.replayWrite(store.activityTimeframe, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
 
 
 
@@ -163,21 +163,15 @@ export const $TopSettled = (config: ITopSettled) => component((
               $text(style({ fontSize: '.85rem' }))('Return %'),
             ),
             sortBy: 'pnl',
-            gridTemplate: '2fr',
+            gridTemplate: '90px',
             columnOp: style({ placeContent: 'flex-end' }),
             $$body: map(pos => {
 
-              return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+              return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', flex: 1 }))(
 
-                screenUtils.isDesktopScreen
-                  ? $ProfilePerformanceGraph({
-                    processData: params.data,
-                    positionList: pos.settledTradeList,
-                    width: 180,
-                    activityTimeframe: params.activityTimeframe,
-                  })({})
-                  : empty(),
-                $pnlValue(pos.pnl)
+                $row(style({ flex: 1, placeContent: 'flex-end', fontWeight: 'bold', letterSpacing: '0.05em' }))(
+                  $pnlValue(pos.pnl)
+                )
                 // $column(style({ gap: '3px', textAlign: 'right' }))(
                 //   $pnlValue(pos.pnl),
                 //   $seperator2,
@@ -186,6 +180,25 @@ export const $TopSettled = (config: ITopSettled) => component((
               )
             })
           },
+          ...screenUtils.isDesktopScreen
+            ? [
+              {
+                $head: $text(`Last ${getMappedValue(LAST_ACTIVITY_LABEL_MAP, params.activityTimeframe)} activity`),
+                gridTemplate: '160px',
+                columnOp: style({ alignItems: 'center', placeContent: 'center' }),
+                $$body: map((pos: IMirrorPositionListSummary & { trader: viem.Address, settledTradeList: IPositionMirrorSettled[]}) => {
+                  return screenUtils.isDesktopScreen
+                    ? $ProfilePerformanceGraph({
+                      processData: params.data,
+                      positionList: pos.settledTradeList,
+                      width: 160,
+                      activityTimeframe: params.activityTimeframe,
+                    })({})
+                    : empty()
+                })
+              },
+            ]
+            : [],
         ]
 
         return $Table({
