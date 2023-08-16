@@ -37,7 +37,7 @@ import { $puppetLogo } from "./$icons"
 export const $midContainer = $column(
   style({
     margin: '0 auto',
-    maxWidth: '940px',
+    maxWidth: '940px', padding: '0 8px 26px',
     gap: screenUtils.isDesktopScreen ? '50px' : '50px',
     width: '100%',
   })

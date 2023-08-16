@@ -25,10 +25,10 @@ export interface IProfilePreview extends IAccountPreview {
 
 
 export const $profileDisplay = (config: IProfilePreview) => {
-  const { $container = $row, address, showAddress = true, labelSize, profileSize } = config
+  const { $container = $row, address, showAddress = true, labelSize, profileSize = 50 } = config
 
 
-  return $container(layoutSheet.spacingSmall, style({ alignItems: 'center', textDecoration: 'none' }))(
+  return $container(style({ gap: `${profileSize / 10}px`, alignItems: 'center', textDecoration: 'none' }))(
     $profileAvatar(config),
     showAddress ? $AccountLabel(address, labelSize) : empty(),
     // showAddress

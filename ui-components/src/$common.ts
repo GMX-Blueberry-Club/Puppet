@@ -169,7 +169,7 @@ interface Icon {
   svgOps?: Op<IBranch<SVGSVGElement>, IBranch<SVGSVGElement>>
 }
 
-export const $icon = ({ $content, width = '24px', viewBox = `0 0 ${parseInt(width)} ${parseInt(width)}`, fill = 'inherit', svgOps = O() }: Icon) => (
+export const $icon = ({ $content, width = '24px', viewBox = `0 0 32 32`, fill = 'inherit', svgOps = O() }: Icon) => (
   $svg('svg')(attr({ viewBox, fill }), style({ width, aspectRatio: '1 /1' }), svgOps)(
     $content
   )

@@ -6,7 +6,7 @@ import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
 import { constant, empty, fromPromise, join, map, merge, mergeArray, multicast, now, skipRepeats, snapshot, startWith, switchLatest, tap } from '@most/core'
 import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN, IntervalTime, TIME_INTERVAL_MAP } from "gmx-middleware-const"
-import { ETH_ADDRESS_REGEXP, switchMap, timeSince, unixTimestampNow } from "gmx-middleware-utils"
+import { ETH_ADDRESS_REGEXP, filterNull, switchMap, timeSince, unixTimestampNow } from "gmx-middleware-utils"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu'
 import { fadeIn } from "../transitions/enter"
@@ -28,9 +28,11 @@ import { rootStoreScope } from "../data/store/store"
 import * as store from "../utils/storage/storeScope"
 import { $midContainer } from "../common/$common"
 import { $heading2, $heading3 } from "../common/$text"
-import { $alert, $anchor, $defaultVScrollLoader, $spinner } from "gmx-middleware-ui-components"
+import { $alert, $alertContainer, $anchor, $defaultVScrollLoader, $spinner } from "gmx-middleware-ui-components"
 import * as GMX from "gmx-middleware-const"
 import { Stream } from "@most/types"
+import { newUpdateInvoke } from "../sw/swUtils"
+import { $ButtonPrimary, $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
 
 const popStateEvent = eventElementTarget('popstate', window)
 const initialLocation = now(document.location)
@@ -52,6 +54,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   [modifySubscriptionList, modifySubscriptionListTether]: Behavior<IPuppetRouteSubscritpion[]>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
   [syncProcessData, syncProcessDataTether]: Behavior<any, bigint>,
+  [clickUpdateVersion, clickUpdateVersionTether]: Behavior<any, bigint>,
 
 ) => {
 
@@ -167,14 +170,13 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
             })
           }, isDesktopScreen),
 
-
           $column(style({ flex: 1 }))(
             $column(style({ flex: 1, position: 'relative' }))(
               switchMap(chainEvent => {
                 return $column(
                   designSheet.customScroll,
                   style({
-                    flex: 1, position: 'absolute', inset: 0, padding: '0 8px 26px',
+                    flex: 1, position: 'absolute', inset: 0,
                     overflowY: 'scroll', overflowX: 'hidden'
                   })
                 )(
@@ -228,7 +230,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                       }))
                     )
                   ),
-            
                   router.match(tradeTermsAndConditions)(
                     $midContainer(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
                       $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
@@ -252,7 +253,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
                       $node(style({ height: '100px' }))(),
                     ),
-
                   ),
                   router.match(adminRoute)(
                     $midContainer(
@@ -297,8 +297,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                       changeRoute: linkClickTether()
                     })
                   ),
-            
-
                   switchMap(params => {
                     const mode = (import.meta as any).env.MODE
                     const refreshThreshold = mode === 'development' ? 550 : 50
@@ -335,22 +333,44 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                     // map(seed => empty(), syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlock }))
                     ]))
                   }, combineObject({ process, syncBlock: block })),
-
                 
                 )
               }, chain)
             ),
 
-            $midContainer(
-              $RouteSubscriptionDrawer({
-                modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetRouteSubscritpion[]),
-                modifySubscriber,
-                subscriptionList
-              })({
-                modifySubscriptionList: modifySubscriptionListTether()
-              // clickClose: clickCloseSubscPanelTether(),
-              // changeSubscribeList: modifySubscriberTether()
-              })
+            $row(
+
+              switchMap((cb) => {
+                return fadeIn(
+                  $row(style({ position: 'absolute', right: '10px', bottom: '10px' }))(
+                    $alertContainer(
+                      filterNull(constant(null, clickUpdateVersion)) as any,
+
+                      $text('New version Available'),
+                      $ButtonSecondary({
+                        $container: $defaultMiniButtonSecondary,
+                        $content: $text('Update'),
+                      })({
+                        click: clickUpdateVersionTether(
+                          tap(cb)
+                        )
+                      })
+                    )
+                  )
+                )
+              }, newUpdateInvoke),
+              
+              $column(style({ maxWidth: '650px', margin: '0 auto', width: '100%', zIndex: 10 }))(
+                $RouteSubscriptionDrawer({
+                  modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetRouteSubscritpion[]),
+                  modifySubscriber,
+                  subscriptionList
+                })({
+                  modifySubscriptionList: modifySubscriptionListTether()
+                  // clickClose: clickCloseSubscPanelTether(),
+                  // changeSubscribeList: modifySubscriberTether()
+                })
+              )
             ),
           ),
           

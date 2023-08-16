@@ -70,10 +70,8 @@ export const $Profile = (config: IProfile) => component((
 
     $column(layoutSheet.spacingBig, style({ paddingTop: '50px', }))(
 
-      $row(layoutSheet.spacingBig, style({ alignItems: 'center', placeContent: 'center' }))(
-        $LastAtivity(activityTimeframe)({
-          changeActivityTimeframe: changeActivityTimeframeTether()
-        }),
+      $column(layoutSheet.spacingBig, style({ alignItems: 'center', placeContent: 'center' }))(
+        
 
         $ButtonToggle({
           $container: $defaulButtonToggleContainer(style({ alignSelf: 'center', })),
@@ -97,7 +95,9 @@ export const $Profile = (config: IProfile) => component((
             const address = urlFragments[urlFragments.length - 2] as viem.Address
 
             return $TraderProfile({ ...config, address, activityTimeframe })({
-              subscribeTreader: modifySubscriberTether()
+              subscribeTreader: modifySubscriberTether(),
+              changeRoute: changeRouteTether(),
+              changeActivityTimeframe: changeActivityTimeframeTether(),
             }).run(sink, scheduler)
           },
         }

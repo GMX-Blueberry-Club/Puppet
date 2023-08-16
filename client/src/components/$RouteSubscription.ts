@@ -1,15 +1,16 @@
-import { Behavior, O, combineObject, replayLatest } from "@aelea/core"
-import { $element, $node, $text, attr, component, nodeEvent, style, styleBehavior } from "@aelea/dom"
-import { $column, $row, InputType, layoutSheet } from "@aelea/ui-components"
+import { Behavior, O, combineObject } from "@aelea/core"
+import { $text, component, nodeEvent, style } from "@aelea/dom"
+import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { constant, empty, map, mergeArray, multicast, never, now, sample, skipRepeats, snapshot, startWith, tap } from "@most/core"
+import { constant, empty, map, mergeArray, multicast, skipRepeats, snapshot, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { $caretDown, $check, $icon, $target, $xCross } from "gmx-middleware-ui-components"
-import { formatBps, getMappedValue, groupArrayMany, parseBps, readableFixedBsp, replayState, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { formatBps, getMappedValue, groupArrayMany, parseBps, readableFixedBsp, switchMap } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $TextField } from "../common/$TextField.js"
+import { $route } from "../common/$common"
 import { $heading3 } from "../common/$text.js"
 import { $card2, $iconCircular } from "../elements/$common.js"
 import { wagmiWriteContract } from "../logic/common.js"
@@ -19,10 +20,9 @@ import { $profileDisplay } from "./$AccountProfile.js"
 import { $IntermediateConnectButton } from "./$ConnectAccount.js"
 import { $RouteDepositInfo } from "./$common.js"
 import { $ButtonCircular, $ButtonPrimary, $ButtonPrimaryCtx } from "./form/$Button.js"
-import { $Select } from "./form/$Select"
-import { $route } from "../common/$common"
 import { $Dropdown } from "./form/$Dropdown"
-import { $trash } from "../elements/$icons"
+
+
 
 interface IRouteSubscribeDrawer {
   subscriptionList: Stream<IPuppetRouteSubscritpion[]>
@@ -57,7 +57,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
               
             return $column(layoutSheet.spacing)(
               $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between', alignItems: 'center' }))(
-                $heading3('Change Match-making Rules'),
+                $heading3('Match-making Rules'),
 
                 $ButtonCircular({
                   $iconPath: $xCross,
@@ -93,15 +93,22 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
 
                               const iconColorParams = subsc
                                 ? modSubsc.subscribed
-                                  ? { fill: pallete.message, icon: $target, label: 'Edit' }: { fill: pallete.negative, icon: $xCross, label: 'Unsubscribe' }
-                                : { fill: pallete.positive, icon: $check, label: 'Subscribe' }
+                                  ? { fill: pallete.message, icon: $target, label: 'Edit' }: { fill: pallete.negative, icon: $xCross, label: 'Remove' }
+                                : { fill: pallete.positive, icon: $check, label: 'Add' }
 
+                              // text-align: center;
+                              // color: rgb(56, 229, 103);
+                              // padding: 4px 12px;
+                              // border-radius: 6px;
+                              // background-color: rgba(56, 229, 103, 0.1);
                               return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: `10px 0` }))(
                                 O(style({ marginLeft: '-32px', backgroundColor: pallete.horizon, cursor: 'pointer' }), clickRemoveSubscTether(nodeEvent('click'), constant(modSubsc)))(
                                   $iconCircular($xCross)
                                 ),
+                                $row(style({ width: '90px' }))(
+                                  $text(style({ backgroundColor: colorAlpha(iconColorParams.fill, .1), borderRadius: '6px', padding: '4px 12px', color: iconColorParams.fill,  }))(iconColorParams.label),  
+                                ),
 
-                                $text(style({ color: iconColorParams.fill, width: '90px' }))(iconColorParams.label),
                                 $profileDisplay({
                                   address: modSubsc.trader,
                                   // $profileContainer: $defaultBerry(style({ width: '50px' }))

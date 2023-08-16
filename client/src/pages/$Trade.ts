@@ -546,10 +546,8 @@ export const $Trade = (config: ITradeComponent) => component((
     // switchFocusMode: 
   })
 
-
   const CONTAINER_WIDTH = 1240
-
-  const $tradeMidContainer = $midContainer(layoutSheet.spacing, style({ flex: 1, position: 'relative', maxWidth: `${CONTAINER_WIDTH}px` }))
+  const $tradeMidContainer = $column(layoutSheet.spacing, style({ flex: 1, margin: '0 auto', width: '100%', position: 'relative', maxWidth: `${CONTAINER_WIDTH}px` }))
 
 
   return [
@@ -561,7 +559,7 @@ export const $Trade = (config: ITradeComponent) => component((
             // paddingLeft: '26px'
           })
           : style({}),
-        style({ height: 'min(650px, 60vh)', position: 'relative', backgroundColor: pallete.background }),
+        style({ minHeight: '430px', flex: 1, maxHeight: '65vh', position: 'relative', backgroundColor: pallete.background }),
         // screenUtils.isDesktopScreen
         //   ? style({ height: '500px' })
         //   : style({ height: '500px' })

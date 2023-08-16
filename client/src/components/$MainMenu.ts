@@ -10,16 +10,17 @@ import { Stream } from "@most/types"
 import { $bagOfCoinsCircle, $fileCheckCircle, $gmxLogo, $puppetLogo } from "../common/$icons"
 import { dark, light } from "../common/theme"
 import { $Picker } from "./$ThemePicker"
-import { $stackedCoins } from "../elements/$icons"
+import { $stackedCoins, $trophy } from "../elements/$icons"
 import { $Popover } from "./$Popover"
 import { $WalletProfileDisplay } from "./$WalletProfileDisplay"
-import { $ButtonSecondary } from "./form/$Button"
+import { $ButtonSecondary, $ButtonSecondary, $defaultMiniButtonSecondary } from "./form/$Button"
 import { disconnect } from "@wagmi/core"
 import { walletLink } from "../wallet"
 import { switchMap } from "gmx-middleware-utils"
 import { fadeIn } from "../transitions/enter"
 import * as storage from "../utils/storage/storeScope"
 import * as store from "../data/store/store"
+import { newUpdateInvoke } from "../sw/swUtils"
 
 interface MainMenu {
   chainList: CHAIN[]
@@ -190,7 +191,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
           click: routeChangeTether()
         }),
         $pageLink({
-          $iconPath: $stackedCoins,
+          $iconPath: $trophy,
           route: parentRoute.create({ fragment: 'leaderboard' }).create({ fragment: 'settled' }),
           url: '/app/leaderboard/settled',
           text: 'leaderboard',
