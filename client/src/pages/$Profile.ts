@@ -110,6 +110,7 @@ export const $Profile = (config: IProfile) => component((
 
             return $PuppetProfile({ ...config, address, activityTimeframe })({
               changeRoute: changeRouteTether(),
+              changeActivityTimeframe: changeActivityTimeframeTether(),
             }).run(sink, scheduler)
           },
         }
