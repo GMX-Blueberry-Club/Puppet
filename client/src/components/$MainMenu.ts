@@ -388,8 +388,6 @@ export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: 
 })
 
 
-
-
 const $pageLink = (config: Omit<IAnchor, '$anchor'> & { $iconPath: $Branch<SVGPathElement>, text: string | Stream<string> }) => {
 
   return component((
@@ -408,7 +406,7 @@ const $pageLink = (config: Omit<IAnchor, '$anchor'> & { $iconPath: $Branch<SVGPa
       ),
       // styleBehavior(map(isDisabled => (isDisabled ?  { pointerEvents: 'none', opacity: .3 } : {}), disabled))
     )(
-      $row(style({ alignItems: 'center', cursor: 'pointer', borderRadius: '50px' }))(
+      $row(style({ alignItems: 'center', cursor: 'pointer', borderRadius: '50px', pointerEvents: 'none' }))(
         $icon({ $content: config.$iconPath, svgOps: style({ padding: '0px 12px', minWidth: '54px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),
         $text(style({ padding: '16px 12px', fontSize: '1.15rem' }))(config.text)
       )

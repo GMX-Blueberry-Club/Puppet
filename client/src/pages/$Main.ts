@@ -148,6 +148,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
         )
       ),
+      
       router.contains(appRoute)(
         $rootContainer(
           styleBehavior(map(isDesktop => ({ flexDirection: isDesktop ? 'row' : 'column' }), isDesktopScreen)),

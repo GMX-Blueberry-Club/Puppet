@@ -291,7 +291,7 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
 
         return $Popover({
           dismiss: modifySubscribeList,
-          $target: $row(layoutSheet.spacingSmall)(
+          $target: $row(layoutSheet.spacing)(
             $trader,
             $ButtonSecondary({
               $content: routeSubscription ? $text('Change') : $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))($icon({ $content: $puppetLogo, fill: pallete.message, width: '16px', viewBox: `0 0 32 32` }), $text('Copy')),

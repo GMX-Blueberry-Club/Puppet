@@ -37,7 +37,7 @@ export interface IChartConfig<TSeriesType extends keyof SeriesDataItemTypeMap> {
   data: Array<SeriesDataItemTypeMap[TSeriesType]>
   appendData?: Stream<SeriesDataItemTypeMap[TSeriesType]>
   priceLines?: Stream<Partial<PriceLineOptions> & Pick<PriceLineOptions, "price"> | null>[]
-  drawMarkers?: Stream<IMarker[]>
+  markers?: Stream<IMarker[]>
 
   $content?: $Node
 
@@ -225,7 +225,7 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
           }),
           tap(next => {
             seriesApi.setMarkers(next)
-          }, config.drawMarkers || empty()),
+          }, config.markers || empty()),
         ]),
         combineArray(([containerDimension]) => {
           // debugger

@@ -1,15 +1,13 @@
 import { pallete } from '@aelea/ui-components-theme'
+import { readableUnitAmount } from 'gmx-middleware-utils'
 import {
   BarPrice,
   BaselineSeriesPartialOptions,
-  CandlestickSeriesPartialOptions,
   ChartOptions,
   DeepPartial,
-  LineStyle,
-  LineType
+  LineStyle
 } from 'lightweight-charts'
 import { $Chart, IChartConfig } from "./$Chart.js"
-import { readableNumber, readableUnitAmount } from 'gmx-middleware-utils'
 
 
 export interface IBaselineChart extends IChartConfig<'Baseline'> {

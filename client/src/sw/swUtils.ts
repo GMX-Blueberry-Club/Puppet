@@ -7,9 +7,9 @@ export const newUpdateInvoke: Stream<() => void> = fromCallback(cb => {
   const reloadCb = registerSW({
     async onNeedRefresh() {
       // @ts-ignore
-      if (SW_DEV) {
-        return
-      }
+      // if (SW_DEV) {
+      //   return
+      // }
 
       cb(() => reloadCb(true))
 
