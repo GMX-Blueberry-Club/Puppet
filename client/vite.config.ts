@@ -32,8 +32,6 @@ const pwaOptions: Partial<VitePWAOptions> = {
   },
   srcDir: 'src',
   filename: 'sw.ts',
-  
-
   includeAssets: ['font/*.ttf', './*.png', './*.svg'],
   manifest: {
     name: SITE_CONFIG.APP_NAME,
