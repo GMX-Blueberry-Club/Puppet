@@ -10,7 +10,7 @@ import { IAccountToRouteMap, IPositionMirrorSettled, IPositionMirrorSlot, IPosit
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { rootStoreScope } from "../store/store"
-import { IProcessEnvironmentMode, IProcessedStore, defineProcess } from "../../utils/indexer/processor"
+import { IProcessEnvironmentMode, IProcessedStore, IProcessedStoreConfig, defineProcess, validateSeed } from "../../utils/indexer/processor"
 import { transformBigints } from "../../utils/storage/storeScope"
 import { puppetLog } from "../scope"
 import * as gmxLog from "../scope/gmx"
@@ -70,26 +70,34 @@ const state: IGmxProcessState = {
   subscription: [],
 }
 
-const blueprint: IProcessedStore<IGmxProcessState> = {
-  startBlock: 122417000n,
-  endBlock: 122634038n,
-  orderId: 0,
+const config: IProcessedStoreConfig = {
+  startBlock: 115000000n,
+  endBlock: 122956472n,
   chainId: arbitrum.id,
-  state: state,
 }
 
 
 export const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
-  const req = await import('../../data/db/sha256-6Cwg24oy0lrnzza4PW1D92fHitef02wGLqI+qxWN6ew=.json')
-  const newLocal = transformBigints(req.default)
-  return newLocal
+  const req = await import('../../data/db/sha256-Ki3Ek+i1Li+uz6FtPOX__5CohGfIoGmTtBsQf5VULng=.json')
+  const storedSeed: IProcessedStore<IGmxProcessState> = transformBigints(req.default)
+
+  const seedFileValidationError = validateSeed(config, storedSeed.config)
+
+  if (seedFileValidationError) {
+    throw new Error(`Seed file validation error: ${seedFileValidationError}`)
+  }
+      
+  return storedSeed
 })
 
 export const gmxProcess = defineProcess(
   {
     mode: SW_DEV ? IProcessEnvironmentMode.DEV : IProcessEnvironmentMode.PROD,
     seed: seedFile,
-    blueprint: blueprint,
+    blueprint: {
+      config,
+      state,
+    },
     parentScope: rootStoreScope,
     queryBlockSegmentLimit: 100000n,
   },

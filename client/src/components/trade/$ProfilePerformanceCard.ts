@@ -168,7 +168,7 @@ function performanceTimeline(
 
 function getClosestpricefeedCandle(pricefeed: Record<IPriceIntervalIdentity, Record<string, IPriceInterval>>, tickerId: IPriceIntervalIdentity, intervalSlot: number, offset: number) {
 
-  if (offset > 50) {
+  if (offset > 5) {
     throw new Error('No recent pricefeed data found')
   }
 

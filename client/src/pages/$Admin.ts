@@ -1,28 +1,38 @@
-import { Behavior } from "@aelea/core"
+import { Behavior, combineObject } from "@aelea/core"
 import { $node, $text, INode, attrBehavior, component, nodeEvent, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { awaitPromises, fromPromise, map, now } from "@most/core"
+import { awaitPromises, fromPromise, map, mergeArray, now, recoverWith, sample, snapshot } from "@most/core"
 import { Stream } from "@most/types"
-import { $Table, $caretDown, $infoLabeledValue } from "gmx-middleware-ui-components"
-import { readableFileSize, switchMap } from "gmx-middleware-utils"
-import { $heading1 } from "../common/$text"
+import { $Table, $alertContainer, $caretDown, $infoLabeledValue } from "gmx-middleware-ui-components"
+import { readableFileSize, readableNumber, readableUnitAmount, switchMap } from "gmx-middleware-utils"
+import { $heading1, $heading3 } from "../common/$text"
 import { $ButtonPrimary, $buttonAnchor, defaultMiniButtonStyle } from "../components/form/$Button"
 import { gmxProcess, seedFile } from "../data/process/process"
 import { gmxLog } from "../data/scope"
 import { $card, $iconCircular } from "../elements/$common"
-import { IProcessedStore, getBlobHash } from "../utils/indexer/processor"
+import { IProcessedStore, getBlobHash, syncProcess } from "../utils/indexer/processor"
 import * as indexDb from "../utils/storage/indexDB"
 import { jsonStringify } from "../utils/storage/storeScope"
-import { blockChange } from "../wallet/walletLink"
+import { blockChange, publicClient } from "../wallet/walletLink"
 import { $seperator2 } from "./common"
 
 
 export const $Admin = component((
   [hoverDownloadBtn, hoverDownloadBtnTether]: Behavior<INode, { href: string, download: string }>,
-  [clickSyncProcess, clickSyncProcessTether]: Behavior<PointerEvent>,
+  [syncBlockNumber, syncBlockNumberTether]: Behavior<PointerEvent, bigint>,
 ) => {
 
   const logList = now(Object.values(gmxLog))
+
+
+  const syncRuntimeSeed = switchMap(params => {
+    return syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlockNumber })
+  }, combineObject({ publicClient, seed: gmxProcess.seed, syncBlockNumber }))
+
+  const processState = mergeArray([
+    gmxProcess.seed,
+    syncRuntimeSeed
+  ])
 
 
   return [
@@ -32,27 +42,21 @@ export const $Admin = component((
 
       $card(
         $column(layoutSheet.spacing)(
+          $ProcessDetails({ seed: now(gmxProcess.blueprint), title: 'Blueprint' })({}),
+
+          $node(),
+          $seperator2,
+          $node(),
 
 
-          $ProcessDetails({ seed: gmxProcess.blueprint, title: 'Blueprint' })({}),
+          $ProcessDetails({ seed: seedFile, title: 'Processed File' })({}),
+
           
           $node(),
           $seperator2,
           $node(),
-          switchMap(seed => {
 
-            return $ProcessDetails({ seed, title: 'Seed file' })({})
-          }, seedFile),
-
-          $node(),
-          $seperator2,
-          $node(),
-
-          switchMap(seed => {
-            return $ProcessDetails({ seed, title: 'Runtime Seed' })({})
-          }, gmxProcess.seed),
-          $row(layoutSheet.spacing)(
-          ),
+          $ProcessDetails({ seed: processState, title: 'Runtime' })({}),
 
           $node(),
           $seperator2,
@@ -61,33 +65,14 @@ export const $Admin = component((
             $infoLabeledValue('Latest Block', $text(map(s => String(s), blockChange))),
 
 
-            // $row(layoutSheet.spacing)(
+            $row(layoutSheet.spacing)(
 
-            //   $buttonAnchor(
-            //     defaultMiniButtonStyle, 
-            //     hoverDownloadBtnTether(
-            //       nodeEvent('pointerover'),
-            //       switchMap(() => map(async blob => {
-
-            //         return {
-            //           href: URL.createObjectURL(blob),
-            //           hash: await getBlobHash(blob)
-            //         }
-            //       }, jsonBlob(gmxProcess.seed))),
-            //       awaitPromises,
-            //       map(params => {
-            //         return { href: params.href, download: `${params.hash}.json` }
-            //       }),
-            //     ),
-            //     attrBehavior(map(attrs => attrs, hoverDownloadBtn))
-            //   )($text('Download File')),
-
-            //   $ButtonPrimary({
-            //     $content: $text('Sync Latest'),
-            //   })({
-            //     click: clickSyncProcessTether()
-            //   })
-            // )
+              $ButtonPrimary({
+                $content: $text('Sync Runtime'),
+              })({
+                click: syncBlockNumberTether(sample(blockChange))
+              })
+            )
           )
             
         )
@@ -113,10 +98,10 @@ export const $Admin = component((
               columnOp: style({  placeContent: 'center' }),
               $head: $text('Size'),
               $$body: map(log => {
+                const logCount = indexDb.read(log.scope, store => store.count())
 
-                const newLocal = map(String, indexDb.read(log.scope, store => store.count()))
                 return $text(
-                  newLocal
+                  map(String, map(readableUnitAmount, logCount))
                 )
                 
               })
@@ -185,58 +170,69 @@ export const $Admin = component((
 
 interface IProcessDetails<T> {
   title: string
-  seed: IProcessedStore<T>
+  seed: Stream<Omit<IProcessedStore<T>, 'orderId' | 'blockNumber'>>
 }
 
 
 export const $ProcessDetails = <T>(config: IProcessDetails<T>) => component((
   [hoverDownloadBtn, hoverDownloadBtnTether]: Behavior<INode, { href: string, download: string }>,
 ) => {
-  const seed = config.seed
-  const blob = getJsonBlob(config.seed)
 
+  const $errorRecoverMsg = recoverWith(err => {
+    return $alertContainer(
+      $heading3(config.title),
+      $text(err.message)
+    )
+  })
 
   return [
-    $column(layoutSheet.spacing)(
+    $errorRecoverMsg(
+      switchMap(seed => {
 
-      $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
-        $text(config.title),
-        $buttonAnchor(
-          defaultMiniButtonStyle, 
-          hoverDownloadBtnTether(
-            nodeEvent('pointerover'),
-            map(async () => {
+        const blob = getJsonBlob(seed)
 
-              return {
-                href: URL.createObjectURL(blob),
-                hash: await getBlobHash(blob)
-              }
-            }),
-            awaitPromises,
-            map(params => {
-              return { href: params.href, download: `${params.hash}.json` }
-            }),
+        return $column(layoutSheet.spacing)(
+
+          $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
+            $text(config.title),
+            $buttonAnchor(
+              defaultMiniButtonStyle, 
+              hoverDownloadBtnTether(
+                nodeEvent('pointerover'),
+                map(async () => {
+
+                  return {
+                    href: URL.createObjectURL(blob),
+                    hash: await getBlobHash(blob)
+                  }
+                }),
+                awaitPromises,
+                map(params => {
+                  return { href: params.href, download: `${params.hash}.json` }
+                }),
+              ),
+              attrBehavior(map(attrs => attrs, hoverDownloadBtn))
+            )($text('Download'))
           ),
-          attrBehavior(map(attrs => attrs, hoverDownloadBtn))
-        )($text('Download'))
-      ),
              
-      $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
-        $infoLabeledValue('Chain', $text(`${seed.chainId}`)),
-      ),
+          $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
+            $infoLabeledValue('Chain', $text(`${seed.config.chainId}`)),
+          ),
 
-      $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
-        $infoLabeledValue('Block Range', $text(`${seed.startBlock}-${seed.endBlock}`)),
-      ),
+          $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
+            $infoLabeledValue('Block Range', $text(`${seed.config.startBlock}-${seed.config.endBlock}`)),
+          ),
 
-      $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
-        $infoLabeledValue('size', $text(readableFileSize(blob.size))),
-      ),
+          $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
+            $infoLabeledValue('size', $text(readableFileSize(blob.size))),
+          ),
 
-      $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
-        $infoLabeledValue('checksum', $text(fromPromise(getBlobHash(blob)))),
-      ),
+          $row(layoutSheet.spacing, style({ placeContent:'space-between' }))(
+            $infoLabeledValue('checksum', $text(fromPromise(getBlobHash(blob)))),
+          ),
 
+        )
+      }, config.seed)
     )
 
   ]

@@ -1,5 +1,5 @@
 import { combineObject } from "@aelea/core"
-import { fromPromise, map, now, switchLatest } from "@most/core"
+import { empty, fromPromise, map, now, recoverWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, max, min, switchMap } from "gmx-middleware-utils"
 import * as viem from "viem"
@@ -14,12 +14,17 @@ export enum IProcessEnvironmentMode {
   PROD,
 }
 
-export interface IProcessedStore<T> {
-  state: T
-  orderId: number
+export interface IProcessedStoreConfig {
   startBlock: bigint
   endBlock: bigint
   chainId: number
+}
+
+export interface IProcessedStore<T> {
+  state: T
+  config: IProcessedStoreConfig
+  orderId: number
+  blockNumber: bigint
 }
 
 
@@ -30,16 +35,13 @@ export interface IProcessSourceConfig<TLog extends ILogOrdered, TState> {
 }
 
 
-
-export interface IProcessorConfig<TSeed, TParentName extends string> {
-  mode: IProcessEnvironmentMode
-  seed: Stream<IProcessedStore<TSeed>>,
-  blueprint: IProcessedStore<TSeed>,
-
+export interface IProcessorConfig<TState, TParentName extends string> {
+  seed: Stream<IProcessedStore<TState>>,
   parentScope: store.IStoreconfig<TParentName>,
   queryBlockSegmentLimit: bigint
+  mode: IProcessEnvironmentMode
+  blueprint: Omit<IProcessedStore<TState>, 'orderId' | 'blockNumber'>,
 }
-
 
 
 
@@ -48,6 +50,7 @@ export interface IProcessParams<TState, TProcessConfigList extends ILogOrdered[]
   scope: store.IStoreScope<`${TParentName}.${string}`, any>
   processList: { [P in keyof TProcessConfigList]: IProcessSourceConfig<TProcessConfigList[P], TState> }
   state: Stream<TState>
+  seed: Stream<IProcessedStore<TState>>,
 }
 
 export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], TParentName extends string >(
@@ -55,20 +58,41 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
   ...processList: { [P in keyof TProcessConfigList]: IProcessSourceConfig<TProcessConfigList[P], TSeed>; }
 ): IProcessParams<TSeed, TProcessConfigList, TParentName> {
 
-  const scopeKey = processList.reduce((acc, next) => `${acc}:${next.source.eventName}`, `processor:${config.blueprint.chainId}:${config.blueprint.startBlock}`)
-  const scope = store.createStoreScope(config.parentScope, scopeKey)
+  const scope = store.createStoreScope(config.parentScope, 'processor')
+  const scopeKey = getProcessorKey(processList, config.blueprint.config)
 
-  const seed = switchMap(seedEvent => {
-    const storeState: IProcessedStore<TSeed> = {
-      ...seedEvent,
-      // orderId: Number(1000000n * config.startBlock), blockNumber: config.startBlock,
+  const storedIdbSeed: Stream<IProcessedStore<TSeed>> = indexDB.get(scope, scopeKey)
+
+
+  const loadSeedFile = map(seedFile => {
+    const invalidSeedFileError = validateSeed(config.blueprint.config, seedFile.config)
+
+    if (invalidSeedFileError) {
+      throw new Error(`Seed file validation error: ${invalidSeedFileError}`)
     }
 
-    return store.get(scope, storeState)
+    return seedFile
   }, config.seed)
+
+  const seed = switchMap(idbSeed => {
+    if (idbSeed) {
+      const invalidIndexDBSeedError = validateSeed(config.blueprint.config, idbSeed.config)
+
+      if (invalidIndexDBSeedError) {
+        return loadSeedFile
+      }
+
+      return now(idbSeed)
+    }
+
+    return loadSeedFile
+
+  }, storedIdbSeed) 
+
+
   const state = map(s => s.state, seed)
   
-  return {  ...config, processList, scope, state, seed, scopeKey  }
+  return { ...config, processList, scope, state, seed, scopeKey  }
 }
 
 
@@ -82,11 +106,12 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
   config: IProcessorSeedConfig<TSeed, TProcessConfigList, TParentName>,
 ): Stream<IProcessedStore<TSeed>> {
 
+  const scopeKey = getProcessorKey(config.processList, config.blueprint.config)
 
   const nextLogs = map(processState => {
-    const startblock = processState.startBlock
+    const startblock = processState.config.startBlock
     const processNextLog = config.processList.map(processConfig => {
-      const rangeKey = IDBKeyRange.bound(processState.orderId, 1e20, true)
+      const rangeKey = IDBKeyRange.bound(processState.orderId || 0, 1e20, true)
       const nextStoredLog: Stream<ILogOrderedEvent[]> = indexDB.getAll(processConfig.source.scope, rangeKey)
 
       return switchMap(stored => {
@@ -139,7 +164,7 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
           )
           : now([])
 
-        const fromBlock = max(startblock, max(processState.endBlock, lstEvent ? lstEvent.blockNumber : 0n))
+        const fromBlock = max(startblock, max(processState.blockNumber, lstEvent ? lstEvent.blockNumber : 0n))
 
 
         const next = fromBlock < config.syncBlock
@@ -169,7 +194,10 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
                     const storeObj = { ...ev, orderId: getEventOrderIdentifier(ev) } as ILogOrderedEvent
                     return storeObj
                   })
-                  .filter(ev => ev.orderId > Math.max(processState.orderId, headEvent ? headEvent.orderId : 0))
+                  .filter(ev => {
+
+                    return ev.orderId > Math.max(processState.orderId || 0, headEvent ? headEvent.orderId : 0)
+                  })
 
                 return filtered
               }
@@ -197,7 +225,6 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
   }, config.seed)
  
   const sync = switchMap(params => {
-
     return switchLatest(zipArray((...nextLogEvents) => {
       const orderedNextEvents = nextLogEvents.flat().sort((a, b) => a.orderId - b.orderId)
 
@@ -216,23 +243,45 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
 
 
         acc.orderId = next.orderId
-        acc.endBlock = next.blockNumber
+        acc.blockNumber = next.blockNumber
         acc.state = eventProcessor.step(acc.state, next)
 
         return acc
       }, params.processState)
 
-      nextState.endBlock = config.syncBlock
+      nextState.blockNumber = config.syncBlock
 
-      console.log(config.syncBlock)
-
-      return indexDB.set(config.scope, nextState)
+      return indexDB.set(config.scope, nextState, scopeKey)
     }, ...params.processNextLog))
 
   }, nextLogs)
 
   return sync
 }
+
+
+function getProcessorKey(processConfigList: IProcessSourceConfig<any, any>[], blueprint: IProcessedStoreConfig) {
+  return processConfigList.reduce((acc, next) => `${acc}:${next.source.eventName}`, `${blueprint.chainId}:${blueprint.startBlock}:${blueprint.endBlock}`)
+}
+
+export function validateSeed(blueprintConfig: IProcessedStoreConfig, seedConfig: IProcessedStoreConfig): null | string {
+
+  if (seedConfig.startBlock !== blueprintConfig.startBlock) {
+    return `seed startBlock ${seedConfig.startBlock} does not match blueprint startBlock ${blueprintConfig.startBlock}`
+  }
+
+  if (seedConfig.endBlock !== blueprintConfig.endBlock) {
+    return `seed endBlock ${seedConfig.endBlock} does not match blueprint endBlock ${blueprintConfig.endBlock}`
+  }
+
+  if (seedConfig.chainId !== blueprintConfig.chainId) {
+    return `seed chainId ${seedConfig.chainId} does not match blueprint chainId ${blueprintConfig.chainId}`
+  }
+
+  return null
+}
+
+// throw new Error('stored database does not match config blueprint, cleaning storage is required')
 
 
 export async function getBlobHash(blob: Blob) {

@@ -4,7 +4,7 @@ import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
-import { constant, empty, fromPromise, join, map, merge, mergeArray, multicast, now, skipRepeats, snapshot, startWith, switchLatest, tap } from '@most/core'
+import { constant, empty, fromPromise, join, map, merge, mergeArray, multicast, now, skipRepeats, snapshot, startWith, switchLatest, take, tap } from '@most/core'
 import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN, IntervalTime, TIME_INTERVAL_MAP } from "gmx-middleware-const"
 import { ETH_ADDRESS_REGEXP, filterNull, switchMap, timeSince, unixTimestampNow } from "gmx-middleware-utils"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount"
@@ -58,9 +58,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
 ) => {
 
-
   const syncProcessEvent = multicast(switchMap(params => {
-    if (params.syncProcessData > params.seed.endBlock) {
+    if (params.syncProcessData > params.seed.config.endBlock) {
       return syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncProcessData })
     }
 
@@ -83,13 +82,13 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
   const rootRoute = router.create({ fragment: baseRoute, title: 'Puppet', fragmentsChange })
   const appRoute = rootRoute.create({ fragment: 'app', title: '' })
+  const adminRoute = rootRoute.create({ fragment: 'admin', title: 'Admin Utilities' })
 
   const profileRoute = appRoute.create({ fragment: 'profile' })
   const walletRoute = appRoute.create({ fragment: 'wallet', title: 'Portfolio' })
-  const adminRoute = appRoute.create({ fragment: 'admin', title: 'Admin Utilities' })
   const TRADEURL = 'trade'
   const tradeRoute = appRoute.create({ fragment: TRADEURL })
-  const tradeTermsAndConditions = appRoute.create({ fragment: 'trading-terms-and-conditions' })
+  const tradeTermsAndConditions = appRoute.create({ fragment: 'terms-and-conditions' })
 
   const leaderboardRoute = appRoute.create({ fragment: 'leaderboard' })
 
@@ -247,32 +246,29 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                     )
                   ),
                   router.match(tradeTermsAndConditions)(
-                    $midContainer(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
-                      $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
-                      $node(),
-                      $text(style({ fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
-                      $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host + '/app/' + TRADEURL} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
-                      $element('ul')(layoutSheet.spacing, style({  }))(
-                        $liItem(
-                          $text(`I am not a United States person or entity;`),
+                    fadeIn(
+                      $midContainer(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
+                        $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
+                        $node(),
+                        $text(style({ fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
+                        $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host + '/app/' + TRADEURL} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
+                        $element('ul')(layoutSheet.spacing, style({  }))(
+                          $liItem(
+                            $text(`I am not a United States person or entity;`),
+                          ),
+                          $liItem(
+                            $text(`I am not a resident, national, or agent of any country to which the United States, the United Kingdom, the United Nations, or the European Union embargoes goods or imposes similar sanctions, including without limitation the U.S. Office of Foreign Asset Control, Specifically Designated Nationals and Blocked Person List;`),
+                          ),
+                          $liItem(
+                            $text(`I am legally entitled to access the Interface under the laws of the jurisdiction where I am located;`),
+                          ),
+                          $liItem(
+                            $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
+                          ),
                         ),
-                        $liItem(
-                          $text(`I am not a resident, national, or agent of any country to which the United States, the United Kingdom, the United Nations, or the European Union embargoes goods or imposes similar sanctions, including without limitation the U.S. Office of Foreign Asset Control, Specifically Designated Nationals and Blocked Person List;`),
-                        ),
-                        $liItem(
-                          $text(`I am legally entitled to access the Interface under the laws of the jurisdiction where I am located;`),
-                        ),
-                        $liItem(
-                          $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
-                        ),
-                      ),
 
-                      $node(style({ height: '100px' }))(),
-                    ),
-                  ),
-                  router.match(adminRoute)(
-                    $midContainer(
-                      $Admin({})
+                        $node(style({ height: '100px' }))(),
+                      )
                     ),
                   ),
                   router.match(tradeRoute)(
@@ -313,9 +309,10 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                       changeRoute: linkClickTether()
                     })
                   ),
+
                   switchMap(params => {
                     const refreshThreshold = SW_DEV ? 150 : 50
-                    const blockDelta = params.syncBlock - params.process.endBlock
+                    const blockDelta = params.syncBlock - params.process.blockNumber
 
                     if (blockDelta < refreshThreshold) {
                       return empty()
@@ -348,7 +345,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                       ),
                     // map(seed => empty(), syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlock }))
                     ]))
-                  }, combineObject({ process, syncBlock: block })),
+                  }, combineObject({ process, syncBlock: take(1, block) })),
                 
                 )
               }, chain)
@@ -389,9 +386,19 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               )
             ),
           ),
-          
         )
       ),
+
+      router.match(adminRoute)(
+
+        $rootContainer(style({ overflowY: 'auto', height: '100vh' }))(
+          $midContainer(
+            $Admin({})
+          )
+        ),
+      ),
+
+
     ])
 
   ]
