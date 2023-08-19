@@ -348,11 +348,11 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
       ),
 
-      $column(style({ borderRadius: `${BOX_SPACING}px`, backgroundColor: pallete.horizon }))(
+      $column(style({ borderRadius: `${BOX_SPACING}px`, backgroundColor: pallete.middleground }))(
         $column(layoutSheet.spacingSmall, style({ padding: '18px', borderRadius: '20px 20px 0 0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}` }),
           styleInline(now({ borderBottom: 'none' })),
           styleInline(combineArray((focus, isIncrease) => {
-            return focus === ITradeFocusMode.collateral ? { borderColor: isIncrease ? `${pallete.middleground}` : `${pallete.indeterminate}` } : { borderColor: '' }
+            return focus === ITradeFocusMode.collateral ? { borderColor: isIncrease ? `${pallete.primary}` : `${pallete.indeterminate}` } : { borderColor: '' }
           }, config.tradeConfig.focusMode, config.tradeConfig.isIncrease))
         )(
           $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between' }))(
@@ -625,7 +625,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
             //   return false
             // }, tradeState),
-            color: map(isIncrease => isIncrease ? pallete.middleground : pallete.indeterminate, config.tradeConfig.isIncrease),
+            color: map(isIncrease => isIncrease ? pallete.foreground : pallete.indeterminate, config.tradeConfig.isIncrease),
             min: map((state) => {
               if (state.isIncrease) {
                 if (state.position.averagePrice > 0n) {
@@ -708,7 +708,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
           styleInline(map(params => {
             const borderColor = params.focusMode === ITradeFocusMode.size
               ? params.isIncrease
-                ? `${pallete.middleground}`
+                ? `${pallete.primary}`
                 : `${pallete.indeterminate}`
               : ''
             return { borderColor }

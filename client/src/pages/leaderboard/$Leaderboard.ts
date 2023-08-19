@@ -1,10 +1,10 @@
 import { Behavior } from "@aelea/core"
-import { $text, component, style } from "@aelea/dom"
+import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { empty, map, mergeArray, multicast, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { $ButtonToggle } from "gmx-middleware-ui-components"
+import { $ButtonToggle, $defaulButtonToggleContainer } from "gmx-middleware-ui-components"
 import { IPuppetRouteTrades, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import { IGmxProcessState } from "../../data/process/process"
 import { $card } from "../../elements/$common"
@@ -13,6 +13,7 @@ import { $TopOpen } from "./$TopOpen"
 import { $TopSettled } from "./$TopSettled"
 import * as GMX from "gmx-middleware-const"
 import { $LastAtivity } from "../components/$LastActivity"
+import { pallete } from "@aelea/ui-components-theme"
 
 
 
@@ -65,10 +66,12 @@ export const $Leaderboard = (config: ILeaderboard) => component((
       style({ alignItems: 'center', paddingTop: '50px', flex: 1 })
     )(
 
+      
+
       $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
         $ButtonToggle({
           options,
-          // $container: $row,
+          $container: $defaulButtonToggleContainer(style({ zIndex: 0 })),
           selected: mergeArray([
             router.match<IRouteOption>(topOpenRoute)(now(options[1])),
             router.match<IRouteOption>(settledRoute)(now(options[0])),
@@ -83,22 +86,21 @@ export const $Leaderboard = (config: ILeaderboard) => component((
         }),
       ),
 
-
-      $card(style({ width: '100%' }))(
-        router.match(topOpenRoute)(
-          $TopOpen({ ...config })({
-            routeChange: routeChangeTether()
-          })
-        ),
-        router.match(settledRoute)(
-          $TopSettled({
-            ...config,
-          })({
-            routeChange: routeChangeTether(),
-            modifySubscriber: modifySubscriberTether()
-          })
-        )
+      router.match(topOpenRoute)(
+        $TopOpen({ ...config })({
+          routeChange: routeChangeTether()
+        })
       ),
+      router.match(settledRoute)(
+        $TopSettled({
+          ...config,
+        })({
+          routeChange: routeChangeTether(),
+          modifySubscriber: modifySubscriberTether()
+        })
+      )
+
+
 
     ),
 

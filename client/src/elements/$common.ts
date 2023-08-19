@@ -25,7 +25,7 @@ export const $card = $column(layoutSheet.spacing,
 export const $card2 = $column(layoutSheet.spacing,
   style({ border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderRadius: '20px', padding: '20px' }),
   style({
-    backgroundColor: pallete.horizon,
+    backgroundColor: pallete.middleground,
     boxShadow: 'rgb(0 0 0 / 25%) 0px 0px 1px, rgb(0 0 0 / 15%) 0px 15px 20px, rgb(0 0 0 / 8%) 0px 1px 12px',
   })
 )

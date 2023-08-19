@@ -21,6 +21,9 @@ const prefixedParentEnv = Object.fromEntries(
 
 
 const pwaOptions: Partial<VitePWAOptions> = {
+  workbox: {
+    cleanupOutdatedCaches: false
+  },
   registerType: 'prompt',
   strategies: 'injectManifest',
   injectManifest: {

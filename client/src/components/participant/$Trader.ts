@@ -3,10 +3,10 @@ import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map, now } from "@most/core"
+import { empty, map, now, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
-import { $Link, $Table, $arrowDown, $arrowRight, $icon } from "gmx-middleware-ui-components"
+import { $Link, $Table, $arrowDown, $arrowRight, $icon, ScrollRequest } from "gmx-middleware-ui-components"
 import { leverageLabel, pagingQuery, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from 'viem'
@@ -37,7 +37,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [subscribeTreader, subscribeTreaderTether]: Behavior<PointerEvent, IPuppetRouteSubscritpion>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
-  [changePageIndex, changePageIndexTether]: Behavior<number, number>,
+  [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
 
 ) => {
 
@@ -56,14 +56,14 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
   const settledTrades = map(params => {
     const filterStartTime = unixTimestampNow() - params.activityTimeframe
-    const list = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.position.blockTimestamp > filterStartTime)
+    const list = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.blockTimestamp > filterStartTime)
     return list
   }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe }))
 
   const openTrades = map(params => {
     const filterStartTime = unixTimestampNow() - params.activityTimeframe
 
-    const list = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address).filter(pos => pos.position.blockTimestamp > filterStartTime)
+    const list = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address).filter(pos => pos.blockTimestamp > filterStartTime)
     return list
   }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe }))
 
@@ -89,11 +89,13 @@ export const $TraderProfile = (config: ITraderProfile) => component((
             ),
             $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end' }))(
               $metricRow(
-                $metricValue(style({ paddingBottom: '5px' }))(
-                  ...params.summary.subscribedPuppets.map(address => {
-                    return $profileAvatar({ address, profileSize: 26 })
-                  })
-                ),
+                params.summary.subscribedPuppets.length
+                  ? $metricValue(style({ paddingBottom: '5px' }))(
+                    ...params.summary.subscribedPuppets.map(address => {
+                      return $profileAvatar({ address, profileSize: 26 })
+                    })
+                  )
+                  : $metricValue($text('-')),
                 $metricLabel($text('Puppets'))
               ),
               $metricRow(
@@ -135,8 +137,8 @@ export const $TraderProfile = (config: ITraderProfile) => component((
           $card2(style({ padding: 0, height: screenUtils.isDesktopScreen ? '200px' : '200px', position: 'relative', margin: screenUtils.isDesktopScreen ? `-36px -36px 0` : `-12px -12px 0px` }))(
             switchMap(params => {
               const filterStartTime = unixTimestampNow() - params.activityTimeframe
-              const traderPos = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.position.blockTimestamp > filterStartTime)
-              const openList = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address).filter(pos => pos.position.blockTimestamp > filterStartTime)
+              const traderPos = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.blockTimestamp > filterStartTime)
+              const openList = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address).filter(pos => pos.blockTimestamp > filterStartTime)
               const allPositions = [...traderPos, ...openList]
 
 
@@ -178,12 +180,15 @@ export const $TraderProfile = (config: ITraderProfile) => component((
             }, combineObject({ openTrades })),
             
             switchMap(params => {
+              const paging = startWith({ offset: 0, pageSize: 20 }, scrollRequest)
+              const dataSource = map(req => {
+                return pagingQuery(req, params.settledTrades)
+              }, paging)
+
               return $column(layoutSheet.spacingSmall)(
                 $heading3('Settled Positions'),
                 $Table({
-                  dataSource: map(pageIndex => {
-                    return pagingQuery({ offset: pageIndex * 20, pageSize: 20 }, params.settledTrades)
-                  }, changePageIndex),
+                  dataSource,
                   columns: [
                     ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
                     entryColumn,
@@ -192,7 +197,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                     settledPnlColumn(),
                   ],
                 })({
-                  scrollIndex: changePageIndexTether()
+                  scrollRequest: scrollRequestTether()
                 })
               )
             }, combineObject({ settledTrades }))

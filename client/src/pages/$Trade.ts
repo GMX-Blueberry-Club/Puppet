@@ -452,7 +452,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   const accountOpenTradeList = map(params => {
-    return Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.route === params.route).map(p => p.position)
+    return Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.route === params.route)
   }, combineObject({ processData: config.processData, route }))
 
   // const position = map(params => {
@@ -707,13 +707,13 @@ export const $Trade = (config: ITradeComponent) => component((
               priceLineColor: pallete.foreground,
               baseLineStyle: LineStyle.SparseDotted,
 
-              upColor: pallete.middleground,
-              borderUpColor: pallete.middleground,
-              wickUpColor: pallete.middleground,
+              upColor: pallete.foreground,
+              borderUpColor: pallete.foreground,
+              wickUpColor: pallete.foreground,
 
               downColor: 'transparent',
-              borderDownColor: colorAlpha(pallete.middleground, .5),
-              wickDownColor: colorAlpha(pallete.middleground, .5),
+              borderDownColor: colorAlpha(pallete.foreground, .5),
+              wickDownColor: colorAlpha(pallete.foreground, .5),
             },
             priceLines: [
               map(val => {
@@ -723,7 +723,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
                 return {
                   price: formatFixed(val, 30),
-                  color: pallete.middleground,
+                  color: pallete.foreground,
                   lineVisible: true,
                   // axisLabelColor: '#fff',
                   // axisLabelTextColor: 'red',

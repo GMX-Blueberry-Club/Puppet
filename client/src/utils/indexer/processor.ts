@@ -8,6 +8,12 @@ import * as indexDB from "../storage/indexDB"
 import * as store from "../storage/storeScope"
 import { IIndexEventLogScopeParams, fetchTradesRecur } from "./rpc"
 
+
+export enum IProcessEnvironmentMode {
+  DEV,
+  PROD,
+}
+
 export interface IProcessedStore<T> {
   state: T
   orderId: number
@@ -24,7 +30,9 @@ export interface IProcessSourceConfig<TLog extends ILogOrdered, TState> {
 }
 
 
+
 export interface IProcessorConfig<TSeed, TParentName extends string> {
+  mode: IProcessEnvironmentMode
   seed: Stream<IProcessedStore<TSeed>>,
   blueprint: IProcessedStore<TSeed>,
 
@@ -108,17 +116,23 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
                 })
               ) as Stream<ILogEvent[]>
 
-
-              const storeMappedLogs = switchMap(logs => {
-                const filtered =  logs
+              const storeLogs = (headEvent: ILogOrderedEvent | undefined, logs: ILogEvent[]): ILogOrderedEvent[] => {
+                const filtered = logs
                   .map(ev => {
                     const storeObj = { ...ev, orderId: getEventOrderIdentifier(ev) } as ILogOrderedEvent
                     return storeObj
                   })
-                  .filter(ev => ev.orderId < fstEvent!.orderId)
+                  .filter(ev => ev.orderId < headEvent!.orderId)
 
-                return indexDB.add(processConfig.source.scope, filtered)
-              }, queryLogs)
+                return filtered
+              }
+
+              const storeMappedLogs = config.mode === IProcessEnvironmentMode.DEV
+                ? switchMap(logs => {
+                  const filtered = storeLogs(fstEvent, logs)
+                  return indexDB.add(processConfig.source.scope, filtered)
+                }, queryLogs)
+                : map(logs => storeLogs(fstEvent, logs), queryLogs)
 
               return storeMappedLogs
             }
@@ -126,6 +140,7 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
           : now([])
 
         const fromBlock = max(startblock, max(processState.endBlock, lstEvent ? lstEvent.blockNumber : 0n))
+
 
         const next = fromBlock < config.syncBlock
           ? fetchTradesRecur(
@@ -147,16 +162,24 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
                 })
               ) as Stream<ILogEvent[]>
 
-              const storeMappedLogs = switchMap(logs => {
+
+              const storeLogs = (headEvent: ILogOrderedEvent | undefined, logs: ILogEvent[]): ILogOrderedEvent[] => {
                 const filtered = logs
                   .map(ev => {
-                    const storeObj = {  ...ev, orderId: getEventOrderIdentifier(ev) } as ILogOrderedEvent
+                    const storeObj = { ...ev, orderId: getEventOrderIdentifier(ev) } as ILogOrderedEvent
                     return storeObj
                   })
-                  .filter(ev => ev.orderId > Math.max(processState.orderId, lstEvent ? lstEvent.orderId : 0))
+                  .filter(ev => ev.orderId > Math.max(processState.orderId, headEvent ? headEvent.orderId : 0))
 
-                return indexDB.add(processConfig.source.scope, filtered)
-              }, queryLogs)
+                return filtered
+              }
+
+              const storeMappedLogs = config.mode === IProcessEnvironmentMode.DEV
+                ? switchMap(logs => {
+                  const filtered = storeLogs(lstEvent, logs)
+                  return indexDB.add(processConfig.source.scope, filtered)
+                }, queryLogs)
+                : map(logs => storeLogs(lstEvent, logs), queryLogs)
 
               return storeMappedLogs
             }
@@ -210,8 +233,6 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
 
   return sync
 }
-
-
 
 
 export async function getBlobHash(blob: Blob) {

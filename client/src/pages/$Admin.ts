@@ -1,48 +1,28 @@
-import { Behavior, combineObject, replayLatest } from "@aelea/core"
+import { Behavior } from "@aelea/core"
 import { $node, $text, INode, attrBehavior, component, nodeEvent, style } from "@aelea/dom"
-import { $TextField, $column, $row, layoutSheet } from "@aelea/ui-components"
-import { awaitPromises, fromPromise, map, mergeArray, multicast, now, snapshot, switchLatest, take } from "@most/core"
+import { $column, $row, layoutSheet } from "@aelea/ui-components"
+import { awaitPromises, fromPromise, map, now } from "@most/core"
 import { Stream } from "@most/types"
 import { $Table, $caretDown, $infoLabeledValue } from "gmx-middleware-ui-components"
 import { readableFileSize, switchMap } from "gmx-middleware-utils"
-import { $CardTable } from "../components/$common"
+import { $heading1 } from "../common/$text"
 import { $ButtonPrimary, $buttonAnchor, defaultMiniButtonStyle } from "../components/form/$Button"
 import { gmxProcess, seedFile } from "../data/process/process"
 import { gmxLog } from "../data/scope"
 import { $card, $iconCircular } from "../elements/$common"
-import { IProcessedStore, getBlobHash, syncProcess } from "../utils/indexer/processor"
+import { IProcessedStore, getBlobHash } from "../utils/indexer/processor"
 import * as indexDb from "../utils/storage/indexDB"
-import { blockChange, publicClient } from "../wallet/walletLink"
-import { $seperator2 } from "./common"
 import { jsonStringify } from "../utils/storage/storeScope"
-import { $heading1 } from "../common/$text"
+import { blockChange } from "../wallet/walletLink"
+import { $seperator2 } from "./common"
 
 
 export const $Admin = component((
   [hoverDownloadBtn, hoverDownloadBtnTether]: Behavior<INode, { href: string, download: string }>,
-  [changeStartBlock, changeStartBlockTether]: Behavior<string, bigint>,
   [clickSyncProcess, clickSyncProcessTether]: Behavior<PointerEvent>,
 ) => {
 
-  const $title = $text(style({ fontWeight: 'bold', fontSize: '1.55em' }))
-
   const logList = now(Object.values(gmxLog))
-
-  const changedSyncedProcess = switchLatest(snapshot((params) => {
-    return syncProcess({ ...gmxProcess, endBlock: params.changeStartBlock, publicClient: params.publicClient })
-  }, combineObject({ changeStartBlock, publicClient }), clickSyncProcess))
-
-  const processState = replayLatest(multicast(mergeArray([
-    take(1, gmxProcess.seed),
-    changedSyncedProcess
-  ])))
-
-  // const createGmxTradingProcess = processSeed({
-  //   ...gmxTradingProcess,
-  //   endBlock
-  // })
-
-  
 
 
   return [
@@ -78,36 +58,36 @@ export const $Admin = component((
           $seperator2,
           $node(),
           $row(style({ placeContent:'space-between' }))(
-            $infoLabeledValue('Latest', $text(map(s => String(s), blockChange))),
+            $infoLabeledValue('Latest Block', $text(map(s => String(s), blockChange))),
 
 
-            $row(layoutSheet.spacing)(
+            // $row(layoutSheet.spacing)(
 
-              $buttonAnchor(
-                defaultMiniButtonStyle, 
-                hoverDownloadBtnTether(
-                  nodeEvent('pointerover'),
-                  switchMap(() => map(async blob => {
+            //   $buttonAnchor(
+            //     defaultMiniButtonStyle, 
+            //     hoverDownloadBtnTether(
+            //       nodeEvent('pointerover'),
+            //       switchMap(() => map(async blob => {
 
-                    return {
-                      href: URL.createObjectURL(blob),
-                      hash: await getBlobHash(blob)
-                    }
-                  }, jsonBlob(gmxProcess.seed))),
-                  awaitPromises,
-                  map(params => {
-                    return { href: params.href, download: `${params.hash}.json` }
-                  }),
-                ),
-                attrBehavior(map(attrs => attrs, hoverDownloadBtn))
-              )($text('Download File')),
+            //         return {
+            //           href: URL.createObjectURL(blob),
+            //           hash: await getBlobHash(blob)
+            //         }
+            //       }, jsonBlob(gmxProcess.seed))),
+            //       awaitPromises,
+            //       map(params => {
+            //         return { href: params.href, download: `${params.hash}.json` }
+            //       }),
+            //     ),
+            //     attrBehavior(map(attrs => attrs, hoverDownloadBtn))
+            //   )($text('Download File')),
 
-              $ButtonPrimary({
-                $content: $text('Sync Latest'),
-              })({
-                click: clickSyncProcessTether()
-              })
-            )
+            //   $ButtonPrimary({
+            //     $content: $text('Sync Latest'),
+            //   })({
+            //     click: clickSyncProcessTether()
+            //   })
+            // )
           )
             
         )

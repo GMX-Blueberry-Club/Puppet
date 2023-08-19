@@ -167,7 +167,7 @@ export const $PnlPercentageValue = (pnl: Stream<bigint> | bigint, collateral: bi
   )
 }
 
-export const $tradePnl = (pos: IPositionSlot, positionMarkPrice: Stream<bigint> | bigint, colorful = true) => {
+export const $tradePnl = (pos: IPosition, positionMarkPrice: Stream<bigint> | bigint, colorful = true) => {
 
   const pnl = isStream(positionMarkPrice)
     ? map((markPrice: bigint) => {
@@ -191,7 +191,7 @@ export function $liquidationSeparator(isLong: boolean, size: bigint, collateral:
   )
 }
 
-export const $openPositionPnlBreakdown = (pos: IPositionSlot, cumulativeFee: Stream<bigint>) => {
+export const $openPositionPnlBreakdown = (pos: IPosition, cumulativeFee: Stream<bigint>) => {
 
 
   return $column(layoutSheet.spacing)(

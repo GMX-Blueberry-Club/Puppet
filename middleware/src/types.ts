@@ -1,4 +1,4 @@
-import { ILogTxType, IPositionSettled, IPositionSlot, IPositionListSummary } from "gmx-middleware-utils"
+import { ILogTxType, IPositionSettled, IPositionSlot, IPositionListSummary, IPosition, IPositionClose, IPositionLiquidated } from "gmx-middleware-utils"
 import * as viem from "viem"
 
 
@@ -24,12 +24,12 @@ export interface IMirrorPosition {
 
 export interface IPositionRequest extends ILogTxType<'PositionRequest'>, IMirrorPosition {}
 
-export interface IPositionMirrorSlot extends ILogTxType<'PositionMirrorSlot'>, IMirrorPosition {
-  position: IPositionSlot
-}
+export interface IPositionMirrorSlot extends IMirrorPosition, IPosition<'PositionMirrorSlot'> {}
 
-export interface IPositionMirrorSettled extends ILogTxType<'PositionMirrorSettled'>, IMirrorPosition {
-  position: IPositionSettled
+export interface IPositionMirrorSettled extends IPosition<'PositionMirrorSettled'>, IMirrorPosition {
+  settlePrice: bigint
+  settlement: IPositionClose | IPositionLiquidated
+  isLiquidated: boolean
 }
 
 export interface IMirrorPositionListSummary extends IPositionListSummary {

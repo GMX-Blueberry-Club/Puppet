@@ -27,8 +27,8 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": [
-    "src"
-, "../ui-components/src/chart"  ],
+    "src",
+  ],
   "references": [
     {
       "path": "../middleware"

@@ -140,7 +140,7 @@ export function request<TResult>(req: IDBRequest<any> | IDBTransaction): Stream<
   return {
     run(sink, scheduler) {
 
-      req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error('Unknown error'))
+      req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error(`${req.db.name}: Unknown error`))
 
       if (req instanceof IDBTransaction) {
         req.oncomplete = () => sink.event(scheduler.currentTime(), null)
@@ -165,7 +165,7 @@ function cursorStep(req: IDBRequest<IDBCursorWithValue | null>): Stream<IDBCurso
     run(sink, scheduler) {
       if (req instanceof IDBTransaction) {
         req.oncomplete = () => sink.event(scheduler.currentTime(), null)
-        req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error('Unknown error'))
+        req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error(`${req.db.name}: Unknown error`))
         return disposeNone()
       }
 
@@ -174,7 +174,7 @@ function cursorStep(req: IDBRequest<IDBCursorWithValue | null>): Stream<IDBCurso
         sink.event(time, req.result)
       }
 
-      req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error('Unknown error'))
+      req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error(`${req.db.name}: Unknown error`))
 
       return disposeNone()
     }

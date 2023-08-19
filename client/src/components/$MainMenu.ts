@@ -13,7 +13,7 @@ import { $Picker } from "./$ThemePicker"
 import { $stackedCoins, $trophy } from "../elements/$icons"
 import { $Popover } from "./$Popover"
 import { $WalletProfileDisplay } from "./$WalletProfileDisplay"
-import { $ButtonSecondary, $ButtonSecondary, $defaultMiniButtonSecondary } from "./form/$Button"
+import { $ButtonSecondary, $defaultMiniButtonSecondary } from "./form/$Button"
 import { disconnect } from "@wagmi/core"
 import { walletLink } from "../wallet"
 import { switchMap } from "gmx-middleware-utils"
@@ -71,23 +71,23 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
       return $column(layoutSheet.spacingBig)(
         
         // ...screenUtils.isMobileScreen ? $menuItemList : [],
-        $row(layoutSheet.spacingBig, style({ flexWrap: 'wrap', width: '210px' }))(
-          $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://docs.blueberry.club/' }))(
-            $icon({ $content: $gitbook, width: '22px', viewBox: `0 0 32 32` })
-          ),
-          $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://discord.com/invite/7ZMmeU3z9j' }))(
-            $icon({ $content: $discord, width: '22px', viewBox: `0 0 32 32` })
-          ),
-          $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://twitter.com/PuppetFinance' }))(
-            $icon({ $content: $twitter, width: '22px', viewBox: `0 0 24 24` })
-          ),
-          $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://www.instagram.com/blueberryclub.eth' }))(
-            $icon({ $content: $instagram, width: '18px', viewBox: `0 0 32 32` })
-          ),
-          $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://github.com/nissoh/blueberry-club' }))(
-            $icon({ $content: $github, width: '22px', viewBox: `0 0 32 32` })
-          ),
-        ),
+        // $row(layoutSheet.spacingBig, style({ flexWrap: 'wrap', width: '210px' }))(
+        //   $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://docs.blueberry.club/' }))(
+        //     $icon({ $content: $gitbook, width: '22px', viewBox: `0 0 32 32` })
+        //   ),
+        //   $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://discord.com/invite/7ZMmeU3z9j' }))(
+        //     $icon({ $content: $discord, width: '22px', viewBox: `0 0 32 32` })
+        //   ),
+        //   $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://twitter.com/PuppetFinance' }))(
+        //     $icon({ $content: $twitter, width: '22px', viewBox: `0 0 24 24` })
+        //   ),
+        //   $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://www.instagram.com/blueberryclub.eth' }))(
+        //     $icon({ $content: $instagram, width: '18px', viewBox: `0 0 32 32` })
+        //   ),
+        //   $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://github.com/nissoh/blueberry-club' }))(
+        //     $icon({ $content: $github, width: '22px', viewBox: `0 0 32 32` })
+        //   ),
+        // ),
 
         $ButtonSecondary({
           $content: $Picker([light, dark])({})
@@ -170,7 +170,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
       //   }),
 
 
-      //   // $extraMenuPopover,
+      //   // $extraMenuPopover,w
       // ),
 
       $column(layoutSheet.spacingBig, style({ flex: 1, placeContent: 'center' }))(
@@ -214,14 +214,14 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
 
       $column(layoutSheet.spacingBig, style({ placeContent: 'flex-end', flex: 1 }))(
         $extraMenuPopover,
-        $circleButtonAnchor(attr({ href: 'https://docs.blueberry.club/' }))(
-          $icon({ $content: $gitbook, fill: pallete.middleground, width: '22px', viewBox: `0 0 32 32` })
-        ),
-        $circleButtonAnchor(attr({ href: 'https://discord.com/invite/7ZMmeU3z9j' }))(
-          $icon({ $content: $discord, fill: pallete.middleground, width: '22px', viewBox: `0 0 32 32` })
-        ),
-        $circleButtonAnchor(attr({ href: 'https://twitter.com/GBlueberryClub' }))(
-          $icon({ $content: $twitter, fill: pallete.middleground, width: '22px', viewBox: `0 0 24 24` })
+        // $circleButtonAnchor(attr({ href: 'https://docs.blueberry.club/' }))(
+        //   $icon({ $content: $gitbook, fill: pallete.middleground, width: '22px', viewBox: `0 0 32 32` })
+        // ),
+        // $circleButtonAnchor(attr({ href: 'https://discord.com/invite/7ZMmeU3z9j' }))(
+        //   $icon({ $content: $discord, fill: pallete.middleground, width: '22px', viewBox: `0 0 32 32` })
+        // ),
+        $circleButtonAnchor(attr({ href: 'https://twitter.com/puppetfinance' }))(
+          $icon({ $content: $twitter, fill: pallete.foreground, width: '22px', viewBox: `0 0 24 24` })
         ),
       )
     ),
@@ -254,7 +254,7 @@ export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: 
 
 
   const $pageLink = ($iconPath: $Branch<SVGPathElement>, text: string | Stream<string>) => $row(style({ alignItems: 'center', cursor: 'pointer' }))(
-    $icon({ $content: $iconPath, width: '16px', fill: pallete.middleground, svgOps: style({ minWidth: '36px' }), viewBox: '0 0 32 32' }),
+    $icon({ $content: $iconPath, width: '16px', fill: pallete.foreground, svgOps: style({ minWidth: '36px' }), viewBox: '0 0 32 32' }),
     $text(text)
   )
 
@@ -399,8 +399,8 @@ const $pageLink = (config: Omit<IAnchor, '$anchor'> & { $iconPath: $Branch<SVGPa
       style({ borderRadius: '50px' }),
       styleBehavior(
         combineArray((isActive, isFocus): StyleCSS | null => {
-          return isActive ? { backgroundColor: `${pallete.background} !important`, fill: pallete.middleground, cursor: 'default' }
-            : isFocus ? { backgroundColor: `${pallete.background} !important`, fill: pallete.middleground }
+          return isActive ? { backgroundColor: `${pallete.background} !important`, fill: pallete.foreground, cursor: 'default' }
+            : isFocus ? { backgroundColor: `${pallete.background} !important`, fill: pallete.foreground }
               : null
         }, active, focus)
       ),

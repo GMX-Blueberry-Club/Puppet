@@ -2,9 +2,9 @@ import { Behavior, O, combineObject, replayLatest } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { map, now } from "@most/core"
+import { map, now, startWith } from "@most/core"
 import { Stream } from "@most/types"
-import { $Link, $Table, $infoTooltipLabel, ISortBy } from "gmx-middleware-ui-components"
+import { $Link, $Table, $infoTooltipLabel, ISortBy, ScrollRequest } from "gmx-middleware-ui-components"
 import { pagingQuery, switchMap } from "gmx-middleware-utils"
 import { IPositionMirrorSlot } from "puppet-middleware-utils"
 import { IProfileActiveTab } from "../$Profile"
@@ -26,24 +26,23 @@ export const $TopOpen = (config: ITopOpen) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
   // [topPnlTimeframeChange, topPnlTimeframeChangeTether]: Behavior<any, ILeaderboardRequest['timeInterval']>,
   
-  [pageIndex, pageIndexTether]: Behavior<number, number>,
+  [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
   [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionMirrorSlot>, ISortBy<IPositionMirrorSlot>>,
 ) => {
 
-  const sortBy: Stream<ISortBy<IPositionMirrorSlot>> = replayLatest(sortByChange, { direction: 'desc', selector: 'blockTimestamp' })
+  const sortBy: Stream<ISortBy<IPositionMirrorSlot>> = replayLatest(sortByChange, { direction: 'desc', selector: 'realisedPnl' })
 
-  const qparams = combineObject({
-    sortBy,
-    pageIndex,
-  })
+  
 
-  const datass = switchMap(params => {
-    return map(data => {
-      const summaryList = Object.values(data.mirrorPositionSlot)
+  const openList = switchMap(params => {
+    const paging = startWith({ ...params.sortBy, offset: 0, pageSize: 20 }, scrollRequest)
 
-      return pagingQuery({ ...params.sortBy, offset: params.pageIndex * 20, pageSize: 20 }, summaryList)
-    }, config.processData)
-  }, qparams)
+    return map(req => {
+      const summaryList = Object.values(params.processData.mirrorPositionSlot)
+
+      return pagingQuery({ ...params.sortBy, ...req }, summaryList)
+    }, paging)
+  }, combineObject({ processData: config.processData, sortBy, }))
 
 
   return [
@@ -51,7 +50,7 @@ export const $TopOpen = (config: ITopOpen) => component((
 
 
       $Table({
-        dataSource: datass,
+        dataSource: openList,
         sortBy,
         columns: [
           {
@@ -92,7 +91,7 @@ export const $TopOpen = (config: ITopOpen) => component((
             // sortBy: 'size',
             columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
             $$body: map((pos) => {
-              return $size(pos.position.size, pos.position.collateral)
+              return $size(pos.size, pos.collateral)
             })
           },
           {
@@ -103,8 +102,8 @@ export const $TopOpen = (config: ITopOpen) => component((
               // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
 
               return $infoTooltipLabel(
-                $openPositionPnlBreakdown(pos.position, now(0n)),
-                $tradePnl(pos.position, latestTokenPrice(config.processData, now(pos.position.indexToken)))
+                $openPositionPnlBreakdown(pos, now(0n)),
+                $tradePnl(pos, latestTokenPrice(config.processData, now(pos.indexToken)))
               )
             })
           },
@@ -124,7 +123,7 @@ export const $TopOpen = (config: ITopOpen) => component((
         ],
       })({
         sortBy: sortByChangeTether(),
-        scrollIndex: pageIndexTether()
+        scrollRequest: scrollRequestTether()
       })
     ),
 

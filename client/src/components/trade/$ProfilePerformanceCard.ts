@@ -113,7 +113,7 @@ function performanceTimeline(
     // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
     interval,
     seed: initialTick,
-    getTime: mp => 'update' in mp ? getTime(mp.update) : mp.blockTimestamp,
+    getTime: mp => 'update' in mp ? Math.max(getTime(mp.update), startTime) : mp.blockTimestamp,
     seedMap: (acc, next) => {
       if ('end' in next) {
         return { ...acc }
@@ -147,9 +147,9 @@ function performanceTimeline(
         }
 
         const mp = slot.source
-        const tickerId = `${mp.position.indexToken}:${interval}` as const
-        const tokenPrice = getClosestpricefeedCandle(processData.pricefeed, tickerId, intervalSlot)
-        const pnl = getPnL(mp.position.isLong, slot.update.averagePrice, tokenPrice.c, slot.update.size)
+        const tickerId = `${mp.indexToken}:${interval}` as const
+        const tokenPrice = getClosestpricefeedCandle(processData.pricefeed, tickerId, intervalSlot, 0)
+        const pnl = getPnL(mp.isLong, slot.update.averagePrice, tokenPrice.c, slot.update.size)
         const openPnl = getParticiapntMpPortion(mp, pnl, shareTarget)
 
         return pnlAcc + openPnl
@@ -166,11 +166,16 @@ function performanceTimeline(
 
 
 
-function getClosestpricefeedCandle(pricefeed: Record<IPriceIntervalIdentity, Record<string, IPriceInterval>>, tickerId: IPriceIntervalIdentity, intervalSlot: number) {
-  const price = pricefeed[tickerId][intervalSlot] || pricefeed[tickerId][intervalSlot + 1]
+function getClosestpricefeedCandle(pricefeed: Record<IPriceIntervalIdentity, Record<string, IPriceInterval>>, tickerId: IPriceIntervalIdentity, intervalSlot: number, offset: number) {
+
+  if (offset > 50) {
+    throw new Error('No recent pricefeed data found')
+  }
+
+  const price = pricefeed[tickerId][intervalSlot] || pricefeed[tickerId][intervalSlot + offset]
 
   if (!price) {
-    return getClosestpricefeedCandle(pricefeed, tickerId, intervalSlot - 1)
+    return getClosestpricefeedCandle(pricefeed, tickerId, intervalSlot, offset + 1)
   }
 
   return price
@@ -185,10 +190,10 @@ export const $ProfilePerformanceCard = (config: IParticipantPerformanceCard) => 
   const tickCount = config.width / pixelsPerBar
   const updateList: IPerformanceTickUpdateTick[] = config.positionList
     .flatMap(mp => {
-      const list = mp.position.link.updateList.map(update => ({ update, source: mp }))
+      const list = mp.link.updateList.map(update => ({ update, source: mp }))
 
-      if ('settlement' in mp.position) {
-        return [...list, { update: mp.position.settlement, source: mp }]
+      if ('settlement' in mp) {
+        return [...list, { update: mp.settlement, source: mp }]
       }
 
       return list
@@ -213,15 +218,15 @@ export const $ProfilePerformanceCard = (config: IParticipantPerformanceCard) => 
 
 
   const markerList: IMarker[] = config.positionList.map((pos) => {
-    const isSettled = 'settlement' in pos.position
-    const position = pos.position.realisedPnl > 0n ? 'aboveBar' as const : 'belowBar' as const
+    const isSettled = 'settlement' in pos
+    const position = pos.realisedPnl > 0n ? 'aboveBar' as const : 'belowBar' as const
 
     return {
       position,
-      text: readableFixedUSD30(pos.position.realisedPnl),
+      text: readableFixedUSD30(pos.realisedPnl),
       color: colorAlpha(pallete.message, .25),
       time: pos.blockTimestamp as Time,
-      size: 1,
+      size: 0.1,
       shape: !isSettled ? 'arrowUp' as const : 'circle' as const,
     }
   }).sort((a, b) => Number(a.time) - Number(b.time))
@@ -326,9 +331,9 @@ export const $ProfilePerformanceGraph = (config: IProfilePerformanceGraph) => co
   const tickCount = config.width / 5
   const updateList: IPerformanceTickUpdateTick[] = config.positionList
     .flatMap(mp => {
-      const updateList = mp.position.link.updateList.map(update => ({ update, source: mp }))
-      if ('settlement' in mp.position) {
-        return [...updateList, { update: mp.position.settlement, source: mp }]
+      const updateList = mp.link.updateList.map(update => ({ update, source: mp }))
+      if ('settlement' in mp) {
+        return [...updateList, { update: mp.settlement, source: mp }]
       }
 
       return updateList

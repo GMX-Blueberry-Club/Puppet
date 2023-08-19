@@ -148,7 +148,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
         )
       ),
-      
+
       router.contains(appRoute)(
         $rootContainer(
           styleBehavior(map(isDesktop => ({ flexDirection: isDesktop ? 'row' : 'column' }), isDesktopScreen)),
@@ -207,24 +207,39 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                     })({})
                   ),
                   router.contains(leaderboardRoute)(
-                    $midContainer(
-                      fadeIn($Leaderboard({
-                        subscriptionList,
-                        route: leaderboardRoute,
-                        processData
-                      })({
-                        routeChange: linkClickTether(
-                          tap(console.log)
-                        ),
-                        modifySubscriber: modifySubscriberTether(),
-                      }))
+
+                    $column(
+                      $node(style({ height: 0 }))(
+                        $node(style({
+                          background: pallete.middleground,
+                          inset: 0,
+                          height: '400px',
+                          margin: `0 -50vw 0`,
+                          display: 'block',
+                          // position: 'absolute',
+                          pointerEvents: 'none',
+                        }))()
+                      ),
+                      $midContainer(
+                        fadeIn($Leaderboard({
+                          subscriptionList,
+                          route: leaderboardRoute,
+                          processData
+                        })({
+                          routeChange: linkClickTether(
+                            tap(console.log)
+                          ),
+                          modifySubscriber: modifySubscriberTether(),
+                        }))
+                      )
                     )
                   ),
                   router.contains(profileRoute)(
                     $midContainer(
                       fadeIn($Profile({
                         route: profileRoute,
-                        processData
+                        processData,
+                        subscriptionList
                       })({
                         modifySubscriber: modifySubscriberTether(),
                         changeRoute: linkClickTether()
@@ -299,16 +314,12 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                     })
                   ),
                   switchMap(params => {
-                    const mode = (import.meta as any).env.MODE
-                    const refreshThreshold = mode === 'development' ? 550 : 50
+                    const refreshThreshold = SW_DEV ? 150 : 50
                     const blockDelta = params.syncBlock - params.process.endBlock
 
-
-                    const lastUpdate = timeSince(params.process.state.approximatedTimestamp) + ' old'
                     if (blockDelta < refreshThreshold) {
                       return empty()
                     }
-
 
                     return switchLatest(mergeArray([
                       now(
@@ -326,7 +337,11 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                               borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
                             }))(
                               $text(`Syncing Blockchain Data....`),
-                              $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(`${lastUpdate} data is displayed`),
+                              $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(
+                                params.process.state.approximatedTimestamp === 0
+                                  ? `Indexing for the first time, this may take a minute or two.`
+                                  : `${timeSince(params.process.state.approximatedTimestamp)} old data is displayed`
+                              ),
                             )
                           )
                         ))
@@ -361,7 +376,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 )
               }, newUpdateInvoke),
               
-              $column(style({ maxWidth: '650px', margin: '0 auto', width: '100%', zIndex: 10 }))(
+              $column(style({ maxWidth: '850px', margin: '0 auto', width: '100%', zIndex: 10 }))(
                 $RouteSubscriptionDrawer({
                   modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetRouteSubscritpion[]),
                   modifySubscriber,

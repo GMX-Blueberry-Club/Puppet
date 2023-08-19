@@ -22,11 +22,11 @@ export const slotSizeColumn = (processData: Stream<IGmxProcessState>, shareTarge
   ),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $$body: map(mp => {
-    const positionMarkPrice = latestTokenPrice(processData, now(mp.position.indexToken))
-    const size = getParticiapntMpPortion(mp, mp.position.maxSize, shareTarget)
-    const collateral = getParticiapntMpPortion(mp, mp.position.maxCollateral, shareTarget)
+    const positionMarkPrice = latestTokenPrice(processData, now(mp.indexToken))
+    const size = getParticiapntMpPortion(mp, mp.maxSize, shareTarget)
+    const collateral = getParticiapntMpPortion(mp, mp.maxCollateral, shareTarget)
 
-    return $sizeAndLiquidation(mp.position.isLong, size, collateral, mp.position.averagePrice, positionMarkPrice)
+    return $sizeAndLiquidation(mp.isLong, size, collateral, mp.averagePrice, positionMarkPrice)
   })
 })
 
@@ -37,8 +37,8 @@ export const settledSizeColumn = (processData: Stream<IGmxProcessState>, puppet?
   ),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $$body: map(mp => {
-    const size = getParticiapntMpPortion(mp, mp.position.maxSize, puppet)
-    const collateral = getParticiapntMpPortion(mp, mp.position.maxCollateral, puppet)
+    const size = getParticiapntMpPortion(mp, mp.maxSize, puppet)
+    const collateral = getParticiapntMpPortion(mp, mp.maxCollateral, puppet)
 
     return $size(size, collateral)
   })
@@ -50,7 +50,7 @@ export const settledSizeColumn = (processData: Stream<IGmxProcessState>, puppet?
 export const entryColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSlot> = {
   $head: $text('Entry'),
   $$body: map((pos) => {
-    return $entry(pos.position)
+    return $entry(pos)
   })
 }
 
@@ -68,13 +68,13 @@ export const pnlSlotColumn = (processData: Stream<IGmxProcessState>, puppet?: vi
   $head: $text('PnL'),
   columnOp: style({ placeContent: 'flex-end' }),
   $$body: map((pos) => {
-    const positionMarkPrice = latestTokenPrice(processData, now(pos.position.indexToken))
+    const positionMarkPrice = latestTokenPrice(processData, now(pos.indexToken))
     const cumulativeFee = now(0n)
 
     return style({ flexDirection: 'row-reverse' })(
       $infoTooltipLabel(
-        $openPositionPnlBreakdown(pos.position, cumulativeFee),
-        $tradePnl(pos.position, positionMarkPrice)
+        $openPositionPnlBreakdown(pos, cumulativeFee),
+        $tradePnl(pos, positionMarkPrice)
       )
     )
   })
@@ -104,7 +104,7 @@ export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IPositionMi
   $head: $text('PnL'),
   columnOp: style({ placeContent: 'flex-end' }),
   $$body: map(mp => {
-    const pnl = getParticiapntMpPortion(mp, mp.position.realisedPnl, puppet)
+    const pnl = getParticiapntMpPortion(mp, mp.realisedPnl, puppet)
       
     return $pnlValue(pnl)
   })
@@ -117,7 +117,7 @@ export const positionTimeColumn: TableColumn<IPositionMirrorSettled | IPositionM
   gridTemplate: 'minmax(110px, 120px)',
   $$body: map((pos) => {
 
-    const timestamp = 'settlement' in pos ? pos.blockTimestamp : pos.position.blockTimestamp
+    const timestamp = 'settlement' in pos ? pos.blockTimestamp : pos.blockTimestamp
 
     return $column(layoutSheet.spacingTiny)(
       $text(readableDate(timestamp)),

@@ -78,7 +78,6 @@ export const $TradePnlHistory = (config: ITradePnlPreview) => component((
       pnlPercentage: 0n
     }
 
-    const pricefeedFramed = config.pricefeed.filter(tick => tick.blockTimestamp >= initialTick.time)
 
     const data = createTimeline({
       source: [

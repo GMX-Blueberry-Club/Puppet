@@ -67,8 +67,8 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
         $column(layoutSheet.spacing, style({ minHeight: '90px' }))(
           switchMap(params => {
             const filterStartTime = unixTimestampNow() - params.activityTimeframe
-            const traderPos = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.position.blockTimestamp > filterStartTime)
-            const openList = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address).filter(pos => pos.position.blockTimestamp > filterStartTime)
+            const traderPos = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.blockTimestamp > filterStartTime)
+            const openList = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address).filter(pos => pos.blockTimestamp > filterStartTime)
             const allPositions = [...traderPos, ...openList]
 
             const summary = map(list => {
@@ -138,8 +138,8 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
             $card2(style({ padding: 0, height: screenUtils.isDesktopScreen ? '200px' : '200px', position: 'relative', margin: screenUtils.isDesktopScreen ? `-36px -36px 0` : `-12px -12px 0px` }))(
               switchMap(params => {
                 const filterStartTime = unixTimestampNow() - params.activityTimeframe
-                const traderPos = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.position.blockTimestamp > filterStartTime)
-                const openList = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address).filter(pos => pos.position.blockTimestamp > filterStartTime)
+                const traderPos = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.blockTimestamp > filterStartTime)
+                const openList = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address).filter(pos => pos.blockTimestamp > filterStartTime)
                 const allPositions = [...traderPos, ...openList]
 
 

@@ -82,11 +82,10 @@ export const $Table = <T, FilterState = never>({
   $headerCell = $defaultTableHeaderCell,
 
   sortBy = now(null),
-  filter = now(null),
   $between = empty(),
   $sortArrowDown = $caretDown
 }: TableOption<T, FilterState>) => component((
-  [scrollIndex, scrollIndexTether]: Behavior<ScrollRequest, ScrollRequest>,
+  [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest, ScrollRequest>,
   [sortByChange, sortByChangeTether]: Behavior<INode, keyof T>
 ) => {
 
@@ -133,40 +132,37 @@ export const $Table = <T, FilterState = never>({
     })
   )
 
-  const filterState = combineObject({ sortBy, filter })
 
-  const $body = switchLatest(map(() => {
-    return  $QuantumScroll({
-      ...scrollConfig,
-      dataSource: map((res) => {
-        const $items = (Array.isArray(res) ? res : res.page).map(rowData => {
+  const $body = $QuantumScroll({
+    ...scrollConfig,
+    dataSource: map((res) => {
+      const $items = (Array.isArray(res) ? res : res.page).map(rowData => {
 
-          return $bodyRowContainer(
-            style({ gridTemplateColumns, })
-          )(
-            ...columns.map(col => {
-              return $bodyCell(col.columnOp || O())(
-                switchLatest(col.$$body(now(rowData)))
-              )
-            })
-          )
-        })
+        return $bodyRowContainer(
+          style({ gridTemplateColumns, })
+        )(
+          ...columns.map(col => {
+            return $bodyCell(col.columnOp || O())(
+              switchLatest(col.$$body(now(rowData)))
+            )
+          })
+        )
+      })
 
-        if (Array.isArray(res)) {
-          return $items
-        } else {
-          return {
-            $items,
-            offset: res.offset,
-            pageSize: res.pageSize
-          }
+      if (Array.isArray(res)) {
+        return $items
+      } else {
+        return {
+          $items,
+          offset: res.offset,
+          pageSize: res.pageSize
         }
+      }
 
-      }, dataSource)
-    })({
-      scrollIndex: scrollIndexTether()
-    })
-  }, filterState))
+    }, dataSource)
+  })({
+    scrollRequest: scrollRequestTether()
+  })
 
   return [
     $container(
@@ -176,7 +172,7 @@ export const $Table = <T, FilterState = never>({
     ),
 
     {
-      scrollIndex,
+      scrollRequest,
       sortBy: snapshot((state, selector) => {
         if (state === null) {
           return state
@@ -192,7 +188,6 @@ export const $Table = <T, FilterState = never>({
 
         return { direction: state.direction, selector }
       }, sortBy, sortByChange),
-      filter
     }
   ]
 

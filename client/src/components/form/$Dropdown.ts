@@ -257,7 +257,7 @@ export const $DropMultiSelect = <T>({
                 return { borderColor: pallete.negative }
               }
 
-              return focus ? { borderColor: pallete.middleground } : null
+              return focus ? { borderColor: pallete.foreground } : null
             }, state)
           ),
           targetIntersectionTether(

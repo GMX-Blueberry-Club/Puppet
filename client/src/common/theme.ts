@@ -10,7 +10,7 @@ const light: Theme = {
     message: '#171B1F',
 
     background: '#ffffff',
-    horizon: '#ecf3fc',
+    horizon: '#f2c7eb',
     middleground: '#443873',
     foreground: '#51585f',
 
@@ -27,10 +27,10 @@ const dark: Theme = {
 
     message: '#ffffff',
 
-    background: '#1b181d',
-    horizon: '#2d2c32',
-    middleground: '#98b0c5',
-    foreground: '#8d97a9',
+    background: '#101217',
+    horizon: '#292c37',
+    middleground: '#1d202b',
+    foreground: '#94a4c2',
 
     positive: '#38E567',
     negative: '#FA4333',

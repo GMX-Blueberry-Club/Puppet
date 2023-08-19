@@ -1,25 +1,26 @@
 
 import { Behavior } from '@aelea/core'
-import { $Branch, $Node, $custom, $text, IBranch, NodeComposeFn, component, style } from '@aelea/dom'
+import { $Branch, $Node, $custom, $text, NodeComposeFn, component, style } from '@aelea/dom'
 import { $column, layoutSheet, observer } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { filter, join, map, mergeArray, multicast, now, snapshot, startWith, until } from "@most/core"
+import { constant, empty, filter, join, map, mergeArray, until } from "@most/core"
 import { Stream } from '@most/types'
 
 
-export type ScrollRequest = number
-
-export type IScrollPagable = {
-  $items: $Branch[]
+export type ScrollRequest = {
   pageSize: number
   offset: number
 }
 
+export type IScrollPagable = ScrollRequest & {
+  $items: $Branch[]
+}
+
 
 export interface QuantumScroll {
-  scrollIndex?: Stream<number>
+  // scrollRequest?: Stream<ScrollRequest>
   insertAscending?: boolean
-  dataSource: Stream<IScrollPagable | $Branch[]>
+  dataSource: Stream<IScrollPagable>
   $container?: NodeComposeFn<$Node>
   $loader?: $Node
   $emptyMessage?: $Node
@@ -39,27 +40,13 @@ export const $QuantumScroll = ({
   $emptyMessage = $defaultEmptyMessage,
   $loader = $defaultVScrollLoader,
   insertAscending = false,
-  scrollIndex = now(0)
+  // scrollRequest = empty()
 }: QuantumScroll) => component((
-  [intersecting, intersectingTether]: Behavior<IBranch, IntersectionObserverEntry>,
+  [nextScrollRequest, nextScrollRequestTether]: Behavior<any, ScrollRequest>,
 ) => {
 
 
-  const intersectedLoader = intersectingTether(
-    observer.intersection({ threshold: 1 }),
-    map(entryList => entryList[0]),
-    filter(entry => {
-      return entry.isIntersecting === true
-    }),
-  )
-
-  const $observerloader = $custom('observer')(intersectedLoader)(
-    $loader
-  )
-
-  const dataLoadingMc = multicast(dataSource)
-
-  const $itemLoader = map((nextResponse) => {
+  const $itemLoader = map(nextResponse => {
     const itemCount = Array.isArray(nextResponse) ? nextResponse.length : nextResponse.$items.length
 
     if (Array.isArray(nextResponse)) {
@@ -72,25 +59,40 @@ export const $QuantumScroll = ({
 
     const hasMoreItems = nextResponse.pageSize === itemCount
 
+
+    const $observerloader = $custom('observer')(
+      nextScrollRequestTether(
+        observer.intersection({ threshold: 1 }),
+        filter(([entry]) => {
+          return entry.isIntersecting === true
+        }),
+        constant({ offset: nextResponse.offset + nextResponse.pageSize, pageSize: nextResponse.pageSize })
+      )
+    )(
+      $loader
+    )
+
     const $items = hasMoreItems
-      ? [...nextResponse.$items, until(dataLoadingMc, $observerloader )]
+      ? [...nextResponse.$items, until(nextScrollRequest, $observerloader)]
       : nextResponse.$items
 
-    const initNextScroll = filter(res => 'offset' in res && res.offset === 0, dataLoadingMc)
 
-    return until(initNextScroll, mergeArray($items))
-  }, dataLoadingMc)
+    return mergeArray($items)
+  }, dataSource)
 
 
   return [
     $container(
       map(node => ({ ...node, insertAscending })),
     )(
-      join($itemLoader),
+      join(mergeArray([
+        // constant(scrollRequest),
+        $itemLoader
+      ])),
     ),
 
     {
-      scrollIndex: startWith(0, snapshot(index => index + 1, scrollIndex, intersecting))
+      scrollRequest: nextScrollRequest
     }
   ]
 })

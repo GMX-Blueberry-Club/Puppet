@@ -26,8 +26,8 @@ export const $Link = ({ url, route, $content, anchorOp, disabled = empty() }: IL
   const $anchorEl = $anchor(
     styleBehavior(
       combineArray((isActive, isFocus): StyleCSS | null => {
-        return isActive ? { color: `${pallete.middleground} !important`, fill: pallete.middleground, cursor: 'default' }
-          : isFocus ? { color: `${pallete.middleground} !important`, fill: pallete.middleground }
+        return isActive ? { color: `${pallete.message} !important`, fill: pallete.message, cursor: 'default' }
+          : isFocus ? { color: `${pallete.message} !important`, fill: pallete.message }
             : null
       }, active, focus)
     ),

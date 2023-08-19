@@ -13,7 +13,7 @@ import { $defaultDropContainer, $Tooltip } from "./$Tooltip.js"
 export const $anchor = $element('a')(
   layoutSheet.spacingTiny,
   attr({ target: '_blank' }),
-  stylePseudo(':hover', { color: pallete.middleground + '!important', fill: pallete.middleground }),
+  stylePseudo(':hover', { color: pallete.foreground + '!important', fill: pallete.foreground }),
   style({
     cursor: 'pointer',
     color: pallete.message,

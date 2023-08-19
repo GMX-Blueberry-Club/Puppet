@@ -24,23 +24,22 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
   const summary = settledTradeList.reduce((seed, next, idx): IMirrorPositionListSummary => {
     const idxBn = BigInt(idx) + 1n
 
-    const position = next.position
 
-    const size = seed.size + getParticiapntMpPortion(next, position.maxSize, shareTarget)
-    const collateral = seed.collateral + getParticiapntMpPortion(next, position.maxCollateral, shareTarget)
-    const leverage = seed.leverage + getParticiapntMpPortion(next, div(position.maxSize, position.maxCollateral), shareTarget)
+    const size = seed.size + getParticiapntMpPortion(next, next.maxSize, shareTarget)
+    const collateral = seed.collateral + getParticiapntMpPortion(next, next.maxCollateral, shareTarget)
+    const leverage = seed.leverage + getParticiapntMpPortion(next, div(next.maxSize, next.maxCollateral), shareTarget)
 
     const avgSize = size / idxBn
     const avgCollateral = collateral / idxBn
     const avgLeverage = leverage / idxBn
 
 
-    const fee = seed.fee + getParticiapntMpPortion(next, position.cumulativeFee, shareTarget)
-    const pnl = seed.pnl + getParticiapntMpPortion(next, position.realisedPnl, shareTarget)
+    const fee = seed.fee + getParticiapntMpPortion(next, next.cumulativeFee, shareTarget)
+    const pnl = seed.pnl + getParticiapntMpPortion(next, next.realisedPnl, shareTarget)
 
 
-    const winCount = seed.winCount + (position.realisedPnl > 0n ? 1 : 0)
-    const lossCount = seed.lossCount + (position.realisedPnl <= 0n ? 1 : 0)
+    const winCount = seed.winCount + (next.realisedPnl > 0n ? 1 : 0)
+    const lossCount = seed.lossCount + (next.realisedPnl <= 0n ? 1 : 0)
 
     const puppets = [...seed.puppets, ...next.puppets.filter(x => !seed.puppets.includes(x))]
 
@@ -86,8 +85,7 @@ export function getParticiapntMpPortion(mp: IPositionMirrorSettled | IPositionMi
 
 
 export function getMpPnL(mp: IPositionMirrorSettled | IPositionMirrorSlot, markPrice: bigint, shareTarget?: viem.Address): bigint {
-  const position = mp.position
-  const delta = getPnL(position.isLong, position.averagePrice, markPrice, position.size)
+  const delta = getPnL(mp.isLong, mp.averagePrice, markPrice, mp.size)
   const openPnl = getParticiapntMpPortion(mp, delta, shareTarget)
 
   return openPnl
@@ -95,6 +93,7 @@ export function getMpPnL(mp: IPositionMirrorSettled | IPositionMirrorSlot, markP
 
 
 export function getPortion(supply: bigint, share: bigint, amount: bigint): bigint {
+  if (supply === 0n) return amount
   if (amount == 0n) throw new Error("amount cannot be 0")
 
   if (share == 0n) {
