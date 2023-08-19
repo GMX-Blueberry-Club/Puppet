@@ -66,7 +66,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
     return now(params.seed)
   }, combineObject({ publicClient, seed: gmxProcess.seed, syncProcessData })))
 
-  const process = mergeArray([gmxProcess.seed, syncProcessEvent])
+  const process = replayLatest(multicast(mergeArray([gmxProcess.seed, syncProcessEvent])))
   const processData = map(p => p.state, process)
 
 
@@ -116,7 +116,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
   
 
-  const subscriptionList: Stream<IPuppetRouteTrades[]> = switchLatest(map(w3p => {
+  const subscriptionList: Stream<IPuppetRouteTrades[]> = replayLatest(multicast(switchLatest(map(w3p => {
     if (!w3p) {
       return now([])
     }
@@ -124,7 +124,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
     return map(data => {
       return data.subscription.filter(s => s.puppet === w3p.account.address)
     }, processData)
-  }, wallet))
+  }, wallet))))
   
 
   return [
@@ -389,14 +389,13 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
         )
       ),
 
-      router.match(adminRoute)(
-
-        $rootContainer(style({ overflowY: 'auto', height: '100vh' }))(
-          $midContainer(
-            $Admin({})
-          )
-        ),
-      ),
+      // router.match(adminRoute)(
+      //   $rootContainer(style({ overflowY: 'auto', height: '100vh' }))(
+      //     $midContainer(
+      //       $Admin({})
+      //     )
+      //   ),
+      // ),
 
 
     ])

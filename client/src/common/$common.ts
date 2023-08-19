@@ -278,6 +278,7 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
     $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
     // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
 
+      // $trader,
       switchMap(params => {
         const w3p = params.wallet
         if (w3p === null) {
