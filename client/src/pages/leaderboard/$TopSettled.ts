@@ -51,7 +51,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
 
   return [
-    $column(
+    $column(style({ width: '100%' }))(
 
       
 
@@ -176,7 +176,7 @@ export const $TopSettled = (config: ITopSettled) => component((
           ]
 
           return $Table({
-
+            sortBy: params.sortBy,
             dataSource,
             columns,
           })({

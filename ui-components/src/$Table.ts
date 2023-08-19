@@ -28,8 +28,7 @@ export interface TableOption<T, FilterState> {
   $bodyCell?: NodeComposeFn<$Node>
   $headerCell?: NodeComposeFn<$Node>
 
-  sortBy?: Stream<ISortBy<T> | null>
-  filter?: Stream<FilterState | null>
+  sortBy?: ISortBy<T>
   $sortArrowDown?: $Node
 }
 
@@ -81,7 +80,7 @@ export const $Table = <T, FilterState = never>({
   $bodyCell = $cell,
   $headerCell = $defaultTableHeaderCell,
 
-  sortBy = now(null),
+  sortBy,
   $between = empty(),
   $sortArrowDown = $caretDown
 }: TableOption<T, FilterState>) => component((
@@ -104,23 +103,18 @@ export const $Table = <T, FilterState = never>({
 
         return $headerCell(col.columnOp || O(), behavior)(
           style({ cursor: 'pointer' }, col.$head),
-          switchLatest(map(param => {
-            if (param === null) {
-              return empty()
-            }
-
-            return $column(
-              $icon({
-                $content: $sortArrowDown, 
-                svgOps: style({ transform: 'rotate(180deg)' }), width: '8px', viewBox: '0 0 32 19.43',
-                fill: param.selector === col.sortBy && param.direction === 'desc' ? '' : colorAlpha(pallete.message, 0.3)
-              }),
-              $icon({ 
-                $content: $sortArrowDown,
-                fill: param.selector === col.sortBy && param.direction === 'asc' ? '' : colorAlpha(pallete.message, 0.3),
-                width: '8px', viewBox: '0 0 32 19.43' })
-            )
-          }, sortBy))
+          sortBy ? $column(
+            $icon({
+              $content: $sortArrowDown, 
+              svgOps: style({ transform: 'rotate(180deg)' }), width: '8px', viewBox: '0 0 32 19.43',
+              fill: sortBy.selector === col.sortBy && sortBy.direction === 'desc' ? '' : colorAlpha(pallete.message, 0.3)
+            }),
+            $icon({ 
+              $content: $sortArrowDown,
+              fill: sortBy.selector === col.sortBy && sortBy.direction === 'asc' ? '' : colorAlpha(pallete.message, 0.3),
+              width: '8px', viewBox: '0 0 32 19.43' })
+          )
+            : empty()
         )
       }
 
@@ -173,21 +167,21 @@ export const $Table = <T, FilterState = never>({
 
     {
       scrollRequest,
-      sortBy: snapshot((state, selector) => {
-        if (state === null) {
-          return state
+      sortBy: map((selector) => {
+        if (!sortBy) {
+          return sortBy
         }
 
-        if (state.selector === selector) {
-          const direction = state.direction === 'asc' ? 'desc' : 'asc'
+        if (sortBy.selector === selector) {
+          const direction = sortBy.direction === 'asc' ? 'desc' : 'asc'
 
           return { direction, selector }
         }
 
 
 
-        return { direction: state.direction, selector }
-      }, sortBy, sortByChange),
+        return { direction: sortBy.direction, selector }
+      }, sortByChange),
     }
   ]
 
