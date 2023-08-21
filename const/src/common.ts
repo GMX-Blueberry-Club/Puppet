@@ -10,7 +10,7 @@ export const ROUTE_DESCRIPTION = [
   {
     collateralToken: ARBITRUM_ADDRESS.USDC,
     indexToken: ARBITRUM_ADDRESS.NATIVE_TOKEN,
-    isLong: true
+    isLong: false
   },
 ]
 

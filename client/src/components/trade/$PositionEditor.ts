@@ -478,7 +478,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 //     $icon({ $content: $caretDown, width: '14px', svgOps: style({ marginTop: '3px' }), viewBox: '0 0 32 32' }),
                 //   )
                 // }, config.tradeState.inputTokenDescription)),
-                value: {
+                selector: {
                   value: config.tradeConfig.inputToken,
                   $container: $defaultSelectContainer(style({ minWidth: '290px', left: 0 })),
                   $$option: map(option => {
@@ -754,7 +754,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                   $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' }),
                 )
               }, config.tradeConfig.indexToken)),
-              value: {
+              selector: {
                 value: config.tradeConfig.indexToken,
                 $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0 })),
                 $$option: map((option) => {
@@ -864,7 +864,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                       }, config.tradeConfig.collateralToken)),
                       $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
                     ),
-                    value: {
+                    selector: {
                       value: config.tradeConfig.collateralToken,
                       $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0 })),
                       $$option: map(option => {

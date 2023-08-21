@@ -604,7 +604,7 @@ export const $Trade = (config: ITradeComponent) => component((
                   })({})
                 )
               }, chartInterval)),
-              value: {
+              selector: {
                 value: chartInterval,
                 $$option: map((option) => {
                   const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]

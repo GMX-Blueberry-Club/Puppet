@@ -292,7 +292,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                             borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
                           }))(
                             $text(`Syncing Blockchain Data....`),
-                            $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(
+                            $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(
                               params.process.state.approximatedTimestamp === 0
                                 ? `Indexing for the first time, this may take a minute or two.`
                                 : `${timeSince(params.process.state.approximatedTimestamp)} old data is displayed`

@@ -219,7 +219,7 @@ export const $ProfilePerformanceCard = (config: IParticipantPerformanceGraph) =>
         $column(style({ alignItems: 'center' }))(
           $NumberTicker({
             textStyle: {
-              fontSize: '1.75rem',
+              fontSize: '1.85rem',
               fontWeight: '900',
             },
             // background: `radial-gradient(${colorAlpha(invertColor(pallete.message), .7)} 9%, transparent 63%)`,
@@ -291,10 +291,33 @@ export const $ProfilePerformanceGraph = (config: IPerformanceTimeline) => compon
   const $container = $row(style({  width: `${config.width}px`,  }))    
   const timeline = performanceTimeline(config)
 
+  const markerList: IMarker[] = config.positionList.map((pos) => {
+    const isSettled = 'settlement' in pos
+    const position = pos.realisedPnl > 0n ? 'belowBar' as const : 'aboveBar' as const
+
+    return {
+      position,
+      color: isSettled ? colorAlpha(pallete.message, .15) : colorAlpha(pallete.primary, .15),
+      time: ('openBlockTimestamp' in pos ? pos.openBlockTimestamp : pos.blockTimestamp) as Time,
+      size: 0.1,
+      shape: isSettled ? 'circle' as const : 'circle' as const,
+    }
+  }).sort((a, b) => Number(a.time) - Number(b.time))
+
+
   return [
     $container(
       $Baseline({
+        markers: now(markerList),
         chartConfig: {
+          leftPriceScale: {
+            autoScale: true,
+            ticksVisible: true,
+            scaleMargins: {
+              top: 0,
+              bottom: 0,
+            }
+          },
           crosshair: {
             horzLine: {
               visible: false,
@@ -303,15 +326,19 @@ export const $ProfilePerformanceGraph = (config: IPerformanceTimeline) => compon
               visible: false,
             }
           },
-          height: 40,
+          height: 70,
           width: config.width,
           timeScale :{
             visible: false
-          }
+          },
         },
         data: timeline as any as BaselineData[],
-        containerOp: style({  inset: '0px 0px 0px 0px' }),
+        // containerOp: style({  inset: '0px 0px 0px 0px' }),
         baselineOptions: {
+          baseValue: {
+            price: 0,
+            type: 'price',
+          },
           lineWidth: 1,
           lineType: LineType.Curved,
         },

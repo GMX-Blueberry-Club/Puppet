@@ -155,8 +155,8 @@ importers:
         specifier: ^6.1.0
         version: 6.1.0(graphql@16.7.1)
       lightweight-charts:
-        specifier: ^4.0.1
-        version: 4.0.1
+        specifier: ^4.1.0-rc2
+        version: 4.1.0-rc2
       mersenne-twister:
         specifier: ^1.1.0
         version: 1.1.0
@@ -7535,6 +7535,12 @@ packages:
 
   /lightweight-charts@4.0.1:
     resolution: {integrity: sha512-p+j6w41PVzf9Vn7IrmpmCJacunpN0kKsl0IZoxMOySSkDcSagZ7Is9pb6pclIfN/usHdta0aYm9FktkYpAQe0g==}
+    dependencies:
+      fancy-canvas: 2.1.0
+    dev: false
+
+  /lightweight-charts@4.1.0-rc2:
+    resolution: {integrity: sha512-hF7QeQfBuVpE/XYFHzGwhw2FZhCI36Lib/Hc7SJb2+vXVbQQvEA6u3+t8ZldRgZitvC3n4hJ2MQGF/h5267s0Q==}
     dependencies:
       fancy-canvas: 2.1.0
     dev: false

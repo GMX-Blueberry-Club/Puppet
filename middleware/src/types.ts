@@ -1,13 +1,7 @@
-import { ILogTxType, IPositionSettled, IPositionSlot, IPositionListSummary, IPosition, IPositionClose, IPositionLiquidated } from "gmx-middleware-utils"
+import { ILogTxType, IPosition, IPositionClose, IPositionLiquidated, IPositionListSummary } from "gmx-middleware-utils"
 import * as viem from "viem"
 
 
-
-export interface IRouteDescription {
-  collateralToken: viem.Address
-  indexToken: viem.Address
-  isLong: boolean
-}
 
 export interface IMirrorPosition {
   requestKey: viem.Hex
@@ -30,6 +24,7 @@ export interface IPositionMirrorSettled extends IPosition<'PositionMirrorSettled
   settlePrice: bigint
   settlement: IPositionClose | IPositionLiquidated
   isLiquidated: boolean
+  openBlockTimestamp: number
 }
 
 export interface IMirrorPositionListSummary extends IPositionListSummary {

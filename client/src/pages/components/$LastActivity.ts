@@ -24,7 +24,7 @@ export const $LastAtivity = (activityTimeframe: Stream<GMX.IntervalTime>) => com
 
   return [
 
-    $row(layoutSheet.spacing)(
+    $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
       $text(style({ color: pallete.foreground }))('Last Activity:'),
       $row(layoutSheet.spacing)(
         ...options.map(([interval, label]) => {

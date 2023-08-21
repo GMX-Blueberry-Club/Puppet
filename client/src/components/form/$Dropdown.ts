@@ -34,8 +34,7 @@ export interface IMultiselect<T> extends ISelect<T> {
 
 
 export interface IDropdown<T> {
-  multiselect?: boolean
-  value: ISelect<T>
+  selector: ISelect<T>
   dropWidth?: number,
   $selection: $Node
   $container?: NodeComposeFn<$Node>
@@ -62,7 +61,7 @@ export function $Dropdown<T>({
   $container = $column(layoutSheet.spacingTiny, style({ position: 'relative' })),
   $selection,
   $option = $defaultOptionContainer,
-  value,
+  selector,
   openMenuOp = O()
 }: IDropdown<T>) {
 
@@ -122,7 +121,7 @@ export function $Dropdown<T>({
             ),
           )
 
-          const $container = (value.$container || $defaultSelectContainer)(
+          const $container = (selector.$container || $defaultSelectContainer)(
             contentIntersectionTether(
               observer.intersection()
             ),
@@ -135,9 +134,9 @@ export function $Dropdown<T>({
 
           return dropBehavior(
             $Select({
-              ...value,
+              ...selector,
               $container,
-              $$option: O(value.$$option, map($option)),
+              $$option: O(selector.$$option, map($option)),
             })({
               select: selectTether()
             })
@@ -154,11 +153,11 @@ export function $Dropdown<T>({
 }
 
 
-export const $defaultDropMultiSelectContainer = $row(layoutSheet.spacingTiny, style({ padding: `15px`, borderBottom: `1px solid ${pallete.message}` }))
+export const $defaultDropMultiSelectContainer = $row(layoutSheet.spacingTiny, style({ borderBottom: `1px solid ${pallete.message}` }))
 export const $defaultDropMultiSelectOption = $row(layoutSheet.spacingSmall,
   style({
     overflow: 'hidden', border: `1px solid ${pallete.message}`,
-    alignItems: 'center', padding: '8px', width: '100%'
+    alignItems: 'center', padding: '4px 8px', width: '100%'
   }),
   stylePseudo(':hover', { backgroundColor: pallete.horizon })
 )
@@ -170,7 +169,7 @@ export interface IMultiselectDrop<T> extends Input<T[]> {
   placeholder?: string
   closeOnSelect?: boolean
 
-  selectDrop: Omit<IMultiselect<T>, 'value'>
+  selector: Omit<IMultiselect<T>, 'value'>
 
   $label?: $Node
 
@@ -187,7 +186,7 @@ export const $DropMultiSelect = <T>({
   $$chip,
   $label = empty(),
   $chip = $defaultChip,
-  selectDrop,
+  selector,
   placeholder,
   validation = never,
   value,
@@ -208,18 +207,12 @@ export const $DropMultiSelect = <T>({
 
 
   const openTrigger = mergeArray([focusField, constant(true, openMenu)])
-
-  const closeTrigger = constant(false, mergeArray([delay(300, blur), closeOnSelect ? pick : empty(),]))
-
+  const closeTrigger = constant(false, mergeArray([delay(100, blur), closeOnSelect ? pick : empty(),]))
   const isOpen = mergeArray([openTrigger, closeTrigger])
-
-  const multicastValidation = O(validation, multicast)
-
-
   const focus = startWith(false, merge(interaction, blur))
 
 
-  const selection = switchLatest(
+  const select = switchLatest(
     map(initSeedList => {
       return skip(1, scan((seed, next) => {
         const matchedIndex = seed.indexOf(next)
@@ -233,7 +226,7 @@ export const $DropMultiSelect = <T>({
     }, value)
   )
 
-  const selectionChange = merge(selection, value)
+  const selectionChange = merge(select, value)
 
   const alert = validation(selectionChange)
 
@@ -327,14 +320,14 @@ export const $DropMultiSelect = <T>({
             return empty()
           }
 
-          const $floatingContainer = (selectDrop.$container || $defaultSelectContainer)(
+          const $floatingContainer = (selector.$container || $defaultSelectContainer)(
             style({
               padding: '8px', zIndex: 50, left: 0,
-              position: 'absolute'
+              position: 'absolute', visibility: 'hidden'
             })
           )
 
-          const optionSelection = selectDrop.list.filter(n => selectedList.indexOf(n) === -1)
+          const optionSelection = selector.list.filter(n => selectedList.indexOf(n) === -1)
 
           if (optionSelection.length === 0) {
             return $floatingContainer($text('Nothing to select'))
@@ -352,9 +345,9 @@ export const $DropMultiSelect = <T>({
                   ? {
                     top: 'calc(100% + -1px)',
                     borderTopLeftRadius: 0, borderTopRightRadius: 0,
-                    display: 'flex'
+                    display: 'flex', visibility: 'visible'
                   } : {
-                    bottom: 'calc(100% + -1px)',
+                    bottom: 'calc(100% + -1px)', visibility: 'visible',
                     borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
                     display: 'flex'
                   }
@@ -365,7 +358,7 @@ export const $DropMultiSelect = <T>({
 
           return dropBehavior(
             $Select({
-              ...selectDrop,
+              ...selector,
               $container: $floatingContainer,
               list: optionSelection,
               value: empty(),
@@ -388,7 +381,7 @@ export const $DropMultiSelect = <T>({
     ),
 
     {
-      selection, alert
+      select, alert
     }
   ]
 })

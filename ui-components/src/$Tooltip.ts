@@ -21,12 +21,11 @@ export const $defaultDropContainer = $column(style({
   userSelect: 'text',
   background: pallete.background,
   boxShadow: `${colorAlpha(pallete.message, .14)} 0px 4px 20px 8px, ${colorAlpha(pallete.message, .1)} 0px 1px 3px 1px`,
-  padding: '8px',
-  minWidth: '270px',
+  padding: '16px',
+  minWidth: '250px',
   borderRadius: '8px',
   fontWeight: 'normal',
 }))
-
 
 export const $defaultTooltipAnchorContainer = $row(style({ position: 'relative', minWidth: 0 }))
 

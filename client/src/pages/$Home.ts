@@ -1,12 +1,16 @@
-import { Behavior } from "@aelea/core"
+import { Behavior, fromCallback } from "@aelea/core"
 import { $element, $node, $text, component, eventElementTarget, style, styleInline } from "@aelea/dom"
 import { Route } from "@aelea/router"
 import { $column, $icon, $row, designSheet, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map } from "@most/core"
+import { empty, map, tap } from "@most/core"
 import { $Link, $anchor } from "gmx-middleware-ui-components"
 import { $gmxLogo, $puppetLogo } from "../common/$icons"
 import { $ButtonSecondary } from "../components/form/$Button"
+import { filterNull, switchMap } from "gmx-middleware-utils"
+import { Stream } from "@most/types"
+import { $seperator2 } from "./common"
+import { $labeledDivider } from "../elements/$common"
 
 
 
@@ -27,10 +31,16 @@ function createAnimationKeyframe(keyframes: string) {
 }
 
 
+const installUserChoice: Stream<any> = fromCallback(cb => {
+  return window.addEventListener('beforeinstallprompt', cb)
+})
+
+
 
 
 export const $Home = (config: ITreasury) => component((
-  [routeChanges, linkClickTether]: Behavior<any, string>,
+  [routeChanges, linkClickTether]: Behavior<any, any>,
+  [clickDownloadBtn, clickDownloadBtnTether]: Behavior<any, any>,
 ) => {
 
   const wheelClockwise = createAnimationKeyframe(`
@@ -101,15 +111,16 @@ export const $Home = (config: ITreasury) => component((
 
 
         $column(style({ textAlign: 'center' }))(
-          $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.75rem', whiteSpace: 'pre-wrap', letterSpacing: '2px' }))('Matching top Traders\nwith Investors'),
+          $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.85rem', whiteSpace: 'pre-wrap', letterSpacing: '2px' }))('Matching top Traders\nwith Investors'),
         ),
         $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Copy, Climb, Conquer. Traders earn more, investors pick high-performing traders on a single deposit.`),
 
-        $column(layoutSheet.spacing)(
+        $node(),
+
+        $column(layoutSheet.spacing, style({ minWidth: '250px' }))(
           screenUtils.isMobileScreen ? $text(style({ textAlign: 'center' }))('< which are you? >') : empty(),
 
           $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
-
             $Link({
               $content: $anchor(
                 $ButtonSecondary({
@@ -188,8 +199,51 @@ export const $Home = (config: ITreasury) => component((
             })({
               click: linkClickTether()
             }),
-
           ),
+
+
+          screenUtils.isMobileScreen
+            ? switchMap(deferredPrompt => {
+              return $column(layoutSheet.spacing)(
+                filterNull(map(req => {
+                  req.then(console.log)
+
+                  return null
+                }, clickDownloadBtn)) as any,
+
+                $node(),
+                $node(),
+
+                $column(
+                  $labeledDivider('Add to Home Screen'),
+                ),
+
+                $node(),
+
+                $Link({
+                  anchorOp: style({ alignSelf: 'center' }),
+                  $content: $anchor(
+                    $ButtonSecondary({
+                      $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+                        $icon({ $content: $puppetLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
+                        $text('Download'),
+                        $icon({ $content: $gmxLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
+                      ),
+                      $container: $element('button')(
+                        designSheet.btn,
+                        style({ position: 'relative', borderRadius: '30px' })
+                      )
+                    })({})
+                  ),
+                  url: '/app/leaderboard/settled', route: config.parentRoute.create({ fragment: 'fefe' })
+                })({
+                  click: clickDownloadBtnTether(
+                    map(() => deferredPrompt.prompt())
+                  )
+                })
+              )
+            }, installUserChoice) 
+            : empty(),
         ),
         $text(style({ color: pallete.foreground, position: 'absolute', bottom: '50px', left: '50%', transform: 'translateX(-50%)' }))('Learn More'),
 
@@ -231,7 +285,7 @@ export const $Home = (config: ITreasury) => component((
       $snapSection(
 
         $column(style({ textAlign: 'center' }))(
-          $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.75rem' }))('Matching top Traders with Investors'),
+          $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.85rem' }))('Matching top Traders with Investors'),
         ),
         $text(style({ whiteSpace: 'pre-wrap', maxWidth: '878px' }))(` A Copy Trading Platform for Simplified and Reduced-Risk-Managed Portfolio
 

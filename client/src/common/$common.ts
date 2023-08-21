@@ -55,26 +55,29 @@ export const $size = (size: bigint, collateral: bigint) => {
   )
 }
 
+export const $routeIntent = (pos: IAbstractRouteIdentity) => {
+  return $row(
+    $icon({
+      svgOps: style({ borderRadius: '50%', padding: '4px', marginRight: '-10px', zIndex: 0, alignItems: 'center', fill: pallete.message, backgroundColor: pallete.horizon }),
+      $content: pos.isLong ? $bull : $bear,
+      viewBox: '0 0 32 32',
+      width: '26px'
+    }),
+    $tokenIcon(pos.indexToken, { width: '28px' }),
+  )
+}
+
 export const $entry = (pos: IPosition) => {
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'center', placeContent: 'center', fontSize: '.85rem' }))(
-    $row(
-      $icon({
-        svgOps: style({ borderRadius: '50%', padding: '4px', marginRight: '-10px', zIndex: 0, alignItems: 'center', fill: pallete.message, backgroundColor: pallete.horizon }),
-        $content: pos.isLong ? $bull : $bear,
-        viewBox: '0 0 32 32',
-        width: '26px'
-      }),
-      $tokenIcon(pos.indexToken, { width: '28px' }),
-    ),
+    $routeIntent(pos),
     $text(readableFixedUSD30(pos.averagePrice))
   )
 }
 
 export const $route = (pos: IAbstractRouteIdentity, size = '34px') => {
   return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-    $tokenIcon(pos.indexToken, { width: size }),
-    $text(getTokenDescription(pos.indexToken).symbol),
-    $text(pos.indexToken === pos.collateralToken ? 'Long': 'Short'),
+    $routeIntent(pos),
+    $text(style({ fontSize: '.85rem' }))(`${getTokenDescription(pos.indexToken).symbol} / ${getTokenDescription(pos.collateralToken).symbol}`),
   )
 }
 
@@ -208,9 +211,9 @@ export const $openPositionPnlBreakdown = (pos: IPosition, cumulativeTokenFunding
   const totalMarginFee = getMarginFees(pos.cumulativeSize)
 
   
-  return $column(layoutSheet.spacing, style({ minWidth: '280px' }))(
+  return $column(layoutSheet.spacing, style({ minWidth: '250px' }))(
     $row(style({ placeContent: 'space-between' }))(
-      $text('PnL breakdown'),
+      $text('Net breakdown'),
 
       $row(layoutSheet.spacingTiny)(
         $text(style({ color: pallete.foreground, flex: 1 }))('Collateral'),

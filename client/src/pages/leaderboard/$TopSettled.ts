@@ -2,14 +2,14 @@ import { Behavior, combineObject, replayLatest } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { empty, map, startWith } from "@most/core"
+import { empty, map, mergeArray, now, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Table, ISortBy, ScrollRequest, TableColumn } from "gmx-middleware-ui-components"
-import { IPositionListSummary, div, getMappedValue, groupArrayMany, pagingQuery, readableFixedBsp, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IAbstractRouteIdentity, IPositionListSummary, div, getMappedValue, groupArrayMany, pagingQuery, readableFixedBsp, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { $TraderDisplay, $pnlValue, $size } from "../../common/$common"
+import { $TraderDisplay, $pnlValue, $route, $size } from "../../common/$common"
 import { puppetsColumn } from "../../components/table/$TableColumn"
 import { $ProfilePerformanceGraph, getUpdateTickList } from "../../components/trade/$ProfilePerformanceGraph"
 import { IGmxProcessState } from "../../data/process/process"
@@ -18,6 +18,8 @@ import { $card } from "../../elements/$common"
 import * as storage from "../../utils/storage/storeScope"
 import { $seperator2 } from "../common"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity"
+import { $DropMultiSelect, $Dropdown } from "../../components/form/$Dropdown"
+import { ROUTE_DESCRIPTIN_MAP, ROUTE_DESCRIPTION } from "puppet-middleware-const"
 
 
 
@@ -31,6 +33,7 @@ export type ITopSettled = {
 type FilterTable =  { activityTimeframe: GMX.IntervalTime } | null
 
 export const $TopSettled = (config: ITopSettled) => component((
+  [routeTypeChange, routeTypeChangeTether]: Behavior<IAbstractRouteIdentity[]>,
   [routeChange, routeChangeTether]: Behavior<string, string>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
   
@@ -48,18 +51,37 @@ export const $TopSettled = (config: ITopSettled) => component((
   const activityTimeframe = storage.replayWrite(store.activityTimeframe, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
 
 
-
-
+  const newLocal = mergeArray([
+    now(ROUTE_DESCRIPTION[0]),
+    routeTypeChange
+  ])
   return [
     $column(style({ width: '100%' }))(
 
-      
 
       $card(layoutSheet.spacingBig, style({ flex: 1 }))(
       
 
         $row(style({ placeContent: 'space-between' }))(
-          $row(),
+          $row(
+            $DropMultiSelect({
+              placeholder: 'All routes',
+              $$chip: map(rt => {
+                return $route(rt)
+              }),
+              selector: {
+                list: ROUTE_DESCRIPTION,
+                $$option: map(route => {
+                  return style({
+                    padding: '8px'
+                  }, $route(route))
+                })
+              },
+              value: now([])
+            })({
+              select: routeTypeChangeTether()
+            }),
+          ),
           $LastAtivity(activityTimeframe)({
             changeActivityTimeframe: changeActivityTimeframeTether()
           }),

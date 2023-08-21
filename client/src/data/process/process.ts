@@ -278,6 +278,7 @@ export const gmxProcess = defineProcess(
         ...positionSlot,
         realisedPnl: args.realisedPnl,
         settlePrice: seed.latestPrice[positionSlot.indexToken],
+        openBlockTimestamp: positionSlot.blockTimestamp,
         isLiquidated: false,
         settlement: {
           ...args,
@@ -330,6 +331,7 @@ export const gmxProcess = defineProcess(
         realisedPnl: realisedPnl,
         settlePrice: args.markPrice,
         isLiquidated: false,
+        openBlockTimestamp: positionSlot.blockTimestamp,
         settlement: {
           ...args,
           transactionHash: value.transactionHash,

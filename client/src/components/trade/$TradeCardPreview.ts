@@ -149,7 +149,7 @@ export const $TradeCardPreview = (config: ITradeCardPreview) => component((
             $column(style({ alignItems: 'center' }))(
               $NumberTicker({
                 textStyle: {
-                  fontSize: '1.75rem',
+                  fontSize: '1.85rem',
                   fontWeight: '900',
                 },
                 // background: `radial-gradient(${colorAlpha(invertColor(pallete.message), .7)} 9%, transparent 63%)`,
@@ -225,7 +225,7 @@ export const $TradeCardPreview = (config: ITradeCardPreview) => component((
         //     $text(style({ fontSize: '.85rem', color: pallete.foreground }))('$'),
         //   ),
         //   // $liquidationSeparator(liqPercentage),
-        //   $row(style({ fontSize: '1.75rem', alignItems: 'baseline' }))(
+        //   $row(style({ fontSize: '1.85rem', alignItems: 'baseline' }))(
         //     $text(style({ color: pallete.foreground }))('('),
         //     animatePnl
         //       ? tickerStyle(

@@ -226,7 +226,7 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
 
       $Dropdown({
         // $container: $row(style({ alignSelf: 'center', position: 'relative' })),
-        value: {
+        selector: {
           list: routeTypeList,
           $$option: map(key => $route(getMappedValue(PUPPET.ROUTE_DESCRIPTIN_MAP, key))),
           value: routeTypeKey,

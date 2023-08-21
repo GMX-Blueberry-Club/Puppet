@@ -49,12 +49,12 @@ function convertMsToGoogleCalendarDate(ms: Date) {
 
 export const $labeledDivider = (label: string) => {
   return $row(layoutSheet.spacing, style({ placeContent: 'center', alignItems: 'center' }))(
-    $column(style({ flex: 1, borderBottom: `1px solid ${pallete.horizon}` }))(),
+    $column(style({ flex: 1, borderBottom: `1px solid ${colorAlpha(pallete.foreground, .2)}` }))(),
     $row(layoutSheet.spacingSmall, style({ color: pallete.foreground, alignItems: 'center' }))(
       $text(style({ fontSize: '.85rem' }))(label),
       $icon({ $content: $caretDblDown, width: '10px', viewBox: '0 0 32 32', fill: pallete.foreground }),
     ),
-    $column(style({ flex: 1, borderBottom: `1px solid ${pallete.horizon}` }))(),
+    $column(style({ flex: 1, borderBottom: `1px solid ${colorAlpha(pallete.foreground, .2)}` }))(),
   )
 }
 
@@ -139,7 +139,7 @@ export interface ITeamMember {
 }
 
 export const $teamMember = ({ name, title, token }: ITeamMember) => {
-  return $column(layoutSheet.spacing, style({ alignItems: 'center', fontSize: screenUtils.isDesktopScreen ? '' : '.75rem' }))(
+  return $column(layoutSheet.spacing, style({ alignItems: 'center', fontSize: screenUtils.isDesktopScreen ? '' : '.85rem' }))(
     $berryByToken(token),
     $column(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
       $anchor(attr(({ href: `https://twitter.com/${name}` })), style({ fontWeight: 900, textDecoration: 'none', fontSize: '1em' }))($text(`@${name}`)),

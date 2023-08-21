@@ -1,14 +1,13 @@
 import { Behavior, combineObject } from "@aelea/core"
-import { $Node, $node, $text, NodeComposeFn, component, style } from "@aelea/dom"
+import { $node, $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { IAttributeBackground, IAttributeBadge, IAttributeMappings, IBerryDisplayTupleMap, IToken, getBerryFromItems, getLabItemTupleIndex, tokenIdAttributeTuple } from "@gambitdao/gbc-middleware"
 import { constant, join, map, mergeArray, multicast, snapshot, startWith } from "@most/core"
 import * as GMX from "gmx-middleware-const"
 import { $Table, $alertTooltip, $defaultVScrollContainer, $infoLabeledValue, $infoTooltipLabel, $spinner, TableOption } from "gmx-middleware-ui-components"
-import { getMappedValue, parseFixed, switchMap, tokenAmount, tokenAmountLabel } from "gmx-middleware-utils"
+import { IAbstractRouteIdentity, getMappedValue, parseFixed, switchMap, tokenAmount, tokenAmountLabel } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
-import { IPuppetRouteSubscritpion, IRouteDescription } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $TextField } from "../common/$TextField"
 import { $route } from "../common/$common"
@@ -77,7 +76,7 @@ export const $berryByLabItems = (
 
 
 export interface IRouteDepositInfoConfig {
-  routeDescription: IRouteDescription
+  routeDescription: IAbstractRouteIdentity
   wallet: IWalletClient
 }
 
