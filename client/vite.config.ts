@@ -66,7 +66,7 @@ const pwaOptions: Partial<VitePWAOptions> = {
 }
 
 
-const replaceOptions = { __DATE__: new Date().toISOString(), SW_DEV: process.env.SW_DEV }
+const replaceOptions = { ...SITE_CONFIG, __DATE__: new Date().toISOString(), SW_DEV: process.env.SW_DEV,  }
 const selfDestroying = process.env.SW_DESTROY === 'true'
 
 if (selfDestroying)
