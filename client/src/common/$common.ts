@@ -11,6 +11,7 @@ import {
   bnDiv,
   div, formatBps,
   getFundingFee,
+  getMarginFees,
   getNextLiquidationPrice, getPnL,
   getTokenDescription,
   IAbstractRouteIdentity,
@@ -18,11 +19,13 @@ import {
   isPositionSettled,
   leverageLabel,
   liquidationWeight,
+  readableFixedBsp,
   readableFixedUSD30,
+  streamOf,
   switchMap
 } from "gmx-middleware-utils"
 import { getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-const"
-import { IPuppetRouteSubscritpion, IPuppetRouteTrades } from "puppet-middleware-utils"
+import { getMpPnL, getParticiapntMpShare, getPortion, IPositionMirrorSettled, IPositionMirrorSlot, IPuppetRouteSubscritpion, IPuppetRouteTrades } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile"
 import { $Popover } from "../components/$Popover"
@@ -32,6 +35,7 @@ import { IProfileActiveTab } from "../pages/$Profile"
 import { $seperator2 } from "../pages/common"
 import { wallet } from "../wallet/walletLink"
 import { $puppetLogo } from "./$icons"
+import { contractReader } from "../logic/common"
 
 
 export const $midContainer = $column(
@@ -167,16 +171,24 @@ export const $PnlPercentageValue = (pnl: Stream<bigint> | bigint, collateral: bi
   )
 }
 
-export const $tradePnl = (pos: IPosition, positionMarkPrice: Stream<bigint> | bigint, colorful = true) => {
-
-  const pnl = isStream(positionMarkPrice)
+export const $tradePnl = (mp: IPositionMirrorSlot | IPositionMirrorSettled, positionMarkPrice: Stream<bigint> | bigint, shareTarget?: viem.Address) => {
+  const value = isStream(positionMarkPrice)
     ? map((markPrice: bigint) => {
-      const delta = getPnL(pos.isLong, pos.averagePrice, markPrice, pos.size)
-      return pos.realisedPnl + delta - pos.cumulativeFee
+      const pnl = getMpPnL(mp, markPrice, shareTarget)
+      return mp.realisedPnl + pnl - mp.cumulativeFee
     }, positionMarkPrice)
     : positionMarkPrice
 
-  return $pnlValue(pnl, colorful)
+  return $pnlValue(value)
+}
+
+export const $tradeRoi = (pos: IPosition, positionMarkPrice: Stream<bigint> | bigint) => {
+  const roi = map((markPrice: bigint) => {
+    const delta = getPnL(pos.isLong, pos.averagePrice, markPrice, pos.size)
+    return readableFixedBsp(div(pos.realisedPnl + delta - pos.cumulativeFee, pos.collateral) * 100n)
+  }, streamOf(positionMarkPrice))
+
+  return $text(roi)
 }
 
 export function $liquidationSeparator(isLong: boolean, size: bigint, collateral: bigint, averagePrice: bigint, markPrice: Stream<bigint>) {
@@ -191,58 +203,48 @@ export function $liquidationSeparator(isLong: boolean, size: bigint, collateral:
   )
 }
 
-export const $openPositionPnlBreakdown = (pos: IPosition, cumulativeFee: Stream<bigint>) => {
+export const $openPositionPnlBreakdown = (pos: IPosition, cumulativeTokenFundingRates: bigint) => {
+  const nextFundingFee = getFundingFee(pos.entryFundingRate, cumulativeTokenFundingRates, pos.size)
+  const totalMarginFee = getMarginFees(pos.cumulativeSize)
 
-
-  return $column(layoutSheet.spacing)(
+  
+  return $column(layoutSheet.spacing, style({ minWidth: '280px' }))(
     $row(style({ placeContent: 'space-between' }))(
-      $text('Net PnL breakdown'),
-      $row(layoutSheet.spacingTiny)(
-        $text(style({ color: pallete.foreground, flex: 1 }))('Deposit'),
-        $text(map(cumFee => {
-          const entryFundingRate = pos.entryFundingRate
-          const fee = getFundingFee(entryFundingRate, cumFee, pos.size)
-          const realisedLoss = pos.realisedPnl < 0n ? -pos.realisedPnl : 0n
+      $text('PnL breakdown'),
 
-          return readableFixedUSD30(pos.collateral + fee + realisedLoss + pos.cumulativeFee)
-        }, cumulativeFee))
-      )
+      $row(layoutSheet.spacingTiny)(
+        $text(style({ color: pallete.foreground, flex: 1 }))('Collateral'),
+        $text(readableFixedUSD30(nextFundingFee))
+      ),
     ),
     $column(layoutSheet.spacingSmall)(
-
-      $row(layoutSheet.spacingTiny)(
-        $text(style({ color: pallete.foreground, flex: 1 }))('Margin Fee'),
-        $pnlValue(-pos.cumulativeFee)
+      
+      $row(style({ placeContent: 'space-between' }))(
+        $text(style({ color: pallete.foreground }))('Margin Fee'),
+        $pnlValue(-totalMarginFee)
       ),
-      $row(layoutSheet.spacingTiny)(
-        $text(style({ color: pallete.foreground, flex: 1 }))('Borrow Fee'),
+      $row(style({ placeContent: 'space-between' }))(
+        $text(style({ color: pallete.foreground }))('Borrow Fee'),
         $pnlValue(
-          map(cumFee => {
-            const entryFundingRate = pos.entryFundingRate
-            // const historicBorrowingFee = totalFee - trade.fee
-
-            const fee = getFundingFee(entryFundingRate, cumFee, pos.size) // + historicBorrowingFee
-
-            return -fee
-          }, cumulativeFee)
+          -(nextFundingFee + pos.cumulativeFee - totalMarginFee)
         )
       ),
-      $seperator,
-      $row(layoutSheet.spacingTiny)(
-        $text(style({ color: pallete.foreground, flex: 1 }))('Total Fees'),
-        $pnlValue(
-          map(cumFee => {
-            const fstUpdate = pos.link.updateList[0]
-            const entryFundingRate = fstUpdate.entryFundingRate
+      $seperator2,
+      // $row(layoutSheet.spacingTiny)(
+      //   $text(style({ color: pallete.foreground, flex: 1 }))('Total Fees'),
+      //   $pnlValue(
+      //     map(cumFee => {
+      //       const fstUpdate = pos.link.updateList[0]
+      //       const entryFundingRate = fstUpdate.entryFundingRate
 
-            const fee = getFundingFee(entryFundingRate, cumFee, pos.size) + pos.cumulativeFee
+      //       const fee = getFundingFee(entryFundingRate, cumFee, pos.size) + pos.cumulativeFee
 
-            return -fee
-          }, cumulativeFee)
-        )
-      ),
-      $row(layoutSheet.spacingTiny)(
-        $text(style({ color: pallete.foreground, flex: 1 }))('Realised Pnl'),
+      //       return -fee
+      //     }, cumulativeTokenFundingRates)
+      //   )
+      // ),
+      $row(style({ placeContent: 'space-between' }))(
+        $text(style({ color: pallete.foreground }))('Realised Pnl'),
         $pnlValue(now(pos.realisedPnl))
       ),
 

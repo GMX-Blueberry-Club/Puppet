@@ -78,7 +78,7 @@ const config: IProcessedStoreConfig = {
 
 
 export const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
-  const req = await (await fetch('/db/sha256-Ki3Ek+i1Li+uz6FtPOX__5CohGfIoGmTtBsQf5VULng=.json')).json()
+  const req = await (await fetch('/db/sha256-hWK3ESJNHdKVaXGMiujJr_wH2MjJe6Sp_P_vbMcFRxE=.json')).json()
   const storedSeed: IProcessedStore<IGmxProcessState> = transformBigints(req)
 
   const seedFileValidationError = validateSeed(config, storedSeed.config)
@@ -195,9 +195,10 @@ export const gmxProcess = defineProcess(
       const positionSlot = seed.mirrorPositionSlot[args.key]
       positionSlot.lastIncreasedTime = BigInt(seed.approximatedTimestamp)
       positionSlot.requestKey = mirrorPositionReq.routeTypeKey
-      positionSlot.cumulativeCollateral += args.collateralDelta
+
       positionSlot.cumulativeSize += args.sizeDelta
-      positionSlot.cumulativeFee += args.fee * 2n
+      positionSlot.cumulativeFee += args.fee
+
       positionSlot.link.increaseList.push({
         ...value.args,
         blockTimestamp: seed.approximatedTimestamp,
@@ -220,8 +221,15 @@ export const gmxProcess = defineProcess(
         // throw new Error('position not found')
       }
 
+      positionSlot.cumulativeSize += args.sizeDelta
       positionSlot.cumulativeFee += args.fee
-      positionSlot.link.decreaseList.push({ ...value.args, blockTimestamp: seed.approximatedTimestamp, transactionHash: value.transactionHash, __typename: 'DecreasePosition' })
+
+      positionSlot.link.decreaseList.push({
+        ...value.args,
+        blockTimestamp: seed.approximatedTimestamp,
+        transactionHash: value.transactionHash,
+        __typename: 'DecreasePosition'
+      })
 
       return seed
     },
@@ -462,7 +470,6 @@ export function createPositionSlot(blockTimestamp: number, transactionHash: viem
     lastIncreasedTime: 0n,
     averagePrice: 0n,
     collateral: 0n,
-    cumulativeCollateral: 0n,
     cumulativeFee: 0n,
     cumulativeSize: 0n,
     entryFundingRate: 0n,

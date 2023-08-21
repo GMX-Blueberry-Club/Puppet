@@ -117,7 +117,7 @@ export const $SwitchNetworkDropdown = (showLabel = false) => component((
       const $container = network === null ? $alertContainer : $row
 
       return $container(
-        style({ cursor: 'pointer', placeContent: 'center' }),
+        style({ cursor: 'pointer', placeContent: 'center', width: '60px' }),
         changeNetworkTether(
           nodeEvent('click'),
           tap(async () => {
@@ -127,7 +127,7 @@ export const $SwitchNetworkDropdown = (showLabel = false) => component((
           }),
         )
       )(
-        $element('img')(attr({ src: `/chain/${network.id}.svg` }), style({ width: '32px', margin: screenUtils.isDesktopScreen ? '0px 0px 8px 0px' : '0px 8px 0 0', aspectRatio: '1 / 1', placeSelf: 'center' }))(),
+        $element('img')(attr({ src: `/chain/${network.id}.svg` }), style({ width: '32px', aspectRatio: '1 / 1', placeSelf: 'center' }))(),
       )
 
       // return style({ zoom: 1.1 })($alertTooltip($text('www')))

@@ -18,6 +18,7 @@ export interface IAccountPreview {
 export interface IProfilePreview extends IAccountPreview {
   $container?: NodeComposeFn<$Node>
   showAddress?: boolean
+  $labelContainer?: NodeComposeFn<$Node>
 }
 
 
@@ -25,12 +26,12 @@ export interface IProfilePreview extends IAccountPreview {
 
 
 export const $profileDisplay = (config: IProfilePreview) => {
-  const { $container = $row, address, showAddress = true, labelSize, profileSize = 50 } = config
+  const { $container = $row, address, showAddress = true, profileSize = 50, $labelContainer } = config
 
 
-  return $container(style({ gap: `${profileSize / 10}px`, alignItems: 'center', textDecoration: 'none' }))(
+  return $container(style({ gap: `${profileSize / 6}px`, alignItems: 'center', textDecoration: 'none' }))(
     $profileAvatar(config),
-    showAddress ? $AccountLabel(address, labelSize) : empty(),
+    showAddress ? $AccountLabel(address, $labelContainer) : empty(),
     // showAddress
     //   ? profile?.ens?.labelName
     //     ? $ProfileLabel(profile.ens!)
@@ -76,8 +77,8 @@ export const $disconnectedWalletDisplay = ($container = $row, size = 50) => {
 }
 
 
-export const $AccountLabel = (address: string, fontSize = '1em') => {
-  return $column(style({ fontSize, alignItems: 'center' }))(
+export const $AccountLabel = (address: string, $container = $column) => {
+  return $container(style({ alignItems: 'center' }))(
     $text(style({ fontSize: '64%' }))(address.slice(0, 6)),
     $text(style({  }))(address.slice(address.length - 4, address.length))
   )

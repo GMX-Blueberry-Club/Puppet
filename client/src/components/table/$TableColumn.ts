@@ -5,21 +5,27 @@ import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { map, now } from "@most/core"
 import { Stream } from "@most/types"
 import { $Link, $infoTooltipLabel, TableColumn } from "gmx-middleware-ui-components"
-import { readableDate, timeSince } from "gmx-middleware-utils"
+import { div, getPnL, getSlotNetPnL, readableDate, readableFixedBsp, switchMap, timeSince } from "gmx-middleware-utils"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile"
-import { $entry, $openPositionPnlBreakdown, $pnlValue, $puppets, $size, $sizeAndLiquidation, $tradePnl } from "../../common/$common"
+import { $entry, $openPositionPnlBreakdown, $pnlValue, $puppets, $size, $sizeAndLiquidation, $tradePnl, $tradeRoi } from "../../common/$common"
 import { IGmxProcessState, latestTokenPrice } from "../../data/process/process"
 import { $txnIconLink } from "../../elements/$common"
 import { IProfileActiveTab } from "../../pages/$Profile"
+import { $seperator2 } from "../../pages/common"
+import { contractReader } from "../../logic/common"
+import * as GMX from 'gmx-middleware-const'
+
+
+const $tableHeader = (primaryLabel: string, secondaryLabel: string) => $column(style({ textAlign: 'right' }))(
+  $text(primaryLabel),
+  $text(style({ fontSize: '.85rem' }))(secondaryLabel)
+)
 
 
 export const slotSizeColumn = (processData: Stream<IGmxProcessState>, shareTarget?: viem.Address): TableColumn<IPositionMirrorSettled | IPositionMirrorSlot> => ({
-  $head: $column(style({ textAlign: 'right' }))(
-    $text('Size'),
-    $text(style({ fontSize: '.85rem' }))('Leverage'),
-  ),
+  $head: $tableHeader('Size', 'Leverage'),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $$body: map(mp => {
     const positionMarkPrice = latestTokenPrice(processData, now(mp.indexToken))
@@ -30,15 +36,12 @@ export const slotSizeColumn = (processData: Stream<IGmxProcessState>, shareTarge
   })
 })
 
-export const settledSizeColumn = (processData: Stream<IGmxProcessState>, puppet?: viem.Address): TableColumn<IPositionMirrorSettled> => ({
-  $head: $column(style({ textAlign: 'right' }))(
-    $text('Size'),
-    $text(style({ fontSize: '.85rem' }))('Leverage'),
-  ),
+export const settledSizeColumn = (shareTarget?: viem.Address): TableColumn<IPositionMirrorSettled> => ({
+  $head: $tableHeader('Size', 'Leverage'),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $$body: map(mp => {
-    const size = getParticiapntMpPortion(mp, mp.maxSize, puppet)
-    const collateral = getParticiapntMpPortion(mp, mp.maxCollateral, puppet)
+    const size = getParticiapntMpPortion(mp, mp.maxSize, shareTarget)
+    const collateral = getParticiapntMpPortion(mp, mp.maxCollateral, shareTarget)
 
     return $size(size, collateral)
   })
@@ -57,25 +60,26 @@ export const entryColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSl
 export const puppetsColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSlot | IMirrorPositionListSummary> = {
   $head: $text('Puppets'),
   $$body: map((pos) => {
-    // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))w
-    // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
-
     return $puppets(pos.puppets)
   })
 }
 
-export const pnlSlotColumn = (processData: Stream<IGmxProcessState>, puppet?: viem.Address): TableColumn<IPositionMirrorSlot> => ({
-  $head: $text('PnL'),
+export const pnlSlotColumn = (processData: Stream<IGmxProcessState>, shareTarget?: viem.Address): TableColumn<IPositionMirrorSlot> => ({
+  $head: $tableHeader('PnL', 'ROI'),
   columnOp: style({ placeContent: 'flex-end' }),
   $$body: map((pos) => {
     const positionMarkPrice = latestTokenPrice(processData, now(pos.indexToken))
-    const cumulativeFee = now(0n)
+    const cumulativeTokenFundingRates = contractReader(GMX.CONTRACT['42161'].Vault)('cumulativeFundingRates', pos.collateralToken)
 
-    return style({ flexDirection: 'row-reverse' })(
-      $infoTooltipLabel(
-        $openPositionPnlBreakdown(pos, cumulativeFee),
-        $tradePnl(pos, positionMarkPrice)
-      )
+    return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
+      style({ flexDirection: 'row-reverse' })(
+        $infoTooltipLabel(
+          switchMap(ff => $openPositionPnlBreakdown(pos, ff), cumulativeTokenFundingRates),
+          $tradePnl(pos, positionMarkPrice, shareTarget)
+        )
+      ),
+      $seperator2,
+      style({ fontSize: '.85rem' })($tradeRoi(pos, positionMarkPrice)),
     )
   })
 })
@@ -101,12 +105,17 @@ export const traderColumn = (click: Op<string, string>, route: router.Route): Ta
 })
 
 export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IPositionMirrorSettled> => ({
-  $head: $text('PnL'),
+  $head: $tableHeader('PnL', 'ROI'),
   columnOp: style({ placeContent: 'flex-end' }),
   $$body: map(mp => {
     const pnl = getParticiapntMpPortion(mp, mp.realisedPnl, puppet)
+    const collateral = getParticiapntMpPortion(mp, mp.collateral, puppet)
       
-    return $pnlValue(pnl)
+    return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
+      $pnlValue(pnl),
+      $seperator2,
+      $text(style({ fontSize: '.85rem' }))(readableFixedBsp(div(pnl, collateral) * 100n)),
+    )
   })
 })
 

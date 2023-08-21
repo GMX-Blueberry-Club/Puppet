@@ -10,8 +10,8 @@ const light: Theme = {
     message: '#171B1F',
 
     background: '#ffffff',
-    horizon: '#f2c7eb',
-    middleground: '#443873',
+    horizon: '#ecf3fc',
+    middleground: '#edf5ff',
     foreground: '#51585f',
 
     positive: '#0cab00',

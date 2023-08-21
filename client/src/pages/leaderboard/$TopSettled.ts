@@ -1,23 +1,23 @@
 import { Behavior, combineObject, replayLatest } from "@aelea/core"
-import { $node, $text, component, style } from "@aelea/dom"
+import { $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { empty, map, snapshot, startWith, switchLatest } from "@most/core"
+import { empty, map, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
-import { $Baseline, $Table, ISortBy, ScrollRequest, TableColumn } from "gmx-middleware-ui-components"
-import { IPositionListSummary, getMappedValue, groupArrayMany, pagingQuery, switchMap, unixTimestampNow } from "gmx-middleware-utils"
-import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetRouteSubscritpion, IPuppetRouteTrades, summariesMirrorTrader } from "puppet-middleware-utils"
+import { $Table, ISortBy, ScrollRequest, TableColumn } from "gmx-middleware-ui-components"
+import { IPositionListSummary, div, getMappedValue, groupArrayMany, pagingQuery, readableFixedBsp, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $TraderDisplay, $pnlValue, $size } from "../../common/$common"
 import { puppetsColumn } from "../../components/table/$TableColumn"
-import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceCard"
+import { $ProfilePerformanceGraph, getUpdateTickList } from "../../components/trade/$ProfilePerformanceGraph"
 import { IGmxProcessState } from "../../data/process/process"
 import * as store from "../../data/store/store"
-import * as storage from "../../utils/storage/storeScope"
-import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity"
-import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { $card } from "../../elements/$common"
+import * as storage from "../../utils/storage/storeScope"
+import { $seperator2 } from "../common"
+import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity"
 
 
 
@@ -58,9 +58,12 @@ export const $TopSettled = (config: ITopSettled) => component((
       $card(layoutSheet.spacingBig, style({ flex: 1 }))(
       
 
-        $LastAtivity(activityTimeframe)({
-          changeActivityTimeframe: changeActivityTimeframeTether()
-        }),
+        $row(style({ placeContent: 'space-between' }))(
+          $row(),
+          $LastAtivity(activityTimeframe)({
+            changeActivityTimeframe: changeActivityTimeframeTether()
+          }),
+        ),
     
         switchMap(params => {
           const paging = startWith({ ...params.sortBy, offset: 0, pageSize: 20 }, scrollRequest)
@@ -119,25 +122,6 @@ export const $TopSettled = (config: ITopSettled) => component((
                 puppetsColumn,
               ]
               : [],
-            ...screenUtils.isDesktopScreen
-              ? [
-                {
-                  $head: $text(`Last ${getMappedValue(LAST_ACTIVITY_LABEL_MAP, params.activityTimeframe)} activity`),
-                  gridTemplate: '160px',
-                  columnOp: style({ alignItems: 'center', placeContent: 'center' }),
-                  $$body: map((pos: IMirrorPositionListSummary & { trader: viem.Address, settledTradeList: IPositionMirrorSettled[]}) => {
-                    return screenUtils.isDesktopScreen
-                      ? $ProfilePerformanceGraph({
-                        processData: params.data,
-                        positionList: pos.settledTradeList,
-                        width: 160,
-                        activityTimeframe: params.activityTimeframe,
-                      })({})
-                      : empty()
-                  })
-                },
-              ]
-              : [],
             {
               $head: $column(style({ textAlign: 'right' }))(
                 $text('Size'),
@@ -159,20 +143,33 @@ export const $TopSettled = (config: ITopSettled) => component((
               columnOp: style({ placeContent: 'flex-end' }),
               $$body: map(pos => {
 
-                return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', flex: 1 }))(
-
-                  $row(style({ flex: 1, placeContent: 'flex-end', fontWeight: 'bold', letterSpacing: '0.05em' }))(
-                    $pnlValue(pos.pnl)
-                  )
-                // $column(style({ gap: '3px', textAlign: 'right' }))(
-                //   $pnlValue(pos.pnl),
-                //   $seperator2,
-                //   $text(style({ fontSize: '.85rem' }))(readableFixedBsp(div(pos.pnl, pos.collateral))),
-                // )
+                return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
+                  $pnlValue(pos.pnl),
+                  $seperator2,
+                  $text(style({ fontSize: '.85rem' }))(readableFixedBsp(div(pos.pnl, pos.collateral) * 100n)),
                 )
               })
             },
-
+            ...screenUtils.isDesktopScreen
+              ? [
+                {
+                  $head: $text(`Last ${getMappedValue(LAST_ACTIVITY_LABEL_MAP, params.activityTimeframe)} activity`),
+                  gridTemplate: '160px',
+                  columnOp: style({ alignItems: 'center', placeContent: 'center' }),
+                  $$body: map((pos: IMirrorPositionListSummary & { trader: viem.Address, settledTradeList: IPositionMirrorSettled[]}) => {
+                    
+                    return screenUtils.isDesktopScreen
+                      ? $ProfilePerformanceGraph({
+                        processData: params.data,
+                        positionList: pos.settledTradeList,
+                        width: 160,
+                        activityTimeframe: params.activityTimeframe,
+                      })({})
+                      : empty()
+                  })
+                },
+              ]
+              : [],
           ]
 
           return $Table({

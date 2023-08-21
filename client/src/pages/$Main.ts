@@ -86,8 +86,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
   const profileRoute = appRoute.create({ fragment: 'profile' })
   const walletRoute = appRoute.create({ fragment: 'wallet', title: 'Portfolio' })
-  const TRADEURL = 'trade'
-  const tradeRoute = appRoute.create({ fragment: TRADEURL })
+  const tradeRoute = appRoute.create({ fragment: 'trade' })
+  const positionRoute = appRoute.create({ fragment: /^trade:0x([A-Fa-f0-9]{64})$/i })
   const tradeTermsAndConditions = appRoute.create({ fragment: 'terms-and-conditions' })
 
   const leaderboardRoute = appRoute.create({ fragment: 'leaderboard' })
@@ -105,7 +105,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       // fontSize: screenUtils.isDesktopScreen ? '1.15rem' : '1rem',
       minHeight: '100vh',
       fontWeight: 400,
-      flexDirection: 'row',
+      // flexDirection: 'row',
     }),
 
     screenUtils.isMobileScreen
@@ -128,8 +128,221 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   
 
   return [
-
     mergeArray([
+      router.contains(appRoute)(
+        $rootContainer(
+          $column(style({ flex: 1, position: 'relative' }))(
+            // $node(style({ height: 0 }))(
+            //   $node(style({
+            //     background: pallete.middleground,
+            //     inset: 0,
+            //     height: '400px',
+            //     margin: `0 -50vw 0`,
+            //     display: 'block',
+            //     // position: 'absolute',
+            //     pointerEvents: 'none',
+            //   }))()
+            // ),
+            switchMap(chainEvent => {
+              return $column(
+                designSheet.customScroll,
+                style({
+                  flex: 1, position: 'absolute', inset: 0,
+                  overflowY: 'scroll', overflowX: 'hidden'
+                })
+              )(
+                switchMap(isDesktop => {
+                  if (isDesktop) {
+                    return $MainMenu({ parentRoute: appRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+                      routeChange: linkClickTether()
+                    })
+                  }
+
+                  return $MainMenuMobile({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+                    routeChange: linkClickTether(),
+                  })
+                }, isDesktopScreen),
+
+                router.contains(walletRoute)(
+                  $IntermediateConnectButton({
+                    $$display: map(wallet => {
+                      return $midContainer(
+                        $Wallet({
+                          route: walletRoute,
+                          processData,
+                          wallet: wallet,
+                        })({
+                          changeRoute: linkClickTether(),
+                        }))
+                    })
+                  })({})
+                ),
+                router.contains(leaderboardRoute)(
+                  $midContainer(
+                    fadeIn($Leaderboard({
+                      subscriptionList,
+                      route: leaderboardRoute,
+                      processData
+                    })({
+                      routeChange: linkClickTether(
+                        tap(console.log)
+                      ),
+                      modifySubscriber: modifySubscriberTether(),
+                    }))
+                  )
+                ),
+                router.contains(profileRoute)(
+                  $midContainer(
+                    fadeIn($Profile({
+                      route: profileRoute,
+                      processData,
+                      subscriptionList
+                    })({
+                      modifySubscriber: modifySubscriberTether(),
+                      changeRoute: linkClickTether()
+                    }))
+                  )
+                ),
+                router.match(tradeTermsAndConditions)(
+                  fadeIn(
+                    $midContainer(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
+                      $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
+                      $node(),
+                      $text(style({ fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
+                      $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
+                      $element('ul')(layoutSheet.spacing, style({  }))(
+                        $liItem(
+                          $text(`I am not a United States person or entity;`),
+                        ),
+                        $liItem(
+                          $text(`I am not a resident, national, or agent of any country to which the United States, the United Kingdom, the United Nations, or the European Union embargoes goods or imposes similar sanctions, including without limitation the U.S. Office of Foreign Asset Control, Specifically Designated Nationals and Blocked Person List;`),
+                        ),
+                        $liItem(
+                          $text(`I am legally entitled to access the Interface under the laws of the jurisdiction where I am located;`),
+                        ),
+                        $liItem(
+                          $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
+                        ),
+                      ),
+
+                      $node(style({ height: '100px' }))(),
+                    )
+                  ),
+                ),
+                router.match(tradeRoute)(
+                  $Trade({
+                    chain: chainEvent,
+                    processData,
+                    referralCode: BLUEBERRY_REFFERAL_CODE,
+                    tokenIndexMap: {
+                      [CHAIN.ARBITRUM]: [
+                        ARBITRUM_ADDRESS.NATIVE_TOKEN,
+                        ARBITRUM_ADDRESS.WBTC,
+                        ARBITRUM_ADDRESS.LINK,
+                        ARBITRUM_ADDRESS.UNI,
+                      ],
+                      [CHAIN.AVALANCHE]: [
+                        AVALANCHE_ADDRESS.NATIVE_TOKEN,
+                        AVALANCHE_ADDRESS.WETHE,
+                        AVALANCHE_ADDRESS.WBTCE,
+                        AVALANCHE_ADDRESS.BTCB,
+                      ]
+                    },
+                    tokenStableMap: {
+                      [CHAIN.ARBITRUM]: [
+                        ARBITRUM_ADDRESS.USDC,
+                        ARBITRUM_ADDRESS.USDT,
+                        ARBITRUM_ADDRESS.DAI,
+                        ARBITRUM_ADDRESS.FRAX,
+                        // ARBITRUM_ADDRESS.MIM,
+                      ],
+                      [CHAIN.AVALANCHE]: [
+                        AVALANCHE_ADDRESS.USDC,
+                        AVALANCHE_ADDRESS.USDCE,
+                        // AVALANCHE_ADDRESS.MIM,
+                      ]
+                    },
+                    parentRoute: tradeRoute
+                  })({
+                    changeRoute: linkClickTether()
+                  })
+                ),
+
+                switchMap(params => {
+                  const refreshThreshold = SW_DEV ? 150 : 50
+                  const blockDelta = params.syncBlock - params.process.blockNumber
+
+                  if (blockDelta < refreshThreshold) {
+                    return empty()
+                  }
+
+                  return switchLatest(mergeArray([
+                    now(
+                      fadeIn($row(
+                        style({ position: 'absolute', bottom: '18px', left: `50%` }),
+                        syncProcessDataTether(
+                          constant(params.syncBlock)
+                        )
+                      )(
+                        style({  transform: 'translateX(-50%)' })(
+                          $column(layoutSheet.spacingTiny, style({
+                            border: `1px solid`,
+                            padding: '20px',
+                            animation: `borderRotate var(--d) linear infinite forwards`,
+                            borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
+                          }))(
+                            $text(`Syncing Blockchain Data....`),
+                            $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(
+                              params.process.state.approximatedTimestamp === 0
+                                ? `Indexing for the first time, this may take a minute or two.`
+                                : `${timeSince(params.process.state.approximatedTimestamp)} old data is displayed`
+                            ),
+                          )
+                        )
+                      ))
+                    ),
+                    // map(seed => empty(), syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlock }))
+                  ]))
+                }, combineObject({ process, syncBlock: take(1, block) })),
+                
+              )
+            }, chain)
+          ),
+
+          switchMap((cb) => {
+            return fadeIn(
+              $row(style({ position: 'absolute', right: '10px', bottom: '10px' }))(
+                $alertContainer(
+                  filterNull(constant(null, clickUpdateVersion)) as any,
+
+                  $text('New version Available'),
+                  $ButtonSecondary({
+                    $container: $defaultMiniButtonSecondary,
+                    $content: $text('Update'),
+                  })({
+                    click: clickUpdateVersionTether(
+                      tap(cb)
+                    )
+                  })
+                )
+              )
+            )
+          }, newUpdateInvoke),
+              
+          $column(style({ maxWidth: '850px', margin: '0 auto', width: '100%', zIndex: 10 }))(
+            $RouteSubscriptionDrawer({
+              modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetRouteSubscritpion[]),
+              modifySubscriber,
+              subscriptionList
+            })({
+              modifySubscriptionList: modifySubscriptionListTether()
+              // clickClose: clickCloseSubscPanelTether(),
+              // changeSubscribeList: modifySubscriberTether()
+            })
+          )
+        )
+      ),
+
       router.match(rootRoute)(
         $rootContainer(
           designSheet.customScroll,
@@ -144,258 +357,16 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
           $Home({
             parentRoute: rootRoute,
           })({ routeChanges: linkClickTether() })
-
         )
       ),
 
-      router.contains(appRoute)(
-        $rootContainer(
-          styleBehavior(map(isDesktop => ({ flexDirection: isDesktop ? 'row' : 'column' }), isDesktopScreen)),
-          screenUtils.isDesktopScreen
-            ? style({
-              display: 'flex', flexDirection: 'row',
-            })
-            : style({
-              display: 'flex', flexDirection: 'column',
-              gap: '35px',
-            })
-        )(
-          switchMap(isDesktop => {
-            if (!isDesktop) {
-              return empty()
-            }
-
-            return $MainMenu({ parentRoute: appRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
-              routeChange: linkClickTether()
-            })
-          }, isDesktopScreen),
-
-          $column(style({ flex: 1 }))(
-            $column(style({ flex: 1, position: 'relative' }))(
-              switchMap(chainEvent => {
-                return $column(
-                  designSheet.customScroll,
-                  style({
-                    flex: 1, position: 'absolute', inset: 0,
-                    overflowY: 'scroll', overflowX: 'hidden'
-                  })
-                )(
-
-                  switchMap(isMobile => {
-                    if (isMobile) {
-                      return empty()
-                    }
-
-                    return  $MainMenuMobile({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
-                      routeChange: linkClickTether(),
-                    })
-                  }, isDesktopScreen),
-
-                  router.contains(walletRoute)(
-                    $IntermediateConnectButton({
-                      $$display: map(wallet => {
-                        return $midContainer(
-                          $Wallet({
-                            route: walletRoute,
-                            processData,
-                            wallet: wallet,
-                          })({
-                            changeRoute: linkClickTether(),
-                          }))
-                      })
-                    })({})
-                  ),
-                  router.contains(leaderboardRoute)(
-
-                    $column(
-                      $node(style({ height: 0 }))(
-                        $node(style({
-                          background: pallete.middleground,
-                          inset: 0,
-                          height: '400px',
-                          margin: `0 -50vw 0`,
-                          display: 'block',
-                          // position: 'absolute',
-                          pointerEvents: 'none',
-                        }))()
-                      ),
-                      $midContainer(
-                        fadeIn($Leaderboard({
-                          subscriptionList,
-                          route: leaderboardRoute,
-                          processData
-                        })({
-                          routeChange: linkClickTether(
-                            tap(console.log)
-                          ),
-                          modifySubscriber: modifySubscriberTether(),
-                        }))
-                      )
-                    )
-                  ),
-                  router.contains(profileRoute)(
-                    $midContainer(
-                      fadeIn($Profile({
-                        route: profileRoute,
-                        processData,
-                        subscriptionList
-                      })({
-                        modifySubscriber: modifySubscriberTether(),
-                        changeRoute: linkClickTether()
-                      }))
-                    )
-                  ),
-                  router.match(tradeTermsAndConditions)(
-                    fadeIn(
-                      $midContainer(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
-                        $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
-                        $node(),
-                        $text(style({ fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
-                        $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host + '/app/' + TRADEURL} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
-                        $element('ul')(layoutSheet.spacing, style({  }))(
-                          $liItem(
-                            $text(`I am not a United States person or entity;`),
-                          ),
-                          $liItem(
-                            $text(`I am not a resident, national, or agent of any country to which the United States, the United Kingdom, the United Nations, or the European Union embargoes goods or imposes similar sanctions, including without limitation the U.S. Office of Foreign Asset Control, Specifically Designated Nationals and Blocked Person List;`),
-                          ),
-                          $liItem(
-                            $text(`I am legally entitled to access the Interface under the laws of the jurisdiction where I am located;`),
-                          ),
-                          $liItem(
-                            $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
-                          ),
-                        ),
-
-                        $node(style({ height: '100px' }))(),
-                      )
-                    ),
-                  ),
-                  router.match(tradeRoute)(
-                    $Trade({
-                      chain: chainEvent,
-                      processData,
-                      referralCode: BLUEBERRY_REFFERAL_CODE,
-                      tokenIndexMap: {
-                        [CHAIN.ARBITRUM]: [
-                          ARBITRUM_ADDRESS.NATIVE_TOKEN,
-                          ARBITRUM_ADDRESS.WBTC,
-                          ARBITRUM_ADDRESS.LINK,
-                          ARBITRUM_ADDRESS.UNI,
-                        ],
-                        [CHAIN.AVALANCHE]: [
-                          AVALANCHE_ADDRESS.NATIVE_TOKEN,
-                          AVALANCHE_ADDRESS.WETHE,
-                          AVALANCHE_ADDRESS.WBTCE,
-                          AVALANCHE_ADDRESS.BTCB,
-                        ]
-                      },
-                      tokenStableMap: {
-                        [CHAIN.ARBITRUM]: [
-                          ARBITRUM_ADDRESS.USDC,
-                          ARBITRUM_ADDRESS.USDT,
-                          ARBITRUM_ADDRESS.DAI,
-                          ARBITRUM_ADDRESS.FRAX,
-                        // ARBITRUM_ADDRESS.MIM,
-                        ],
-                        [CHAIN.AVALANCHE]: [
-                          AVALANCHE_ADDRESS.USDC,
-                          AVALANCHE_ADDRESS.USDCE,
-                        // AVALANCHE_ADDRESS.MIM,
-                        ]
-                      },
-                      parentRoute: tradeRoute
-                    })({
-                      changeRoute: linkClickTether()
-                    })
-                  ),
-
-                  switchMap(params => {
-                    const refreshThreshold = SW_DEV ? 150 : 50
-                    const blockDelta = params.syncBlock - params.process.blockNumber
-
-                    if (blockDelta < refreshThreshold) {
-                      return empty()
-                    }
-
-                    return switchLatest(mergeArray([
-                      now(
-                        fadeIn($row(
-                          style({ position: 'absolute', bottom: '18px', left: `50%` }),
-                          syncProcessDataTether(
-                            constant(params.syncBlock)
-                          )
-                        )(
-                          style({  transform: 'translateX(-50%)' })(
-                            $column(layoutSheet.spacingTiny, style({
-                              border: `1px solid`,
-                              padding: '20px',
-                              animation: `borderRotate var(--d) linear infinite forwards`,
-                              borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
-                            }))(
-                              $text(`Syncing Blockchain Data....`),
-                              $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(
-                                params.process.state.approximatedTimestamp === 0
-                                  ? `Indexing for the first time, this may take a minute or two.`
-                                  : `${timeSince(params.process.state.approximatedTimestamp)} old data is displayed`
-                              ),
-                            )
-                          )
-                        ))
-                      ),
-                    // map(seed => empty(), syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlock }))
-                    ]))
-                  }, combineObject({ process, syncBlock: take(1, block) })),
-                
-                )
-              }, chain)
-            ),
-
-            $row(
-
-              switchMap((cb) => {
-                return fadeIn(
-                  $row(style({ position: 'absolute', right: '10px', bottom: '10px' }))(
-                    $alertContainer(
-                      filterNull(constant(null, clickUpdateVersion)) as any,
-
-                      $text('New version Available'),
-                      $ButtonSecondary({
-                        $container: $defaultMiniButtonSecondary,
-                        $content: $text('Update'),
-                      })({
-                        click: clickUpdateVersionTether(
-                          tap(cb)
-                        )
-                      })
-                    )
-                  )
-                )
-              }, newUpdateInvoke),
-              
-              $column(style({ maxWidth: '850px', margin: '0 auto', width: '100%', zIndex: 10 }))(
-                $RouteSubscriptionDrawer({
-                  modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetRouteSubscritpion[]),
-                  modifySubscriber,
-                  subscriptionList
-                })({
-                  modifySubscriptionList: modifySubscriptionListTether()
-                  // clickClose: clickCloseSubscPanelTether(),
-                  // changeSubscribeList: modifySubscriberTether()
-                })
-              )
-            ),
-          ),
-        )
+      router.match(adminRoute)(
+        $rootContainer(style({ overflowY: 'auto', height: '100vh' }))(
+          $midContainer(
+            $Admin({})
+          )
+        ),
       ),
-
-      // router.match(adminRoute)(
-      //   $rootContainer(style({ overflowY: 'auto', height: '100vh' }))(
-      //     $midContainer(
-      //       $Admin({})
-      //     )
-      //   ),
-      // ),
 
 
     ])

@@ -13,7 +13,7 @@ export const LAST_ACTIVITY_LABEL_MAP = {
   [GMX.TIME_INTERVAL_MAP.HR24]: '24h',
   [GMX.TIME_INTERVAL_MAP.DAY7]: '7d',
   [GMX.TIME_INTERVAL_MAP.MONTH]: '30d',
-  [GMX.TIME_INTERVAL_MAP.YEAR]: '1y',
+  // [GMX.TIME_INTERVAL_MAP.YEAR]: '1y',
 }
 
 export const $LastAtivity = (activityTimeframe: Stream<GMX.IntervalTime>) => component((

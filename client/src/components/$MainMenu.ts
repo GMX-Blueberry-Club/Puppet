@@ -21,6 +21,7 @@ import { fadeIn } from "../transitions/enter"
 import * as storage from "../utils/storage/storeScope"
 import * as store from "../data/store/store"
 import { newUpdateInvoke } from "../sw/swUtils"
+import { $SwitchNetworkDropdown } from "./$ConnectAccount"
 
 interface MainMenu {
   chainList: CHAIN[]
@@ -34,14 +35,10 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
   [routeChange, routeChangeTether]: Behavior<string, string>,
   [clickPopoverClaim, clickPopoverClaimTether]: Behavior<any, any>,
   [walletChange, walletChangeTether]: Behavior<any, any>,
-  [clickToggleMenu, clickToggleMenuTether]: Behavior<any, boolean>,
 ) => {
 
   const routeChangeMulticast = multicast(routeChange)
 
-
-
-  const isMenuOpen = storage.replayWrite(store.mainMenuOpen, false, clickToggleMenu)
   
 
 
@@ -124,64 +121,33 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
 
   return [
 
-    $column(
-      styleBehavior(map(isOpen => ({ width: isOpen ? '210px' : '78px' }), isMenuOpen)),
+    $row(
+      // styleBehavior(map(isOpen => ({ width: isOpen ? '210px' : '78px' }), isMenuOpen)),
       layoutSheet.spacingBig,
       style({
         transition: 'width .3s ease-in-out', overflow: 'hidden',
-        backgroundColor: pallete.horizon, zIndex: 22, padding: '18px 12px', maxHeight: '100vh', flexShrink: 0,
-        borderRadius: '0 30px 30px', borderRight: `1px solid ${colorAlpha(pallete.foreground, .20)}`, placeContent: 'space-between' })
+        zIndex: 22, padding: '18px 12px', maxHeight: '100vh', flexShrink: 0,
+        placeContent: 'space-between' })
     )(
 
-      
-      $column(style({ placeContent: 'center', position: 'relative' }))(
-
-        switchMap(isOpen => {
-
-          if (isOpen)  {
-            return $row(style({ position: 'relative', placeContent: 'center'  }))(
-              fadeIn($icon({ $content: $puppetLogo, svgOps: style({ minWidth: '50px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' })),
-              fadeIn($row(
-                clickToggleMenuTether(nodeEvent('pointerdown'), constant(false)),
-                style({ position: 'absolute', right: 0, cursor: 'pointer', alignSelf: 'flex-end', border: `1px solid ${colorAlpha(pallete.foreground, .25)}`, aspectRatio: `1 / 1`, alignItems: 'center', maxWidth: '36px', height: '36px', placeContent: 'center', borderRadius: '50px' })
-              )(
-                $icon({ $content: $caretDown, svgOps : style({ fill: pallete.foreground, transform: 'rotate(90deg)' }), viewBox: '0 0 32 32' })
-              )),
-            )
-          }
-
-
-          return fadeIn($row(
-            clickToggleMenuTether(nodeEvent('pointerdown'), constant(true)),
-            style({ cursor: 'pointer', alignSelf: 'flex-end', border: `1px solid ${colorAlpha(pallete.foreground, .25)}`, aspectRatio: `1 / 1`, alignItems: 'center', maxWidth: '50px', height: '50px', placeContent: 'center', borderRadius: '50px' })
-          )(
-            $icon({ $content: $caretDown, svgOps : style({ fill: pallete.foreground, transform: 'rotate(270deg)' }), viewBox: '0 0 32 32' })
-          ))
-        }, isMenuOpen)
-        
+ 
+      $column(layoutSheet.spacingBig, style({ flex: 1, alignItems: 'flex-start' }))(
+        $RouterAnchor({
+          url: '/',
+          route: parentRoute,
+          $anchor: $element('a')(style({ padding: '8px', margin: '8px' }))($icon({ $content: $puppetLogo, width: '45px', viewBox: '0 0 32 32' }))
+        })({
+          click: routeChangeTether()
+        })
       ),
-      // $column(layoutSheet.spacingBig, style({ alignItems: 'center' }))(
-      //   $RouterAnchor({
-      //     url: '/',
-      //     route: parentRoute,
-      //     $anchor: $element('a')(style({ padding: '8px', margin: '8px' }))($icon({ $content: $puppetLogo, width: '45px', viewBox: '0 0 32 32' }))
-      //   })({
-      //     click: routeChangeTether()
-      //   }),
 
-
-      //   // $extraMenuPopover,w
-      // ),
-
-      $column(layoutSheet.spacingBig, style({ flex: 1, placeContent: 'center' }))(
-
+      $row(layoutSheet.spacingBig, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
         $WalletProfileDisplay({
-          $container: $column(style({ alignSelf: 'center' })),
+          // $container: $column(style({ alignSelf: 'center' })),
           parentRoute
         })({
           routeChange: routeChangeTether(),
         }),
-        
         $pageLink({
           $iconPath: $gmxLogo, 
           route: parentRoute.create({ fragment: 'trade' }),
@@ -198,21 +164,10 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
         })({
           click: routeChangeTether()
         }),
-        // $Link({ $content: , url: '/app/trade', route:  })({
-        //   // $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', disabled: now(false), route: parentRoute.create({ fragment: 'feefwefwe' }) })({
-        //   click: routeChangeTether()
-        // }),
-
-        // $Link({ $content: $pageLink($stackedCoins, 'Leaderboard'), url: '/app/leaderboard/settled', route:  })({
-        //   click: routeChangeTether()
-        // }),
-
-        
-
-
       ),
 
-      $column(layoutSheet.spacingBig, style({ placeContent: 'flex-end', flex: 1 }))(
+      $row(layoutSheet.spacingBig, style({ flex: 1, placeContent: 'flex-end', alignItems: 'center' }))(
+        $SwitchNetworkDropdown()({}),
         $extraMenuPopover,
         // $circleButtonAnchor(attr({ href: 'https://docs.blueberry.club/' }))(
         //   $icon({ $content: $gitbook, fill: pallete.middleground, width: '22px', viewBox: `0 0 32 32` })
@@ -228,7 +183,6 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
 
     {
       routeChange: routeChangeMulticast,
-      toggleMenu: snapshot(isOpen => !isOpen, isMenuOpen, clickToggleMenu)
     }
   ]
 })
@@ -396,7 +350,7 @@ const $pageLink = (config: Omit<IAnchor, '$anchor'> & { $iconPath: $Branch<SVGPa
     [focus, focusTether]: Behavior<boolean, boolean>,
   ) => {
     const $anchorEl = $anchor(
-      style({ borderRadius: '50px' }),
+      style({ borderRadius: '50px', padding: '11px 22px', border: `1px solid ${ colorAlpha(pallete.foreground, .2) }` }),
       styleBehavior(
         combineArray((isActive, isFocus): StyleCSS | null => {
           return isActive ? { backgroundColor: `${pallete.background} !important`, fill: pallete.foreground, cursor: 'default' }
@@ -406,9 +360,9 @@ const $pageLink = (config: Omit<IAnchor, '$anchor'> & { $iconPath: $Branch<SVGPa
       ),
       // styleBehavior(map(isDisabled => (isDisabled ?  { pointerEvents: 'none', opacity: .3 } : {}), disabled))
     )(
-      $row(style({ alignItems: 'center', cursor: 'pointer', borderRadius: '50px', pointerEvents: 'none' }))(
-        $icon({ $content: config.$iconPath, svgOps: style({ padding: '0px 12px', minWidth: '54px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),
-        $text(style({ padding: '16px 12px', fontSize: '1.15rem' }))(config.text)
+      $row(layoutSheet.spacing, style({ alignItems: 'center', cursor: 'pointer',  borderRadius: '50px', pointerEvents: 'none' }))(
+        $icon({ $content: config.$iconPath, svgOps: style({ width: '28px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),
+        $text(style({ fontSize: '1.15rem' }))(config.text)
       )
     )
 

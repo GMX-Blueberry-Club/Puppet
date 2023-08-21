@@ -1,7 +1,7 @@
 import { combineObject } from "@aelea/core"
 import { empty, fromPromise, map, now, recoverWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, max, min, switchMap } from "gmx-middleware-utils"
+import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, getblockOrderIdentifier, max, min, switchMap } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { zipArray } from "../../logic/utils"
 import * as indexDB from "../storage/indexDB"
@@ -74,20 +74,34 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
     return seedFile
   }, config.seed)
 
-  const seed = switchMap(idbSeed => {
-    if (idbSeed) {
-      const invalidIndexDBSeedError = validateSeed(config.blueprint.config, idbSeed.config)
+  const seed = config.mode === IProcessEnvironmentMode.PROD
+    ? switchMap(idbSeed => {
+      if (idbSeed) {
+        const invalidIndexDBSeedError = validateSeed(config.blueprint.config, idbSeed.config)
 
-      if (invalidIndexDBSeedError) {
-        return loadSeedFile
+        if (invalidIndexDBSeedError) {
+          return loadSeedFile
+        }
+
+        return now(idbSeed)
       }
 
-      return now(idbSeed)
-    }
+      return loadSeedFile
 
-    return loadSeedFile
+    }, storedIdbSeed)
+    : map(idbSeed => {
+      if (idbSeed) {
+        const invalidIndexDBSeedError = validateSeed(config.blueprint.config, idbSeed.config)
 
-  }, storedIdbSeed) 
+        if (invalidIndexDBSeedError) {
+          throw new Error(`IndexDB seed validation error: ${invalidIndexDBSeedError}`)
+        }
+ 
+        return idbSeed
+      }
+
+      return { ...config.blueprint, orderId: getblockOrderIdentifier(config.blueprint.config.startBlock), blockNumber: config.blueprint.config.startBlock }
+    }, storedIdbSeed)
 
 
   const state = map(s => s.state, seed)
@@ -111,7 +125,7 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
   const nextLogs = map(processState => {
     const startblock = processState.config.startBlock
     const processNextLog = config.processList.map(processConfig => {
-      const rangeKey = IDBKeyRange.bound(processState.orderId || 0, 1e20, true)
+      const rangeKey = IDBKeyRange.bound(processState.orderId, getblockOrderIdentifier(config.syncBlock + 1n), true)
       const nextStoredLog: Stream<ILogOrderedEvent[]> = indexDB.getAll(processConfig.source.scope, rangeKey)
 
       return switchMap(stored => {

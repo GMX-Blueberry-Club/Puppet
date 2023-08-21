@@ -33,7 +33,6 @@ export interface IPositionMirrorSettled extends IPosition<'PositionMirrorSettled
 }
 
 export interface IMirrorPositionListSummary extends IPositionListSummary {
-  // route: viem.Address
   puppets: viem.Address[]
   // settledTradeList: IPositionMirrorSettled[]
 }

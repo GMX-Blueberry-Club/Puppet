@@ -16,7 +16,7 @@ import { IGmxProcessState } from "../../data/process/process"
 import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
 import { entryColumn, pnlSlotColumn, positionTimeColumn, puppetsColumn, settledPnlColumn, settledSizeColumn, slotSizeColumn } from "../table/$TableColumn"
-import { $ProfilePerformanceCard } from "../trade/$ProfilePerformanceCard"
+import { $ProfilePerformanceCard, getUpdateTickList } from "../trade/$ProfilePerformanceGraph"
 import { $LastAtivity } from "../../pages/components/$LastActivity"
 import * as storage from "../../utils/storage/storeScope"
 import * as store from "../../data/store/store"
@@ -147,7 +147,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                 processData: params.processData,
                 activityTimeframe: params.activityTimeframe,
                 width: 300,
-                positionList: allPositions
+                positionList: allPositions,
                 // trader: config.address,
               })({ })
             }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe })),
@@ -193,7 +193,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                     ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
                     entryColumn,
                     puppetsColumn,
-                    settledSizeColumn(config.processData),
+                    settledSizeColumn(),
                     settledPnlColumn(),
                   ],
                 })({

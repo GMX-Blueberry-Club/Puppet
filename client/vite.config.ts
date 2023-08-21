@@ -50,12 +50,6 @@ const pwaOptions: Partial<VitePWAOptions> = {
         sizes: '512x512',
         type: 'image/png'
       },
-      {
-        src: 'pwa-maskable-560x560.png',
-        sizes: '560x560',
-        type: 'image/png',
-        purpose: "any maskable"
-      },
     ]
   },
 

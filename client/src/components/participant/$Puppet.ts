@@ -17,7 +17,7 @@ import { IGmxProcessState } from "../../data/process/process"
 import { $card, $card2 } from "../../elements/$common"
 import { $seperator2 } from "../../pages/common"
 import { entryColumn, pnlSlotColumn, positionTimeColumn, settledPnlColumn, settledSizeColumn, slotSizeColumn } from "../table/$TableColumn"
-import { $ProfilePerformanceCard, $ProfilePerformanceGraph } from "../trade/$ProfilePerformanceCard"
+import { $ProfilePerformanceCard, $ProfilePerformanceGraph, getUpdateTickList } from "../trade/$ProfilePerformanceGraph"
 import * as GMX from 'gmx-middleware-const'
 import { $metricValue } from "./profileUtils"
 import { $LastAtivity } from "../../pages/components/$LastActivity"
@@ -100,11 +100,11 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
                   $metricLabel($text('Puppets'))
                 ),
                 $metricRow(
-                  $heading2(summary.size ? `${summary.winCount} / ${summary.lossCount}` : '-'),
+                  $heading2(summary ? `${summary.winCount} / ${summary.lossCount}` : '-'),
                   $metricLabel($text('Win / Loss'))
                 ),
                 $metricRow(
-                  $heading2(summary.size ? leverageLabel(summary.avgLeverage) : '-'),
+                  $heading2(summary ? leverageLabel(summary.avgLeverage) : '-'),
                   $metricLabel($text('Avg Leverage'))
                 )
               ),
@@ -148,7 +148,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
                   processData: params.processData,
                   activityTimeframe: params.activityTimeframe,
                   width: 300,
-                  positionList: allPositions
+                  positionList: allPositions,
                 // trader: config.address,
                 })({ })
               }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe })),
@@ -173,7 +173,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
                 columns: [
                   ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
                   entryColumn,
-                  settledSizeColumn(config.processData),
+                  settledSizeColumn(),
                   settledPnlColumn(),
                 ],
               })({})
