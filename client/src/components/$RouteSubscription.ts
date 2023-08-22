@@ -1,5 +1,5 @@
 import { Behavior, O, combineObject } from "@aelea/core"
-import { $text, component, nodeEvent, style } from "@aelea/dom"
+import { $element, $text, attr, component, nodeEvent, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, mergeArray, multicast, skipRepeats, snapshot, startWith } from "@most/core"
@@ -140,7 +140,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
                     return wagmiWriteContract({
                       ...PUPPET.CONTRACT[42161].Orchestrator,
                       functionName: 'batchSubscribeRoute',
-                      args: [allowance, traders, routeTypes, subscribe]
+                      args: [w3p.account.address, allowance, traders, routeTypes, subscribe]
                     })
                   }, config.modifySubscriptionList),
                   multicast
@@ -198,7 +198,7 @@ interface IRouteSubscriptionEditor {
 }
 
 export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => component((
-  // [inputEndDate, inputEndDateTether]: Behavior<any, bigint>,
+  [inputEndDate, inputEndDateTether]: Behavior<any, bigint>,
   [inputAllowance, inputAllowanceTether]: Behavior<any, bigint>,
   [clickUnsubscribe, clickUnsubscribeTether]: Behavior<any, bigint>,
   [clickSubmit, clickSubmitTether]: Behavior<any>,
@@ -209,12 +209,12 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
 
   const allowance = startWith(config.routeSubscription?.allowance || 500n, inputAllowance)
   const routeTypeKey = startWith(routeTypeList.find(key => key === config.routeSubscription?.routeTypeKey) || routeTypeList[0], selectRouteType)
-  // const initEnddate = config.routeSubscription?.endDate && config.routeSubscription.endDate > unixTimestampNow() ? config.routeSubscription?.endDate : 0n
-  // const endDate = startWith(initEnddate, inputEndDate)
+  const initEnddate = config.routeSubscription?.endDate && config.routeSubscription.endDate > unixTimestampNow() ? config.routeSubscription?.endDate : 0n
+  const endDate = startWith(initEnddate, inputEndDate)
   
   const form = combineObject({
     allowance,
-    // endDate,
+    endDate,
     routeTypeKey
   })
 
@@ -252,24 +252,24 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
             map(x => parseBps(x) / 100n)
           )
         }),
-        // $TextField({
-        //   label: 'End Date',
-        //   $input: $element('input')(attr({ type: 'datetime-local' })),
-        //   hint: 'limit the amount of time you are subscribed',
-        //   placeholder: 'never',
-        //   labelWidth: 100,
-        //   value: map(x => {
-        //     if (x === 0n) {
-        //       return ''
-        //     }
+        $TextField({
+          label: 'Expiration',
+          $input: $element('input')(attr({ type: 'datetime-local' })),
+          hint: 'limit the amount of time you are subscribed',
+          placeholder: 'never',
+          labelWidth: 100,
+          value: map(x => {
+            if (x === 0n) {
+              return ''
+            }
 
-        //     return new Date(Number(x) * 1000).toISOString().slice(0, 16)
-        //   }, endDate),
-        // })({
-        //   change: inputEndDateTether(
-        //     map(x => BigInt(new Date(x).getTime() / 1000))
-        //   )
-        // })
+            return new Date(Number(x) * 1000).toISOString().slice(0, 16)
+          }, inputEndDate),
+        })({
+          change: inputEndDateTether(
+            map(x => BigInt(new Date(x).getTime() / 1000))
+          )
+        })
       ),
 
       $ButtonPrimary({

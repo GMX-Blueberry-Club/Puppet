@@ -41,7 +41,7 @@ import { contractReader } from "../logic/common"
 export const $midContainer = $column(
   style({
     margin: '0 auto',
-    maxWidth: '940px', padding: '0px 12px 26px',
+    maxWidth: '840px', padding: '0px 12px 26px',
     gap: screenUtils.isDesktopScreen ? '50px' : '50px',
     width: '100%',
   })

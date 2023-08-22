@@ -13,9 +13,10 @@ import {
   IPriceLine,
   ISeriesApi,
   LineStyle, LogicalRange, MouseEventParams, PriceLineOptions,
+  Range,
   SeriesDataItemTypeMap, SeriesMarker,
   SeriesPartialOptionsMap,
-  Time, TimeRange
+  Time
 } from 'lightweight-charts'
 
 export interface IMarker extends SeriesMarker<Time> {
@@ -151,7 +152,7 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
   )
 
   const visibleTimeRangeChange = multicast(
-    fromCallback<TimeRange | null>(cb => {
+    fromCallback<Range<Time> | null>(cb => {
       timeScale.subscribeVisibleTimeRangeChange(cb)
       return disposeWith(handler => timeScale.unsubscribeVisibleTimeRangeChange(handler), cb)
     })
