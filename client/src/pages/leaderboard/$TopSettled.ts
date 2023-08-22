@@ -1,5 +1,5 @@
 import { Behavior, combineObject, replayLatest } from "@aelea/core"
-import { $text, component, style } from "@aelea/dom"
+import { $element, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { empty, map, mergeArray, now, startWith } from "@most/core"
@@ -19,7 +19,10 @@ import * as storage from "../../utils/storage/storeScope"
 import { $seperator2 } from "../common"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity"
 import { $DropMultiSelect, $Dropdown } from "../../components/form/$Dropdown"
-import { ROUTE_DESCRIPTIN_MAP, ROUTE_DESCRIPTION } from "puppet-middleware-const"
+import { ROUTE_DESCRIPTIN_MAP, ROUTE_DESCRIPTION, getRouteTypeKey } from "puppet-middleware-const"
+import { rootStoreScope } from "../../data/store/store"
+import { pallete } from "@aelea/ui-components-theme"
+import { $labelDisplay } from "../../common/$TextField"
 
 
 
@@ -44,17 +47,56 @@ export const $TopSettled = (config: ITopSettled) => component((
 ) => {
 
 
-  const sortBy = replayLatest(sortByChange, { direction: 'desc', selector: 'pnl' } as ISortBy<IPositionListSummary>)
-  // const filter = combineObject({ activityTimeframe: config.activityTimeframe })
+  const exploreStore = storage.createStoreScope(rootStoreScope, 'explore' as const)
+  const sortBy = storage.replayWrite(exploreStore, { direction: 'desc', selector: 'pnl' } as ISortBy<IPositionListSummary>, sortByChange, 'sortBy')
+  const routeList = map(list => list.map(rt => {
+    const matchedMemType = ROUTE_DESCRIPTION.find(rtd => getRouteTypeKey(rt.collateralToken, rt.indexToken, rt.isLong) === getRouteTypeKey(rtd.collateralToken, rtd.indexToken, rtd.isLong))
 
+    if (!matchedMemType) {
+      throw new Error(`Route type not found for ${rt.collateralToken} ${rt.indexToken} ${rt.isLong}`)
+    }
+
+    return matchedMemType
+  }), storage.replayWrite(exploreStore, [] as IAbstractRouteIdentity[], routeTypeChange, 'filterRouteList'))
 
   const activityTimeframe = storage.replayWrite(store.activityTimeframe, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
 
 
-  const newLocal = mergeArray([
-    now(ROUTE_DESCRIPTION[0]),
-    routeTypeChange
-  ])
+
+  const pageParms = map(params => {
+    const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
+    const paging = startWith(requestPage, scrollRequest)
+
+    const dataSource =  map(req => {
+      const filterStartTime = unixTimestampNow() - params.activityTimeframe
+
+      const flattenMapMap = Object
+        .values(params.data.mirrorPositionSettled)
+        .flatMap(x => Object.values(x).flat())
+        .filter(x => {
+          const routeLength = params.routeList.length
+          if (routeLength && params.routeList.findIndex(rt => getRouteTypeKey(rt.collateralToken, rt.indexToken, rt.isLong) === x.routeTypeKey) === -1) {
+            return false
+          }
+
+          return x.blockTimestamp > filterStartTime
+        })
+      const tradeListMap = groupArrayMany(flattenMapMap, a => a.trader)
+      const tradeListEntries = Object.values(tradeListMap)
+      const filterestPosList = tradeListEntries.map(settledTradeList => {
+
+        return { trader: settledTradeList[0].trader, settledTradeList, ...summariesMirrorTrader(settledTradeList) }
+      })
+
+      return pagingQuery({ ...params.sortBy, ...req }, filterestPosList)
+    }, paging)
+
+
+    return { ...params, dataSource }
+  }, combineObject({ data: config.processData, sortBy, activityTimeframe, routeList }))
+
+
+
   return [
     $column(style({ width: '100%' }))(
 
@@ -65,7 +107,9 @@ export const $TopSettled = (config: ITopSettled) => component((
         $row(style({ placeContent: 'space-between' }))(
           $row(
             $DropMultiSelect({
-              placeholder: 'All routes',
+              $label: $labelDisplay(style({ color: pallete.foreground }))('Route'),
+              $input: $element('input')(style({ maxWidth: '80px' })),
+              placeholder: 'All / Select',
               $$chip: map(rt => {
                 return $route(rt)
               }),
@@ -77,7 +121,7 @@ export const $TopSettled = (config: ITopSettled) => component((
                   }, $route(route))
                 })
               },
-              value: now([])
+              value: routeList
             })({
               select: routeTypeChangeTether()
             }),
@@ -88,26 +132,6 @@ export const $TopSettled = (config: ITopSettled) => component((
         ),
     
         switchMap(params => {
-          const paging = startWith({ ...params.sortBy, offset: 0, pageSize: 20 }, scrollRequest)
-
-          const dataSource =  map(req => {
-            const filterStartTime = unixTimestampNow() - params.activityTimeframe
-
-            const flattenMapMap = Object
-              .values(params.data.mirrorPositionSettled)
-              .flatMap(x => Object.values(x).flat())
-              .filter(x => x.blockTimestamp > filterStartTime)
-            const tradeListMap = groupArrayMany(flattenMapMap, a => a.trader)
-            const tradeListEntries = Object.values(tradeListMap)
-            const filterestPosList = tradeListEntries.map(settledTradeList => {
-
-              return { trader: settledTradeList[0].trader, settledTradeList, ...summariesMirrorTrader(settledTradeList) }
-            })
-
-            return pagingQuery({ ...params.sortBy, ...req }, filterestPosList)
-          }, paging)
-
-
 
 
           const columns: TableColumn<IMirrorPositionListSummary & { trader: viem.Address, settledTradeList: IPositionMirrorSettled[] }>[] = [
@@ -182,9 +206,10 @@ export const $TopSettled = (config: ITopSettled) => component((
                     
                     return screenUtils.isDesktopScreen
                       ? $ProfilePerformanceGraph({
+                        $container: $row(style({ position: 'relative',  width: `160px`, height: `80px`, margin: '-16px 0' })),
+                        tickCount: 50,
                         processData: params.data,
                         positionList: pos.settledTradeList,
-                        width: 160,
                         activityTimeframe: params.activityTimeframe,
                       })({})
                       : empty()
@@ -196,13 +221,13 @@ export const $TopSettled = (config: ITopSettled) => component((
 
           return $Table({
             sortBy: params.sortBy,
-            dataSource,
+            dataSource: params.dataSource,
             columns,
           })({
             sortBy: sortByChangeTether(),
             scrollRequest: scrollRequestTether(),
           })
-        }, combineObject({ data: config.processData, sortBy, activityTimeframe })),
+        }, pageParms),
 
       
       )

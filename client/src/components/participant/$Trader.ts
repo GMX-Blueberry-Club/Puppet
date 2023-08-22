@@ -21,6 +21,7 @@ import { $LastAtivity } from "../../pages/components/$LastActivity"
 import * as storage from "../../utils/storage/storeScope"
 import * as store from "../../data/store/store"
 import { $metricLabel, $metricRow, $metricValue } from "./profileUtils"
+import { rootStoreScope } from "../../data/store/store"
 
 
 
@@ -145,8 +146,8 @@ export const $TraderProfile = (config: ITraderProfile) => component((
               return $ProfilePerformanceCard({
                 $container: $column(style({ width: '100%', padding: 0, height: '200px' })),
                 processData: params.processData,
+                tickCount: 100,
                 activityTimeframe: params.activityTimeframe,
-                width: 300,
                 positionList: allPositions,
                 // trader: config.address,
               })({ })

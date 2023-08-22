@@ -1,11 +1,11 @@
 import { map } from "@most/core"
 import { Stream } from "@most/types"
-import { BASIS_POINTS_DIVISOR, BYTES32_ZERO, IntervalTime, TIME_INTERVAL_MAP } from "gmx-middleware-const"
+import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, BYTES32_ZERO, IntervalTime, TIME_INTERVAL_MAP } from "gmx-middleware-const"
 import {
   IPositionIncrease, IPositionSlot, IPriceInterval,
   IPriceIntervalIdentity, createPricefeedCandle, div, getIntervalIdentifier, importGlobal, switchMap
 } from "gmx-middleware-utils"
-import { getPuppetSubscriptionKey } from "puppet-middleware-const"
+import { getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-const"
 import { IAccountToRouteMap, IPositionMirrorSettled, IPositionMirrorSlot, IPositionRequest, IPuppetRouteTrades } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
@@ -154,8 +154,8 @@ export const gmxProcess = defineProcess(
         positionKey: args.key,
         puppets: [],
         requestKey: BYTES32_ZERO,
-        routeTypeKey: BYTES32_ZERO,
-        route: args.account,
+        routeTypeKey: getRouteTypeKey(args.collateralToken, args.indexToken, args.isLong),
+        route: ADDRESS_ZERO,
         trader: args.account,
         shares: [],
         shareSupply: 0n,

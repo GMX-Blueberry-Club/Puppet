@@ -18,6 +18,7 @@ import { IGmxProcessState } from "../data/process/process"
 import * as store from "../data/store/store"
 import * as storage from "../utils/storage/storeScope"
 import { $LastAtivity } from "./components/$LastActivity"
+import { rootStoreScope } from "../data/store/store"
 
 
 export enum IProfileActiveTab {

@@ -161,7 +161,7 @@ export const $defaultDropMultiSelectOption = $row(layoutSheet.spacingSmall,
   }),
   stylePseudo(':hover', { backgroundColor: pallete.horizon })
 )
-export const $defaultChip = $row(style({ border: `1px solid ${pallete.foreground}`, padding: '8px', cursor: 'default', alignItems: 'center', borderRadius: '22px' }))
+export const $defaultChip = $row(style({ backgroundColor: pallete.primary, padding: '0 4px', cursor: 'default', alignItems: 'center', borderRadius: '22px' }))
 
 
 
@@ -177,6 +177,7 @@ export interface IMultiselectDrop<T> extends Input<T[]> {
   $dropdownContainer?: NodeComposeFn<$Node>
 
   $chip?: NodeComposeFn<$Node>
+  $input?: NodeComposeFn<$Node<HTMLInputElement>>
   $$chip: Op<T, $Node>
   openMenu?: Stream<any>
 }
@@ -191,7 +192,8 @@ export const $DropMultiSelect = <T>({
   validation = never,
   value,
   closeOnSelect = true,
-  openMenu = empty()
+  openMenu = empty(),
+  $input = $element('input'),
 }: IMultiselectDrop<T>
 ) => component((
   [pick, pickTether]: Behavior<T, T>,
@@ -227,9 +229,7 @@ export const $DropMultiSelect = <T>({
   )
 
   const selectionChange = merge(select, value)
-
   const alert = validation(selectionChange)
-
   const state = combineObject({ focus, alert })
 
 
@@ -239,7 +239,7 @@ export const $DropMultiSelect = <T>({
       $column(layoutSheet.flex, layoutSheet.spacingTiny, style({ display: 'flex', flexDirection: 'row', position: 'relative' }))(
         isEmpty($label)
           ? empty()
-          : $row(style({ alignSelf: 'flex-start', cursor: 'pointer', paddingBottom: '1px' }))(
+          : $row(style({ alignSelf: 'flex-end', cursor: 'pointer' }))(
             $label
           ),
 
@@ -277,8 +277,8 @@ export const $DropMultiSelect = <T>({
           }, selectionChange)),
 
           $row(style({ alignItems: 'center', flex: '1', alignSelf: 'stretch' }))(
-            $element('input')(
-              placeholder ? attr({ placeholder }) : O(),
+            $input(
+              attr({ placeholder: placeholder || '', autocomplete: 'off', 'data-lpignore': 'true' }),
 
               interactionTether(interactionOp),
               blurTether(dismissOp),
@@ -289,7 +289,7 @@ export const $DropMultiSelect = <T>({
                 alignSelf: 'stretch',
                 outline: 'none',
                 minHeight: '36px',
-                flex: '1 0 150px',
+                flex: '1 0 100px',
                 color: pallete.message,
                 background: 'transparent',
               }),

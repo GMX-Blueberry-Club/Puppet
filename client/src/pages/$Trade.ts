@@ -33,7 +33,7 @@ import * as trade from "../logic/trade"
 import { resolveAddress } from "../logic/utils"
 import { rootStoreScope } from "../data/store/store"
 import * as indexDB from "../utils/storage/indexDB"
-import * as store from "../utils/storage/storeScope"
+import * as storage from "../utils/storage/storeScope"
 import { walletLink } from "../wallet"
 import { wallet } from "../wallet/walletLink"
 
@@ -118,21 +118,21 @@ export const $Trade = (config: ITradeComponent) => component((
   
 
   const executionFee = replayLatest(multicast(positionRouter.read('minExecutionFee')))
-  const tradingStore = store.createStoreScope(rootStoreScope, 'tradeBox' as const)
+  const tradingStore = storage.createStoreScope(rootStoreScope, 'tradeBox' as const)
 
 
-  const chartInterval = store.replayWrite(tradingStore, GMX.TIME_INTERVAL_MAP.MIN15, selectTimeFrame, 'chartInterval')
-  const isTradingEnabled = store.replayWrite(tradingStore, false, enableTrading, 'isTradingEnabled')
-  const isLong = store.replayWrite(tradingStore, true, switchIsLong, 'isLong')
-  const isIncrease = store.replayWrite(tradingStore, true, switchIsIncrease, 'isIncrease')
-  const focusMode = store.replayWrite(tradingStore, ITradeFocusMode.collateral, switchFocusMode, 'focusMode')
-  const slippage = store.replayWrite(tradingStore, '0.35', changeSlippage, 'slippage')
-  const inputToken = store.replayWrite(tradingStore, GMX.ADDRESS_ZERO, changeInputToken, 'inputToken')
-  const indexToken = store.replayWrite(tradingStore, nativeToken, changeIndexToken, 'indexToken')
-  const shortCollateralToken = store.replayWrite(tradingStore, GMX.ARBITRUM_ADDRESS.USDC as viem.Address | null, changeShortCollateralToken, 'shortCollateralToken')
+  const chartInterval = storage.replayWrite(tradingStore, GMX.TIME_INTERVAL_MAP.MIN15, selectTimeFrame, 'chartInterval')
+  const isTradingEnabled = storage.replayWrite(tradingStore, false, enableTrading, 'isTradingEnabled')
+  const isLong = storage.replayWrite(tradingStore, true, switchIsLong, 'isLong')
+  const isIncrease = storage.replayWrite(tradingStore, true, switchIsIncrease, 'isIncrease')
+  const focusMode = storage.replayWrite(tradingStore, ITradeFocusMode.collateral, switchFocusMode, 'focusMode')
+  const slippage = storage.replayWrite(tradingStore, '0.35', changeSlippage, 'slippage')
+  const inputToken = storage.replayWrite(tradingStore, GMX.ADDRESS_ZERO, changeInputToken, 'inputToken')
+  const indexToken = storage.replayWrite(tradingStore, nativeToken, changeIndexToken, 'indexToken')
+  const shortCollateralToken = storage.replayWrite(tradingStore, GMX.ARBITRUM_ADDRESS.USDC as viem.Address | null, changeShortCollateralToken, 'shortCollateralToken')
   const leverage = mergeArray([
     changeLeverage,
-    store.replayWrite(tradingStore, GMX.LIMIT_LEVERAGE / 4n, debounce(100, changeLeverage), 'leverage'),
+    storage.replayWrite(tradingStore, GMX.LIMIT_LEVERAGE / 4n, debounce(100, changeLeverage), 'leverage'),
   ])
 
 
@@ -170,7 +170,7 @@ export const $Trade = (config: ITradeComponent) => component((
     }
 
     const key = getRouteKey(w3p.account.address, params.collateralToken, params.indexToken, params.isLong)
-    const storedRouteKey = store.get(tradingStore, GMX.ADDRESS_ZERO as viem.Address, key)
+    const storedRouteKey = storage.get(tradingStore, GMX.ADDRESS_ZERO as viem.Address, key)
     const fallbackGetRoute = switchMap(address => {
 
       if (address === GMX.ADDRESS_ZERO) {

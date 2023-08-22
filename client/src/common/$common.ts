@@ -76,8 +76,14 @@ export const $entry = (pos: IPosition) => {
 
 export const $route = (pos: IAbstractRouteIdentity, size = '34px') => {
   return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-    $routeIntent(pos),
-    $text(style({ fontSize: '.85rem' }))(`${getTokenDescription(pos.indexToken).symbol} / ${getTokenDescription(pos.collateralToken).symbol}`),
+    $icon({
+      svgOps: style({ borderRadius: '50%', padding: '4px', marginRight: '-20px', zIndex: 0, alignItems: 'center', fill: pallete.message, backgroundColor: pallete.horizon }),
+      $content: pos.isLong ? $bull : $bear,
+      viewBox: '0 0 32 32',
+      width: '26px'
+    }),
+    $tokenIcon(pos.indexToken, { width: '28px' }),
+    $text(style({ fontSize: '.85rem' }))(`${getTokenDescription(pos.indexToken).symbol}/${getTokenDescription(pos.collateralToken).symbol}`),
   )
 }
 
@@ -133,6 +139,10 @@ export const $puppets = (puppets: readonly viem.Address[]) => {
 
   // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
   // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
+
+  if (puppets.length === 0) {
+    return $text(style({ fontSize: '0.85rem', color: pallete.foreground }))('-')
+  }
                 
   return $row(layoutSheet.spacingSmall, style({ }))(
     ...puppets.map(address => {

@@ -20,7 +20,7 @@ import {
   readableUnitAmount,
   unixTimestampNow
 } from "gmx-middleware-utils"
-import { BaselineData, ChartOptions, DeepPartial, LineType, MouseEventParams, Time } from "lightweight-charts"
+import { BaselineData, BaselineSeriesPartialOptions, ChartOptions, DeepPartial, LineType, MouseEventParams, Time } from "lightweight-charts"
 import { IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { IGmxProcessState, PRICEFEED_INTERVAL } from "../../data/process/process.js"
@@ -39,13 +39,14 @@ type ITimelinePositionSlot = IPerformanceTickUpdateTick & {
 export interface IPerformanceTimeline {
   positionList: (IPositionMirrorSettled | IPositionMirrorSlot)[],
   processData: IGmxProcessState,
-  width: number
+  tickCount: number,
   activityTimeframe: GMX.IntervalTime,
   targetShare?: viem.Address,
+  chartConfig?: DeepPartial<ChartOptions>
 }
 
 interface IParticipantPerformanceGraph extends IPerformanceTimeline {
-  $container?: NodeComposeFn<$Node>
+  $container: NodeComposeFn<$Node>
   chartConfig?: DeepPartial<ChartOptions>
   pixelsPerBar?: number
 }
@@ -77,11 +78,9 @@ export function performanceTimeline(config: IPerformanceTimeline) {
   if (config.positionList.length === 0) return []
 
   const performanceTickList = getUpdateTickList(config.positionList)
-  const tickCount = config.width / 5
   const timeNow = unixTimestampNow()
   const startTime = timeNow - config.activityTimeframe
-  const interval = findClosest(PRICEFEED_INTERVAL, config.activityTimeframe / tickCount)
-
+  const interval = findClosest(PRICEFEED_INTERVAL, config.activityTimeframe / config.tickCount)
 
   const initialTick: IGraphPnLTick = {
     time: startTime,
@@ -174,7 +173,7 @@ export const $ProfilePerformanceCard = (config: IParticipantPerformanceGraph) =>
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams>
 ) => {
 
-  const $container = config.$container || $column(style({ height: '80px', minWidth: '100px' }))
+  const $container = config.$container
   const timeline = performanceTimeline(config)
   const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
 
@@ -284,19 +283,19 @@ export const $ProfilePerformanceCard = (config: IParticipantPerformanceGraph) =>
 })
 
 
-export const $ProfilePerformanceGraph = (config: IPerformanceTimeline) => component((
+export const $ProfilePerformanceGraph = (config: IPerformanceTimeline & { $container: NodeComposeFn<$Node> }) => component((
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
 ) => {
 
-  const $container = $row(style({  width: `${config.width}px`,  }))    
+
   const timeline = performanceTimeline(config)
 
-  const markerList: IMarker[] = config.positionList.map((pos) => {
+  const markerList = config.positionList.map((pos): IMarker => {
     const isSettled = 'settlement' in pos
     const position = pos.realisedPnl > 0n ? 'belowBar' as const : 'aboveBar' as const
 
     return {
-      position,
+      position: 'inBar',
       color: isSettled ? colorAlpha(pallete.message, .15) : colorAlpha(pallete.primary, .15),
       time: ('openBlockTimestamp' in pos ? pos.openBlockTimestamp : pos.blockTimestamp) as Time,
       size: 0.1,
@@ -306,8 +305,9 @@ export const $ProfilePerformanceGraph = (config: IPerformanceTimeline) => compon
 
 
   return [
-    $container(
+    config.$container(
       $Baseline({
+        containerOp: style({  inset: '0px 0px 0px 0px', position: 'absolute' }),
         markers: now(markerList),
         chartConfig: {
           leftPriceScale: {
@@ -326,11 +326,12 @@ export const $ProfilePerformanceGraph = (config: IPerformanceTimeline) => compon
               visible: false,
             }
           },
-          height: 70,
-          width: config.width,
+          // height: 150,
+          // width: 100,
           timeScale :{
             visible: false
           },
+          // ...config.chartConfig
         },
         data: timeline as any as BaselineData[],
         // containerOp: style({  inset: '0px 0px 0px 0px' }),

@@ -29,6 +29,9 @@ export const $label2 = $element('label')(
 )
 
 
+export const $labelDisplay = $text(style({ padding: '0 4px', alignSelf: 'flex-end', cursor: 'pointer', lineHeight: '36px', borderBottom: `2px solid ${colorAlpha(pallete.message, .1)}` }))
+
+
 const overideInputStyle = O(
   style({
     backgroundColor: pallete.background,
@@ -61,7 +64,7 @@ export const $TextField = (config: TextField) => component((
   return [
     $label(
       $row(layoutSheet.spacingTiny, style({ width: '100%' }))(
-        $text(style({ padding: '0 4px', width: labelWidth ? labelWidth + 'px' : '', alignSelf: 'flex-end', cursor: 'pointer', lineHeight: '36px', borderBottom: `2px solid ${colorAlpha(pallete.message, .1)}` }))(label),
+        $labelDisplay(style({ width: labelWidth ? labelWidth + 'px' : '' }))(label),
         placeholder ? attr({ placeholder: placeholder }, $field): $field,
       ),
       $row(style({ position: 'relative' }))(

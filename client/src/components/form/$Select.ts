@@ -1,5 +1,5 @@
 import { Op, Behavior } from "@aelea/core"
-import { NodeComposeFn, $Node, component, IBranch, nodeEvent } from "@aelea/dom"
+import { NodeComposeFn, $Node, component, IBranch, nodeEvent, style } from "@aelea/dom"
 import { constant, switchLatest, now } from "@most/core"
 import { Stream } from "@most/types"
 import { $defaultSelectContainer } from "./$Dropdown"
@@ -26,7 +26,12 @@ export const $Select = <T>({ list, $$option, $container = $defaultSelectContaine
           constant(item)
         )
 
-        const $opt = switchLatest($$option(now(item)))
+        const $opt = style({ cursor: 'pointer' })(
+          switchLatest(
+            $$option(now(item))
+          
+          )
+        )
 
         return selectBehavior($opt)
       })
