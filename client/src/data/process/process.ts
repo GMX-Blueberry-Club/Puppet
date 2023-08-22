@@ -78,7 +78,7 @@ const config: IProcessedStoreConfig = {
 
 
 export const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
-  const req = await (await fetch('/db/sha256-hWK3ESJNHdKVaXGMiujJr_wH2MjJe6Sp_P_vbMcFRxE=.json')).json()
+  const req = await (await fetch('/db/sha256-PFd3SX2t0EJfIK7gSqcSba_CYL+jCLljTwhpPMRUzqk=.json')).json()
   const storedSeed: IProcessedStore<IGmxProcessState> = transformBigints(req)
 
   const seedFileValidationError = validateSeed(config, storedSeed.config)
