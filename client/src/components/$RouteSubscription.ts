@@ -224,24 +224,26 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
 
       $text('The following rules will apply to this trader whenever he opens and maintain a position'),
 
-      $Dropdown({
-        // $container: $row(style({ alignSelf: 'center', position: 'relative' })),
-        selector: {
-          list: routeTypeList,
-          $$option: map(key => $route(getMappedValue(PUPPET.ROUTE_DESCRIPTIN_MAP, key))),
-          value: routeTypeKey,
-        },
-        $selection: switchMap(key => {
-          return $row(layoutSheet.spacingSmall)(
-            $route(getMappedValue(PUPPET.ROUTE_DESCRIPTIN_MAP, key)),
-            $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
-          )
-        }, routeTypeKey),
-      })({
-        select: selectRouteTypeTether()
-      }),      
+      $row(style({ placeContent: 'center' }))(
+        $Dropdown({
+          $container: $row(style({ borderRadius: '30px', backgroundColor: pallete.background, padding: '4px 8px', position: 'relative', border: `1px solid ${colorAlpha(pallete.foreground, .2)}`, cursor: 'pointer' })),
+          selector: {
+            list: routeTypeList,
+            $$option: map(key => $route(getMappedValue(PUPPET.ROUTE_DESCRIPTIN_MAP, key))),
+            value: routeTypeKey,
+          },
+          $selection: switchMap(key => {
+            return $row(layoutSheet.spacingSmall)(
+              $route(getMappedValue(PUPPET.ROUTE_DESCRIPTIN_MAP, key)),
+              $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
+            )
+          }, routeTypeKey),
+        })({
+          select: selectRouteTypeTether()
+        }),  
+      ),
 
-      $column(layoutSheet.spacing, style({ }))(
+      $column(layoutSheet.spacingBig, style({ }))(
         $TextField({
           label: 'Allow %',
           value: map(x => formatBps(x * 100n), allowance),

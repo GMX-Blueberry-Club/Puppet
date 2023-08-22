@@ -83,7 +83,10 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
           return loadSeedFile
         }
 
-        return now(idbSeed)
+        const blockNumber = idbSeed.blockNumber || config.blueprint.config.startBlock
+        const orderId = idbSeed.orderId || getblockOrderIdentifier(blockNumber)
+
+        return now({ ...idbSeed, blockNumber, orderId })
       }
 
       return loadSeedFile

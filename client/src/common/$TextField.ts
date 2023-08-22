@@ -18,7 +18,7 @@ export interface TextField extends Field {
 
 
 export const $label2 = $element('label')(
-  layoutSheet.spacingTiny,
+  layoutSheet.spacingSmall,
   style({ 
     cursor: 'pointer',
     display: 'flex',

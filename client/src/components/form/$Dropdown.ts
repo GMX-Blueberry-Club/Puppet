@@ -82,7 +82,7 @@ export function $Dropdown<T>({
 
     const clickBehavior = O(
       openMenuTether(
-        nodeEvent('click'),
+        nodeEvent('pointerdown'),
         openMenuOp,
       ),
       targetIntersectionTether(
@@ -161,7 +161,7 @@ export const $defaultDropMultiSelectOption = $row(layoutSheet.spacingSmall,
   }),
   stylePseudo(':hover', { backgroundColor: pallete.horizon })
 )
-export const $defaultChip = $row(style({ backgroundColor: pallete.primary, padding: '0 4px', cursor: 'default', alignItems: 'center', borderRadius: '22px' }))
+export const $defaultChip = $row(style({ backgroundColor: pallete.primary, paddingLeft: '4px', cursor: 'default', alignItems: 'center', borderRadius: '22px' }))
 
 
 
@@ -209,7 +209,10 @@ export const $DropMultiSelect = <T>({
 
 
   const openTrigger = mergeArray([focusField, constant(true, openMenu)])
-  const closeTrigger = constant(false, mergeArray([delay(100, blur), closeOnSelect ? pick : empty(),]))
+  const closeTrigger = constant(false, mergeArray([
+    // delay(100, blur),
+    closeOnSelect ? pick : empty()
+  ]))
   const isOpen = mergeArray([openTrigger, closeTrigger])
   const focus = startWith(false, merge(interaction, blur))
 
@@ -316,6 +319,7 @@ export const $DropMultiSelect = <T>({
         ),
 
         switchLatest(snapshot((selectedList, show) => {
+          console.log('show', show)
           if (!show) {
             return empty()
           }
