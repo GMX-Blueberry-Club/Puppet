@@ -276,33 +276,29 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                     return empty()
                   }
 
-                  return switchLatest(mergeArray([
-                    now(
-                      fadeIn($row(
-                        style({ position: 'absolute', bottom: '18px', left: `50%` }),
-                        syncProcessDataTether(
-                          constant(params.syncBlock)
-                        )
-                      )(
-                        style({  transform: 'translateX(-50%)' })(
-                          $column(layoutSheet.spacingTiny, style({
-                            border: `1px solid`,
-                            padding: '20px',
-                            animation: `borderRotate var(--d) linear infinite forwards`,
-                            borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
-                          }))(
-                            $text(`Syncing Blockchain Data....`),
-                            $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(
-                              params.process.state.approximatedTimestamp === 0
-                                ? `Indexing for the first time, this may take a minute or two.`
-                                : `${timeSince(params.process.state.approximatedTimestamp)} old data is displayed`
-                            ),
-                          )
-                        )
-                      ))
-                    ),
-                    // map(seed => empty(), syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlock }))
-                  ]))
+                  return fadeIn($row(
+                    style({ position: 'absolute', bottom: '18px', left: `50%` }),
+                    syncProcessDataTether(
+                      constant(params.syncBlock)
+                    )
+                  )(
+                    style({  transform: 'translateX(-50%)' })(
+                      $column(layoutSheet.spacingTiny, style({
+                        backgroundColor: pallete.horizon,
+                        border: `1px solid`,
+                        padding: '20px',
+                        animation: `borderRotate var(--d) linear infinite forwards`,
+                        borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
+                      }))(
+                        $text(`Syncing Blockchain Data....`),
+                        $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(
+                          params.process.state.approximatedTimestamp === 0
+                            ? `Indexing for the first time, this may take a minute or two.`
+                            : `${timeSince(params.process.state.approximatedTimestamp)} old data is displayed`
+                        ),
+                      )
+                    )
+                  ))
                 }, combineObject({ process, syncBlock: take(1, block) })),
                 
               )

@@ -40,6 +40,7 @@ export type IPuppetRouteSubscritpion = {
   subscribed: boolean
   allowance: bigint
   routeTypeKey: viem.Hex
+  expiry: bigint
   puppetSubscriptionKey: viem.Hex
 }
 

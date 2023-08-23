@@ -50,7 +50,7 @@ export const $WalletProfileDisplay = ({ $container = $row, parentRoute }: IWalle
             }),
             awaitPromises
           )(
-            style({ cursor: 'pointer' }, $disconnectedWalletDisplay($container))
+            style({ paddingRight: '18px', cursor: 'pointer' }, $disconnectedWalletDisplay($container))
           )
       }, mergeArray([now(null), walletChange]), account))
     ),

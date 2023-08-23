@@ -1,134 +1,166 @@
-import { Behavior, O, combineObject, replayLatest } from "@aelea/core"
-import { $text, component, style } from "@aelea/dom"
+import { Behavior, O, combineObject } from "@aelea/core"
+import { $element, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { map, now, startWith } from "@most/core"
+import { pallete } from "@aelea/ui-components-theme"
+import { map, startWith } from "@most/core"
 import { Stream } from "@most/types"
-import { $Link, $Table, $infoTooltipLabel, ISortBy, ScrollRequest } from "gmx-middleware-ui-components"
-import { pagingQuery, switchMap } from "gmx-middleware-utils"
-import { IPositionMirrorSlot } from "puppet-middleware-utils"
-import { IProfileActiveTab } from "../$Profile"
-import { $openPositionPnlBreakdown, $size, $tradePnl } from "../../common/$common"
-import { $profileDisplay } from "../../components/$AccountProfile"
-import { IGmxProcessState, latestTokenPrice } from "../../data/process/process"
+import * as GMX from 'gmx-middleware-const'
+import { $Table, ISortBy, ScrollRequest } from "gmx-middleware-ui-components"
+import { IAbstractRouteIdentity, getSlotNetPnL, pagingQuery, switchMap } from "gmx-middleware-utils"
+import { ROUTE_DESCRIPTION, getRouteTypeKey } from "puppet-middleware-const"
+import { IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
+import { $labelDisplay } from "../../common/$TextField"
+import { $TraderDisplay, $route, $size } from "../../common/$common"
+import { $DropMultiSelect } from "../../components/form/$Dropdown"
+import { pnlSlotColumn, puppetsColumn, slotSizeColumn } from "../../components/table/$TableColumn"
+import { IGmxProcessState } from "../../data/process/process"
+import { rootStoreScope } from "../../data/store/store"
+import { $card } from "../../elements/$common"
+import * as storage from "../../utils/storage/storeScope"
 
 
 
-
+  type IPositionOpen = IPositionMirrorSlot & {
+    pnl: bigint
+  }
 
 export type ITopOpen = {
   route: router.Route
-
+  subscriptionList: Stream<IPuppetRouteSubscritpion[]>
   processData: Stream<IGmxProcessState>
 }
 
+
 export const $TopOpen = (config: ITopOpen) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
-  // [topPnlTimeframeChange, topPnlTimeframeChangeTether]: Behavior<any, ILeaderboardRequest['timeInterval']>,
-  
+  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
+  [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionOpen>>,
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
-  [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionMirrorSlot>, ISortBy<IPositionMirrorSlot>>,
+  [routeTypeChange, routeTypeChangeTether]: Behavior<IAbstractRouteIdentity[]>,
+
 ) => {
 
-  const sortBy: Stream<ISortBy<IPositionMirrorSlot>> = replayLatest(sortByChange, { direction: 'desc', selector: 'realisedPnl' })
+  const exploreStore = storage.createStoreScope(rootStoreScope, 'topOpen' as const)
 
-  
 
-  const openList = switchMap(params => {
-    const paging = startWith({ ...params.sortBy, offset: 0, pageSize: 20 }, scrollRequest)
+  const sortBy = storage.replayWrite(exploreStore, { direction: 'desc', selector: 'pnl' } as ISortBy<IPositionOpen>, sortByChange, 'sortBy')
+  const routeList = map(list => list.map(rt => {
+    const matchedMemType = ROUTE_DESCRIPTION.find(rtd => getRouteTypeKey(rt.collateralToken, rt.indexToken, rt.isLong) === getRouteTypeKey(rtd.collateralToken, rtd.indexToken, rtd.isLong))
 
-    return map(req => {
-      const summaryList = Object.values(params.processData.mirrorPositionSlot)
+    if (!matchedMemType) {
+      throw new Error(`Route type not found for ${rt.collateralToken} ${rt.indexToken} ${rt.isLong}`)
+    }
 
-      return pagingQuery({ ...params.sortBy, ...req }, summaryList)
+    return matchedMemType
+  }), storage.replayWrite(exploreStore, [] as IAbstractRouteIdentity[], routeTypeChange, 'filterRouteList'))
+
+
+  const pageParms = map(params => {
+    const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
+    const paging = startWith(requestPage, scrollRequest)
+
+    const dataSource =  map(req => {
+
+      const flattenMapMap = Object.values(params.processData.mirrorPositionSlot)
+        .filter(pos => {
+          const routeLength = params.routeList.length
+          if (routeLength && params.routeList.findIndex(rt => getRouteTypeKey(rt.collateralToken, rt.indexToken, rt.isLong) === pos.routeTypeKey) === -1) {
+            return false
+          }
+
+          return true
+        })
+        .map(pos => {
+          const marketPrice = params.processData.latestPrice[pos.indexToken]
+          const pnl = getSlotNetPnL(pos, marketPrice)
+
+          return { ...pos, pnl }
+        })
+
+      return pagingQuery({ ...params.sortBy, ...req }, flattenMapMap)
     }, paging)
-  }, combineObject({ processData: config.processData, sortBy, }))
+
+
+    return { ...params, dataSource }
+  }, combineObject({ processData: config.processData, sortBy, routeList }))
 
 
   return [
     $column(layoutSheet.spacingBig)(
 
 
-      $Table({
-        dataSource: openList,
-        sortBy,
-        columns: [
-          {
-            $head: $text('Account'),
-            columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
-            $$body: map((pos) => {
+      $card(layoutSheet.spacingBig, style({ flex: 1 }))(
 
-              return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-                // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
-                $Link({
-                  $content: $profileDisplay({
-                    address: pos.trader,
-                    // $profileContainer: $defaultBerry(style({ width: '50px' }))
-                  }),
-                  route: config.route.create({ fragment: 'fefwef' }),
-                  url: `/app/profile/${pos.trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
-                })({ click: routeChangeTether() }),
-              )
+        $row(style({ placeContent: 'space-between' }))(
+          $row(
+            $DropMultiSelect({
+              $label: $labelDisplay(style({ color: pallete.foreground }))('Route'),
+              $input: $element('input')(style({ maxWidth: '80px' })),
+              placeholder: 'All / Select',
+              $$chip: map(rt => {
+                return $route(rt)
+              }),
+              selector: {
+                list: ROUTE_DESCRIPTION,
+                $$option: map(route => {
+                  return style({
+                    padding: '8px'
+                  }, $route(route))
+                })
+              },
+              value: routeList
+            })({
+              select: routeTypeChangeTether()
+            }),
+          ),
+          
+        ),
 
-            })
-          },
+        switchMap(params => {
 
-          // {
-          //   $head: $text('Win / Loss'),
-          //   columnOp: style({ alignItems: 'center', placeContent: 'center' }),
-          //   $$body: map((pos) => {
-          //     return $row(
-          //       $text(`${pos.winCount} / ${pos.lossCount}`)
-          //     )
-          //   })
-          // },
 
-          {
-            $head: $column(style({ textAlign: 'right' }))(
-              $text('Cum. Size $'),
-              $text(style({ fontSize: '.85rem' }))('Avg. Leverage'),
-            ),
-            // sortBy: 'size',
-            columnOp: style({ placeContent: 'flex-end', minWidth: '90px' }),
-            $$body: map((pos) => {
-              return $size(pos.size, pos.collateral)
-            })
-          },
-          {
-            $head: $text('PnL'),
-            columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
-            $$body: map((pos) => {
-              // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
-              // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
-
-              return $infoTooltipLabel(
-                $openPositionPnlBreakdown(pos, now(0n)),
-                $tradePnl(pos, latestTokenPrice(config.processData, now(pos.indexToken)))
-              )
-            })
-          },
-          {
-            $head: $text('Puppet'),
-            columnOp: O(layoutSheet.spacingTiny, style({ flex: 1, placeContent: 'flex-end' })),
-            $$body: map((pos) => {
-              // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
-              // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
-
-              return $column(
-                $text(String(pos.puppets.length)),
-              )
-            })
-          },
+          return $Table({
+            dataSource: params.dataSource,
+            sortBy: params.sortBy,
+            columns: [
+              {
+                $head: $text('Trader'),
+                gridTemplate: 'minmax(140px, 180px)',
+                columnOp: style({ alignItems: 'center' }),
+                $$body: map(pos => {
+                  return $TraderDisplay({
+                    route: config.route,
+                    // changeSubscriptionList: config.changeSubscriptionList,
+                    subscriptionList: config.subscriptionList,
+                    trader: pos.trader,
+                  })({ 
+                    modifySubscribeList: modifySubscriberTether(),
+                    clickTrader: routeChangeTether()
+                  })
+                })
+              },
+              puppetsColumn,
+              slotSizeColumn(config.processData),
+              {
+                ...pnlSlotColumn(config.processData),
+                sortBy: 'pnl'
+              },
             
-        ],
-      })({
-        sortBy: sortByChangeTether(),
-        scrollRequest: scrollRequestTether()
-      })
+            ],
+          })({
+            sortBy: sortByChangeTether(),
+            scrollRequest: scrollRequestTether()
+          })
+        }, pageParms),
+    
+      ),
+
+      
     ),
 
     {
-      routeChange,
+      routeChange, modifySubscriber,
     }
   ]
 })

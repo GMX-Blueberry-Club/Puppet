@@ -5,7 +5,7 @@ import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, mergeArray, multicast, skipRepeats, snapshot, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { $caretDown, $check, $icon, $target, $xCross } from "gmx-middleware-ui-components"
-import { formatBps, getMappedValue, groupArrayMany, parseBps, readableFixedBsp, switchMap } from "gmx-middleware-utils"
+import { formatBps, getMappedValue, groupArrayMany, parseBps, readableFixedBsp, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -256,7 +256,7 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
         }),
         $TextField({
           label: 'Expiration',
-          $input: $element('input')(attr({ type: 'datetime-local' })),
+          $input: $element('input')(attr({ type: 'date' })),
           hint: 'limit the amount of time you are subscribed',
           placeholder: 'never',
           labelWidth: 100,
