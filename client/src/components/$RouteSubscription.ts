@@ -21,6 +21,7 @@ import { $IntermediateConnectButton } from "./$ConnectAccount.js"
 import { $RouteDepositInfo } from "./$common.js"
 import { $ButtonCircular, $ButtonPrimary, $ButtonPrimaryCtx } from "./form/$Button.js"
 import { $Dropdown } from "./form/$Dropdown"
+import { TIME_INTERVAL_MAP } from "gmx-middleware-const"
 
 
 
@@ -209,12 +210,12 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
 
   const allowance = startWith(config.routeSubscription?.allowance || 500n, inputAllowance)
   const routeTypeKey = startWith(routeTypeList.find(key => key === config.routeSubscription?.routeTypeKey) || routeTypeList[0], selectRouteType)
-  const initEnddate = config.routeSubscription?.endDate && config.routeSubscription.endDate > unixTimestampNow() ? config.routeSubscription?.endDate : 0n
-  const endDate = startWith(initEnddate, inputEndDate)
+  const initEnddate = config.routeSubscription?.expiry ? config.routeSubscription?.expiry : BigInt(unixTimestampNow() + TIME_INTERVAL_MAP.YEAR)
+  const expiry = startWith(initEnddate, inputEndDate)
   
   const form = combineObject({
     allowance,
-    endDate,
+    expiry,
     routeTypeKey
   })
 
@@ -257,16 +258,12 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
         $TextField({
           label: 'Expiration',
           $input: $element('input')(attr({ type: 'date' })),
-          hint: 'limit the amount of time you are subscribed',
+          hint: 'set a date when this rule will expire, default is 1 year',
           placeholder: 'never',
           labelWidth: 100,
-          value: map(x => {
-            if (x === 0n) {
-              return ''
-            }
-
-            return new Date(Number(x) * 1000).toISOString().slice(0, 16)
-          }, inputEndDate),
+          value: map(time => {
+            return new Date(Number(time * 1000n)).toISOString().slice(0, 10)
+          }, expiry),
         })({
           change: inputEndDateTether(
             map(x => BigInt(new Date(x).getTime() / 1000))

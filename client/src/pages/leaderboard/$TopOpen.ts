@@ -141,7 +141,10 @@ export const $TopOpen = (config: ITopOpen) => component((
                 })
               },
               puppetsColumn,
-              slotSizeColumn(config.processData),
+              {
+                ...slotSizeColumn(config.processData),
+                sortBy: 'size'
+              },
               {
                 ...pnlSlotColumn(config.processData),
                 sortBy: 'pnl'

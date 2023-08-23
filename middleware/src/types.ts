@@ -36,7 +36,6 @@ export interface IMirrorPositionListSummary extends IPositionListSummary {
 export type IPuppetRouteSubscritpion = {
   trader: viem.Address
   puppet: viem.Address
-  endDate: bigint
   subscribed: boolean
   allowance: bigint
   routeTypeKey: viem.Hex
