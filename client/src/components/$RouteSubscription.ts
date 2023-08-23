@@ -4,8 +4,8 @@ import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, mergeArray, multicast, skipRepeats, snapshot, startWith } from "@most/core"
 import { Stream } from "@most/types"
-import { $caretDown, $check, $icon, $target, $xCross } from "gmx-middleware-ui-components"
-import { formatBps, getMappedValue, groupArrayMany, parseBps, readableFixedBsp, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { $caretDown, $check, $icon, $infoLabeledValue, $target, $xCross } from "gmx-middleware-ui-components"
+import { formatBps, getMappedValue, groupArrayMany, parseBps, readableDate, readableFixedBsp, switchMap, tokenAmountLabel, unixTimestampNow } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -13,13 +13,13 @@ import { $TextField } from "../common/$TextField.js"
 import { $route } from "../common/$common"
 import { $heading3 } from "../common/$text.js"
 import { $card2, $iconCircular } from "../elements/$common.js"
-import { wagmiWriteContract } from "../logic/common.js"
+import { connectContract, wagmiWriteContract } from "../logic/common.js"
 import { $seperator2 } from "../pages/common.js"
 import { fadeIn } from "../transitions/enter.js"
 import { $profileDisplay } from "./$AccountProfile.js"
 import { $IntermediateConnectButton } from "./$ConnectAccount.js"
 import { $RouteDepositInfo } from "./$common.js"
-import { $ButtonCircular, $ButtonPrimary, $ButtonPrimaryCtx } from "./form/$Button.js"
+import { $ButtonCircular, $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary } from "./form/$Button.js"
 import { $Dropdown } from "./form/$Dropdown"
 import { TIME_INTERVAL_MAP } from "gmx-middleware-const"
 
@@ -55,6 +55,9 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
       return fadeIn($card2(style({ border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderBottom: 'none', padding: '18px', borderRadius: '20px 20px 0 0' }))(
         $IntermediateConnectButton({
           $$display: map(w3p => {
+
+            const orchestrator = connectContract(PUPPET.CONTRACT[42161].Orchestrator)
+
               
             return $column(layoutSheet.spacing)(
               $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between', alignItems: 'center' }))(
@@ -110,11 +113,20 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
                                   $text(style({ backgroundColor: colorAlpha(iconColorParams.fill, .1), borderRadius: '6px', padding: '4px 12px', color: iconColorParams.fill,  }))(iconColorParams.label),  
                                 ),
 
+                                switchMap(amount => {
+                                  return $text(tokenAmountLabel(routeType.indexToken, amount))
+                                }, orchestrator.read('puppetAccountBalance', w3p.account.address, routeType.indexToken)),
+
                                 $profileDisplay({
                                   address: modSubsc.trader,
                                   // $profileContainer: $defaultBerry(style({ width: '50px' }))
                                 }),
-                                $text(readableFixedBsp(modSubsc.allowance * 100n)),
+                                $infoLabeledValue('Copy Until', readableDate(Number(modSubsc.expiry))),
+                                $infoLabeledValue(
+                                  'Allow',
+                                  $text(`${readableFixedBsp(modSubsc.allowance * 100n)} (${''})`)
+                                ),
+                                
                               )
                             })
                           )
@@ -132,16 +144,17 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
               })({
                 click: requestChangeSubscriptionTether(
                   snapshot(list => {
-
-                    const allowance = list.map(x => x.allowance)
+                    const owner = w3p.account.address
+                    const allowances = list.map(x => x.allowance)
+                    const expiries = list.map(x => x.expiry)
                     const traders = list.map(a => a.trader)
                     const routeTypes = list.map(x => x.routeTypeKey)
-                    const subscribe = list.map(x => x.subscribed)
+                    const subscribes = list.map(x => x.subscribed)
 
                     return wagmiWriteContract({
                       ...PUPPET.CONTRACT[42161].Orchestrator,
                       functionName: 'batchSubscribeRoute',
-                      args: [w3p.account.address, allowance, traders, routeTypes, subscribe]
+                      args: [owner, allowances, expiries, traders, routeTypes, subscribes]
                     })
                   }, config.modifySubscriptionList),
                   multicast
@@ -271,7 +284,7 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
         })
       ),
 
-      $ButtonPrimary({
+      $ButtonSecondary({
         $content: $text('Change'),
       })({
         click: clickSubmitTether()
@@ -280,7 +293,7 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
       config.routeSubscription ? $seperator2 : empty(),
 
       config.routeSubscription ? 
-        $ButtonPrimary({
+        $ButtonSecondary({
           $content: $text('Unsubscribe'),
         })({
           click: clickUnsubscribeTether()

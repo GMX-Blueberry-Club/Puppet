@@ -88,7 +88,8 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
       router.match(topOpenRoute)(
         $TopOpen({ ...config })({
-          routeChange: routeChangeTether()
+          routeChange: routeChangeTether(),
+          modifySubscriber: modifySubscriberTether()
         })
       ),
       router.match(settledRoute)(

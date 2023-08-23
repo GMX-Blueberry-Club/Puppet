@@ -64,6 +64,10 @@ export const $TopOpen = (config: ITopOpen) => component((
 
       const flattenMapMap = Object.values(params.processData.mirrorPositionSlot)
         .filter(pos => {
+          if (pos.route === GMX.ADDRESS_ZERO) {
+            return false
+          }
+
           const routeLength = params.routeList.length
           if (routeLength && params.routeList.findIndex(rt => getRouteTypeKey(rt.collateralToken, rt.indexToken, rt.isLong) === pos.routeTypeKey) === -1) {
             return false
@@ -78,7 +82,7 @@ export const $TopOpen = (config: ITopOpen) => component((
           return { ...pos, pnl }
         })
 
-      return pagingQuery({ ...params.sortBy, ...req }, flattenMapMap)
+      return pagingQuery({ ...params.sortBy, ...req }, flattenMapMap as IPositionOpen[])
     }, paging)
 
 
@@ -140,16 +144,15 @@ export const $TopOpen = (config: ITopOpen) => component((
                   })
                 })
               },
-              puppetsColumn,
+              puppetsColumn<IPositionOpen>(),
               {
                 ...slotSizeColumn(config.processData),
                 sortBy: 'size'
               },
               {
+                sortBy: 'pnl',
                 ...pnlSlotColumn(config.processData),
-                sortBy: 'pnl'
               },
-            
             ],
           })({
             sortBy: sortByChangeTether(),

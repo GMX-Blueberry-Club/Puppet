@@ -158,12 +158,10 @@ export const $leverage = (size: bigint, collateral: bigint) =>
 export const $pnlValue = (pnl: Stream<bigint> | bigint, colorful = true) => {
   const pnls = isStream(pnl) ? pnl : now(pnl)
 
-  const display = map((n: bigint) => {
-    return readableFixedUSD30(n)
-  }, pnls)
+  const display = map(value => readableFixedUSD30(value), pnls)
 
-  const displayColor = skipRepeats(map((n: bigint) => {
-    return n > 0n ? pallete.positive : n === 0n ? pallete.foreground : pallete.negative
+  const displayColor = skipRepeats(map(value => {
+    return value > 0n ? pallete.positive : value === 0n ? pallete.foreground : pallete.negative
   }, pnls))
 
   const colorStyle = colorful

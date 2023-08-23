@@ -24,7 +24,7 @@ const $tableHeader = (primaryLabel: string, secondaryLabel: string) => $column(s
 )
 
 
-export const slotSizeColumn = (processData: Stream<IGmxProcessState>, shareTarget?: viem.Address): TableColumn<IPositionMirrorSettled | IPositionMirrorSlot> => ({
+export const slotSizeColumn = <T extends IPositionMirrorSettled | IPositionMirrorSlot>(processData: Stream<IGmxProcessState>, shareTarget?: viem.Address): TableColumn<T> => ({
   $head: $tableHeader('Size', 'Leverage'),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $$body: map(mp => {
@@ -57,14 +57,14 @@ export const entryColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSl
   })
 }
 
-export const puppetsColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSlot | IMirrorPositionListSummary> = {
+export const puppetsColumn = <T extends {puppets: readonly `0x${string}`[]}>(): TableColumn<T> => ({
   $head: $text('Puppets'),
   $$body: map((pos) => {
     return $puppets(pos.puppets)
   })
-}
+})
 
-export const pnlSlotColumn = (processData: Stream<IGmxProcessState>, shareTarget?: viem.Address): TableColumn<IPositionMirrorSlot> => ({
+export const pnlSlotColumn = <T extends IPositionMirrorSlot>(processData: Stream<IGmxProcessState>, shareTarget?: viem.Address): TableColumn<T> => ({
   $head: $tableHeader('PnL', 'ROI'),
   columnOp: style({ placeContent: 'flex-end' }),
   $$body: map((pos) => {
@@ -84,7 +84,7 @@ export const pnlSlotColumn = (processData: Stream<IGmxProcessState>, shareTarget
   })
 })
 
-export const traderColumn = (click: Op<string, string>, route: router.Route): TableColumn<IMirrorPositionListSummary & { trader: viem.Address }> => ({
+export const traderColumn = <T extends IMirrorPositionListSummary & { trader: viem.Address }>(click: Op<string, string>, route: router.Route): TableColumn<T> => ({
   $head: $text('Trader'),
   // gridTemplate: 'minmax(110px, 120px)',
   columnOp: style({ alignItems: 'center' }),

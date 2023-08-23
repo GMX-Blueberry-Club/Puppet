@@ -81,6 +81,9 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
 ) => {
 
 
+  const multicastRequest = multicast(config.request)
+
+
   const duringRequest = multicast(mergeArray([
     constant(true, click),
     awaitPromises(map(async req => {
@@ -91,32 +94,32 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
         console.warn(err)
         return false
       }
-    }, config.request))
+    }, multicastRequest))
   ]))
 
+  const settledOrError = recoverWith(error => now(error.message), multicastRequest)
+
   return [
-    $column(
-      $ButtonCore({
-        $container: config.$container || $defaultButtonPrimary(
-          style({ alignItems: 'center' }),
-          style({
-            border: `1px solid`,
-            padding: '14px 18px',
-            animation: `borderRotate var(--d) linear infinite forwards`,
-            borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
-          }),
-          stylePseudo(':hover', { backgroundColor: pallete.foreground })
-        ),
-        disabled: mergeArray([
-          combineArray((isDisabled, isCtxPending) => {
-            return isDisabled || isCtxPending
-          }, config.disabled || now(false), duringRequest)
-        ]),
-        $content: config.$content
-      })({
-        click: clickTether()
-      }),
-    ),
+    $ButtonCore({
+      $container: config.$container || $defaultButtonPrimary(
+        style({ alignItems: 'center' }),
+        style({
+          border: `1px solid`,
+          padding: '14px 18px',
+          animation: `borderRotate var(--d) linear infinite forwards`,
+          borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
+        }),
+        stylePseudo(':hover', { backgroundColor: pallete.foreground })
+      ),
+      disabled: mergeArray([
+        combineArray((isDisabled, isCtxPending) => {
+          return isDisabled || isCtxPending
+        }, config.disabled || now(false), duringRequest)
+      ]),
+      $content: config.$content
+    })({
+      click: clickTether()
+    }),
 
 
     {

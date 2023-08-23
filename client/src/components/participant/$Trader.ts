@@ -170,7 +170,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                   columns: [
                     ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
                     entryColumn,
-                    puppetsColumn,
+                    puppetsColumn(),
                     slotSizeColumn(config.processData),
                     pnlSlotColumn(config.processData),
                   ],
@@ -193,7 +193,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                   columns: [
                     ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
                     entryColumn,
-                    puppetsColumn,
+                    puppetsColumn(),
                     settledSizeColumn(),
                     settledPnlColumn(),
                   ],

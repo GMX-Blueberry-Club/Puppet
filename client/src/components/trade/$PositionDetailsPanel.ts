@@ -290,7 +290,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
       ? wagmiWriteContract({
         ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
         value,
-        functionName: 'registerRouteAndRequestPosition',
+        functionName: 'registerRouteAccountAndRequestPosition',
         args: [
           tradeParams,
           swapParams,

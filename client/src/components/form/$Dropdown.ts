@@ -174,6 +174,7 @@ export interface IMultiselectDrop<T> extends Input<T[]> {
   $label?: $Node
 
   $container?: NodeComposeFn<$Node>
+  $fieldcontainer?: NodeComposeFn<$Node>
   $dropdownContainer?: NodeComposeFn<$Node>
 
   $chip?: NodeComposeFn<$Node>
@@ -183,7 +184,8 @@ export interface IMultiselectDrop<T> extends Input<T[]> {
 }
 
 export const $DropMultiSelect = <T>({
-  $container = $defaultDropMultiSelectContainer,
+  $container = $column(layoutSheet.spacingTiny, style({ display: 'flex', position: 'relative' })),
+  $fieldcontainer = $defaultDropMultiSelectContainer,
   $$chip,
   $label = empty(),
   $chip = $defaultChip,
@@ -237,16 +239,16 @@ export const $DropMultiSelect = <T>({
 
 
   return [
-    $column(layoutSheet.flex, layoutSheet.spacingTiny, style({ display: 'flex', flex: 1, position: 'relative' }))(
+    $container(
 
-      $column(layoutSheet.flex, layoutSheet.spacingTiny, style({ display: 'flex', flexDirection: 'row', position: 'relative' }))(
+      $row(layoutSheet.flex, layoutSheet.spacingTiny, style({ display: 'flex', flexDirection: 'row', position: 'relative' }))(
         isEmpty($label)
           ? empty()
           : $row(style({ alignSelf: 'flex-end', cursor: 'pointer' }))(
             $label
           ),
 
-        $container(
+        $fieldcontainer(
           styleBehavior(
             map(({ focus, alert }) => {
               if (alert) {

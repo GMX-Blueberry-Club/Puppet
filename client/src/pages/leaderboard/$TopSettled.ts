@@ -18,11 +18,13 @@ import { $card } from "../../elements/$common"
 import * as storage from "../../utils/storage/storeScope"
 import { $seperator2 } from "../common"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity"
-import { $DropMultiSelect, $Dropdown } from "../../components/form/$Dropdown"
+import { $DropMultiSelect, $Dropdown, $defaultDropMultiSelectContainer } from "../../components/form/$Dropdown"
 import { ROUTE_DESCRIPTIN_MAP, ROUTE_DESCRIPTION, getRouteTypeKey } from "puppet-middleware-const"
 import { rootStoreScope } from "../../data/store/store"
 import { pallete } from "@aelea/ui-components-theme"
 import { $labelDisplay } from "../../common/$TextField"
+import { $Popover } from "../../components/$Popover"
+import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../../components/form/$Button"
 
 
 
@@ -43,6 +45,8 @@ export const $TopSettled = (config: ITopSettled) => component((
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
   [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionListSummary>>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<GMX.IntervalTime>,
+
+  [openFilterPopover, openFilterPopoverTether]: Behavior<any>,
 
 ) => {
 
@@ -72,14 +76,18 @@ export const $TopSettled = (config: ITopSettled) => component((
 
       const flattenMapMap = Object
         .values(params.data.mirrorPositionSettled)
-        .flatMap(x => Object.values(x).flat())
-        .filter(x => {
-          const routeLength = params.routeList.length
-          if (routeLength && params.routeList.findIndex(rt => getRouteTypeKey(rt.collateralToken, rt.indexToken, rt.isLong) === x.routeTypeKey) === -1) {
+        .flatMap(pos => Object.values(pos).flat())
+        .filter(pos => {
+          if (pos.route === GMX.ADDRESS_ZERO) {
             return false
           }
 
-          return x.blockTimestamp > filterStartTime
+          const routeLength = params.routeList.length
+          if (routeLength && params.routeList.findIndex(rt => getRouteTypeKey(rt.collateralToken, rt.indexToken, rt.isLong) === pos.routeTypeKey) === -1) {
+            return false
+          }
+
+          return pos.blockTimestamp > filterStartTime
         })
       const tradeListMap = groupArrayMany(flattenMapMap, a => a.trader)
       const tradeListEntries = Object.values(tradeListMap)
@@ -104,31 +112,67 @@ export const $TopSettled = (config: ITopSettled) => component((
       $card(layoutSheet.spacingBig, style({ flex: 1 }))(
       
 
-        $row(style({ placeContent: 'space-between' }))(
-          $row(
-            $DropMultiSelect({
-              $label: $labelDisplay(style({ color: pallete.foreground }))('Route'),
-              $input: $element('input')(style({ maxWidth: '80px' })),
-              placeholder: 'All / Select',
-              $$chip: map(rt => {
-                return $route(rt)
-              }),
-              selector: {
-                list: ROUTE_DESCRIPTION,
-                $$option: map(route => {
-                  return style({
-                    padding: '8px'
-                  }, $route(route))
-                })
-              },
-              value: routeList
-            })({
-              select: routeTypeChangeTether()
+        $row(layoutSheet.spacingBig, style({ placeContent: 'space-between', alignItems: 'flex-start' }))(
+          $DropMultiSelect({
+            // $container: $row(layoutSheet.spacingTiny, style({ display: 'flex', position: 'relative' })),
+            $input: $element('input')(style({ width: '100px' })),
+            $label: $labelDisplay(style({ color: pallete.foreground }))('Route'),
+            placeholder: 'All / Select',
+            $$chip: map(rt => {
+              return $route(rt)
             }),
-          ),
-          $LastAtivity(activityTimeframe)({
-            changeActivityTimeframe: changeActivityTimeframeTether()
+            selector: {
+              list: ROUTE_DESCRIPTION,
+              $$option: map(route => {
+                return style({
+                  padding: '8px'
+                }, $route(route))
+              })
+            },
+            value: routeList
+          })({
+            select: routeTypeChangeTether()
           }),
+
+          // $Popover({
+          //   $target: $ButtonSecondary({
+          //     $container: $defaultMiniButtonSecondary,
+          //     $content: $text('Filter'),
+          //   })({
+          //     click: openFilterPopoverTether()
+          //   }),
+          //   $popContent: map(() => {
+
+          //     return $column(layoutSheet.spacingBig, style({ width: '410px' }))(
+          //       $row(
+          //         $DropMultiSelect({
+          //           $label: $labelDisplay(style({ color: pallete.foreground }))('Route'),
+          //           placeholder: 'All / Select',
+          //           $$chip: map(rt => {
+          //             return $route(rt)
+          //           }),
+          //           selector: {
+          //             list: ROUTE_DESCRIPTION,
+          //             $$option: map(route => {
+          //               return style({
+          //                 padding: '8px'
+          //               }, $route(route))
+          //             })
+          //           },
+          //           value: routeList
+          //         })({
+          //           select: routeTypeChangeTether()
+          //         }),
+          //       )
+          //     )
+          //   }, openFilterPopover)
+          // })({}),
+          
+          style({ flexDirection: screenUtils.isDesktopScreen ? 'row': 'column' })(
+            $LastAtivity(activityTimeframe)({
+              changeActivityTimeframe: changeActivityTimeframeTether()
+            })
+          ),
         ),
     
         switchMap(params => {
@@ -165,7 +209,7 @@ export const $TopSettled = (config: ITopSettled) => component((
                     )
                   })
                 },
-                puppetsColumn,
+                puppetsColumn(),
               ]
               : [],
             {

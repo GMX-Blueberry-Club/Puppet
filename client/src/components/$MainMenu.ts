@@ -149,18 +149,18 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
           routeChange: routeChangeTether(),
         }),
         $pageLink({
-          $iconPath: $gmxLogo, 
-          route: parentRoute.create({ fragment: 'trade' }),
-          text: 'Trade',
-          url: '/app/trade',
-        })({
-          click: routeChangeTether()
-        }),
-        $pageLink({
           $iconPath: $trophy,
           route: parentRoute.create({ fragment: 'leaderboard' }).create({ fragment: 'settled' }),
           url: '/app/leaderboard/settled',
           text: 'leaderboard',
+        })({
+          click: routeChangeTether()
+        }),
+        $pageLink({
+          $iconPath: $gmxLogo, 
+          route: parentRoute.create({ fragment: 'trade' }),
+          text: 'Trade',
+          url: '/app/trade',
         })({
           click: routeChangeTether()
         }),
