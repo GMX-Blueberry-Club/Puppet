@@ -3,10 +3,10 @@ import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { map } from "@most/core"
+import { empty, map, now, startWith } from "@most/core"
 import { Stream } from "@most/types"
-import { $Link, $Table, $arrowRight, $icon, $infoLabel } from "gmx-middleware-ui-components"
-import { getMappedValue, groupArrayMany, leverageLabel, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { $Link, $Table, $arrowRight, $icon, $infoLabel, ScrollRequest } from "gmx-middleware-ui-components"
+import { getMappedValue, groupArrayMany, leverageLabel, pagingQuery, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { ROUTE_DESCRIPTIN_MAP } from "puppet-middleware-const"
 import { IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from 'viem'
@@ -21,6 +21,7 @@ import { $ProfilePerformanceCard, $ProfilePerformanceGraph, getUpdateTickList } 
 import * as GMX from 'gmx-middleware-const'
 import { $metricValue } from "./profileUtils"
 import { $LastAtivity } from "../../pages/components/$LastActivity"
+import { IProfileActiveTab } from "../../pages/$Profile"
 
 
 
@@ -37,6 +38,8 @@ export interface ITraderProfile {
 export const $PuppetProfile = (config: ITraderProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
+  [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
 ) => {
 
   const openTrades = map(seed => {
@@ -58,6 +61,16 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
   const $metricLabel = $row(style({ color: pallete.foreground, letterSpacing: '1px', fontSize: '.85rem' }))
 
 
+  const summary = map(params => {
+    const list = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().reverse()
+    const subscribedTraders = params.processData.subscription.filter((sub) => sub.puppet === config.address).map(s => s.trader)
+
+    return {
+      stats: summariesMirrorTrader(list),
+      subscribedTraders
+    }
+  }, combineObject({ processData: config.processData }))
+
 
   return [
 
@@ -66,19 +79,6 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
 
         $column(layoutSheet.spacing, style({ minHeight: '90px' }))(
           switchMap(params => {
-            const filterStartTime = unixTimestampNow() - params.activityTimeframe
-            const traderPos = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.blockTimestamp > filterStartTime)
-            const openList = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address).filter(pos => pos.blockTimestamp > filterStartTime)
-            const allPositions = [...traderPos, ...openList]
-
-            const summary = map(list => {
-              if (list.length === 0) {
-                return null
-              }
-
-              return summariesMirrorTrader(list)
-            }, settledTrades)
-            const subscribedPuppets = params.processData.subscription.filter((sub) => sub.puppet === config.address).map(s => s.trader)
 
 
 
@@ -93,28 +93,28 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
               $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end' }))(
                 $metricRow(
                   $metricValue(style({ paddingBottom: '5px' }))(
-                    ...subscribedPuppets.map(address => {
+                    ...params.summary.subscribedTraders.map(address => {
                       return $profileAvatar({ address, profileSize: 26 })
                     })
                   ),
-                  $metricLabel($text('Puppets'))
+                  $metricLabel($text('Traders'))
                 ),
                 $metricRow(
-                  $heading2(summary ? `${summary.winCount} / ${summary.lossCount}` : '-'),
+                  $heading2(summary ? `${params.summary.stats.winCount} / ${params.summary.stats.lossCount}` : '-'),
                   $metricLabel($text('Win / Loss'))
                 ),
                 $metricRow(
-                  $heading2(summary ? leverageLabel(summary.avgLeverage) : '-'),
+                  $heading2(summary ? leverageLabel(params.summary.stats.avgLeverage) : '-'),
                   $metricLabel($text('Avg Leverage'))
                 )
               ),
             )
-          }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe })),
+          }, combineObject({ processData: config.processData, summary })),
         ),
 
 
-        $column(layoutSheet.spacing)(
-          $row(style({ placeContent: 'space-between' }))(
+        $column(layoutSheet.spacingTiny)(
+          $row(style({ placeContent: 'space-between', alignItems: 'center' }))(
             $Link({
               $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center', cursor: 'pointer' }))(
                 $icon({
@@ -138,194 +138,155 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
             $card2(style({ padding: 0, height: screenUtils.isDesktopScreen ? '200px' : '200px', position: 'relative', margin: screenUtils.isDesktopScreen ? `-36px -36px 0` : `-12px -12px 0px` }))(
               switchMap(params => {
                 const filterStartTime = unixTimestampNow() - params.activityTimeframe
-                const traderPos = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.blockTimestamp > filterStartTime)
-                const openList = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address).filter(pos => pos.blockTimestamp > filterStartTime)
-                const allPositions = [...traderPos, ...openList]
+                // const traderPos = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.blockTimestamp > filterStartTime)
+                // const openList = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address).filter(pos => pos.blockTimestamp > filterStartTime)
+                const allPositions = [...params.openTrades, ...params.settledTrades]
 
 
                 return $ProfilePerformanceCard({
                   $container: $column(style({ width: '100%', padding: 0, height: '200px' })),
                   processData: params.processData,
                   activityTimeframe: params.activityTimeframe,
-                  width: 300,
+                  tickCount: 100,
                   positionList: allPositions,
                 // trader: config.address,
                 })({ })
-              }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe })),
+              }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe, openTrades, settledTrades })),
             ),
-            $column(
 
-              $column(
-                $heading3('Open Positions'),
-                $Table({
-                  dataSource: openTrades,
-                  columns: [
-                    ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
-                    entryColumn,
-                    slotSizeColumn(config.processData),
-                    pnlSlotColumn(config.processData),
-                  ],
-                })({}),
-              ),
-              $heading3('Settled Positions'),
-              $Table({
-                dataSource: settledTrades,
-                columns: [
-                  ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
-                  entryColumn,
-                  settledSizeColumn(),
-                  settledPnlColumn(),
-                ],
-              })({})
+            $column(layoutSheet.spacing)(
+              $heading3('Routes'),
+              switchMap(params => {
+
+                const subscList = params.processData.subscription.filter(s => s.puppet === config.address)
+                const group = Object.entries(groupArrayMany(subscList, s => s.routeTypeKey))
+
+                return $column(layoutSheet.spacingBig, style({ width: '100%' }))(
+                  ...group.map(([key, list]) => {
+
+                    const route = getMappedValue(ROUTE_DESCRIPTIN_MAP, key)
+
+                    return $column(layoutSheet.spacing)(
+                      $route(route),
+
+                      // $RouteDepositInfo({
+                      //   routeDescription: route,
+                      //   wallet: w3p
+                      // })({}),
+
+                      $column(style({ paddingLeft: '16px' }))(
+                        $row(layoutSheet.spacing)(
+                          $seperator2,
+
+                          $column(layoutSheet.spacing, style({ flex: 1 }))(
+                            ...list.map(sub => {
+                              const settledList = [...sub.settled, ...sub.open] //.slice(-1)
+
+                              if (settledList.length === 0) {
+                                return $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
+                                  $Link({
+                                    $content: $profileDisplay({
+                                      address: sub.trader,
+                                    }),
+                                    route: config.route.create({ fragment: 'baseRoute' }),
+                                    url: `/app/profile/${sub.trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
+                                  })({ click: changeRouteTether() }),
+                                  $infoLabel($text('No trades yet'))
+                                )
+                              }
+
+
+                              const summary = summariesMirrorTrader(sub.settled, config.address)
+
+                              return $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
+                                $TraderDisplay({
+                                  route: config.route,
+                                  subscriptionList: config.subscriptionList,
+                                  trader: sub.trader,
+                                })({
+                                  clickTrader: changeRouteTether(),
+                                  modifySubscribeList: modifySubscriberTether(),
+                                }),
+
+                                $node(style({ flex: 1 }))(),
+
+                                $ProfilePerformanceGraph({
+                                  $container: $column(style({ width: '100%', padding: 0, height: '100px', position: 'relative' })),
+                                  processData: params.processData,
+                                  positionList: settledList,
+                                  tickCount: 100,
+                                  activityTimeframe: params.activityTimeframe
+                                })({}),
+
+                                $pnlValue(summary.pnl)
+                              )
+                            })
+                          ),
+                        ),
+                        $seperator2,
+                      ),
+                
+
+                    )
+                  })
+                )
+              }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe })),
+
+
+              switchMap(params => {
+                if (params.openTrades.length === 0) {
+                  return empty()
+                }
+
+                return $column(layoutSheet.spacingSmall)(
+                  $heading3('Open Positions'),
+                  $Table({
+                    dataSource: now(params.openTrades),
+                    columns: [
+                      ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
+                      entryColumn,
+                      slotSizeColumn(config.processData),
+                      pnlSlotColumn(config.processData),
+                    ],
+                  })({
+                  // scrollIndex: changePageIndexTether()
+                  })
+                )
+              }, combineObject({ openTrades })),
+
+     
+              switchMap(params => {
+                const paging = startWith({ offset: 0, pageSize: 20 }, scrollRequest)
+                const dataSource = map(req => {
+                  return pagingQuery(req, params.settledTrades)
+                }, paging)
+
+                return $column(layoutSheet.spacingSmall)(
+                  $heading3('Settled Positions'),
+                  $Table({
+                    dataSource,
+                    columns: [
+                      ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
+                      entryColumn,
+                      settledSizeColumn(),
+                      settledPnlColumn(),
+                    ],
+                  })({
+                    scrollRequest: scrollRequestTether()
+                  })
+                )
+              }, combineObject({ settledTrades })),
+              
+          
             ),
           )
         )
             
       ),
 
-      // $column(layoutSheet.spacingBig)(
+ 
 
-      //   switchMap(params => {
-
-      //     const tradeList = params.processData.subscription.filter(s => s.puppet === config.address)
-      //       .flatMap(trade => {
-      //         return [...trade.settled, ...trade.open]
-      //       }) // .slice(-1)
-
-      //     return $card2(style({ padding: 0, position: 'relative' }))(
-      //       $row(layoutSheet.spacing, style({ marginBottom: '-10px', flex: 1, placeContent: 'space-between', position: 'absolute', bottom: '100%', left: '20px', right: 0 }))(
-      //         $row(
-      //           $profileDisplay({
-      //             address: config.address,
-      //             $container: $row(
-      //               style({ minWidth: '120px', })
-      //             ),
-      //             profileSize: 100
-      //           })
-      //         ),
-
-      //         $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end', paddingBottom: '32px' }))(
-      //           // $metricRow(
-      //           //   $metricValue(
-      //           //     switchMap(puppets => {
-      //           //       return $row(style({ flex: 1, padding: '2px 0 4px' }))(
-      //           //         ...puppets.map(address => {
-      //           //           return $discoverAvatar({ address, $profileContainer: $defaultBerry(style({ minWidth: '30px', maxWidth: '30px' })) })
-      //           //         })
-      //           //       )
-      //           //     }, subscribedTraders)
-      //           //   ),
-      //           //   $metricLabel($text('Traders')),
-      //           // ),
-
-      //           // $seperator2,
-
-      //           $metricRow(
-      //             $heading2(map(seed => {
-      //               if (seed === null) return '-'
-
-      //               return `${seed.winCount} / ${seed.lossCount}`
-      //             }, summary)),
-      //             $metricLabel($text('Win / Loss')),
-      //           ),
-
-      //           // $seperator2,
-
-      //           $metricRow(
-      //             $heading2(map(seed => {
-      //               if (seed === null) return '-'
-
-      //               return leverageLabel(seed.avgLeverage)
-      //             }, summary)),
-      //             $metricLabel($text('Avg Leverage')),
-      //           ),
-      //         ),
-
-      //       ),
-      //       $ProfilePerformanceCard({
-      //         $container: $column(style({ height: '200px', padding: 0 })),
-      //         processData: params.processData,
-      //         positionList: tradeList,
-      //         width: 300,
-      //         targetShare: config.address,
-      //         activityTimeframe: params.activityTimeframe,
-      //       })({ }),
-      //     )
-      //   }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe })),
-
-      //   $node(),
-
-      //   $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
-      //     $heading3('Routes'),
-
-      //     switchMap(params => {
-
-      //       const subscList = params.processData.subscription.filter(s => s.puppet === config.address)
-      //       const group = Object.entries(groupArrayMany(subscList, s => s.routeTypeKey))
-
-      //       return $column(layoutSheet.spacingBig, style({ width: '100%' }))(
-      //         ...group.map(([key, list]) => {
-
-      //           const route = getMappedValue(ROUTE_DESCRIPTIN_MAP, key)
-
-      //           return $column(layoutSheet.spacing)(
-      //             $route(route),
-
-      //             // $RouteDepositInfo({
-      //             //   routeDescription: route,
-      //             //   wallet: w3p
-      //             // })({}),
-
-      //             $row(style({ paddingLeft: '15px' }), layoutSheet.spacing)(
-      //               $seperator2,
-
-      //               $column(layoutSheet.spacing, style({ flex: 1 }))(
-      //                 ...list.map(sub => {
-      //                   const settledList = [...sub.settled, ...sub.open] //.slice(-1)
-
-      //                   if (settledList.length === 0) {
-      //                     return $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
-      //                       $TraderDisplay({
-      //                         route: config.route,
-      //                         subscriptionList: config.subscriptionList,
-      //                         trader: sub.trader,
-      //                       })({}),
-      //                       $infoLabel($text('No trades yet'))
-      //                     )
-      //                   }
-
-
-      //                   const summary = summariesMirrorTrader(sub.settled, config.address)
-
-      //                   return $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
-      //                     $TraderDisplay({
-      //                       route: config.route,
-      //                       subscriptionList: config.subscriptionList,
-      //                       trader: sub.trader,
-      //                     })({}),
-
-      //                     $node(style({ flex: 1 }))(),
-
-      //                     $ProfilePerformanceGraph({
-      //                       processData: params.processData,
-      //                       positionList: settledList,
-      //                       width: 250,
-      //                       activityTimeframe: params.activityTimeframe
-      //                     })({}),
-
-      //                     $pnlValue(summary.pnl)
-      //                   )
-      //                 })
-      //               ),
-      //             ),
-                
-
-      //           )
-      //         })
-      //       )
-      //     }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe })),
-
-      //   ),
+   
 
       //   $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
 
@@ -383,7 +344,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
     ),
     
     {
-      changeRoute, changeActivityTimeframe
+      changeRoute, changeActivityTimeframe, modifySubscriber
     }
   ]
 })

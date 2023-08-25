@@ -1,5 +1,5 @@
 import { Behavior, O, combineObject } from "@aelea/core"
-import { $element, $text, attr, component, nodeEvent, style } from "@aelea/dom"
+import { $element, $text, attr, component, nodeEvent, style, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, mergeArray, multicast, skipRepeats, snapshot, startWith } from "@most/core"
@@ -22,6 +22,7 @@ import { $RouteDepositInfo } from "./$common.js"
 import { $ButtonCircular, $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary } from "./form/$Button.js"
 import { $Dropdown } from "./form/$Dropdown"
 import { TIME_INTERVAL_MAP } from "gmx-middleware-const"
+import { theme } from "../assignThemeSync"
 
 
 
@@ -109,22 +110,24 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
                                 O(style({ marginLeft: '-32px', backgroundColor: pallete.horizon, cursor: 'pointer' }), clickRemoveSubscTether(nodeEvent('click'), constant(modSubsc)))(
                                   $iconCircular($xCross)
                                 ),
-                                $row(style({ width: '90px' }))(
-                                  $text(style({ backgroundColor: colorAlpha(iconColorParams.fill, .1), borderRadius: '6px', padding: '4px 12px', color: iconColorParams.fill,  }))(iconColorParams.label),  
+                                $row(style({ width: '62px' }))(
+                                  $text(style({ backgroundColor: colorAlpha(iconColorParams.fill, .1), marginLeft: `-30px`, borderRadius: '6px', padding: '6px 12px 6px 22px', color: iconColorParams.fill,  }))(iconColorParams.label),  
                                 ),
 
-                                switchMap(amount => {
-                                  return $text(tokenAmountLabel(routeType.indexToken, amount))
-                                }, orchestrator.read('puppetAccountBalance', w3p.account.address, routeType.indexToken)),
+                                // switchMap(amount => {
+                                //   return $text(tokenAmountLabel(routeType.indexToken, amount))
+                                // }, orchestrator.read('puppetAccountBalance', w3p.account.address, routeType.indexToken)),
 
                                 $profileDisplay({
                                   address: modSubsc.trader,
                                   // $profileContainer: $defaultBerry(style({ width: '50px' }))
                                 }),
+
+                                $row(style({ flex: 1 }))(),
                                 $infoLabeledValue('Copy Until', readableDate(Number(modSubsc.expiry))),
                                 $infoLabeledValue(
                                   'Allow',
-                                  $text(`${readableFixedBsp(modSubsc.allowance * 100n)} (${''})`)
+                                  $text(`${readableFixedBsp(modSubsc.allowance * 100n)}`)
                                 ),
                                 
                               )
@@ -214,19 +217,21 @@ interface IRouteSubscriptionEditor {
 export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => component((
   [inputEndDate, inputEndDateTether]: Behavior<any, bigint>,
   [inputAllowance, inputAllowanceTether]: Behavior<any, bigint>,
-  [clickUnsubscribe, clickUnsubscribeTether]: Behavior<any, bigint>,
+  [clickUnsubscribe, clickUnsubscribeTether]: Behavior<any, false>,
   [clickSubmit, clickSubmitTether]: Behavior<any>,
   [selectRouteType, selectRouteTypeTether]: Behavior<viem.Hex>,
 ) => {
   const routeTypeList = Object.keys(PUPPET.ROUTE_DESCRIPTIN_MAP) as viem.Hex[]
 
 
+  const subscribed = startWith(true, clickUnsubscribe)
   const allowance = startWith(config.routeSubscription?.allowance || 500n, inputAllowance)
   const routeTypeKey = startWith(routeTypeList.find(key => key === config.routeSubscription?.routeTypeKey) || routeTypeList[0], selectRouteType)
   const initEnddate = config.routeSubscription?.expiry ? config.routeSubscription?.expiry : BigInt(unixTimestampNow() + TIME_INTERVAL_MAP.YEAR)
   const expiry = startWith(initEnddate, inputEndDate)
   
   const form = combineObject({
+    subscribed,
     allowance,
     expiry,
     routeTypeKey
@@ -257,58 +262,61 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
         }),  
       ),
 
-      $column(layoutSheet.spacingBig, style({ }))(
-        $TextField({
-          label: 'Allow %',
-          value: map(x => formatBps(x * 100n), allowance),
-          labelWidth: 100,
-          hint: `% allocated per position adjustment. Lower values decrease risk. Helps with easier management if peformance is below expectation"`,
-        })({
-          change: inputAllowanceTether(
-            map(x => parseBps(x) / 100n)
-          )
-        }),
-        $TextField({
-          label: 'Expiration',
-          $input: $element('input')(attr({ type: 'date' })),
-          hint: 'set a date when this rule will expire, default is 1 year',
-          placeholder: 'never',
-          labelWidth: 100,
-          value: map(time => {
-            return new Date(Number(time * 1000n)).toISOString().slice(0, 10)
-          }, expiry),
-        })({
-          change: inputEndDateTether(
-            map(x => BigInt(new Date(x).getTime() / 1000))
-          )
-        })
-      ),
-
-      $ButtonSecondary({
-        $content: $text('Change'),
+      $TextField({
+        label: 'Allow %',
+        value: map(x => formatBps(x * 100n), allowance),
+        labelWidth: 100,
+        hint: `% allocated per position adjustment. Lower values decrease risk. Helps with easier management if peformance is below expectation"`,
       })({
-        click: clickSubmitTether()
+        change: inputAllowanceTether(
+          map(x => parseBps(x) / 100n)
+        )
+      }),
+      $TextField({
+        label: 'Expiration',
+        $input: $element('input')(
+          attr({ type: 'date' }),
+          stylePseudo('::-webkit-calendar-picker-indicator', { filter: theme.name === 'dark' ? `invert(1)` : '' })
+        ),
+        hint: 'set a date when this rule will expire, default is 1 year',
+        placeholder: 'never',
+        labelWidth: 100,
+        value: map(time => {
+          return new Date(Number(time * 1000n)).toISOString().slice(0, 10)
+        }, expiry),
+      })({
+        change: inputEndDateTether(
+          map(x => BigInt(new Date(x).getTime() / 1000))
+        )
       }),
 
-      config.routeSubscription ? $seperator2 : empty(),
 
-      config.routeSubscription ? 
+      $seperator2,
+
+      $row(style({ placeContent: 'space-between' }))(
         $ButtonSecondary({
-          $content: $text('Unsubscribe'),
+          $content: $text('Change'),
         })({
-          click: clickUnsubscribeTether()
-        })
-        : empty(),
+          click: clickSubmitTether()
+        }),
+
+        
+        config.routeSubscription ? 
+          $ButtonSecondary({
+            $content: $text('Unsubscribe'),
+          })({
+            click: clickUnsubscribeTether(constant(false))
+          })
+          : empty(),
+      )
+    
 
     ),
 
     {
-      changeRouteSubscription: mergeArray([
-        snapshot(subsc => {
-          return { ...config.routeSubscription, ...subsc }
-        }, form, clickSubmit),
-        map(() => ({ ...config.routeSubscription, subscribed: false }), clickUnsubscribe)
-      ]),
+      changeRouteSubscription: snapshot(subsc => {
+        return { ...config.routeSubscription, ...subsc }
+      }, form, clickSubmit),
     }
   ]
 })

@@ -72,3 +72,10 @@ export const executeDecreasePosition = store.createRpcLogEventScope({
   eventName: 'ExecuteDecreasePosition',
 })
 
+
+export const V2eventLog1 = store.createRpcLogEventScope({
+  ...config,
+  ...GMX.CONTRACT[42161].EventEmitter,
+  eventName: 'EventLog1',
+})
+

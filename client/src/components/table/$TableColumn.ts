@@ -1,5 +1,5 @@
-import { O, Op } from "@aelea/core"
-import { $text, style } from "@aelea/dom"
+import { O, Op, Tether } from "@aelea/core"
+import { $Node, $text, INode, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { map, now } from "@most/core"
@@ -57,10 +57,10 @@ export const entryColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSl
   })
 }
 
-export const puppetsColumn = <T extends {puppets: readonly `0x${string}`[]}>(): TableColumn<T> => ({
+export const puppetsColumn = <T extends {puppets: readonly `0x${string}`[]}>(click: Tether<INode, string>): TableColumn<T> => ({
   $head: $text('Puppets'),
   $$body: map((pos) => {
-    return $puppets(pos.puppets)
+    return $puppets(pos.puppets, click)
   })
 })
 

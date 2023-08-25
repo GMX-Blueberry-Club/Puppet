@@ -66,7 +66,7 @@ const pwaOptions: Partial<VitePWAOptions> = {
 }
 
 
-const replaceOptions = { __DATE__: new Date().toISOString(), SW_DEV: process.env.SW_DEV,  }
+const replaceOptions = process.env.SW_DEV ? { __DATE__: new Date().toISOString(), SW_DEV: process.env.SW_DEV } : { __DATE__: new Date().toISOString(), SW_DEV: process.env.SW_DEV, ...SITE_CONFIG}
 const selfDestroying = process.env.SW_DESTROY === 'true'
 
 if (selfDestroying)
@@ -75,7 +75,7 @@ if (selfDestroying)
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  // define: { ...prefixedParentEnv },
+  define: { ...prefixedParentEnv },
   envDir: '../',
   publicDir: 'assets',
   plugins: [

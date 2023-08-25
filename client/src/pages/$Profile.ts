@@ -46,6 +46,7 @@ export const $Profile = (config: IProfile) => component((
   [selectProfileMode, selectProfileModeTether]: Behavior<IRouteOption, IRouteOption>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
+  
 ) => {
 
   const profileAddressRoute = config.route.create({ title: 'Profile', fragment: ETH_ADDRESS_REGEXP })
@@ -112,12 +113,12 @@ export const $Profile = (config: IProfile) => component((
             return $PuppetProfile({ ...config, address, activityTimeframe })({
               changeRoute: changeRouteTether(),
               changeActivityTimeframe: changeActivityTimeframeTether(),
+              modifySubscriber: modifySubscriberTether()
             }).run(sink, scheduler)
           },
         }
       ),
       
-      $node(),
       $node(),
       $node(),
 

@@ -35,7 +35,7 @@ export interface ITraderProfile {
 
 
 export const $TraderProfile = (config: ITraderProfile) => component((
-  [changeRoute, changeRouteTether]: Behavior<string, string>,
+  [changeRoute, changeRouteTether]: Behavior<any, string>,
   [subscribeTreader, subscribeTreaderTether]: Behavior<PointerEvent, IPuppetRouteSubscritpion>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
@@ -57,14 +57,12 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
   const settledTrades = map(params => {
     const filterStartTime = unixTimestampNow() - params.activityTimeframe
-    const list = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.blockTimestamp > filterStartTime)
+    const list = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.blockTimestamp > filterStartTime).reverse()
     return list
   }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe }))
 
   const openTrades = map(params => {
-    const filterStartTime = unixTimestampNow() - params.activityTimeframe
-
-    const list = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address).filter(pos => pos.blockTimestamp > filterStartTime)
+    const list = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address)
     return list
   }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe }))
 
@@ -113,8 +111,8 @@ export const $TraderProfile = (config: ITraderProfile) => component((
       ),
 
 
-      $column(layoutSheet.spacing)(
-        $row(style({ placeContent: 'space-between' }))(
+      $column(layoutSheet.spacingTiny)(
+        $row(style({ placeContent: 'space-between', alignItems: 'center' }))(
           $Link({
             $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center', cursor: 'pointer' }))(
               $icon({
@@ -139,7 +137,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
             switchMap(params => {
               const filterStartTime = unixTimestampNow() - params.activityTimeframe
               const traderPos = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.blockTimestamp > filterStartTime)
-              const openList = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address).filter(pos => pos.blockTimestamp > filterStartTime)
+              const openList = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address)
               const allPositions = [...traderPos, ...openList]
 
 
@@ -170,7 +168,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                   columns: [
                     ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
                     entryColumn,
-                    puppetsColumn(),
+                    puppetsColumn(changeRouteTether),
                     slotSizeColumn(config.processData),
                     pnlSlotColumn(config.processData),
                   ],
@@ -193,7 +191,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                   columns: [
                     ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
                     entryColumn,
-                    puppetsColumn(),
+                    puppetsColumn(changeRouteTether),
                     settledSizeColumn(),
                     settledPnlColumn(),
                   ],

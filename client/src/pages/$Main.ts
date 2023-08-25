@@ -199,7 +199,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                       subscriptionList
                     })({
                       modifySubscriber: modifySubscriberTether(),
-                      changeRoute: linkClickTether()
+                      changeRoute: linkClickTether(),
                     }))
                   )
                 ),

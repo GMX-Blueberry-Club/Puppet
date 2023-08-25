@@ -10,6 +10,7 @@ import * as viem from "viem"
 import { invertColor } from "gmx-middleware-utils"
 import { $iconCircular } from "../../elements/$common"
 import { $IntermediateConnectButton, $SwitchNetworkDropdown } from "../$ConnectAccount"
+import { theme } from "../../assignThemeSync"
 
 
 
@@ -109,7 +110,7 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
           animation: `borderRotate var(--d) linear infinite forwards`,
           borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
         }),
-        stylePseudo(':hover', { backgroundColor: pallete.foreground })
+        stylePseudo(':hover', { backgroundColor: pallete.foreground }),
       ),
       disabled: mergeArray([
         combineArray((isDisabled, isCtxPending) => {

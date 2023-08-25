@@ -37,7 +37,6 @@ const storage = createStorage({ storage: window.localStorage })
 const projectId = import.meta.env.VITE_WC_PROJECT_ID || 'fdc797f2e6a68e01b9e17843c939673e'
 
 
-
 const configChain = configureChains(
   chains,
   [

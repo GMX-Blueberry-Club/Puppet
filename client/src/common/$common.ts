@@ -1,9 +1,9 @@
-import { Behavior, combineObject, isStream, O } from "@aelea/core"
-import { $text, component, style, styleBehavior, styleInline } from "@aelea/dom"
+import { Behavior, combineObject, isStream, O, Op, Tether } from "@aelea/core"
+import { $Node, $text, component, INode, nodeEvent, style, styleBehavior, styleInline } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $icon, $row, $seperator, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { map, now, skipRepeats } from "@most/core"
+import { constant, map, now, skipRepeats, tap } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $bear, $bull, $Link, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
@@ -135,7 +135,7 @@ export const $sizeAndLiquidation = (isLong: boolean, size: bigint, collateral: b
 }
 
 
-export const $puppets = (puppets: readonly viem.Address[]) => {
+export const $puppets = (puppets: readonly viem.Address[], click: Tether<INode, string>) => {
 
   // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
   // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
@@ -144,9 +144,16 @@ export const $puppets = (puppets: readonly viem.Address[]) => {
     return $text(style({ fontSize: '0.85rem', color: pallete.foreground }))('-')
   }
                 
-  return $row(layoutSheet.spacingSmall, style({ }))(
+  return $row(layoutSheet.spacingSmall, style({ cursor: 'pointer' }))(
     ...puppets.map(address => {
-      return $profileAvatar({ address, profileSize: 30 })
+      return click(nodeEvent('click'), map(() => {
+        const url = `/app/profile/${address}/puppet`
+
+        history.pushState({}, '', url)
+        return url
+      }))(
+        $profileAvatar({ address, profileSize: 30 })
+      )
     }),
     // $content
   )
@@ -269,6 +276,8 @@ interface ITraderDisplay {
   subscriptionList: Stream<IPuppetRouteTrades[]>
   route: router.Route
 }
+
+
 
 export const $TraderDisplay =  (config: ITraderDisplay) => component((
   [clickTrader, clickTraderTether]: Behavior<any, viem.Address>,

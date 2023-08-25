@@ -39,7 +39,7 @@ type FilterTable =  { activityTimeframe: GMX.IntervalTime } | null
 
 export const $TopSettled = (config: ITopSettled) => component((
   [routeTypeChange, routeTypeChangeTether]: Behavior<IAbstractRouteIdentity[]>,
-  [routeChange, routeChangeTether]: Behavior<string, string>,
+  [routeChange, routeChangeTether]: Behavior<any, string>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
   
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
@@ -209,7 +209,7 @@ export const $TopSettled = (config: ITopSettled) => component((
                     )
                   })
                 },
-                puppetsColumn(),
+                puppetsColumn(routeChangeTether),
               ]
               : [],
             {
