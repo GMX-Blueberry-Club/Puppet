@@ -106,7 +106,6 @@ export const $TopSettled = (config: ITopSettled) => component((
 
 
       $card(layoutSheet.spacingBig, style({ flex: 1 }))(
-      
 
         $row(layoutSheet.spacingBig, style({ placeContent: 'space-between', alignItems: 'flex-start' }))(
           $DropMultiSelect({
