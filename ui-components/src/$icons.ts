@@ -178,8 +178,17 @@ export const $eth = $svg('g')(
 
 export const $tokenIconMap = {
   [TOKEN_SYMBOL.GMX]: $gmx,
+  [TOKEN_SYMBOL.ARB]: $gmx,
   [TOKEN_SYMBOL.ESGMX]: $gmx,
   [TOKEN_SYMBOL.GLP]: $glp,
+
+  [TOKEN_SYMBOL.ARB]: $glp,
+  [TOKEN_SYMBOL.SOL]: $glp,
+  [TOKEN_SYMBOL.SynDOGE]: $glp,
+  [TOKEN_SYMBOL.SynBTC]: $glp,
+  [TOKEN_SYMBOL.SynLTC]: $glp,
+  [TOKEN_SYMBOL.SynXRP]: $glp,
+  
 
   [TOKEN_SYMBOL.BTC]: $btc,
   [TOKEN_SYMBOL.WBTC]: $btc,

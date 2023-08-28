@@ -321,7 +321,6 @@ export const $DropMultiSelect = <T>({
         ),
 
         switchLatest(snapshot((selectedList, show) => {
-          console.log('show', show)
           if (!show) {
             return empty()
           }

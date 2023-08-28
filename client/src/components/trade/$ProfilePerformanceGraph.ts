@@ -6,27 +6,27 @@ import { empty, map, multicast, now, skipRepeatsWith, startWith } from "@most/co
 import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $infoTooltipLabel, IMarker } from "gmx-middleware-ui-components"
 import {
-  IPositionClose,
-  IPositionLiquidated,
-  IPositionUpdate,
   IPriceInterval,
   IPriceIntervalIdentity,
+  PositionDecrease,
+  PositionIncrease,
   createTimeline,
   filterNull,
   formatFixed,
   getPnL,
+  getPositionPnlUsd,
   parseReadableNumber,
   readableFixedUSD30,
   readableUnitAmount,
   unixTimestampNow
 } from "gmx-middleware-utils"
-import { BaselineData, BaselineSeriesPartialOptions, ChartOptions, DeepPartial, LineType, MouseEventParams, Time } from "lightweight-charts"
+import { BaselineData, ChartOptions, DeepPartial, LineType, MouseEventParams, Time } from "lightweight-charts"
 import { IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { IGmxProcessState, PRICEFEED_INTERVAL } from "../../data/process/process.js"
 
 type IPerformanceTickUpdateTick = {
-  update: IPositionUpdate | IPositionClose | IPositionLiquidated
+  update: PositionIncrease | PositionDecrease
   source: IPositionMirrorSettled | IPositionMirrorSlot
 }
 
@@ -67,7 +67,7 @@ function findClosest<T extends readonly number[]> (arr: T, chosen: number): T[nu
 }
 
 
-function getTime(tickItem: IPositionUpdate | IPositionClose | IPositionLiquidated) {
+function getTime(tickItem: PositionIncrease | PositionDecrease) {
   return tickItem.blockTimestamp
 }
 
@@ -107,18 +107,20 @@ export function performanceTimeline(config: IPerformanceTimeline) {
         return { ...acc }
       }
 
-      if (next.update.__typename === 'UpdatePosition') {
-        acc.positionSlot[next.update.key] ??= {
+      const key = next.update.positionKey
+
+      if (next.update.collateralAmount > 0n || next.update.__typename === 'PositionIncrease') {
+        acc.positionSlot[key] ??= {
           openPnl: 0n,
           realisedPnl: 0n,
           ...next
         }
         return { ...acc }
-      } else {
-        delete acc.positionSlot[next.update.key]
       }
+      
+      delete acc.positionSlot[key]
 
-      const nextSettlePnl = next.update.__typename === 'LiquidatePosition' ? -next.update.collateral : next.update.realisedPnl
+      const nextSettlePnl = next.update.basePnlUsd
       const pnlPortion = getParticiapntMpPortion(next.source, nextSettlePnl, config.targetShare)
       const openPnl = Object.values(acc.positionSlot).reduce((a, b) => a + b.openPnl + b.realisedPnl, 0n)
 
@@ -129,18 +131,18 @@ export function performanceTimeline(config: IPerformanceTimeline) {
     },
     gapMap: (acc, next, intervalSlot) => {
       const pendingPnl = Object.values(acc.positionSlot).reduce((pnlAcc, slot) => {
-
-        if  (slot.update.__typename !== 'UpdatePosition') {
+        if  (slot.update.collateralAmount === 0n) {
           return pnlAcc
         }
 
         const mp = slot.source
         const tickerId = `${mp.indexToken}:${interval}` as const
         const tokenPrice = getClosestpricefeedCandle(config.processData.pricefeed, tickerId, intervalSlot, 0)
-        const pnl = getPnL(mp.isLong, slot.update.averagePrice, tokenPrice.c, slot.update.size)
-        const openPnl = getParticiapntMpPortion(mp, pnl, config.targetShare)
+        const lstUpdate = mp.updates[mp.updates.length - 1]
+        const pnl = getPositionPnlUsd(lstUpdate, { isPriceFeed: true, maxPrice: tokenPrice.c, minPrice: tokenPrice.c, token: mp.indexToken  })
+        const pnlShare = getParticiapntMpPortion(mp, pnl, config.targetShare)
 
-        return pnlAcc + openPnl
+        return pnlAcc + pnlShare
       }, 0n)
 
       const value = formatFixed(acc.settledPnl + pendingPnl, 30)
@@ -156,7 +158,7 @@ export function performanceTimeline(config: IPerformanceTimeline) {
 
 function getClosestpricefeedCandle(pricefeed: Record<IPriceIntervalIdentity, Record<string, IPriceInterval>>, tickerId: IPriceIntervalIdentity, intervalSlot: number, offset: number) {
 
-  if (offset > 5) {
+  if (offset > 50) {
     throw new Error('No recent pricefeed data found')
   }
 
@@ -361,7 +363,7 @@ export const $ProfilePerformanceGraph = (config: IPerformanceTimeline & { $conta
 export function getUpdateTickList(list: (IPositionMirrorSettled | IPositionMirrorSlot)[]): IPerformanceTickUpdateTick[] {
   const updateList: IPerformanceTickUpdateTick[] = list
     .flatMap(mp => {
-      const tickList = mp.link.updateList.map(update => ({ update, source: mp }))
+      const tickList = mp.updates.map(update => ({ update, source: mp }))
 
       if ('settlement' in mp) {
         return [...tickList, { update: mp.settlement, source: mp }]

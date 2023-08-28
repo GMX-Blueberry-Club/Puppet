@@ -39,12 +39,12 @@ type FilterTable =  { activityTimeframe: GMX.IntervalTime } | null
 
 export const $TopSettled = (config: ITopSettled) => component((
   [routeTypeChange, routeTypeChangeTether]: Behavior<IAbstractRouteIdentity[]>,
-  [routeChange, routeChangeTether]: Behavior<any, string>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
   
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
   [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionListSummary>>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<GMX.IntervalTime>,
+  [routeChange, routeChangeTether]: Behavior<any, string>,
 
   [openFilterPopover, openFilterPopoverTether]: Behavior<any>,
 
@@ -65,8 +65,6 @@ export const $TopSettled = (config: ITopSettled) => component((
 
   const activityTimeframe = storage.replayWrite(store.activityTimeframe, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
 
-
-
   const pageParms = map(params => {
     const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
     const paging = startWith(requestPage, scrollRequest)
@@ -74,13 +72,11 @@ export const $TopSettled = (config: ITopSettled) => component((
     const dataSource =  map(req => {
       const filterStartTime = unixTimestampNow() - params.activityTimeframe
 
-      const flattenMapMap = Object
-        .values(params.data.mirrorPositionSettled)
-        .flatMap(pos => Object.values(pos).flat())
+      const flattenMapMap = params.data.mirrorPositionSettled
         .filter(pos => {
-          if (pos.route === GMX.ADDRESS_ZERO) {
-            return false
-          }
+          // if (pos.route === GMX.ADDRESS_ZERO) {
+          //   return false
+          // }
 
           const routeLength = params.routeList.length
           if (routeLength && params.routeList.findIndex(rt => getRouteTypeKey(rt.collateralToken, rt.indexToken, rt.isLong) === pos.routeTypeKey) === -1) {

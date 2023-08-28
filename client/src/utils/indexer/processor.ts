@@ -1,5 +1,5 @@
 import { combineObject } from "@aelea/core"
-import { empty, fromPromise, map, now, recoverWith, switchLatest } from "@most/core"
+import { fromPromise, map, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, getblockOrderIdentifier, max, min, switchMap } from "gmx-middleware-utils"
 import * as viem from "viem"
@@ -29,7 +29,7 @@ export interface IProcessedStore<T> {
 
 
 export interface IProcessSourceConfig<TLog extends ILogOrdered, TState> {
-  rangeSize?: bigint
+  queryBlockRange?: bigint
   source: IIndexEventLogScopeParams<TLog, any, any>
   step: (seed: TState, value: TLog) => TState
 }
@@ -38,7 +38,6 @@ export interface IProcessSourceConfig<TLog extends ILogOrdered, TState> {
 export interface IProcessorConfig<TState, TParentName extends string> {
   seed: Stream<IProcessedStore<TState>>,
   parentScope: store.IStoreconfig<TParentName>,
-  queryBlockSegmentLimit: bigint
   mode: IProcessEnvironmentMode
   blueprint: Omit<IProcessedStore<TState>, 'orderId' | 'blockNumber'>,
 }
@@ -126,17 +125,55 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
   const scopeKey = getProcessorKey(config.processList, config.blueprint.config)
 
   const nextLogs = map(processState => {
-    const startblock = processState.config.startBlock
     const processNextLog = config.processList.map(processConfig => {
       const rangeKey = IDBKeyRange.bound(processState.orderId, getblockOrderIdentifier(config.syncBlock + 1n), true)
       const nextStoredLog: Stream<ILogOrderedEvent[]> = indexDB.getAll(processConfig.source.scope, rangeKey)
 
       return switchMap(stored => {
+        const sourceStartBlock = processConfig.source.startBlock
+        const startblock = sourceStartBlock && sourceStartBlock > processState.config.startBlock ? sourceStartBlock : processState.config.startBlock
+
         const fstEvent = stored[0] as ILogOrderedEvent | undefined
         const lstEvent = stored[stored.length - 1] as ILogOrderedEvent | undefined
 
         const startGapBlockRange = fstEvent ? startblock - fstEvent.blockNumber : 0n
         const event = processConfig.source.abi.find((ev: any) => ev.type === 'event' && ev.name === processConfig.source.eventName)
+
+
+        if (!processConfig.queryBlockRange) {
+          const fromBlock = max(startblock, max(processState.blockNumber, lstEvent ? lstEvent.blockNumber : 0n))
+
+          const allEventsFromStart = fromPromise(
+            config.publicClient.getLogs({
+              fromBlock,
+              event,
+              address: processConfig.source.address,
+              args: processConfig.source.args,
+              strict: true,
+            })
+          ) as Stream<ILogEvent[]>
+
+          return switchMap(logs => {
+            const filtered = logs
+              .map(ev => {
+                const storeObj = { ...ev, orderId: getEventOrderIdentifier(ev) } as ILogOrderedEvent
+                return storeObj
+              })
+              .filter(ev => {
+                if (!lstEvent) {
+                  return true
+                }
+
+                return ev.orderId > Math.max(processState.orderId || 0, lstEvent.orderId)
+              })
+
+            if (config.mode === IProcessEnvironmentMode.DEV) {
+              return map(nextStored => [...stored, ...nextStored], indexDB.add(processConfig.source.scope, filtered))
+            }
+
+            return now([...stored, ...filtered])
+          }, allEventsFromStart)
+        }
 
         const prev = startGapBlockRange > 0n
           ? fetchTradesRecur(
@@ -145,16 +182,17 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
               fromBlock: startblock,
               toBlock: startblock + startGapBlockRange,
               publicClient: config.publicClient,
-              rangeSize: processConfig.rangeSize || config.queryBlockSegmentLimit,
+              rangeBlockQuery: processConfig.queryBlockRange,
             },
             reqParams => {
               const queryLogs = fromPromise(
                 config.publicClient.getLogs({
                   event,
+                  args: reqParams.args,
                   address: reqParams.address,
                   fromBlock: reqParams.fromBlock,
+                  toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeBlockQuery),
                   strict: true,
-                  toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeSize),
                 })
               ) as Stream<ILogEvent[]>
 
@@ -191,16 +229,17 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
               fromBlock: fromBlock,
               toBlock: config.syncBlock,
               publicClient: config.publicClient,
-              rangeSize: processConfig.rangeSize || config.queryBlockSegmentLimit,
+              rangeBlockQuery: processConfig.queryBlockRange,
             },
             reqParams => {
               const queryLogs = fromPromise(
                 config.publicClient.getLogs({
                   event,
+                  args: reqParams.args,
                   address: reqParams.address,
                   fromBlock: reqParams.fromBlock,
                   strict: true,
-                  toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeSize),
+                  toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeBlockQuery),
                 })
               ) as Stream<ILogEvent[]>
 
@@ -246,9 +285,9 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
       const orderedNextEvents = nextLogEvents.flat().sort((a, b) => a.orderId - b.orderId)
 
       const nextState = orderedNextEvents.reduce((acc, next) => {
-        const eventProcessor = config.processList.find(processConfig => {
+        const eventProcessor = config.processList.find((processConfig, idx) => {
           if ('eventName' in next) {
-            return processConfig.source.eventName === next.eventName
+            return nextLogEvents[idx].indexOf(next) > -1
           }
 
           throw new Error('Event is not an ILogOrderedEvent')

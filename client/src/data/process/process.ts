@@ -1,19 +1,26 @@
 import { map } from "@most/core"
 import { Stream } from "@most/types"
-import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, BYTES32_ZERO, IntervalTime, TIME_INTERVAL_MAP } from "gmx-middleware-const"
+import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, BYTES32_ZERO, IntervalTime, MarketEvent, OracleEvent, PositionEvent, TIME_INTERVAL_MAP, TOKEN_ADDRESS_DESCRIPTION_MAP } from "gmx-middleware-const"
 import {
-  IPositionIncrease, IPositionSlot, IPriceInterval,
-  IPriceIntervalIdentity, createPricefeedCandle, div, getIntervalIdentifier, importGlobal, switchMap
+  IEventLog1Args,
+  ILogTxType,
+  IPositionSlot, IPriceInterval,
+  IPriceIntervalIdentity, Market, MarketPoolValueInfo, OraclePrice, PositionDecrease,
+  PositionIncrease, createPricefeedCandle,
+  div,
+  getIntervalIdentifier,
+  getMappedValue,
+  getTokenUsd,
+  importGlobal, switchMap, unixTimestampNow
 } from "gmx-middleware-utils"
-import { getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-const"
-import { IAccountToRouteMap, IPositionMirrorSettled, IPositionMirrorSlot, IPositionRequest, IPuppetRouteTrades } from "puppet-middleware-utils"
+import { getRouteTypeKey } from "puppet-middleware-const"
+import { IPositionMirrorSettled, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
-import { rootStoreScope } from "../store/store"
 import { IProcessEnvironmentMode, IProcessedStore, IProcessedStoreConfig, defineProcess, validateSeed } from "../../utils/indexer/processor"
 import { transformBigints } from "../../utils/storage/storeScope"
-import { puppetLog } from "../scope"
 import * as gmxLog from "../scope/gmx"
+import { rootStoreScope } from "../store/store"
 
 
 export interface IProcessMetrics {
@@ -35,23 +42,26 @@ export const PRICEFEED_INTERVAL = [
 
 export interface IGmxProcessState {
   blockMetrics: IProcessMetrics,
-  // positionSlot: Record<viem.Hex, IPositionSlot>
-  // positionsSettled: Record<viem.Hex, IPositionSettled>
-  // leaderboard: Record<viem.Address, ITraderSummary>
+
   pricefeed: Record<IPriceIntervalIdentity, Record<string, IPriceInterval>>
-  latestPrice: Record<viem.Address, bigint>
+  latestPrice: Record<viem.Address, OraclePrice>
+  marketPoolInfo: Record<viem.Address, MarketPoolValueInfo>
   approximatedTimestamp: number
 
-  mirrorPositionRequest: Record<viem.Hex, IPositionRequest>
+  // mirrorPositionRequest: Record<viem.Hex, IPositionRequest>
   mirrorPositionSlot: Record<viem.Hex, IPositionMirrorSlot>
-  mirrorPositionSettled: IAccountToRouteMap<IPositionMirrorSettled[]>
-  subscription: IPuppetRouteTrades[]
+  mirrorPositionSettled: IPositionMirrorSettled[]
+  subscription: IPuppetRouteSubscritpion[]
+
+  // mirrorPositionSlotV2: Record<viem.Hex, IPositionMirrorSlotV2>
+  // mirrorPositionSettledV2: IAccountToRouteMap<IPositionMirrorSettled[]>
+  markets: Record<viem.Address, Market>
 }
 
 
 
-
 const state: IGmxProcessState = {
+  marketPoolInfo: {},
   blockMetrics: {
     cumulativeBlocks: 0n,
     cumulativeDeltaTime: 0n,
@@ -64,15 +74,20 @@ const state: IGmxProcessState = {
   pricefeed: {},
   latestPrice: {},
 
-  mirrorPositionRequest: {},
+  // mirrorPositionRequest: {},
   mirrorPositionSlot: {},
-  mirrorPositionSettled: {},
+  mirrorPositionSettled: [],
   subscription: [],
+
+  // V2
+  // mirrorPositionSlotV2: {},
+  // mirrorPositionSettledV2: {},
+  markets: {},
 }
 
 const config: IProcessedStoreConfig = {
-  startBlock: 115000000n,
-  endBlock: 122956472n,
+  startBlock: 107745255n,
+  endBlock: 125227192n,
   chainId: arbitrum.id,
 }
 
@@ -99,10 +114,10 @@ export const gmxProcess = defineProcess(
       state,
     },
     parentScope: rootStoreScope,
-    queryBlockSegmentLimit: 100000n,
   },
   {
     source: gmxLog.requestIncreasePosition,
+    queryBlockRange: 100000n,
     step(seed, value) {
     
       if (seed.blockMetrics.height > 0n)  {
@@ -126,11 +141,21 @@ export const gmxProcess = defineProcess(
     },
   },
   {
-    source: gmxLog.vaultPriceEvents,
+    source: gmxLog.marketCreated,
     step(seed, value) {
-      const args = value.args
+      const entity = getEventType<Market>('Market', value, seed.approximatedTimestamp)
+      seed.markets[entity.marketToken] = entity
+      return seed
+    },
+  },
+  {
+    source: gmxLog.oraclePrice,
+    queryBlockRange: 100000n,
+    step(seed, value) {
+      const entity = getEventdata<OraclePrice>(value)
 
-      seed.latestPrice[args.token] = args.fastPrice
+
+      seed.latestPrice[entity.token] = entity
 
       if (seed.blockMetrics.timestamp === 0n) {
         return seed
@@ -139,303 +164,313 @@ export const gmxProcess = defineProcess(
       seed.approximatedTimestamp = Number(seed.blockMetrics.timestamp + (value.blockNumber - seed.blockMetrics.height) * seed.blockMetrics.avgDeltaTime / BASIS_POINTS_DIVISOR)
 
       for (const key in PRICEFEED_INTERVAL) {
-        storeCandle(seed, args.token, PRICEFEED_INTERVAL[key], args.fastPrice)
+        storeCandle(seed, entity.token, PRICEFEED_INTERVAL[key], entity.minPrice)
       }
 
       return seed
     },
   },
   {
-    source: gmxLog.increaseEvents,
+    source: gmxLog.positionIncrease,
+    queryBlockRange: 100000n,
     step(seed, value) {
+      const adjustment = getEventType<PositionIncrease>('PositionIncrease', value, seed.approximatedTimestamp)
 
-      const args = value.args
-      seed.mirrorPositionRequest[args.key] ??= {
-        positionKey: args.key,
+      const market = seed.markets[adjustment.market]
+
+      const slot = seed.mirrorPositionSlot[adjustment.positionKey] ??= {
+        ...createPositionSlot(unixTimestampNow(), value.transactionHash, market.indexToken, adjustment, adjustment.orderKey),
         puppets: [],
         requestKey: BYTES32_ZERO,
-        routeTypeKey: getRouteTypeKey(args.collateralToken, args.indexToken, args.isLong),
+        routeTypeKey: getRouteTypeKey(adjustment.collateralToken, adjustment.market, adjustment.isLong),
         route: ADDRESS_ZERO,
-        trader: args.account,
+        trader: adjustment.account,
         shares: [],
         shareSupply: 0n,
         traderShare: 0n,
-        blockTimestamp: seed.approximatedTimestamp,
-        transactionHash: value.transactionHash,
-        __typename: 'PositionRequest',
+        positionKey: adjustment.positionKey,
       }
 
+      slot.updates.push(adjustment)
+      slot.cumulativeFee += adjustment.fundingFeeAmountPerSize
 
-      const mirrorPositionReq = seed.mirrorPositionRequest[args.key]
+      slot.cumulativeSizeUsd += adjustment.sizeDeltaUsd
+      slot.cumulativeSizeToken += adjustment.sizeDeltaInTokens
 
-
-
-      if (!seed.mirrorPositionSlot[args.key]) {
-        const positionSlot = seed.mirrorPositionSlot[args.key] = createMirrorPositionSlot(
-          seed.approximatedTimestamp,
-          value.transactionHash,
-          {
-            ...args,
-            __typename: 'IncreasePosition',
-            blockTimestamp: seed.approximatedTimestamp,
-            transactionHash: value.transactionHash,
-          },
-          mirrorPositionReq.requestKey,
-          mirrorPositionReq
-        )
-        seed.mirrorPositionSlot[args.key].puppets.forEach(puppet => {
-          const subscKey = getPuppetSubscriptionKey(puppet, positionSlot.trader, positionSlot.routeTypeKey)
-          const subsc = seed.subscription.find(s => s.puppetSubscriptionKey === subscKey)!
-
-          subsc.open.push(positionSlot)
-        })
+      if (adjustment.sizeInTokens > slot.maxSizeToken) {
+        slot.maxSizeToken = adjustment.sizeInTokens
+      }
+      if (adjustment.sizeInUsd > slot.maxSizeUsd) {
+        slot.maxSizeUsd = adjustment.sizeInUsd
       }
 
+      if (adjustment.collateralAmount > slot.maxCollateralToken) {
+        slot.maxCollateralToken = adjustment.collateralAmount
+      }
 
-      const positionSlot = seed.mirrorPositionSlot[args.key]
-      positionSlot.lastIncreasedTime = BigInt(seed.approximatedTimestamp)
-      positionSlot.requestKey = mirrorPositionReq.routeTypeKey
+      // const collateralTokenDescription = getMappedValue(TOKEN_ADDRESS_DESCRIPTION_MAP, adjustment.collateralToken)
+      // const collateralUsd = getTokenUsd(adjustment.collateralAmount, adjustment["collateralTokenPrice.min"], collateralTokenDescription.decimals)
 
-      positionSlot.cumulativeSize += args.sizeDelta
-      positionSlot.cumulativeFee += args.fee
+      const collateralUsd = adjustment.collateralAmount * adjustment["collateralTokenPrice.min"]
+      
 
-      positionSlot.link.increaseList.push({
-        ...value.args,
-        blockTimestamp: seed.approximatedTimestamp,
-        transactionHash: value.transactionHash,
-        __typename: 'IncreasePosition'
-      })
-
+      if (collateralUsd > slot.maxCollateralUsd) {
+        slot.maxCollateralUsd = collateralUsd
+      }
 
       return seed
     },
   },
   {
-    source: gmxLog.decreaseEvents,
+    source: gmxLog.positionDecrease,
+    queryBlockRange: 100000n,
     step(seed, value) {
-      const args = value.args
-      const positionSlot = seed.mirrorPositionSlot[args.key]
+      const adjustment = getEventType<PositionDecrease>('PositionDecrease', value, seed.approximatedTimestamp)
+      const slot = seed.mirrorPositionSlot[adjustment.positionKey]
 
-      if (!positionSlot) {
-        return seed
-        // throw new Error('position not found')
+      if (!slot) return seed
+
+      // const decimals = getMappedValue(TOKEN_ADDRESS_DESCRIPTION_MAP, adjustment.collateralToken).decimals
+      // const newLocal = getTokenUsd(adjustment.collateralAmount, adjustment["collateralTokenPrice.min"], decimals)
+      // debugger
+      // slot.collateral += newLocal
+      slot.realisedPnl += adjustment.basePnlUsd
+                
+      slot.updates.push(adjustment)
+      slot.cumulativeFee += adjustment.fundingFeeAmountPerSize
+
+      slot.cumulativeSizeUsd += adjustment.sizeDeltaUsd
+      slot.cumulativeSizeToken += adjustment.sizeDeltaInTokens
+
+      if (adjustment.sizeInTokens > slot.maxSizeToken) {
+        slot.maxSizeToken = adjustment.sizeInTokens
+      }
+      if (adjustment.sizeInUsd > slot.maxSizeUsd) {
+        slot.maxSizeUsd = adjustment.sizeInUsd
       }
 
-      positionSlot.cumulativeSize += args.sizeDelta
-      positionSlot.cumulativeFee += args.fee
-
-      positionSlot.link.decreaseList.push({
-        ...value.args,
-        blockTimestamp: seed.approximatedTimestamp,
-        transactionHash: value.transactionHash,
-        __typename: 'DecreasePosition'
-      })
-
-      return seed
-    },
-  },
-  {
-    source: gmxLog.updateEvents,
-    step(seed, value) {
-      const args = value.args
-      const positionSlot = seed.mirrorPositionSlot[args.key]
-
-      if (!positionSlot) {
-        return seed
-        // throw new Error('position not found')
-      }
-
-      const markPrice = seed.latestPrice[positionSlot.indexToken]
-
-      positionSlot.link.updateList.push({ ...value.args, blockTimestamp: seed.approximatedTimestamp, markPrice, transactionHash: value.transactionHash, __typename: 'UpdatePosition' })
-      positionSlot.collateral = args.collateral
-      positionSlot.realisedPnl = args.realisedPnl
-      positionSlot.averagePrice = args.averagePrice
-      positionSlot.size = args.size
-      positionSlot.reserveAmount = args.reserveAmount
-      positionSlot.entryFundingRate = args.entryFundingRate
-      positionSlot.maxCollateral = args.collateral > positionSlot.maxCollateral ? args.collateral : positionSlot.maxCollateral
-      positionSlot.maxSize = args.size > positionSlot.maxSize ? args.size : positionSlot.maxSize
-
-      return seed
-    },
-  },
-  {
-    source: gmxLog.closeEvents,
-    step(seed, value) {
-      const args = value.args
-      const positionSlot = seed.mirrorPositionSlot[args.key]
-
-      if (!positionSlot ) {
-        return seed
-        // throw new Error('position not found')
+      if (adjustment.collateralAmount > slot.maxCollateralUsd) {
+        slot.maxCollateralUsd = adjustment.collateralAmount
       }
 
 
-      seed.mirrorPositionSettled[positionSlot.trader] ??= {}
-      seed.mirrorPositionSettled[positionSlot.trader][positionSlot.routeTypeKey] ??= []
-      const newSettledPosition: IPositionMirrorSettled = {
-        ...positionSlot,
-        realisedPnl: args.realisedPnl,
-        settlePrice: seed.latestPrice[positionSlot.indexToken],
-        openBlockTimestamp: positionSlot.blockTimestamp,
-        isLiquidated: false,
-        settlement: {
-          ...args,
-          transactionHash: value.transactionHash,
+      if (adjustment.collateralAmount === 0n) {
+        seed.mirrorPositionSettled.push({
+          ...slot,
+          openBlockTimestamp: slot.blockTimestamp,
+          isLiquidated: false,
+          settlement: adjustment,
           blockTimestamp: seed.approximatedTimestamp,
-          __typename: 'ClosePosition',
-        },
-        blockTimestamp: seed.approximatedTimestamp,
-        transactionHash: value.transactionHash,
-        __typename: 'PositionMirrorSettled',
-      } as const
-      seed.mirrorPositionSettled[positionSlot.trader][positionSlot.routeTypeKey].push(newSettledPosition)
-
-
-      positionSlot.puppets.forEach(puppet => {
-        const subscKey = getPuppetSubscriptionKey(puppet, positionSlot.trader, positionSlot.routeTypeKey)
-        const subsc = seed.subscription.find(s => s.puppetSubscriptionKey === subscKey)!
-
-        subsc.settled.push(newSettledPosition)
-
-        const removeIdx = subsc.open.findIndex(pos => pos.positionKey === positionSlot.positionKey)
-        subsc.open.splice(removeIdx, 1)
-      })
-
-      delete seed.mirrorPositionSlot[args.key]
-      delete seed.mirrorPositionRequest[args.key]
-
-
-      return seed
-    },
-  },
-  {
-    source: gmxLog.liquidateEvents,
-    step(seed, value) {
-      const args = value.args
-      const positionSlot = seed.mirrorPositionSlot[args.key]
-
-      if (!positionSlot) {
-        return seed
-        // throw new Error('position not found')
-      }
-
-
-      const realisedPnl = -args.collateral
-
-      seed.mirrorPositionSettled[positionSlot.trader] ??= {}
-      seed.mirrorPositionSettled[positionSlot.trader][positionSlot.routeTypeKey] ??= []
-      const newSettledPosition: IPositionMirrorSettled = {
-        ...positionSlot,
-        realisedPnl: realisedPnl,
-        settlePrice: args.markPrice,
-        isLiquidated: false,
-        openBlockTimestamp: positionSlot.blockTimestamp,
-        settlement: {
-          ...args,
           transactionHash: value.transactionHash,
-          blockTimestamp: seed.approximatedTimestamp,
-          __typename: 'LiquidatePosition',
-        },
-        __typename: 'PositionMirrorSettled',
-      } as const
-      seed.mirrorPositionSettled[positionSlot.trader][positionSlot.routeTypeKey].push(newSettledPosition)
-
-      positionSlot.puppets.forEach(puppet => {
-        const subscKey = getPuppetSubscriptionKey(puppet, positionSlot.trader, positionSlot.routeTypeKey)
-        const subsc = seed.subscription.find(s => s.puppetSubscriptionKey === subscKey)!
-
-        subsc.settled.push(newSettledPosition)
-
-        const removeIdx = subsc.open.findIndex(pos => pos.positionKey === positionSlot.positionKey)
-        subsc.open.splice(removeIdx, 1)
-      })
-
-      delete seed.mirrorPositionSlot[args.key]
-      delete seed.mirrorPositionRequest[args.key]
-
-      return seed
-    },
-  },
-  {
-    source: puppetLog.shareIncrease,
-    step(seed, value) {
-      const args = value.args
-      const positionSlot = seed.mirrorPositionSlot[args.positionKey]
-
-      if (!positionSlot) {
-        return seed
-        // throw new Error('position not found')
+          __typename: 'PositionSettled',
+        } as const)
       }
 
-      positionSlot.shares = args.puppetsShares
-      positionSlot.traderShare = args.traderShares
-      positionSlot.shareSupply = args.totalSupply
-
-      // positionSlot.position.cumulativeFee += args.fee
-      // positionSlot.position.link.decreaseList.push({ ...value.args, blockTimestamp: seed.approximatedTimestamp, transactionHash: value.transactionHash, __typename: 'DecreasePosition' })
-
-      return seed
-    },
-  },
-  // puppet
-  {
-    source: puppetLog.openPosition,
-    step(seed, value) {
-      const args = value.args
-
-      seed.mirrorPositionRequest[args.positionKey] ??= {
-        ...args,
-        shares: [],
-        shareSupply: 0n,
-        traderShare: 0n,
-        blockTimestamp: seed.approximatedTimestamp,
-        transactionHash: value.transactionHash,
-        __typename: 'PositionRequest',
-      }
+      delete seed.mirrorPositionSlot[adjustment.positionKey]
 
 
       return seed
     },
   },
-  {
-    source: puppetLog.subscribeRoute,
-    step(seed, value) {
-      const args = value.args
-      const subscKey = getPuppetSubscriptionKey(args.puppet, args.trader, args.routeTypeKey)
+  // {
+  //   source: gmxLog.V2eventLog1,
+  //   step(seed, value) {
+  //     const args = value.args
+  //     const eventName = args.eventName
 
-      let subsc = seed.subscription.find(subsc => subsc.puppetSubscriptionKey === subscKey)
+  //     if (eventName === MarketEvent.MarketPoolValueInfo)  {
+  //       const entity = getEventType<MarketPoolValueInfo>('MarketPoolValueInfo', value, seed.approximatedTimestamp)
+  //       seed.marketPoolInfo[entity.market] = entity
+  //     }
 
-      if (!subsc) {
-        subsc = {
-          allowance: 0n,
-          puppet: args.puppet,
-          trader: args.trader,
-          puppetSubscriptionKey: subscKey,
-          routeTypeKey: args.routeTypeKey,
-          subscribed: args.subscribe,
-          endDate: 0n,
-          settled: [],
-          open: []
-        }
+  //     // if (eventName === MarketEvent.ClaimableCollateralUpdated)  {
+  //     //   const entity = getEventdata<OraclePrice>(value)
+  //     //   console.log(entity)
+  //     // }
+  //     // if (eventName === MarketEvent.ClaimableCollateralUpdated)  {
+  //     //   const entity = getEventdata<OraclePrice>('OraclePrice', value, seed.approximatedTimestamp)
+  //     //   console.log(entity)
+  //     // }
+  //     // if (eventName === MarketEvent.ClaimableFundingUpdated)  {
+  //     //   const entity = getEventdata<OraclePrice>(value, seed.approximatedTimestamp)
+  //     //   console.log(entity)
+  //     // }
 
-        seed.subscription.push(subsc)
-      }
+  //     if (eventName === OracleEvent.OraclePriceUpdate)  {
+
+  //     }
+
+
+  //     if (eventName === PositionEvent.PositionIncrease)  {
+
+  //     }
+
+  //     if (eventName === PositionEvent.PositionDecrease)  {
+
+          
+
+  //       }
+
+
+  //       // settledPosition.puppets.forEach(puppet => {
+  //       //   const subscKey = getPuppetSubscriptionKey(puppet, settledPosition.trader, settledPosition.routeTypeKey)
+  //       //   const subsc = seed.subscription.find(s => s.puppetSubscriptionKey === subscKey)!
+
+  //       //   subsc.settled.push(settledPosition)
+
+  //       //   const removeIdx = subsc.open.findIndex(pos => pos.positionKey === positionSlot.positionKey)
+  //       //   subsc.open.splice(removeIdx, 1)
+  //       // })
+
+  //       delete seed.mirrorPositionSlot[adjustment.orderKey]
+  //       // delete seed.mirrorPositionRequest[args.key]
+
+  //       return seed
+  //     }
+
+  //     // if (eventName === PositionEvent.PositionFeesCollected)  {
+  //     //   const entity = getEventdata<PositionFeesInfo>(value)
+  //     //   const slot = seed.mirrorPositionSlot[entity.positionKey]
+
+  //     //   if (!slot) return seed
+
+  //     //   slot.feeList.push(entity)
+  //     // }
+
+
+  //     return seed
+  //   }
+  // },
+  
+  // {
+  //   source: gmxLog.liquidateEvents,
+  //   step(seed, value) {
+  //     const args = value.args
+  //     const positionSlot = seed.mirrorPositionSlot[args.key]
+
+  //     if (!positionSlot) {
+  //       return seed
+  //       // throw new Error('position not found')
+  //     }
+
+
+  //     const realisedPnl = -args.collateral
+
+  //     seed.mirrorPositionSettled[positionSlot.trader] ??= {}
+  //     seed.mirrorPositionSettled[positionSlot.trader][positionSlot.routeTypeKey] ??= []
+  //     const newSettledPosition: IPositionMirrorSettled = {
+  //       ...positionSlot,
+  //       realisedPnl: realisedPnl,
+  //       settlePrice: args.markPrice,
+  //       isLiquidated: false,
+  //       openBlockTimestamp: positionSlot.blockTimestamp,
+  //       settlement: {
+  //         ...args,
+  //         transactionHash: value.transactionHash,
+  //         blockTimestamp: seed.approximatedTimestamp,
+  //         __typename: 'LiquidatePosition',
+  //       },
+  //       __typename: 'PositionMirrorSettled',
+  //     } as const
+  //     seed.mirrorPositionSettled[positionSlot.trader][positionSlot.routeTypeKey].push(newSettledPosition)
+
+  //     positionSlot.puppets.forEach(puppet => {
+  //       const subscKey = getPuppetSubscriptionKey(puppet, positionSlot.trader, positionSlot.routeTypeKey)
+  //       const subsc = seed.subscription.find(s => s.puppetSubscriptionKey === subscKey)!
+
+  //       subsc.settled.push(newSettledPosition)
+
+  //       const removeIdx = subsc.open.findIndex(pos => pos.positionKey === positionSlot.positionKey)
+  //       subsc.open.splice(removeIdx, 1)
+  //     })
+
+  //     delete seed.mirrorPositionSlot[args.key]
+  //     delete seed.mirrorPositionRequest[args.key]
+
+  //     return seed
+  //   },
+  // },
+  // {
+  //   source: puppetLog.shareIncrease,
+  //   step(seed, value) {
+  //     const args = value.args
+  //     const positionSlot = seed.mirrorPositionSlot[args.positionKey]
+
+  //     if (!positionSlot) {
+  //       return seed
+  //       // throw new Error('position not found')
+  //     }
+
+  //     positionSlot.shares = args.puppetsShares
+  //     positionSlot.traderShare = args.traderShares
+  //     positionSlot.shareSupply = args.totalSupply
+
+  //     // positionSlot.position.cumulativeFee += args.fee
+  //     // positionSlot.position.link.decreaseList.push({ ...value.args, blockTimestamp: seed.approximatedTimestamp, transactionHash: value.transactionHash, __typename: 'DecreasePosition' })
+
+  //     return seed
+  //   },
+  // },
+  // // puppet
+  // {
+  //   source: puppetLog.openPosition,
+  //   step(seed, value) {
+  //     const args = value.args
+
+
+  //     // TODO better hook this up with the position slot
+  //     seed.mirrorPositionSlot[args.positionKey] ??= {
+  //       ...seed.mirrorPositionSlot[args.positionKey],
+  //       requestKey: args.positionKey,
+  //       puppets: args.puppets,
+  //       shares: [],
+  //       traderShare: 0n,
+  //       trader: args.trader,
+  //       shareSupply: 0n,
+  //       routeTypeKey: args.routeTypeKey,
+  //       positionKey: args.positionKey,
+  //       route: args.route,
+  //     }
+
+
+  //     return seed
+  //   },
+  // },
+  // {
+  //   source: puppetLog.subscribeRoute,
+  //   step(seed, value) {
+  //     const args = value.args
+  //     const subscKey = getPuppetSubscriptionKey(args.puppet, args.trader, args.routeTypeKey)
+
+  //     let subsc = seed.subscription.find(subsc => subsc.puppetSubscriptionKey === subscKey)
+
+  //     if (!subsc) {
+  //       subsc = {
+  //         allowance: 0n,
+  //         puppet: args.puppet,
+  //         trader: args.trader,
+  //         puppetSubscriptionKey: subscKey,
+  //         routeTypeKey: args.routeTypeKey,
+  //         subscribed: args.subscribe,
+  //         expiry: 0n,
+  //         settled: [],
+  //         open: []
+  //       }
+
+  //       seed.subscription.push(subsc)
+  //     }
 
       
 
-      subsc.subscribed = args.subscribe
+  //     subsc.subscribed = args.subscribe
 
-      return seed
-    },
-  },
+  //     return seed
+  //   },
+  // },
 )
 
 
-export interface IPuppetProcess extends IGmxProcessState {
 
-}
 
 
 
@@ -461,48 +496,56 @@ function storeCandle(seed: IGmxProcessState, token: viem.Address, interval: Inte
   }
 }
 
-export function createPositionSlot(blockTimestamp: number, transactionHash: viem.Hex, event: IPositionIncrease, requestKey: viem.Hex): IPositionSlot {
+export function createPositionSlot(blockTimestamp: number, transactionHash: viem.Hex, indexToken: viem.Address, event: PositionIncrease, requestKey: viem.Hex): IPositionSlot {
   return {
+    market: event.market,
     requestKey,
-    key: event.key,
+    key: event.positionKey,
     account: event.account,
     collateralToken: event.collateralToken,
-    indexToken: event.indexToken,
+    indexToken,
     isLong: event.isLong,
-    lastIncreasedTime: 0n,
     averagePrice: 0n,
-    collateral: 0n,
     cumulativeFee: 0n,
-    cumulativeSize: 0n,
-    entryFundingRate: 0n,
-    maxCollateral: 0n,
-    reserveAmount: 0n,
-    size: 0n,
-    maxSize: 0n,
+    maxCollateralUsd: 0n,
+    maxCollateralToken: 0n,
+    maxSizeToken: 0n,
+    maxSizeUsd: 0n,
+    cumulativeSizeToken: 0n,
+    cumulativeSizeUsd: 0n,
+    updates: [],
     realisedPnl: 0n,
-    __typename: 'PositionSlot',
-    link: {
-      decreaseList: [],
-      increaseList: [],
-      updateList: [],
-    },
 
+    __typename: "PositionSlot",
     transactionHash: transactionHash,
     blockTimestamp: blockTimestamp,
   }
 }
 
-export function createMirrorPositionSlot(blockTimestamp: number, transactionHash: viem.Hex, event: IPositionIncrease, requestKey: viem.Hex, req: IPositionRequest): IPositionMirrorSlot {
-  return {
-    ...req,
-    ...createPositionSlot(blockTimestamp, transactionHash, event, requestKey),
-    __typename: 'PositionMirrorSlot'
-  }
-}
+
 
 
 
 export const latestTokenPrice = (process: Stream<IGmxProcessState>, tokenEvent: Stream<viem.Address>) => {
   return switchMap(token => map(seed => seed.latestPrice[token], process), tokenEvent)
+}
+
+export const getEventType = <T extends ILogTxType<any>>(typeName: string, log: IEventLog1Args, blockTimestamp: number): T => {
+  const initObj = {
+    blockTimestamp,
+    transactionHash: log.transactionHash,
+    __typename: typeName,
+  }
+
+  return getEventdata(log, initObj)
+}
+
+export const getEventdata = <T>(log: IEventLog1Args, initObj: any = {}): T => {
+  const obj = Object.values(log.args.eventData).map(x => x.items).flat().reduce((acc, value) => {
+    acc[value.key] = value.value
+    return acc
+  }, initObj)
+
+  return obj
 }
 

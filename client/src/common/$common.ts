@@ -1,15 +1,15 @@
-import { Behavior, combineObject, isStream, O, Op, Tether } from "@aelea/core"
-import { $Node, $text, component, INode, nodeEvent, style, styleBehavior, styleInline } from "@aelea/dom"
+import { Behavior, combineObject, isStream, O, Tether } from "@aelea/core"
+import { $text, component, INode, nodeEvent, style, styleBehavior, styleInline } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $icon, $row, $seperator, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { constant, map, now, skipRepeats, tap } from "@most/core"
+import { map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $bear, $bull, $Link, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
 import {
   bnDiv,
-  div, formatBps,
+  div,
   getFundingFee,
   getMarginFees,
   getNextLiquidationPrice, getPnL,
@@ -17,15 +17,15 @@ import {
   IAbstractRouteIdentity,
   IPosition, IPositionSettled, IPositionSlot,
   isPositionSettled,
-  leverageLabel,
   liquidationWeight,
+  OraclePrice,
   readableFixedBsp,
   readableFixedUSD30,
   streamOf,
   switchMap
 } from "gmx-middleware-utils"
 import { getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-const"
-import { getMpPnL, getParticiapntMpShare, getPortion, IPositionMirrorSettled, IPositionMirrorSlot, IPuppetRouteSubscritpion, IPuppetRouteTrades } from "puppet-middleware-utils"
+import { getMpSlotPnL, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile"
 import { $Popover } from "../components/$Popover"
@@ -35,7 +35,7 @@ import { IProfileActiveTab } from "../pages/$Profile"
 import { $seperator2 } from "../pages/common"
 import { wallet } from "../wallet/walletLink"
 import { $puppetLogo } from "./$icons"
-import { contractReader } from "../logic/common"
+import { TOKEN_SYMBOL } from "gmx-middleware-const"
 
 
 export const $midContainer = $column(
@@ -87,12 +87,12 @@ export const $route = (pos: IAbstractRouteIdentity, size = '34px') => {
   )
 }
 
-export const $settledSizeDisplay = (pos: IPositionSettled | IPositionSlot) => {
+export const $settledSizeDisplay = (pos: IPositionSettled) => {
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
-    $text(readableFixedUSD30(pos.maxSize)),
+    $text(readableFixedUSD30(pos.maxSizeUsd)),
     $seperator2,
     $row(layoutSheet.spacingSmall, style({ fontSize: '.85rem', placeContent: 'center' }))(
-      $leverage(pos.maxSize, pos.maxCollateral),
+      $leverage(pos.maxSizeUsd, pos.maxCollateralUsd),
       $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
         $icon({
           fill: isPositionSettled(pos) ? pallete.negative : undefined,
@@ -110,7 +110,7 @@ export const $settledSizeDisplay = (pos: IPositionSettled | IPositionSlot) => {
 
 export const $tokenIcon = (indexToken: viem.Address, IIcon?: { width?: string }) => {
   const tokenDesc = getTokenDescription(indexToken)
-  const $token = $tokenIconMap[tokenDesc.symbol]
+  const $token = $tokenIconMap[tokenDesc.symbol] || $tokenIconMap[TOKEN_SYMBOL.GMX]
 
   if (!$token) {
     throw new Error('Unable to find matched token')
@@ -125,7 +125,7 @@ export const $tokenIcon = (indexToken: viem.Address, IIcon?: { width?: string })
   })
 }
 
-export const $sizeAndLiquidation = (isLong: boolean, size: bigint, collateral: bigint, averagePrice: bigint, markPrice: Stream<bigint>) => {
+export const $sizeAndLiquidation = (isLong: boolean, size: bigint, collateral: bigint, averagePrice: bigint, markPrice: Stream<OraclePrice>) => {
 
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
     $text(readableFixedUSD30(size)),
@@ -189,10 +189,10 @@ export const $PnlPercentageValue = (pnl: Stream<bigint> | bigint, collateral: bi
   )
 }
 
-export const $tradePnl = (mp: IPositionMirrorSlot | IPositionMirrorSettled, positionMarkPrice: Stream<bigint> | bigint, shareTarget?: viem.Address) => {
+export const $positionSlotPnl = (mp: IPositionMirrorSlot, positionMarkPrice: Stream<OraclePrice> | bigint, shareTarget?: viem.Address) => {
   const value = isStream(positionMarkPrice)
-    ? map((markPrice: bigint) => {
-      const pnl = getMpPnL(mp, markPrice, shareTarget)
+    ? map((price) => {
+      const pnl = getMpSlotPnL(mp, price, shareTarget)
       return mp.realisedPnl + pnl - mp.cumulativeFee
     }, positionMarkPrice)
     : positionMarkPrice
@@ -200,16 +200,16 @@ export const $tradePnl = (mp: IPositionMirrorSlot | IPositionMirrorSettled, posi
   return $pnlValue(value)
 }
 
-export const $tradeRoi = (pos: IPosition, positionMarkPrice: Stream<bigint> | bigint) => {
-  const roi = map((markPrice: bigint) => {
-    const delta = getPnL(pos.isLong, pos.averagePrice, markPrice, pos.size)
-    return readableFixedBsp(div(pos.realisedPnl + delta - pos.cumulativeFee, pos.collateral) * 100n)
+export const $positionSlotRoi = (pos: IPositionMirrorSlot, positionMarkPrice: Stream<OraclePrice> | OraclePrice) => {
+  const roi = map(markPrice => {
+    const delta = getMpSlotPnL(pos, markPrice)
+    return readableFixedBsp(div(pos.realisedPnl + delta - pos.cumulativeFee, pos.maxCollateralUsd) * 100n)
   }, streamOf(positionMarkPrice))
 
   return $text(roi)
 }
 
-export function $liquidationSeparator(isLong: boolean, size: bigint, collateral: bigint, averagePrice: bigint, markPrice: Stream<bigint>) {
+export function $liquidationSeparator(isLong: boolean, size: bigint, collateral: bigint, averagePrice: bigint, markPrice: Stream<OraclePrice>) {
 
   const liquidationPrice = getNextLiquidationPrice(isLong, size, collateral, averagePrice)
   const liqWeight = map(price => liquidationWeight(isLong, liquidationPrice, price), markPrice)
@@ -273,7 +273,7 @@ export const $openPositionPnlBreakdown = (pos: IPosition, cumulativeTokenFunding
 interface ITraderDisplay {
   trader: viem.Address
   // changeSubscriptionList: Stream<IPuppetRouteTrades[]>
-  subscriptionList: Stream<IPuppetRouteTrades[]>
+  subscriptionList: Stream<IPuppetRouteSubscritpion[]>
   route: router.Route
 }
 

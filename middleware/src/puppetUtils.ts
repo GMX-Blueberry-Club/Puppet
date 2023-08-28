@@ -1,4 +1,4 @@
-import { IPositionListSummary, div, getPnL } from "gmx-middleware-utils"
+import { OraclePrice, div, getSlotNetPnL } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot } from "./types.js"
 
@@ -25,9 +25,9 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
     const idxBn = BigInt(idx) + 1n
 
 
-    const size = seed.size + getParticiapntMpPortion(next, next.maxSize, shareTarget)
-    const collateral = seed.collateral + getParticiapntMpPortion(next, next.maxCollateral, shareTarget)
-    const leverage = seed.leverage + getParticiapntMpPortion(next, div(next.maxSize, next.maxCollateral), shareTarget)
+    const size = seed.size + getParticiapntMpPortion(next, next.maxSizeUsd, shareTarget)
+    const collateral = seed.collateral + getParticiapntMpPortion(next, next.maxCollateralUsd, shareTarget)
+    const leverage = seed.leverage + getParticiapntMpPortion(next, div(next.maxSizeUsd, next.maxCollateralUsd), shareTarget)
 
     const avgSize = size / idxBn
     const avgCollateral = collateral / idxBn
@@ -84,8 +84,8 @@ export function getParticiapntMpPortion(mp: IPositionMirrorSettled | IPositionMi
 }
 
 
-export function getMpPnL(mp: IPositionMirrorSettled | IPositionMirrorSlot, markPrice: bigint, shareTarget?: viem.Address): bigint {
-  const delta = getPnL(mp.isLong, mp.averagePrice, markPrice, mp.size)
+export function getMpSlotPnL(mp: IPositionMirrorSlot, markPrice: OraclePrice, shareTarget?: viem.Address): bigint {
+  const delta = getSlotNetPnL(mp, markPrice)
   const openPnl = getParticiapntMpPortion(mp, delta, shareTarget)
 
   return openPnl

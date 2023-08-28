@@ -80,7 +80,7 @@ const gmxIOPriceMapSource = {
 }
 
 export function latestPriceFromExchanges(indexToken: viem.Address): Stream<bigint> {
-  const existingToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION, indexToken)
+  const existingToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION_MAP, indexToken)
   const symbol = derievedSymbolMapping[existingToken.symbol] || existingToken
 
   if (symbol === null) {
@@ -221,10 +221,10 @@ export function connectTrade(chain: ISupportedChain) {
 
     return map(params => {
       const collateralTokenDescription = getTokenDescription(params.collateralToken)
-      const isStable = collateralTokenDescription.isStable
+      const isUsd = collateralTokenDescription.isUsd
 
-      const vaultSize = isStable ? params.globalShortSizes : params.guaranteedUsd
-      const globalMaxSize = isStable ? params.maxGlobalShortSizes : params.maxGlobalLongSizes
+      const vaultSize = isUsd ? params.globalShortSizes : params.guaranteedUsd
+      const globalMaxSize = isUsd ? params.maxGlobalShortSizes : params.maxGlobalLongSizes
 
       return globalMaxSize - vaultSize
     }, combineObject({ collateralToken, maxGlobalShortSizes, maxGlobalLongSizes, indexToken, globalShortSizes, guaranteedUsd }))

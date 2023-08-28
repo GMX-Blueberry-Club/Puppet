@@ -33,7 +33,7 @@ export type ITopOpen = {
 
 
 export const $TopOpen = (config: ITopOpen) => component((
-  [routeChange, routeChangeTether]: Behavior<string, string>,
+  [routeChange, routeChangeTether]: Behavior<any, string>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
   [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionOpen>>,
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
@@ -64,9 +64,9 @@ export const $TopOpen = (config: ITopOpen) => component((
 
       const flattenMapMap = Object.values(params.processData.mirrorPositionSlot)
         .filter(pos => {
-          if (pos.route === GMX.ADDRESS_ZERO) {
-            return false
-          }
+          // if (pos.route === GMX.ADDRESS_ZERO) {
+          //   return false
+          // }
 
           const routeLength = params.routeList.length
           if (routeLength && params.routeList.findIndex(rt => getRouteTypeKey(rt.collateralToken, rt.indexToken, rt.isLong) === pos.routeTypeKey) === -1) {
@@ -144,10 +144,10 @@ export const $TopOpen = (config: ITopOpen) => component((
                   })
                 })
               },
-              puppetsColumn<IPositionOpen>(),
+              puppetsColumn<IPositionOpen>(routeChangeTether),
               {
                 ...slotSizeColumn(config.processData),
-                sortBy: 'size'
+                sortBy: 'maxSizeUsd'
               },
               {
                 sortBy: 'pnl',

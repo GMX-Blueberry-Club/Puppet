@@ -307,7 +307,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   const swapFee = replayLatest(multicast(skipRepeats(map((params) => {
-    const inputAndIndexStable = params.inputTokenDescription.isStable && params.indexTokenDescription.isStable
+    const inputAndIndexStable = params.inputTokenDescription.isUsd && params.indexTokenDescription.isUsd
     const swapFeeBasisPoints = inputAndIndexStable ? GMX.STABLE_SWAP_FEE_BASIS_POINTS : GMX.SWAP_FEE_BASIS_POINTS
     const taxBasisPoints = inputAndIndexStable ? GMX.STABLE_TAX_BASIS_POINTS : GMX.TAX_BASIS_POINTS
 
@@ -469,7 +469,7 @@ export const $Trade = (config: ITradeComponent) => component((
       const trade = posList.find(t => t.key === pos.key) || null
 
       if (pos.averagePrice > 0n && trade === null) {
-        const posSlot = createPositionSlot(unixTimestampNow(), '0x0' as const, pos as any, '0x00')
+        const posSlot = createPositionSlot(unixTimestampNow(), '0x0' as const, '0x00', pos as any, '0x00')
 
         return [posSlot, ...posList]
       }

@@ -13,8 +13,10 @@ export type IIndexRpcEventLogConfig<
 > = {
   address: viem.Address
   eventName: viem.InferEventName<TAbi, TEventName>
+  args?: any
   abi: TAbi,
   parentScope: store.IStoreconfig<TParentScopeName>
+  startBlock?: bigint
 }
 
 export type IIndexEventLogScopeParams<
@@ -23,7 +25,7 @@ export type IIndexEventLogScopeParams<
   TEventName extends string,
   TParentScopeName extends string = string,
 > = IIndexRpcEventLogConfig<TLog, TAbi, TEventName, TParentScopeName> & {
-  scope: store.IStoreScope<`${TParentScopeName}.${viem.InferEventName<TAbi, TEventName>}:0x${string}`, { readonly keyPath: "orderId" }>
+  scope: store.IStoreScope<`${TParentScopeName}.${viem.InferEventName<TAbi, TEventName>}:${bigint}:0x${string}${string}`, { readonly keyPath: "orderId" }>
 }
 
 export function createRpcLogEventScope<
@@ -32,7 +34,9 @@ export function createRpcLogEventScope<
   TEventName extends string,
   TParentScopeName extends string = string,
 >(config: IIndexRpcEventLogConfig<TLog, TAbi, TEventName, TParentScopeName>): IIndexEventLogScopeParams<TLog, TAbi, TEventName, TParentScopeName> {
-  const scopeName = `${config.eventName}:${config.address}` as const
+
+  const shortArgsHash = config.args ? Object.entries(config.args).reduce((acc, [key, val]) => `${acc}:${getShortHash(key, val)}`, '') : ''
+  const scopeName = `${config.eventName}:${config.startBlock || 0n}:${config.address}${shortArgsHash}` as const
   const scope = store.createStoreScope(config.parentScope, scopeName, { keyPath: 'orderId' } as const)
   
   return { ...config, scope }
@@ -45,7 +49,7 @@ export type IFilterLogsParams<
   TEventName extends string,
   TParentScopeName extends string = string,
 > = IIndexEventLogScopeParams<TLog, TAbi, TEventName, TParentScopeName> & {
-  rangeSize: bigint,
+  rangeBlockQuery: bigint,
   fromBlock: bigint
   toBlock: bigint
   publicClient: viem.PublicClient
@@ -65,7 +69,7 @@ export const fetchTradesRecur = <
   let delayTime = 0
 
   const nextBatchResponse = chain(res => {
-    const nextToBlock = params.fromBlock + params.rangeSize
+    const nextToBlock = params.fromBlock + params.rangeBlockQuery
 
     if (nextToBlock >= params.toBlock) {
       return now(res)
@@ -81,20 +85,31 @@ export const fetchTradesRecur = <
 
 
   return recoverWith<TReturn[], Error & { code: number }, TReturn[]>((err): Stream<TReturn[]> => {
-    if (err.code === 429) {
-      delayTime += 1000
-
-      const delayEvent = delay(delayTime, now(null))
-      return chain(() => fetchTradesRecur({ ...params }, getList), delayEvent)
-    }
+    delayTime += 1000
+    const delayEvent = delay(delayTime, now(null))
 
     if (err.code !== -32602 || retryAmount > 3) {
       throw err
     }
 
     retryAmount++
-    const reducedRange = params.rangeSize - params.rangeSize / 3n
+    const reducedRange = params.rangeBlockQuery / 3n
 
-    return fetchTradesRecur({ ...params, rangeSize: reducedRange }, getList)
+    return chain(() => fetchTradesRecur({ ...params, rangeBlockQuery: reducedRange }, getList), delayEvent)
   }, nextBatchResponse)
 }
+
+
+function getShortHash(name: string, obj: any) {
+  const str = JSON.stringify(obj)
+  let hash = 0
+
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i)
+    hash |= 0 // Convert to 32bit integer
+  }
+    
+  return `${name}-${hash.toString(16)}`
+}
+
+

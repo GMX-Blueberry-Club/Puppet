@@ -91,7 +91,7 @@ export const $RouteDepositInfo = (config: IRouteDepositInfoConfig) => component(
 ) => {
 
   const orchestrator = connectContract(PUPPET.CONTRACT[42161].Orchestrator)
-  const indexToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION, config.routeDescription.indexToken)
+  const indexToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION_MAP, config.routeDescription.indexToken)
 
 
   return [

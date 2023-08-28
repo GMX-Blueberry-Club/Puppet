@@ -45,7 +45,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
   
   const summary = map(params => {
-    const list = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().reverse()
+    const list = params.processData.mirrorPositionSettled.filter(pos => pos.account === config.address).reverse()
     const subscribedPuppets = params.processData.subscription.filter((sub) => sub.puppet === config.address).map(s => s.trader)
 
     return {
@@ -57,12 +57,12 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
   const settledTrades = map(params => {
     const filterStartTime = unixTimestampNow() - params.activityTimeframe
-    const list = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.blockTimestamp > filterStartTime).reverse()
+    const list = params.processData.mirrorPositionSettled.filter(pos => pos.trader === config.address && pos.blockTimestamp > filterStartTime).reverse()
     return list
   }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe }))
 
   const openTrades = map(params => {
-    const list = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address)
+    const list = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.account === config.address)
     return list
   }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe }))
 
@@ -136,8 +136,8 @@ export const $TraderProfile = (config: ITraderProfile) => component((
           $card2(style({ padding: 0, height: screenUtils.isDesktopScreen ? '200px' : '200px', position: 'relative', margin: screenUtils.isDesktopScreen ? `-36px -36px 0` : `-12px -12px 0px` }))(
             switchMap(params => {
               const filterStartTime = unixTimestampNow() - params.activityTimeframe
-              const traderPos = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.blockTimestamp > filterStartTime)
-              const openList = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address)
+              const traderPos = params.processData.mirrorPositionSettled.filter(pos => pos.trader === config.address && pos.blockTimestamp > filterStartTime)
+              const openList = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.account === config.address)
               const allPositions = [...traderPos, ...openList]
 
 

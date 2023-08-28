@@ -23,7 +23,7 @@ import * as wagmi from "@wagmi/core"
 import { $Profile } from "./$Profile"
 import * as viem from 'viem'
 import { $RouteSubscriptionDrawer } from "../components/$RouteSubscription"
-import { IPuppetRouteSubscritpion, IPuppetRouteTrades } from "puppet-middleware-utils"
+import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import { rootStoreScope } from "../data/store/store"
 import * as store from "../utils/storage/storeScope"
 import { $midContainer } from "../common/$common"
@@ -116,7 +116,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
   
 
-  const subscriptionList: Stream<IPuppetRouteTrades[]> = replayLatest(multicast(switchLatest(map(w3p => {
+  const subscriptionList: Stream<IPuppetRouteSubscritpion[]> = replayLatest(multicast(switchLatest(map(w3p => {
     if (!w3p) {
       return now([])
     }
@@ -270,7 +270,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
                 switchMap(params => {
                   const refreshThreshold = SW_DEV ? 150 : 50
-                  const blockDelta = params.syncBlock - params.process.blockNumber
+                  const blockDelta = params.syncBlock  - params.process.blockNumber
 
                   if (blockDelta < refreshThreshold) {
                     return empty()

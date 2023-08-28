@@ -1,6 +1,6 @@
 import { combineObject, fromCallback } from "@aelea/core"
 import { pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, debounce, map, mergeArray, now, skip } from "@most/core"
+import { awaitPromises, map, mergeArray, now, skip } from "@most/core"
 import { Stream } from "@most/types"
 import {
   Address, GetAccountResult, GetNetworkResult,
@@ -12,10 +12,7 @@ import { EthereumClient, w3mConnectors, w3mProvider } from '@web3modal/ethereum'
 import { Web3Modal } from '@web3modal/html'
 import { switchMap } from "gmx-middleware-utils"
 import { PublicClient, Transport } from "viem"
-import { arbitrum, avalanche } from "viem/chains"
-import { Core } from '@walletconnect/core'
-import SignClient from '@walletconnect/sign-client'
-import { DappClient as PushDappClient } from '@walletconnect/push-client'
+import { arbitrum } from "viem/chains"
 
 
 const chains = [

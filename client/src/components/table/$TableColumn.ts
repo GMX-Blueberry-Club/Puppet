@@ -9,7 +9,7 @@ import { div, getPnL, getSlotNetPnL, readableDate, readableFixedBsp, switchMap, 
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile"
-import { $entry, $openPositionPnlBreakdown, $pnlValue, $puppets, $size, $sizeAndLiquidation, $tradePnl, $tradeRoi } from "../../common/$common"
+import { $entry, $openPositionPnlBreakdown, $pnlValue, $puppets, $size, $sizeAndLiquidation, $positionSlotPnl, $positionSlotRoi } from "../../common/$common"
 import { IGmxProcessState, latestTokenPrice } from "../../data/process/process"
 import { $txnIconLink } from "../../elements/$common"
 import { IProfileActiveTab } from "../../pages/$Profile"
@@ -29,8 +29,8 @@ export const slotSizeColumn = <T extends IPositionMirrorSettled | IPositionMirro
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $$body: map(mp => {
     const positionMarkPrice = latestTokenPrice(processData, now(mp.indexToken))
-    const size = getParticiapntMpPortion(mp, mp.maxSize, shareTarget)
-    const collateral = getParticiapntMpPortion(mp, mp.maxCollateral, shareTarget)
+    const size = getParticiapntMpPortion(mp, mp.maxSizeUsd, shareTarget)
+    const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, shareTarget)
 
     return $sizeAndLiquidation(mp.isLong, size, collateral, mp.averagePrice, positionMarkPrice)
   })
@@ -40,8 +40,8 @@ export const settledSizeColumn = (shareTarget?: viem.Address): TableColumn<IPosi
   $head: $tableHeader('Size', 'Leverage'),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $$body: map(mp => {
-    const size = getParticiapntMpPortion(mp, mp.maxSize, shareTarget)
-    const collateral = getParticiapntMpPortion(mp, mp.maxCollateral, shareTarget)
+    const size = getParticiapntMpPortion(mp, mp.maxSizeUsd, shareTarget)
+    const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, shareTarget)
 
     return $size(size, collateral)
   })
@@ -75,11 +75,11 @@ export const pnlSlotColumn = <T extends IPositionMirrorSlot>(processData: Stream
       style({ flexDirection: 'row-reverse' })(
         $infoTooltipLabel(
           switchMap(ff => $openPositionPnlBreakdown(pos, ff), cumulativeTokenFundingRates),
-          $tradePnl(pos, positionMarkPrice, shareTarget)
+          $positionSlotPnl(pos, positionMarkPrice, shareTarget)
         )
       ),
       $seperator2,
-      style({ fontSize: '.85rem' })($tradeRoi(pos, positionMarkPrice)),
+      style({ fontSize: '.85rem' })($positionSlotRoi(pos, positionMarkPrice)),
     )
   })
 })
@@ -109,7 +109,7 @@ export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IPositionMi
   columnOp: style({ placeContent: 'flex-end' }),
   $$body: map(mp => {
     const pnl = getParticiapntMpPortion(mp, mp.realisedPnl, puppet)
-    const collateral = getParticiapntMpPortion(mp, mp.collateral, puppet)
+    const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, puppet)
       
     return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
       $pnlValue(pnl),
