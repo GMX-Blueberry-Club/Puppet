@@ -4,7 +4,7 @@ import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-compon
 import {
   IPositionDecrease, IPositionIncrease, IPositionSlot, abs, filterNull, formatFixed,
   getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getIntervalIdentifier, getLiquidationPrice, getMappedValue,
-  getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getPnL, getPositionKey,
+  getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getOraclePrice, getPnL, getPositionKey,
   getTokenAmount, getTokenDescription, readableDate, readableFixedBsp, readableFixedUSD30, readableUnitAmount, safeDiv, switchMap, timeSince, unixTimestampNow
 } from "gmx-middleware-utils"
 
@@ -155,12 +155,12 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ inputToken, wallet }))))
 
 
-  const inputTokenPrice = latestTokenPrice(config.processData, map(address => resolveAddress(config.chain.id, address), inputToken))
+  const inputTokenPrice = map(price => getOraclePrice(price, true), latestTokenPrice(config.processData, map(address => resolveAddress(config.chain.id, address), inputToken)))
   const indexTokenPrice = mergeArray([
-    latestTokenPrice(config.processData, indexToken),
-    multicast(switchMap(address => trade.exchangesWebsocketPriceSource(config.chain, address), indexToken))
+    map(params => getOraclePrice(params.price, params.isLong), combineObject({ price: latestTokenPrice(config.processData, indexToken), isLong })),
+    // multicast(switchMap(address => trade.exchangesWebsocketPriceSource(config.chain, address), indexToken))
   ])
-  const collateralTokenPrice = latestTokenPrice(config.processData, collateralToken)
+  const collateralTokenPrice = map(price => getOraclePrice(price, true), latestTokenPrice(config.processData, collateralToken))
 
 
   const route = replayLatest(multicast(switchMap(params => {
@@ -488,8 +488,9 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const pricefeed = map(params => {
     const feed = getIntervalIdentifier(params.indexToken, params.timeframe)
+    const candleFeed = Object.values(params.processData.pricefeed[feed])
 
-    return Object.values(params.processData.pricefeed[feed])
+    return candleFeed
   }, combineObject({ timeframe: chartInterval, indexToken, processData: config.processData }))
 
 
@@ -526,6 +527,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
     requestReset: clickResetPosition,
   }
+
   const $tradebox = $PositionEditor({
     ...config,
     openPositionList,
@@ -647,16 +649,16 @@ export const $Trade = (config: ITradeComponent) => component((
             ) : empty(),
         ),
 
-        switchLatest(snapshot( (params, pricefeed) => {
+        switchLatest(snapshot((params, feed) => {
 
           const tf = params.timeframe
 
-          const fst = pricefeed[pricefeed.length - 1]
+          const fst = feed[feed.length - 1]
           const initialTick = {
-            open: formatFixed(fst.o, 30),
-            high: formatFixed(fst.h, 30),
-            low: formatFixed(fst.l, 30),
-            close: formatFixed(fst.c, 30),
+            open: formatFixed(fst.o * getDenominator(params.indexTokenDescription.decimals), 30),
+            high: formatFixed(fst.h * getDenominator(params.indexTokenDescription.decimals), 30),
+            low: formatFixed(fst.l * getDenominator(params.indexTokenDescription.decimals), 30),
+            close: formatFixed(fst.c * getDenominator(params.indexTokenDescription.decimals), 30),
             time: fst.blockTimestamp as Time
           }
 
@@ -695,11 +697,11 @@ export const $Trade = (config: ITradeComponent) => component((
                 }, filterNull(focusPrice)))
               )
             ),
-            data: pricefeed.map(({ o, h, l, c, blockTimestamp }) => {
-              const open = formatFixed(o, 30)
-              const high = formatFixed(h, 30)
-              const low = formatFixed(l, 30)
-              const close = formatFixed(c, 30)
+            data: feed.map(({ o, h, l, c, blockTimestamp }) => {
+              const open = formatFixed(o * getDenominator(params.indexTokenDescription.decimals), 30)
+              const high = formatFixed(h * getDenominator(params.indexTokenDescription.decimals), 30)
+              const low = formatFixed(l * getDenominator(params.indexTokenDescription.decimals), 30)
+              const close = formatFixed(c * getDenominator(params.indexTokenDescription.decimals), 30)
 
               return { open, high, low, close, time: Number(blockTimestamp) as Time }
             }),
@@ -817,7 +819,7 @@ export const $Trade = (config: ITradeComponent) => component((
           })
 
               
-        }, combineObject({ timeframe: chartInterval, indexToken }), pricefeed)),
+        }, combineObject({ timeframe: chartInterval, indexToken, indexTokenDescription }), pricefeed)),
 
 
 

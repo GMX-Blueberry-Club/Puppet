@@ -294,12 +294,11 @@ export const $ProfilePerformanceGraph = (config: IPerformanceTimeline & { $conta
 
   const markerList = config.positionList.map((pos): IMarker => {
     const isSettled = 'settlement' in pos
-    const position = pos.realisedPnl > 0n ? 'belowBar' as const : 'aboveBar' as const
 
     return {
       position: 'inBar',
       color: isSettled ? colorAlpha(pallete.message, .15) : colorAlpha(pallete.primary, .15),
-      time: ('openBlockTimestamp' in pos ? pos.openBlockTimestamp : pos.blockTimestamp) as Time,
+      time: pos.blockTimestamp as Time,
       size: 0.1,
       shape: isSettled ? 'circle' as const : 'circle' as const,
     }

@@ -56,9 +56,9 @@ export const $size = (size: bigint, collateral: bigint) => {
 }
 
 export const $routeIntent = (pos: IAbstractRouteIdentity) => {
-  return $row(
+  return $row(style({ alignItems: 'center' }))(
     $icon({
-      svgOps: style({ borderRadius: '50%', padding: '4px', marginRight: '-10px', zIndex: 0, alignItems: 'center', fill: pallete.message, backgroundColor: pallete.horizon }),
+      svgOps: style({ borderRadius: '50%', padding: '4px', marginRight: '-6px', zIndex: 0, alignItems: 'center', fill: pallete.message, backgroundColor: pallete.horizon }),
       $content: pos.isLong ? $bull : $bear,
       viewBox: '0 0 32 32',
       width: '26px'
@@ -172,7 +172,7 @@ export const $pnlValue = (pnl: Stream<bigint> | bigint, colorful = true) => {
   }, pnls))
 
   const colorStyle = colorful
-    ? styleBehavior(map(color => {
+    ? styleInline(map(color => {
       return { color }
     }, displayColor))
     : O()

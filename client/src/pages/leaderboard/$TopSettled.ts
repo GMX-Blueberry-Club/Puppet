@@ -111,7 +111,7 @@ export const $TopSettled = (config: ITopSettled) => component((
           $DropMultiSelect({
             // $container: $row(layoutSheet.spacingTiny, style({ display: 'flex', position: 'relative' })),
             $input: $element('input')(style({ width: '100px' })),
-            $label: $labelDisplay(style({ color: pallete.foreground }))('Route'),
+            $label: $labelDisplay(style({ color: pallete.foreground }))('Markets'),
             placeholder: 'All / Select',
             $$chip: map(rt => {
               return $route(rt)

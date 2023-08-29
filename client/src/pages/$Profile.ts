@@ -94,7 +94,7 @@ export const $Profile = (config: IProfile) => component((
         {
           run(sink, scheduler) {
             const urlFragments = document.location.pathname.split('/')
-            const address = urlFragments[urlFragments.length - 2] as viem.Address
+            const address = viem.getAddress(urlFragments[urlFragments.length - 2])
 
             return $TraderProfile({ ...config, address, activityTimeframe })({
               subscribeTreader: modifySubscriberTether(),

@@ -1,6 +1,6 @@
 import { map } from "@most/core"
 import { Stream } from "@most/types"
-import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, BYTES32_ZERO, IntervalTime, MarketEvent, OracleEvent, PositionEvent, TIME_INTERVAL_MAP, TOKEN_ADDRESS_DESCRIPTION_MAP } from "gmx-middleware-const"
+import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, BYTES32_ZERO, IntervalTime, MarketEvent, OracleEvent, PositionEvent, TIME_INTERVAL_MAP, TOKEN_ADDRESS_DESCRIPTION_MAP, TOKEN_DESCRIPTION_MAP } from "gmx-middleware-const"
 import {
   IEventLog1Args,
   ILogTxType,
@@ -8,6 +8,7 @@ import {
   IPriceIntervalIdentity, Market, MarketPoolValueInfo, OraclePrice, PositionDecrease,
   PositionIncrease, createPricefeedCandle,
   div,
+  getDenominator,
   getIntervalIdentifier,
   getMappedValue,
   getTokenUsd,
@@ -191,7 +192,10 @@ export const gmxProcess = defineProcess(
         positionKey: adjustment.positionKey,
       }
 
+      const tokenDescription = getMappedValue(TOKEN_ADDRESS_DESCRIPTION_MAP, market.indexToken)
+
       slot.updates.push(adjustment)
+      slot.averagePrice = adjustment.sizeInUsd / adjustment.sizeInTokens * getDenominator(tokenDescription.decimals)
       slot.cumulativeFee += adjustment.fundingFeeAmountPerSize
 
       slot.cumulativeSizeUsd += adjustment.sizeDeltaUsd
@@ -212,7 +216,6 @@ export const gmxProcess = defineProcess(
       // const collateralUsd = getTokenUsd(adjustment.collateralAmount, adjustment["collateralTokenPrice.min"], collateralTokenDescription.decimals)
 
       const collateralUsd = adjustment.collateralAmount * adjustment["collateralTokenPrice.min"]
-      
 
       if (collateralUsd > slot.maxCollateralUsd) {
         slot.maxCollateralUsd = collateralUsd

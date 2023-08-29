@@ -13,7 +13,7 @@ import { IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware
 import { $labelDisplay } from "../../common/$TextField"
 import { $TraderDisplay, $route, $size } from "../../common/$common"
 import { $DropMultiSelect } from "../../components/form/$Dropdown"
-import { pnlSlotColumn, puppetsColumn, slotSizeColumn } from "../../components/table/$TableColumn"
+import { entryColumn, pnlSlotColumn, puppetsColumn, slotSizeColumn } from "../../components/table/$TableColumn"
 import { IGmxProcessState } from "../../data/process/process"
 import { rootStoreScope } from "../../data/store/store"
 import { $card } from "../../elements/$common"
@@ -99,7 +99,7 @@ export const $TopOpen = (config: ITopOpen) => component((
         $row(style({ placeContent: 'space-between' }))(
           $row(
             $DropMultiSelect({
-              $label: $labelDisplay(style({ color: pallete.foreground }))('Route'),
+              $label: $labelDisplay(style({ color: pallete.foreground }))('Markets'),
               $input: $element('input')(style({ maxWidth: '80px' })),
               placeholder: 'All / Select',
               $$chip: map(rt => {
@@ -144,6 +144,7 @@ export const $TopOpen = (config: ITopOpen) => component((
                   })
                 })
               },
+              entryColumn,
               puppetsColumn<IPositionOpen>(routeChangeTether),
               {
                 ...slotSizeColumn(config.processData),
