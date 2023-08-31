@@ -6,7 +6,7 @@ import { empty, map, mergeArray, now, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Table, ISortBy, ScrollRequest, TableColumn } from "gmx-middleware-ui-components"
-import { IAbstractRouteIdentity, IPositionListSummary, div, getMappedValue, groupArrayMany, pagingQuery, readableFixedBsp, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IAbstractPositionParams, IPositionListSummary, div, getMappedValue, groupArrayMany, pagingQuery, readableFixedBsp, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $TraderDisplay, $pnlValue, $route, $size } from "../../common/$common"
@@ -38,7 +38,7 @@ export type ITopSettled = {
 type FilterTable =  { activityTimeframe: GMX.IntervalTime } | null
 
 export const $TopSettled = (config: ITopSettled) => component((
-  [routeTypeChange, routeTypeChangeTether]: Behavior<IAbstractRouteIdentity[]>,
+  [routeTypeChange, routeTypeChangeTether]: Behavior<IAbstractPositionParams[]>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
   
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
@@ -61,7 +61,7 @@ export const $TopSettled = (config: ITopSettled) => component((
     }
 
     return matchedMemType
-  }), storage.replayWrite(exploreStore, [] as IAbstractRouteIdentity[], routeTypeChange, 'filterRouteList'))
+  }), storage.replayWrite(exploreStore, [] as IAbstractPositionParams[], routeTypeChange, 'filterRouteList'))
 
   const activityTimeframe = storage.replayWrite(store.activityTimeframe, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
 
@@ -113,9 +113,7 @@ export const $TopSettled = (config: ITopSettled) => component((
             $input: $element('input')(style({ width: '100px' })),
             $label: $labelDisplay(style({ color: pallete.foreground }))('Markets'),
             placeholder: 'All / Select',
-            $$chip: map(rt => {
-              return $route(rt)
-            }),
+            $$chip: map(rt => $route(rt)),
             selector: {
               list: ROUTE_DESCRIPTION,
               $$option: map(route => {

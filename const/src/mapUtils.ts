@@ -20,3 +20,5 @@ export function getPuppetSubscriptionKey(puppet: viem.Address, trader: viem.Addr
     [puppet, trader, routeTypeKey]
   ))
 }
+
+

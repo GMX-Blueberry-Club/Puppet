@@ -7,9 +7,8 @@ import { fetchBalance, readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
 import * as GMX from "gmx-middleware-const"
 import {
-  IAbstractPositionIdentity, IAbstractPositionKey, IPriceInterval, IRequestPricefeedApi, ITokenSymbol, IVaultPosition,
-  filterNull, getMappedValue,
-  getTokenDescription, parseFixed, periodicRun
+  IAbstractPositionIdentity, IPriceInterval, IRequestPricefeedApi, ITokenSymbol,
+  filterNull, getMappedValue, getTokenDescription, parseFixed, periodicRun
 } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { Address, Chain } from "viem"
@@ -19,7 +18,16 @@ import { connectContract } from "./common"
 import { resolveAddress } from "./utils"
 
 
-export type IPositionGetter = IVaultPosition & IAbstractPositionKey & IAbstractPositionIdentity
+export type IPositionGetter = IAbstractPositionIdentity & {
+  size: bigint
+  sizeUsd: bigint
+  collateral: bigint
+  collateralUsd: bigint
+  realisedPnl: bigint
+  averagePrice: bigint
+  entryFundingRate: bigint
+  lastIncreasedTime: bigint
+}
 
 
 export interface ITokenPoolInfo {

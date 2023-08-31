@@ -1,18 +1,19 @@
 import { map } from "@most/core"
 import { Stream } from "@most/types"
-import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, BYTES32_ZERO, IntervalTime, MarketEvent, OracleEvent, PositionEvent, TIME_INTERVAL_MAP, TOKEN_ADDRESS_DESCRIPTION_MAP, TOKEN_DESCRIPTION_MAP } from "gmx-middleware-const"
+import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, IntervalTime, TIME_INTERVAL_MAP, TOKEN_ADDRESS_DESCRIPTION_MAP } from "gmx-middleware-const"
 import {
   IEventLog1Args,
   ILogTxType,
-  IPositionSlot, IPriceInterval,
-  IPriceIntervalIdentity, Market, MarketPoolValueInfo, OraclePrice, PositionDecrease,
-  PositionIncrease, createPricefeedCandle,
+  IPositionDecrease,
+  IPositionIncrease,
+  IPriceInterval,
+  IPriceIntervalIdentity, IMarket, IOraclePrice,
+  createPricefeedCandle,
   div,
   getDenominator,
   getIntervalIdentifier,
   getMappedValue,
-  getTokenUsd,
-  importGlobal, switchMap, unixTimestampNow
+  importGlobal, switchMap, unixTimestampNow, IMarketCreatedEvent, IOraclePriceUpdateEvent
 } from "gmx-middleware-utils"
 import { getRouteTypeKey } from "puppet-middleware-const"
 import { IPositionMirrorSettled, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
@@ -45,8 +46,7 @@ export interface IGmxProcessState {
   blockMetrics: IProcessMetrics,
 
   pricefeed: Record<IPriceIntervalIdentity, Record<string, IPriceInterval>>
-  latestPrice: Record<viem.Address, OraclePrice>
-  marketPoolInfo: Record<viem.Address, MarketPoolValueInfo>
+  latestPrice: Record<viem.Address, IOraclePrice>
   approximatedTimestamp: number
 
   // mirrorPositionRequest: Record<viem.Hex, IPositionRequest>
@@ -56,13 +56,12 @@ export interface IGmxProcessState {
 
   // mirrorPositionSlotV2: Record<viem.Hex, IPositionMirrorSlotV2>
   // mirrorPositionSettledV2: IAccountToRouteMap<IPositionMirrorSettled[]>
-  markets: Record<viem.Address, Market>
+  markets: Record<viem.Address, IMarket>
 }
 
 
 
 const state: IGmxProcessState = {
-  marketPoolInfo: {},
   blockMetrics: {
     cumulativeBlocks: 0n,
     cumulativeDeltaTime: 0n,
@@ -144,8 +143,13 @@ export const gmxProcess = defineProcess(
   {
     source: gmxLog.marketCreated,
     step(seed, value) {
-      const entity = getEventType<Market>('Market', value, seed.approximatedTimestamp)
-      seed.markets[entity.marketToken] = entity
+      const entity = getEventType<IMarketCreatedEvent>('Market', value, seed.approximatedTimestamp)
+      seed.markets[entity.marketToken] = {
+        indexToken: entity.indexToken,
+        longToken: entity.longToken,
+        marketToken: entity.marketToken,
+        shortToken: entity.shortToken,
+      }
       return seed
     },
   },
@@ -153,10 +157,15 @@ export const gmxProcess = defineProcess(
     source: gmxLog.oraclePrice,
     queryBlockRange: 100000n,
     step(seed, value) {
-      const entity = getEventdata<OraclePrice>(value)
+      const entity = getEventdata<IOraclePriceUpdateEvent>(value)
 
 
-      seed.latestPrice[entity.token] = entity
+      seed.latestPrice[entity.token] = {
+        isPriceFeed: entity.isPriceFeed,
+        max: entity.maxPrice,
+        min: entity.minPrice,
+        token: entity.token,
+      }
 
       if (seed.blockMetrics.timestamp === 0n) {
         return seed
@@ -175,47 +184,55 @@ export const gmxProcess = defineProcess(
     source: gmxLog.positionIncrease,
     queryBlockRange: 100000n,
     step(seed, value) {
-      const adjustment = getEventType<PositionIncrease>('PositionIncrease', value, seed.approximatedTimestamp)
+      const update = getEventType<IPositionIncrease>('PositionIncrease', value, seed.approximatedTimestamp)
 
-      const market = seed.markets[adjustment.market]
+      const market = seed.markets[update.market]
 
-      const slot = seed.mirrorPositionSlot[adjustment.positionKey] ??= {
-        ...createPositionSlot(unixTimestampNow(), value.transactionHash, market.indexToken, adjustment, adjustment.orderKey),
+      const slot = seed.mirrorPositionSlot[update.positionKey] ??= {
+        ...initPartialPositionSlot,
+        key: update.positionKey,
+        account: update.account,
+        collateralToken: update.collateralToken,
+        isLong: update.isLong,
+        indexToken: market.indexToken,
+        latestUpdate: update,
         puppets: [],
-        requestKey: BYTES32_ZERO,
-        routeTypeKey: getRouteTypeKey(adjustment.collateralToken, adjustment.market, adjustment.isLong),
+        orderKey: update.orderKey,
+        routeTypeKey: getRouteTypeKey(update.collateralToken, update.market, update.isLong),
         route: ADDRESS_ZERO,
-        trader: adjustment.account,
+        trader: update.account,
         shares: [],
         shareSupply: 0n,
         traderShare: 0n,
-        positionKey: adjustment.positionKey,
+        transactionHash: value.transactionHash,
+        blockTimestamp: unixTimestampNow(),
       }
 
       const tokenDescription = getMappedValue(TOKEN_ADDRESS_DESCRIPTION_MAP, market.indexToken)
 
-      slot.updates.push(adjustment)
-      slot.averagePrice = adjustment.sizeInUsd / adjustment.sizeInTokens * getDenominator(tokenDescription.decimals)
-      slot.cumulativeFee += adjustment.fundingFeeAmountPerSize
+      slot.latestUpdate = update
+      slot.updates = [...slot.updates, update]
+      slot.averagePrice = update.sizeInUsd / update.sizeInTokens * getDenominator(tokenDescription.decimals)
+      slot.cumulativeFee += update.fundingFeeAmountPerSize
 
-      slot.cumulativeSizeUsd += adjustment.sizeDeltaUsd
-      slot.cumulativeSizeToken += adjustment.sizeDeltaInTokens
+      slot.cumulativeSizeUsd += update.sizeDeltaUsd
+      slot.cumulativeSizeToken += update.sizeDeltaInTokens
 
-      if (adjustment.sizeInTokens > slot.maxSizeToken) {
-        slot.maxSizeToken = adjustment.sizeInTokens
+      if (update.sizeInTokens > slot.maxSizeToken) {
+        slot.maxSizeToken = update.sizeInTokens
       }
-      if (adjustment.sizeInUsd > slot.maxSizeUsd) {
-        slot.maxSizeUsd = adjustment.sizeInUsd
+      if (update.sizeInUsd > slot.maxSizeUsd) {
+        slot.maxSizeUsd = update.sizeInUsd
       }
 
-      if (adjustment.collateralAmount > slot.maxCollateralToken) {
-        slot.maxCollateralToken = adjustment.collateralAmount
+      if (update.collateralAmount > slot.maxCollateralToken) {
+        slot.maxCollateralToken = update.collateralAmount
       }
 
       // const collateralTokenDescription = getMappedValue(TOKEN_ADDRESS_DESCRIPTION_MAP, adjustment.collateralToken)
       // const collateralUsd = getTokenUsd(adjustment.collateralAmount, adjustment["collateralTokenPrice.min"], collateralTokenDescription.decimals)
 
-      const collateralUsd = adjustment.collateralAmount * adjustment["collateralTokenPrice.min"]
+      const collateralUsd = update.collateralAmount * update["collateralTokenPrice.min"]
 
       if (collateralUsd > slot.maxCollateralUsd) {
         slot.maxCollateralUsd = collateralUsd
@@ -228,248 +245,50 @@ export const gmxProcess = defineProcess(
     source: gmxLog.positionDecrease,
     queryBlockRange: 100000n,
     step(seed, value) {
-      const adjustment = getEventType<PositionDecrease>('PositionDecrease', value, seed.approximatedTimestamp)
-      const slot = seed.mirrorPositionSlot[adjustment.positionKey]
+      const update = getEventType<IPositionDecrease>('PositionDecrease', value, seed.approximatedTimestamp)
+      const slot = seed.mirrorPositionSlot[update.positionKey]
 
       if (!slot) return seed
 
-      // const decimals = getMappedValue(TOKEN_ADDRESS_DESCRIPTION_MAP, adjustment.collateralToken).decimals
-      // const newLocal = getTokenUsd(adjustment.collateralAmount, adjustment["collateralTokenPrice.min"], decimals)
-      // debugger
-      // slot.collateral += newLocal
-      slot.realisedPnl += adjustment.basePnlUsd
+      slot.latestUpdate = update
+      slot.realisedPnl += update.basePnlUsd
                 
-      slot.updates.push(adjustment)
-      slot.cumulativeFee += adjustment.fundingFeeAmountPerSize
+      slot.updates = [...slot.updates, update]
+      slot.cumulativeFee += update.fundingFeeAmountPerSize
 
-      slot.cumulativeSizeUsd += adjustment.sizeDeltaUsd
-      slot.cumulativeSizeToken += adjustment.sizeDeltaInTokens
+      slot.cumulativeSizeUsd += update.sizeDeltaUsd
+      slot.cumulativeSizeToken += update.sizeDeltaInTokens
 
-      if (adjustment.sizeInTokens > slot.maxSizeToken) {
-        slot.maxSizeToken = adjustment.sizeInTokens
+      if (update.sizeInTokens > slot.maxSizeToken) {
+        slot.maxSizeToken = update.sizeInTokens
       }
-      if (adjustment.sizeInUsd > slot.maxSizeUsd) {
-        slot.maxSizeUsd = adjustment.sizeInUsd
-      }
-
-      if (adjustment.collateralAmount > slot.maxCollateralUsd) {
-        slot.maxCollateralUsd = adjustment.collateralAmount
+      if (update.sizeInUsd > slot.maxSizeUsd) {
+        slot.maxSizeUsd = update.sizeInUsd
       }
 
+      if (update.collateralAmount > slot.maxCollateralUsd) {
+        slot.maxCollateralUsd = update.collateralAmount
+      }
 
-      if (adjustment.collateralAmount === 0n) {
+
+      if (update.collateralAmount === 0n) {
         seed.mirrorPositionSettled.push({
           ...slot,
           openBlockTimestamp: slot.blockTimestamp,
           isLiquidated: false,
-          settlement: adjustment,
+          settlement: update,
           blockTimestamp: seed.approximatedTimestamp,
           transactionHash: value.transactionHash,
           __typename: 'PositionSettled',
         } as const)
       }
 
-      delete seed.mirrorPositionSlot[adjustment.positionKey]
+      delete seed.mirrorPositionSlot[update.positionKey]
 
 
       return seed
     },
   },
-  // {
-  //   source: gmxLog.V2eventLog1,
-  //   step(seed, value) {
-  //     const args = value.args
-  //     const eventName = args.eventName
-
-  //     if (eventName === MarketEvent.MarketPoolValueInfo)  {
-  //       const entity = getEventType<MarketPoolValueInfo>('MarketPoolValueInfo', value, seed.approximatedTimestamp)
-  //       seed.marketPoolInfo[entity.market] = entity
-  //     }
-
-  //     // if (eventName === MarketEvent.ClaimableCollateralUpdated)  {
-  //     //   const entity = getEventdata<OraclePrice>(value)
-  //     //   console.log(entity)
-  //     // }
-  //     // if (eventName === MarketEvent.ClaimableCollateralUpdated)  {
-  //     //   const entity = getEventdata<OraclePrice>('OraclePrice', value, seed.approximatedTimestamp)
-  //     //   console.log(entity)
-  //     // }
-  //     // if (eventName === MarketEvent.ClaimableFundingUpdated)  {
-  //     //   const entity = getEventdata<OraclePrice>(value, seed.approximatedTimestamp)
-  //     //   console.log(entity)
-  //     // }
-
-  //     if (eventName === OracleEvent.OraclePriceUpdate)  {
-
-  //     }
-
-
-  //     if (eventName === PositionEvent.PositionIncrease)  {
-
-  //     }
-
-  //     if (eventName === PositionEvent.PositionDecrease)  {
-
-          
-
-  //       }
-
-
-  //       // settledPosition.puppets.forEach(puppet => {
-  //       //   const subscKey = getPuppetSubscriptionKey(puppet, settledPosition.trader, settledPosition.routeTypeKey)
-  //       //   const subsc = seed.subscription.find(s => s.puppetSubscriptionKey === subscKey)!
-
-  //       //   subsc.settled.push(settledPosition)
-
-  //       //   const removeIdx = subsc.open.findIndex(pos => pos.positionKey === positionSlot.positionKey)
-  //       //   subsc.open.splice(removeIdx, 1)
-  //       // })
-
-  //       delete seed.mirrorPositionSlot[adjustment.orderKey]
-  //       // delete seed.mirrorPositionRequest[args.key]
-
-  //       return seed
-  //     }
-
-  //     // if (eventName === PositionEvent.PositionFeesCollected)  {
-  //     //   const entity = getEventdata<PositionFeesInfo>(value)
-  //     //   const slot = seed.mirrorPositionSlot[entity.positionKey]
-
-  //     //   if (!slot) return seed
-
-  //     //   slot.feeList.push(entity)
-  //     // }
-
-
-  //     return seed
-  //   }
-  // },
-  
-  // {
-  //   source: gmxLog.liquidateEvents,
-  //   step(seed, value) {
-  //     const args = value.args
-  //     const positionSlot = seed.mirrorPositionSlot[args.key]
-
-  //     if (!positionSlot) {
-  //       return seed
-  //       // throw new Error('position not found')
-  //     }
-
-
-  //     const realisedPnl = -args.collateral
-
-  //     seed.mirrorPositionSettled[positionSlot.trader] ??= {}
-  //     seed.mirrorPositionSettled[positionSlot.trader][positionSlot.routeTypeKey] ??= []
-  //     const newSettledPosition: IPositionMirrorSettled = {
-  //       ...positionSlot,
-  //       realisedPnl: realisedPnl,
-  //       settlePrice: args.markPrice,
-  //       isLiquidated: false,
-  //       openBlockTimestamp: positionSlot.blockTimestamp,
-  //       settlement: {
-  //         ...args,
-  //         transactionHash: value.transactionHash,
-  //         blockTimestamp: seed.approximatedTimestamp,
-  //         __typename: 'LiquidatePosition',
-  //       },
-  //       __typename: 'PositionMirrorSettled',
-  //     } as const
-  //     seed.mirrorPositionSettled[positionSlot.trader][positionSlot.routeTypeKey].push(newSettledPosition)
-
-  //     positionSlot.puppets.forEach(puppet => {
-  //       const subscKey = getPuppetSubscriptionKey(puppet, positionSlot.trader, positionSlot.routeTypeKey)
-  //       const subsc = seed.subscription.find(s => s.puppetSubscriptionKey === subscKey)!
-
-  //       subsc.settled.push(newSettledPosition)
-
-  //       const removeIdx = subsc.open.findIndex(pos => pos.positionKey === positionSlot.positionKey)
-  //       subsc.open.splice(removeIdx, 1)
-  //     })
-
-  //     delete seed.mirrorPositionSlot[args.key]
-  //     delete seed.mirrorPositionRequest[args.key]
-
-  //     return seed
-  //   },
-  // },
-  // {
-  //   source: puppetLog.shareIncrease,
-  //   step(seed, value) {
-  //     const args = value.args
-  //     const positionSlot = seed.mirrorPositionSlot[args.positionKey]
-
-  //     if (!positionSlot) {
-  //       return seed
-  //       // throw new Error('position not found')
-  //     }
-
-  //     positionSlot.shares = args.puppetsShares
-  //     positionSlot.traderShare = args.traderShares
-  //     positionSlot.shareSupply = args.totalSupply
-
-  //     // positionSlot.position.cumulativeFee += args.fee
-  //     // positionSlot.position.link.decreaseList.push({ ...value.args, blockTimestamp: seed.approximatedTimestamp, transactionHash: value.transactionHash, __typename: 'DecreasePosition' })
-
-  //     return seed
-  //   },
-  // },
-  // // puppet
-  // {
-  //   source: puppetLog.openPosition,
-  //   step(seed, value) {
-  //     const args = value.args
-
-
-  //     // TODO better hook this up with the position slot
-  //     seed.mirrorPositionSlot[args.positionKey] ??= {
-  //       ...seed.mirrorPositionSlot[args.positionKey],
-  //       requestKey: args.positionKey,
-  //       puppets: args.puppets,
-  //       shares: [],
-  //       traderShare: 0n,
-  //       trader: args.trader,
-  //       shareSupply: 0n,
-  //       routeTypeKey: args.routeTypeKey,
-  //       positionKey: args.positionKey,
-  //       route: args.route,
-  //     }
-
-
-  //     return seed
-  //   },
-  // },
-  // {
-  //   source: puppetLog.subscribeRoute,
-  //   step(seed, value) {
-  //     const args = value.args
-  //     const subscKey = getPuppetSubscriptionKey(args.puppet, args.trader, args.routeTypeKey)
-
-  //     let subsc = seed.subscription.find(subsc => subsc.puppetSubscriptionKey === subscKey)
-
-  //     if (!subsc) {
-  //       subsc = {
-  //         allowance: 0n,
-  //         puppet: args.puppet,
-  //         trader: args.trader,
-  //         puppetSubscriptionKey: subscKey,
-  //         routeTypeKey: args.routeTypeKey,
-  //         subscribed: args.subscribe,
-  //         expiry: 0n,
-  //         settled: [],
-  //         open: []
-  //       }
-
-  //       seed.subscription.push(subsc)
-  //     }
-
-      
-
-  //     subsc.subscribed = args.subscribe
-
-  //     return seed
-  //   },
-  // },
 )
 
 
@@ -499,38 +318,26 @@ function storeCandle(seed: IGmxProcessState, token: viem.Address, interval: Inte
   }
 }
 
-export function createPositionSlot(blockTimestamp: number, transactionHash: viem.Hex, indexToken: viem.Address, event: PositionIncrease, requestKey: viem.Hex): IPositionSlot {
-  return {
-    market: event.market,
-    requestKey,
-    key: event.positionKey,
-    account: event.account,
-    collateralToken: event.collateralToken,
-    indexToken,
-    isLong: event.isLong,
-    averagePrice: 0n,
-    cumulativeFee: 0n,
-    maxCollateralUsd: 0n,
-    maxCollateralToken: 0n,
-    maxSizeToken: 0n,
-    maxSizeUsd: 0n,
-    cumulativeSizeToken: 0n,
-    cumulativeSizeUsd: 0n,
-    updates: [],
-    realisedPnl: 0n,
-
-    __typename: "PositionSlot",
-    transactionHash: transactionHash,
-    blockTimestamp: blockTimestamp,
-  }
-}
+export const initPartialPositionSlot = {
+  averagePrice: 0n,
+  cumulativeFee: 0n,
+  maxCollateralUsd: 0n,
+  maxCollateralToken: 0n,
+  maxSizeToken: 0n,
+  maxSizeUsd: 0n,
+  cumulativeSizeToken: 0n,
+  cumulativeSizeUsd: 0n,
+  updates: [],
+  realisedPnl: 0n,
+  __typename: "PositionSlot",
+} as const
 
 
 
 
 
 export const latestTokenPrice = (process: Stream<IGmxProcessState>, tokenEvent: Stream<viem.Address>) => {
-  return switchMap(token => map(seed => seed.latestPrice[token], process), tokenEvent)
+  return switchMap(token => map(seed => seed.latestPrice[token].min, process), tokenEvent)
 }
 
 export const getEventType = <T extends ILogTxType<any>>(typeName: string, log: IEventLog1Args, blockTimestamp: number): T => {

@@ -1,17 +1,15 @@
-import { IPositionListSummary, IPositionSettled, IPositionSlot, PositionDecrease } from "gmx-middleware-utils"
+import { IPositionListSummary, IPositionSettled, IPositionSlot, IPositionDecrease } from "gmx-middleware-utils"
 import * as viem from "viem"
 
 
 
 export interface IMirrorPositionInfo {
-  requestKey: viem.Hex
   puppets: readonly viem.Address[]
   shares: readonly bigint[]
   traderShare: bigint
   trader: viem.Address
   shareSupply: bigint
   routeTypeKey: viem.Hex
-  positionKey: viem.Hex
   route: viem.Address
 }
 
@@ -19,7 +17,7 @@ export interface IMirrorPositionInfo {
 export interface IPositionMirrorSlot extends IMirrorPositionInfo, IPositionSlot {}
 
 export interface IPositionMirrorSettled extends IPositionSettled, IMirrorPositionInfo {
-  settlement: PositionDecrease
+  settlement: IPositionDecrease
   isLiquidated: boolean
   openBlockTimestamp: number
 }

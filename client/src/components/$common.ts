@@ -6,7 +6,7 @@ import { IAttributeBackground, IAttributeBadge, IAttributeMappings, IBerryDispla
 import { constant, join, map, mergeArray, multicast, snapshot, startWith } from "@most/core"
 import * as GMX from "gmx-middleware-const"
 import { $Table, $alertTooltip, $defaultVScrollContainer, $infoLabeledValue, $infoTooltipLabel, $spinner, TableOption } from "gmx-middleware-ui-components"
-import { IAbstractRouteIdentity, getMappedValue, parseFixed, switchMap, tokenAmount, tokenAmountLabel } from "gmx-middleware-utils"
+import { IAbstractPositionParams, getMappedValue, parseFixed, switchMap, tokenAmount, tokenAmountLabel } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
 import { $TextField } from "../common/$TextField"
@@ -76,7 +76,7 @@ export const $berryByLabItems = (
 
 
 export interface IRouteDepositInfoConfig {
-  routeDescription: IAbstractRouteIdentity
+  routeDescription: IAbstractPositionParams
   wallet: IWalletClient
 }
 

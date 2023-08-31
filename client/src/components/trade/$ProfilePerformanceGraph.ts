@@ -8,8 +8,8 @@ import { $Baseline, $infoTooltipLabel, IMarker } from "gmx-middleware-ui-compone
 import {
   IPriceInterval,
   IPriceIntervalIdentity,
-  PositionDecrease,
-  PositionIncrease,
+  IPositionDecrease,
+  IPositionIncrease,
   createTimeline,
   filterNull,
   formatFixed,
@@ -26,7 +26,7 @@ import * as viem from "viem"
 import { IGmxProcessState, PRICEFEED_INTERVAL } from "../../data/process/process.js"
 
 type IPerformanceTickUpdateTick = {
-  update: PositionIncrease | PositionDecrease
+  update: IPositionIncrease | IPositionDecrease
   source: IPositionMirrorSettled | IPositionMirrorSlot
 }
 
@@ -67,7 +67,7 @@ function findClosest<T extends readonly number[]> (arr: T, chosen: number): T[nu
 }
 
 
-function getTime(tickItem: PositionIncrease | PositionDecrease) {
+function getTime(tickItem: IPositionIncrease | IPositionDecrease) {
   return tickItem.blockTimestamp
 }
 
@@ -138,8 +138,8 @@ export function performanceTimeline(config: IPerformanceTimeline) {
         const mp = slot.source
         const tickerId = `${mp.indexToken}:${interval}` as const
         const tokenPrice = getClosestpricefeedCandle(config.processData.pricefeed, tickerId, intervalSlot, 0)
-        const lstUpdate = mp.updates[mp.updates.length - 1]
-        const pnl = getPositionPnlUsd(lstUpdate, { isPriceFeed: true, maxPrice: tokenPrice.c, minPrice: tokenPrice.c, token: mp.indexToken  })
+        const lstUpdate = mp.latestUpdate
+        const pnl = getPositionPnlUsd(lstUpdate, { isPriceFeed: true, max: tokenPrice.c, minPrice: tokenPrice.c, token: mp.indexToken  })
         const pnlShare = getParticiapntMpPortion(mp, pnl, config.targetShare)
 
         return pnlAcc + pnlShare

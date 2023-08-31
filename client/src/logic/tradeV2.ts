@@ -1,0 +1,465 @@
+import * as viem from "viem"
+import * as wagmi from "@wagmi/core"
+import { ISupportedChain } from "../wallet/walletLink"
+import * as GMX from "gmx-middleware-const"
+import { IMarket, IMarketPoolValueInfo, IMarketPrice, IOraclePrice } from "gmx-middleware-utils"
+
+
+export function hashData(types: any, values: any) {
+  const hex = viem.encodeAbiParameters(viem.parseAbiParameters(types) as any, values)
+  const bytes = viem.toBytes(hex)
+  const hash = viem.keccak256(bytes)
+  return hash
+}
+
+export function hashKey(key: string) {
+  return hashData(["string"], [key])
+}
+
+export const POSITION_IMPACT_FACTOR_KEY = "POSITION_IMPACT_FACTOR"
+export const MAX_POSITION_IMPACT_FACTOR_KEY = "MAX_POSITION_IMPACT_FACTOR"
+export const POSITION_IMPACT_EXPONENT_FACTOR_KEY = "POSITION_IMPACT_EXPONENT_FACTOR"
+export const POSITION_FEE_FACTOR_KEY = "POSITION_FEE_FACTOR"
+export const SWAP_IMPACT_FACTOR_KEY = "SWAP_IMPACT_FACTOR"
+export const SWAP_IMPACT_EXPONENT_FACTOR_KEY = "SWAP_IMPACT_EXPONENT_FACTOR"
+export const SWAP_FEE_FACTOR_KEY = "SWAP_FEE_FACTOR"
+export const FEE_RECEIVER_DEPOSIT_FACTOR_KEY = "FEE_RECEIVER_DEPOSIT_FACTOR"
+export const BORROWING_FEE_RECEIVER_FACTOR_KEY = "BORROWING_FEE_RECEIVER_FACTOR"
+export const FEE_RECEIVER_WITHDRAWAL_FACTOR_KEY = "FEE_RECEIVER_WITHDRAWAL_FACTOR"
+export const FEE_RECEIVER_SWAP_FACTOR_KEY = "FEE_RECEIVER_SWAP_FACTOR"
+export const FEE_RECEIVER_POSITION_FACTOR_KEY = "FEE_RECEIVER_POSITION_FACTOR"
+export const OPEN_INTEREST_KEY = "OPEN_INTEREST"
+export const OPEN_INTEREST_IN_TOKENS_KEY = "OPEN_INTEREST_IN_TOKENS"
+export const POOL_AMOUNT_KEY = "POOL_AMOUNT"
+export const MAX_POOL_AMOUNT_KEY = "MAX_POOL_AMOUNT"
+export const RESERVE_FACTOR_KEY = "RESERVE_FACTOR"
+export const OPEN_INTEREST_RESERVE_FACTOR_KEY = "OPEN_INTEREST_RESERVE_FACTOR"
+export const NONCE_KEY = "NONCE"
+export const BORROWING_FACTOR_KEY = "BORROWING_FACTOR"
+export const BORROWING_EXPONENT_FACTOR_KEY = "BORROWING_EXPONENT_FACTOR"
+export const CUMULATIVE_BORROWING_FACTOR_KEY = "CUMULATIVE_BORROWING_FACTOR"
+export const TOTAL_BORROWING_KEY = "TOTAL_BORROWING"
+export const FUNDING_FACTOR_KEY = "FUNDING_FACTOR"
+export const FUNDING_EXPONENT_FACTOR_KEY = "FUNDING_EXPONENT_FACTOR"
+export const MAX_PNL_FACTOR_KEY = "MAX_PNL_FACTOR"
+export const MAX_PNL_FACTOR_FOR_WITHDRAWALS_KEY = "MAX_PNL_FACTOR_FOR_WITHDRAWALS"
+export const MAX_PNL_FACTOR_FOR_DEPOSITS_KEY = "MAX_PNL_FACTOR_FOR_DEPOSITS"
+export const MAX_PNL_FACTOR_FOR_TRADERS_KEY = "MAX_PNL_FACTOR_FOR_TRADERS"
+export const MAX_POSITION_IMPACT_FACTOR_FOR_LIQUIDATIONS_KEY = "MAX_POSITION_IMPACT_FACTOR_FOR_LIQUIDATION"
+export const POSITION_IMPACT_POOL_AMOUNT_KEY = "POSITION_IMPACT_POOL_AMOUNT"
+export const SWAP_IMPACT_POOL_AMOUNT_KEY = "SWAP_IMPACT_POOL_AMOUNT"
+export const MIN_COLLATERAL_USD_KEY = "MIN_COLLATERAL_USD"
+export const MIN_COLLATERAL_FACTOR_KEY = "MIN_COLLATERAL_FACTOR"
+export const MIN_COLLATERAL_FACTOR_FOR_OPEN_INTEREST_MULTIPLIER_KEY = "MIN_COLLATERAL_FACTOR_FOR_OPEN_INTEREST_MULTIPLIER"
+export const MIN_POSITION_SIZE_USD_KEY = "MIN_POSITION_SIZE_USD"
+export const MAX_LEVERAGE_KEY = "MAX_LEVERAGE"
+export const DEPOSIT_GAS_LIMIT_KEY = "DEPOSIT_GAS_LIMIT"
+export const WITHDRAWAL_GAS_LIMIT_KEY = "WITHDRAWAL_GAS_LIMIT"
+export const INCREASE_ORDER_GAS_LIMIT_KEY = "INCREASE_ORDER_GAS_LIMIT"
+export const DECREASE_ORDER_GAS_LIMIT_KEY = "DECREASE_ORDER_GAS_LIMIT"
+export const SWAP_ORDER_GAS_LIMIT_KEY = "SWAP_ORDER_GAS_LIMIT"
+export const SINGLE_SWAP_GAS_LIMIT_KEY = "SINGLE_SWAP_GAS_LIMIT"
+export const TOKEN_TRANSFER_GAS_LIMIT_KEY = "TOKEN_TRANSFER_GAS_LIMIT"
+export const NATIVE_TOKEN_TRANSFER_GAS_LIMIT_KEY = "NATIVE_TOKEN_TRANSFER_GAS_LIMIT"
+export const ESTIMATED_GAS_FEE_BASE_AMOUNT = "ESTIMATED_GAS_FEE_BASE_AMOUNT"
+export const ESTIMATED_GAS_FEE_MULTIPLIER_FACTOR = "ESTIMATED_GAS_FEE_MULTIPLIER_FACTOR"
+export const MARKET_LIST_KEY = "MARKET_LIST"
+export const POSITION_LIST_KEY = "POSITION_LIST"
+export const ACCOUNT_POSITION_LIST_KEY = "ACCOUNT_POSITION_LIST"
+export const ORDER_LIST_KEY = "ORDER_LIST"
+export const ACCOUNT_ORDER_LIST_KEY = "ACCOUNT_ORDER_LIST"
+export const CLAIMABLE_FUNDING_AMOUNT = "CLAIMABLE_FUNDING_AMOUNT"
+export const VIRTUAL_TOKEN_ID_KEY = "VIRTUAL_TOKEN_ID"
+export const VIRTUAL_MARKET_ID_KEY = "VIRTUAL_MARKET_ID"
+export const VIRTUAL_INVENTORY_FOR_POSITIONS_KEY = "VIRTUAL_INVENTORY_FOR_POSITIONS"
+export const VIRTUAL_INVENTORY_FOR_SWAPS_KEY = "VIRTUAL_INVENTORY_FOR_SWAPS"
+export const POOL_AMOUNT_ADJUSTMENT_KEY = "POOL_AMOUNT_ADJUSTMENT"
+export const AFFILIATE_REWARD_KEY = "AFFILIATE_REWARD"
+export const IS_MARKET_DISABLED_KEY = "IS_MARKET_DISABLED"
+
+
+
+export async function getMarketInfo(
+  chain: ISupportedChain,
+  marketToken: viem.Address,
+  marketPrice: IMarketPrice,
+): Promise<IMarketPoolValueInfo> {
+  const datastoreContract = GMX.CONTRACT[chain.id].Datastore
+  const readerContract = GMX.CONTRACT[chain.id].ReaderV2
+
+  const marketInfo = wagmi.readContract({
+    ...readerContract,
+    functionName: 'getMarketInfo',
+    args: [datastoreContract.address, marketPrice, marketToken],
+  })
+
+  // const isDisabled = wagmi.readContract({
+  //   ...datastoreContract,
+  //   functionName: 'getBool',
+  //   args: [hashData(["bytes32", "address"], [hashKey(IS_MARKET_DISABLED_KEY), market.marketToken])],
+  // })
+
+  // const longPoolAmount = wagmi.readContract({
+  //   ...datastoreContract,
+  //   functionName: 'getUint',
+  //   args: [hashData(["bytes32", "address", "address"], [hashKey(POOL_AMOUNT_KEY), market.marketToken, market.longToken])],
+  // })
+
+
+  // const shortPoolAmount = wagmi.readContract({
+  //   ...datastoreContract,
+  //   functionName: 'getUint',
+  //   args: [hashData(["bytes32", "address", "address"], [hashKey(POOL_AMOUNT_KEY), market.marketToken, market.shortToken])],
+  // })
+
+
+  const maxLongPoolAmount = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "address"], [hashKey(MAX_POOL_AMOUNT_KEY), market.marketToken, market.longToken])],
+  })
+
+  const maxShortPoolAmount = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "address"], [hashKey(MAX_POOL_AMOUNT_KEY), market.marketToken, market.shortToken])],
+  })
+
+  const longPoolAmountAdjustment = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "address"], [hashKey(POOL_AMOUNT_ADJUSTMENT_KEY), market.marketToken, market.longToken])],
+  })
+  
+  const shortPoolAmountAdjustment = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "address"], [hashKey(POOL_AMOUNT_ADJUSTMENT_KEY), market.marketToken, market.shortToken])],
+  })
+
+  const reserveFactorLong = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(RESERVE_FACTOR_KEY), market.marketToken, true])],
+  })
+
+  const reserveFactorShort = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(RESERVE_FACTOR_KEY), market.marketToken, false])],
+  })
+
+  const openInterestReserveFactorLong = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(OPEN_INTEREST_RESERVE_FACTOR_KEY), market.marketToken, true])],
+  })
+
+  const openInterestReserveFactorShort = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(OPEN_INTEREST_RESERVE_FACTOR_KEY), market.marketToken, false])],
+  })
+
+  const positionImpactPoolAmount = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address"], [hashKey(POSITION_IMPACT_POOL_AMOUNT_KEY), market.marketToken])],
+  })
+
+  const swapImpactPoolAmountLong = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "address"], [hashKey(SWAP_IMPACT_POOL_AMOUNT_KEY), market.marketToken, market.longToken])],
+  })
+
+  const swapImpactPoolAmountShort = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "address"], [hashKey(SWAP_IMPACT_POOL_AMOUNT_KEY), market.marketToken, market.shortToken])],
+  })
+
+  const borrowingFactorLong = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(BORROWING_FACTOR_KEY), market.marketToken, true])],
+  })
+
+  const borrowingFactorShort = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(BORROWING_FACTOR_KEY), market.marketToken, false])],
+  })
+
+  const borrowingExponentFactorLong = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(BORROWING_EXPONENT_FACTOR_KEY), market.marketToken, true])],
+  })
+
+  const borrowingExponentFactorShort = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(BORROWING_EXPONENT_FACTOR_KEY), market.marketToken, false])],
+  })
+
+  const fundingFactor = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address"], [hashKey(FUNDING_FACTOR_KEY), market.marketToken])],
+  })
+
+  const fundingExponentFactor = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address"], [hashKey(FUNDING_EXPONENT_FACTOR_KEY), market.marketToken])],
+  })
+
+  const maxPnlFactorForTradersLong = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "bytes32", "address", "bool"], [hashKey(MAX_PNL_FACTOR_KEY), hashKey(MAX_PNL_FACTOR_FOR_TRADERS_KEY), market.marketToken, true])],
+  })
+
+  const maxPnlFactorForTradersShort = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "bytes32", "address", "bool"], [hashKey(MAX_PNL_FACTOR_KEY), hashKey(MAX_PNL_FACTOR_FOR_TRADERS_KEY), market.marketToken, false])],
+  })
+
+  const positionFeeFactorForPositiveImpact = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(POSITION_FEE_FACTOR_KEY), market.marketToken, true])],
+  })
+
+  const positionFeeFactorForNegativeImpact = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(POSITION_FEE_FACTOR_KEY), market.marketToken, false])],
+  })
+
+  const positionImpactFactorPositive = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(POSITION_IMPACT_FACTOR_KEY), market.marketToken, true])],
+  })
+
+  const positionImpactFactorNegative = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(POSITION_IMPACT_FACTOR_KEY), market.marketToken, false])],
+  })
+
+  const maxPositionImpactFactorPositive = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(MAX_POSITION_IMPACT_FACTOR_KEY), market.marketToken, true])],
+  })
+
+  const maxPositionImpactFactorNegative = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(MAX_POSITION_IMPACT_FACTOR_KEY), market.marketToken, false])],
+  })
+
+  const maxPositionImpactFactorForLiquidations = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address"], [hashKey(MAX_POSITION_IMPACT_FACTOR_FOR_LIQUIDATIONS_KEY), market.marketToken])],
+  })
+
+  const minCollateralFactor = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address"], [hashKey(MIN_COLLATERAL_FACTOR_KEY), market.marketToken])],
+  })
+
+  const minCollateralFactorForOpenInterestLong = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(MIN_COLLATERAL_FACTOR_FOR_OPEN_INTEREST_MULTIPLIER_KEY), market.marketToken, true])],
+  })
+
+  const minCollateralFactorForOpenInterestShort = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(MIN_COLLATERAL_FACTOR_FOR_OPEN_INTEREST_MULTIPLIER_KEY), market.marketToken, false])],
+  })
+
+  const positionImpactExponentFactor = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address"], [hashKey(POSITION_IMPACT_EXPONENT_FACTOR_KEY), market.marketToken])],
+  })
+
+  const swapFeeFactorForPositiveImpact = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(SWAP_FEE_FACTOR_KEY), market.marketToken, true])],
+  })
+
+  const swapFeeFactorForNegativeImpact = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(SWAP_FEE_FACTOR_KEY), market.marketToken, false])],
+  })
+
+  const swapImpactFactorPositive = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(SWAP_IMPACT_FACTOR_KEY), market.marketToken, true])],
+  })
+
+  const swapImpactFactorNegative = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "bool"], [hashKey(SWAP_IMPACT_FACTOR_KEY), market.marketToken, false])],
+  })
+
+  const swapImpactExponentFactor = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address"], [hashKey(SWAP_IMPACT_EXPONENT_FACTOR_KEY), market.marketToken])],
+  })
+
+  const longInterestUsingLongToken = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_KEY), market.marketToken, market.longToken, true])],
+  })
+
+  const longInterestUsingShortToken = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_KEY), market.marketToken, market.shortToken, true])],
+  })
+
+  const shortInterestUsingLongToken = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_KEY), market.marketToken, market.longToken, false])],
+  })
+
+  const shortInterestUsingShortToken = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_KEY), market.marketToken, market.shortToken, false])],
+  })
+
+  const longInterestInTokensUsingLongToken = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_IN_TOKENS_KEY), market.marketToken, market.longToken, true])],
+  })
+
+  const longInterestInTokensUsingShortToken = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_IN_TOKENS_KEY), market.marketToken, market.shortToken, true])],
+  })
+
+  const shortInterestInTokensUsingLongToken = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_IN_TOKENS_KEY), market.marketToken, market.longToken, false])],
+  })
+
+
+  const shortInterestInTokensUsingShortToken = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getUint',
+    args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_IN_TOKENS_KEY), market.marketToken, market.shortToken, false])],
+  })
+
+  const virtualMarketId = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getBytes32',
+    args: [hashData(["bytes32", "address"], [hashKey(VIRTUAL_MARKET_ID_KEY), market.marketToken])],
+  })
+
+  const virtualLongTokenId = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getBytes32',
+    args: [hashData(["bytes32", "address"], [hashKey(VIRTUAL_TOKEN_ID_KEY), market.longToken])],
+  })
+
+  const virtualShortTokenId = wagmi.readContract({
+    ...datastoreContract,
+    functionName: 'getBytes32',
+    args: [hashData(["bytes32", "address"], [hashKey(VIRTUAL_TOKEN_ID_KEY), market.shortToken])],
+  })
+
+
+  
+  const longInterestUsd = await longInterestUsingLongToken + await longInterestUsingShortToken
+  const shortInterestUsd = await shortInterestUsingLongToken + await shortInterestUsingShortToken
+
+
+  return {
+    marketInfo: await marketInfo,
+    longInterestUsd, shortInterestUsd,
+    
+    
+    // netPnlMax, netPnlMin, pnlLongMax, pnlLongMin, pnlShortMax, pnlShortMin,
+    // poolValueMax, poolValueMin, shortInterestInTokens,
+
+    // totalBorrowingFees,
+    // claimableFundingAmountLong, claimableFundingAmountShort,
+    
+    // longPoolAmount: await longPoolAmount,
+    // shortPoolAmount: await shortPoolAmount,
+
+    maxLongPoolAmount: await maxLongPoolAmount,
+    maxShortPoolAmount: await maxShortPoolAmount,
+    longPoolAmountAdjustment: await longPoolAmountAdjustment,
+    shortPoolAmountAdjustment: await shortPoolAmountAdjustment,
+    reserveFactorLong: await reserveFactorLong,
+    reserveFactorShort: await reserveFactorShort,
+    openInterestReserveFactorLong: await openInterestReserveFactorLong,
+    openInterestReserveFactorShort: await openInterestReserveFactorShort,
+    positionImpactPoolAmount: await positionImpactPoolAmount,
+    swapImpactPoolAmountLong: await swapImpactPoolAmountLong,
+    swapImpactPoolAmountShort: await swapImpactPoolAmountShort,
+    borrowingFactorLong: await borrowingFactorLong,
+    borrowingFactorShort: await borrowingFactorShort,
+    borrowingExponentFactorLong: await borrowingExponentFactorLong,
+    borrowingExponentFactorShort: await borrowingExponentFactorShort,
+    fundingFactor: await fundingFactor,
+    fundingExponentFactor: await fundingExponentFactor,
+    maxPnlFactorForTradersLong: await maxPnlFactorForTradersLong,
+    maxPnlFactorForTradersShort: await maxPnlFactorForTradersShort,
+    positionFeeFactorForPositiveImpact: await positionFeeFactorForPositiveImpact,
+    positionFeeFactorForNegativeImpact: await positionFeeFactorForNegativeImpact,
+    positionImpactFactorPositive: await positionImpactFactorPositive,
+    positionImpactFactorNegative: await positionImpactFactorNegative,
+    maxPositionImpactFactorPositive: await maxPositionImpactFactorPositive,
+    maxPositionImpactFactorNegative: await maxPositionImpactFactorNegative,
+    maxPositionImpactFactorForLiquidations: await maxPositionImpactFactorForLiquidations,
+    minCollateralFactor: await minCollateralFactor,
+    minCollateralFactorForOpenInterestLong: await minCollateralFactorForOpenInterestLong,
+    minCollateralFactorForOpenInterestShort: await minCollateralFactorForOpenInterestShort,
+    positionImpactExponentFactor: await positionImpactExponentFactor,
+
+    swapFeeFactorForPositiveImpact: await swapFeeFactorForPositiveImpact,
+    swapFeeFactorForNegativeImpact: await swapFeeFactorForNegativeImpact,
+    swapImpactFactorPositive: await swapImpactFactorPositive,
+    swapImpactFactorNegative: await swapImpactFactorNegative,
+    swapImpactExponentFactor: await swapImpactExponentFactor,
+
+
+    // longInterestUsingLongToken: await longInterestUsingLongToken,
+    // longInterestUsingShortToken: await longInterestUsingShortToken,
+    // shortInterestUsingLongToken: await shortInterestUsingLongToken,
+    // shortInterestUsingShortToken: await shortInterestUsingShortToken,
+    // shortInterestInTokensUsingLongToken: await shortInterestInTokensUsingLongToken,
+    // shortInterestInTokensUsingShortToken: await shortInterestInTokensUsingShortToken,
+    virtualMarketId: await virtualMarketId,
+    virtualLongTokenId: await virtualLongTokenId,
+    virtualShortTokenId: await virtualShortTokenId,
+
+    // borrowingFactorPerSecondForLongs
+    shortInterestInTokens: await shortInterestInTokensUsingLongToken + await shortInterestInTokensUsingShortToken,
+    longInterestInTokens: await longInterestInTokensUsingLongToken + await longInterestInTokensUsingShortToken,
+  }
+}

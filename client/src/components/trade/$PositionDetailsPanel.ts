@@ -198,12 +198,12 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
         return `Leverage below 1.1x`
       }
 
-      if (state.position.averagePrice === 0n && state.collateralDeltaUsd < 10n ** 30n * 10n) {
-        return `Min 10 Collateral required`
-      }
+      // if (state.position === null && state.collateralDeltaUsd < 10n ** 30n * 10n) {
+      //   return `Min 10 Collateral required`
+      // }
     } else {
 
-      if (state.position.averagePrice > 0n && state.inputToken !== state.collateralToken) {
+      if (state.position && state.inputToken !== state.collateralToken) {
         const delta = getPnL(state.isLong, state.position.averagePrice, state.indexTokenPrice, -state.sizeDeltaUsd)
         const adjustedSizeDelta = safeDiv(abs(state.sizeDeltaUsd) * delta, state.position.size)
         const fees = state.swapFee + state.marginFee
@@ -221,11 +221,11 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
     }
 
-    if (!state.isIncrease && state.position.averagePrice === 0n) {
+    if (!state.isIncrease && state.position === null) {
       return `No ${state.indexTokenDescription.symbol} position to reduce`
     }
 
-    if (state.position.averagePrice > 0n && state.liquidationPrice && (state.isLong ? state.liquidationPrice > state.indexTokenPrice : state.liquidationPrice < state.indexTokenPrice)) {
+    if (state.position && state.liquidationPrice && (state.isLong ? state.liquidationPrice > state.indexTokenPrice : state.liquidationPrice < state.indexTokenPrice)) {
       return `Exceeding liquidation price`
     }
 
@@ -387,7 +387,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
                 switchLatest(map(params => {
                   const depositTokenNorm = resolveAddress(config.chain.id, params.inputToken)
                   const outputToken = params.isLong ? params.indexToken : params.collateralToken
-                  const totalSizeUsd = params.position.size + params.sizeDeltaUsd
+                  const totalSizeUsd = params.position ? params.position.size + params.sizeDeltaUsd : params.sizeDeltaUsd
 
                   const rateFactor = params.isLong ? params.fundingRateFactor : params.stableFundingRateFactor
                   const rate = safeDiv(rateFactor * params.collateralTokenPoolInfo.reservedAmount, params.collateralTokenPoolInfo.poolAmounts)
@@ -454,7 +454,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
               ),
               $text(style({ whiteSpace: 'pre-wrap' }))(map(params => {
 
-                if (params.position.averagePrice === 0n) {
+                if (params.position === null) {
                   return 0n
                 }
 
@@ -571,7 +571,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
                 $content: $text(map(params => {
                   let modLabel: string
 
-                  if (params.position.averagePrice > 0n) {
+                  if (params.position) {
                     if (params.isIncrease) {
                       modLabel = 'Increase'
                     } else {
@@ -595,10 +595,10 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
       styleInline(map(mode => ({ height: '140px', display: mode ? 'none' : 'flex' }), inTradeMode))(
         switchMap(params => {
-
-          if (params.position.averagePrice === 0n) {
-            const tokenDesc = getTokenDescription(params.position.indexToken)
-            const route = params.position.isLong ? `Long-${tokenDesc.symbol}` : `Short-${tokenDesc.symbol}/${getTokenDescription(params.position.collateralToken).symbol}`
+          const pos = params.position
+          if (pos === null) {
+            const tokenDesc = getTokenDescription(params.indexToken)
+            const route = params.isLong ? `Long-${tokenDesc.symbol}` : `Short-${tokenDesc.symbol}/${getTokenDescription(params.collateralToken).symbol}`
 
             return $row(style({ placeContent: 'center', alignItems: 'center' }))(
               $text(style({ color: pallete.foreground }))(`No active ${route} position`)
@@ -612,7 +612,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
 
             return map(price => {
-              const delta = getPnL(params.position.isLong, params.position.averagePrice, price, params.position.size)
+              const delta = getPnL(pos.isLong, pos.averagePrice, price, pos.size)
               // const val = formatFixed(delta + pos.realisedPnl - pos.cumulativeFee, 30)
               const val = 0
 
@@ -623,7 +623,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
           const rateFactor = params.isLong ? params.fundingRateFactor : params.stableFundingRateFactor
           const rate = safeDiv(rateFactor * params.collateralTokenPoolInfo.reservedAmount, params.collateralTokenPoolInfo.poolAmounts)
-          const nextSize = params.position.size * rate / GMX.BASIS_POINTS_DIVISOR / 100n
+          const nextSize = pos.size * rate / GMX.BASIS_POINTS_DIVISOR / 100n
 
 
           return $column(style({ position: 'relative' }))(
@@ -685,7 +685,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
             //   // requestPricefeed: requestTradePricefeedTether()
             // })
           )
-        }, combineObject({ position, collateralTokenPoolInfo, fundingRateFactor, stableFundingRateFactor, isLong,  }))
+        }, combineObject({ position, collateralTokenPoolInfo, fundingRateFactor, stableFundingRateFactor, isLong, indexToken, collateralToken,  }))
       ),
 
       switchMap(posList => {
@@ -761,7 +761,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
       }, requestApproveSpend))),
 
       leverage: filterNull(snapshot(state => {
-        if (state.position.size === 0n) {
+        if (state.position === null) {
           return null
         }
 

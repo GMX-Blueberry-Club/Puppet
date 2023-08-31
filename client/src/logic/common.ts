@@ -85,10 +85,11 @@ export const contractReader = <
     const resolveArgs: Stream<onlyArray<TArgs>> = isStream(args_[0]) ? combineArray((..._args) => _args, ...args_ as any) : now(args_ as any) as any
 
     return awaitPromises(map(async args => {
+      
       try {
         return await wagmi.readContract({ ...params_, functionName, args } as any)
       } catch (error) {
-        console.error(error)
+        console.error(functionName, error)
         throw error
       }
     }, resolveArgs)) as any

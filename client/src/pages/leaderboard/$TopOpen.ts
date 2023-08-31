@@ -7,7 +7,7 @@ import { map, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Table, ISortBy, ScrollRequest } from "gmx-middleware-ui-components"
-import { IAbstractRouteIdentity, getSlotNetPnL, pagingQuery, switchMap } from "gmx-middleware-utils"
+import { IAbstractPositionParams, getSlotNetPnL, pagingQuery, switchMap } from "gmx-middleware-utils"
 import { ROUTE_DESCRIPTION, getRouteTypeKey } from "puppet-middleware-const"
 import { IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import { $labelDisplay } from "../../common/$TextField"
@@ -37,7 +37,7 @@ export const $TopOpen = (config: ITopOpen) => component((
   [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
   [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionOpen>>,
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
-  [routeTypeChange, routeTypeChangeTether]: Behavior<IAbstractRouteIdentity[]>,
+  [routeTypeChange, routeTypeChangeTether]: Behavior<IAbstractPositionParams[]>,
 
 ) => {
 
@@ -53,7 +53,7 @@ export const $TopOpen = (config: ITopOpen) => component((
     }
 
     return matchedMemType
-  }), storage.replayWrite(exploreStore, [] as IAbstractRouteIdentity[], routeTypeChange, 'filterRouteList'))
+  }), storage.replayWrite(exploreStore, [] as IAbstractPositionParams[], routeTypeChange, 'filterRouteList'))
 
 
   const pageParms = map(params => {

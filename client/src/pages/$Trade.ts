@@ -2,14 +2,14 @@ import { Behavior, O, combineArray, combineObject, replayLatest } from "@aelea/c
 import { $node, $text, component, style, styleBehavior } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import {
-  IPositionDecrease, IPositionIncrease, IPositionSlot, abs, filterNull, formatFixed,
-  getAdjustedDelta, getDenominator, getFeeBasisPoints, getFundingFee, getIntervalIdentifier, getLiquidationPrice, getMappedValue,
+  IPositionDecrease, IPositionIncrease, IPositionSlot, IPositionAdjustment, abs, filterNull, formatFixed,
+  getAdjustedDelta, getDenominator, getEntryPrice, getFeeBasisPoints, getFundingFee, getIntervalIdentifier, getLiquidationPrice, getMappedValue,
   getMarginFees, getNativeTokenDescription, getNextAveragePrice, getNextLiquidationPrice, getOraclePrice, getPnL, getPositionKey,
-  getTokenAmount, getTokenDescription, readableDate, readableFixedBsp, readableFixedUSD30, readableUnitAmount, safeDiv, switchMap, timeSince, unixTimestampNow
+  getTokenAmount, getTokenDescription, readableDate, readableFixedBsp, readableFixedUSD30, readableUnitAmount, safeDiv, switchMap, timeSince, unixTimestampNow, IMarketPrice
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, combine, debounce, empty, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, zip } from "@most/core"
+import { awaitPromises, combine, debounce, empty, fromPromise, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
@@ -26,9 +26,9 @@ import { $ButtonSecondary } from "../components/form/$Button"
 import { $Dropdown } from "../components/form/$Dropdown"
 import { $PositionDetailsPanel, IRequestTrade } from "../components/trade/$PositionDetailsPanel"
 import { $PositionEditor, IPositionEditorAbstractParams, ITradeFocusMode } from "../components/trade/$PositionEditor"
-import { createPositionSlot, latestTokenPrice } from "../data/process/process"
+import { initPartialPositionSlot, latestTokenPrice } from "../data/process/process"
 import { $caretDown } from "../elements/$icons"
-import { connectContract } from "../logic/common"
+import { connectContract, contractReader } from "../logic/common"
 import * as trade from "../logic/trade"
 import { resolveAddress } from "../logic/utils"
 import { rootStoreScope } from "../data/store/store"
@@ -36,6 +36,8 @@ import * as indexDB from "../utils/storage/indexDB"
 import * as storage from "../utils/storage/storeScope"
 import { walletLink } from "../wallet"
 import { wallet } from "../wallet/walletLink"
+import { IPositionMirrorSlot } from "puppet-middleware-utils"
+import { getMarketInfo } from "../logic/tradeV2"
 
 
 export type ITradeComponent = IPositionEditorAbstractParams
@@ -102,6 +104,9 @@ export const $Trade = (config: ITradeComponent) => component((
 
 ) => {
 
+  const markets = map(data => Object.values(data.markets), config.processData)
+  const processData = config.processData
+
   const chainId = config.chain.id
   const nativeToken = GMX.CHAIN_ADDRESS_MAP[chainId].NATIVE_TOKEN
   const gmxContractMap = GMX.CONTRACT[config.chain.id]
@@ -110,12 +115,13 @@ export const $Trade = (config: ITradeComponent) => component((
   const tradeReader = trade.connectTrade(config.chain)
 
   // const vaultReader = contractReader(vaultConfig)
+  const v2Reader = contractReader(gmxContractMap.ReaderV2)
+  const datastoreReader = contractReader(gmxContractMap.Datastore)
   const vault = connectContract(gmxContractMap.Vault)
   const positionRouter = connectContract(gmxContractMap.PositionRouter)
   const usdg = connectContract(gmxContractMap.USDG)
   const orchestrator = connectContract(puppetContractMap.Orchestrator)
   const router = connectContract(GMX.CONTRACT[config.chain.id].Router)
-  
 
   const executionFee = replayLatest(multicast(positionRouter.read('minExecutionFee')))
   const tradingStore = storage.createStoreScope(rootStoreScope, 'tradeBox' as const)
@@ -134,10 +140,19 @@ export const $Trade = (config: ITradeComponent) => component((
     changeLeverage,
     storage.replayWrite(tradingStore, GMX.LIMIT_LEVERAGE / 4n, debounce(100, changeLeverage), 'leverage'),
   ])
+  
+  const market = map(params => {
+    if (params.stored === undefined) {
+      return params.markets[1]
+    }
+
+    return params.markets.find(m => m.marketToken === params.stored) || params.markets[0]
+  }, combineObject({ stored: indexDB.get(tradingStore, 'market') as Stream<viem.Address | undefined>, markets })) // storage.replayWrite(tradingStore, GMX.ADDRESS_ZERO, changeInputToken, 'inputToken')
 
 
   const collateralDeltaUsd = replayLatest(changeCollateralDeltaUsd, 0n)
   const sizeDeltaUsd = replayLatest(changeSizeDeltaUsd, 0n)
+
 
 
 
@@ -155,127 +170,82 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ inputToken, wallet }))))
 
 
-  const inputTokenPrice = map(price => getOraclePrice(price, true), latestTokenPrice(config.processData, map(address => resolveAddress(config.chain.id, address), inputToken)))
-  const indexTokenPrice = mergeArray([
-    map(params => getOraclePrice(params.price, params.isLong), combineObject({ price: latestTokenPrice(config.processData, indexToken), isLong })),
-    // multicast(switchMap(address => trade.exchangesWebsocketPriceSource(config.chain, address), indexToken))
-  ])
-  const collateralTokenPrice = map(price => getOraclePrice(price, true), latestTokenPrice(config.processData, collateralToken))
+  const marketPrice: Stream<IMarketPrice> = map(params => {
+    return {
+      longTokenPrice: params.processData.latestPrice[params.market.longToken],
+      shortTokenPrice: params.processData.latestPrice[params.market.shortToken],
+      indexTokenPrice: params.processData.latestPrice[params.market.indexToken],
+    }
+  }, combineObject({ market, processData }))
+
+  const longTokenPrice = map(params => params.processData.latestPrice[params.market.longToken].min, combineObject({ market, processData }))
+  const shortTokenPrice = map(params => params.processData.latestPrice[params.market.shortToken].min, combineObject({ market, processData }))
+  const indexTokenPrice = map(params => params.processData.latestPrice[params.market.indexToken].min, combineObject({ market, processData }))
+  // const indexTokenPrice = map(params => getOraclePrice(params.price, params.isLong), combineObject({ price: latestTokenPrice(config.processData, indexToken), isLong }))
 
 
-  const route = replayLatest(multicast(switchMap(params => {
+  const inputTokenPrice = latestTokenPrice(config.processData, map(address => resolveAddress(config.chain.id, address), inputToken))
+  const collateralTokenPrice = latestTokenPrice(config.processData, collateralToken)
+
+
+
+  const marketInfo = switchMap(params => {
+    return fromPromise(getMarketInfo(config.chain, params.market.marketToken, params.marketPrice))
+  }, combineObject({ market, marketPrice }))
+
+
+  const route = map(params => {
     const w3p = params.wallet
     if (w3p === null) {
-      return now(GMX.ADDRESS_ZERO)
+      return GMX.ADDRESS_ZERO
     }
 
-    const key = getRouteKey(w3p.account.address, params.collateralToken, params.indexToken, params.isLong)
-    const storedRouteKey = storage.get(tradingStore, GMX.ADDRESS_ZERO as viem.Address, key)
-    const fallbackGetRoute = switchMap(address => {
+    return w3p.account.address
+  }, combineObject({ wallet }))
 
-      if (address === GMX.ADDRESS_ZERO) {
-        return switchMap(res => {
-          return address === GMX.ADDRESS_ZERO ? now(res) : indexDB.set(tradingStore, res, key)
-        }, orchestrator.read('getRoute', key))
-      }
+  // const route = replayLatest(multicast(switchMap(params => {
+  //   const w3p = params.wallet
+  //   if (w3p === null) {
+  //     return now(GMX.ADDRESS_ZERO)
+  //   }
 
-      return now(address)
-    }, storedRouteKey)
+  //   const key = getRouteKey(w3p.account.address, params.collateralToken, params.indexToken, params.isLong)
+  //   const storedRouteKey = storage.get(tradingStore, GMX.ADDRESS_ZERO as viem.Address, key)
+  //   const fallbackGetRoute = switchMap(address => {
 
-    return fallbackGetRoute
-  }, combineObject({ wallet, collateralToken, indexToken, isLong }))))
+  //     if (address === GMX.ADDRESS_ZERO) {
+  //       return switchMap(res => {
+  //         return address === GMX.ADDRESS_ZERO ? now(res) : indexDB.set(tradingStore, res, key)
+  //       }, orchestrator.read('getRoute', key))
+  //     }
+
+  //     return now(address)
+  //   }, storedRouteKey)
+
+  //   return fallbackGetRoute
+  // }, combineObject({ wallet, collateralToken, indexToken, isLong }))))
 
 
 
-  const positionKeyAbs = map(params => {
+  const _positionKeyArgs = map(params => {
     const resolvedCollateralToken = params.isLong ? params.indexToken : params.collateralToken
     const address = params.route || GMX.ADDRESS_ZERO
-    const key = getPositionKey(address, resolvedCollateralToken, params.indexToken, params.isLong)
+    const key = getPositionKey(address, params.market.marketToken, resolvedCollateralToken, params.isLong)
 
     return { ...params, key, account: address, isLong: params.isLong, collateralToken: resolvedCollateralToken }
-  }, combineObject({ route, indexToken, collateralToken, isLong }))
+  }, combineObject({ route, indexToken, collateralToken, isLong, market }))
 
-  const positionKey = skipRepeatsWith((prev, next) => prev.key === next.key, positionKeyAbs)
-
-
-  const keeperExecuteIncrease = positionRouter.listen('ExecuteIncreasePosition')
-  const keeperDecreaseIncrease = positionRouter.listen('ExecuteDecreasePosition')
-  const keeperCancelIncrease = positionRouter.listen('CancelIncreasePosition')
-  const keeperCancelDecrease = positionRouter.listen('CancelDecreasePosition')
+  const positionKeyArgs = skipRepeatsWith((prev, next) => prev.key === next.key, _positionKeyArgs)
 
 
+  const position: Stream<IPositionAdjustment | null> = map((params) => {
+    const existingSlot = params.processData.mirrorPositionSlot[params.positionKeyArgs.key]
+    if (!existingSlot) return null
 
+    return existingSlot.latestUpdate
+    // return { ...initPartialPositionSlot, ...params.positionKeyArgs, blockTimestamp: unixTimestampNow(), orderKey: GMX.BYTES32_ZERO, market: GMX.ADDRESS_ZERO, transactionHash: GMX.BYTES32_ZERO }
+  }, combineObject({ processData: config.processData, positionKeyArgs }))
 
-  const adjustPosition = multicast(mergeArray([
-    keeperExecuteIncrease,
-    keeperDecreaseIncrease,
-    keeperCancelIncrease,
-    keeperCancelDecrease,
-  ]))
-
-  const positions = vault.read('positions', map(pos => pos.key, positionKey))
-
-  const positionChange: Stream<trade.IPositionGetter> = multicast(map(params => {
-    const [size, collateral, averagePrice, entryFundingRate, reserveAmount, realisedPnl, lastIncreasedTime] = params.positions
-    const lastIncreasedTimeBn = lastIncreasedTime
-
-    const ret: trade.IPositionGetter = {
-      account: params.positionKey.account,
-      isLong: params.positionKey.isLong,
-      key: params.positionKey.key,
-      indexToken: params.positionKey.indexToken,
-      collateralToken: params.positionKey.collateralToken,
-      size: size,
-      collateral: collateral,
-      averagePrice: averagePrice,
-      entryFundingRate: entryFundingRate,
-      reserveAmount: reserveAmount,
-      realisedPnl: realisedPnl,
-      lastIncreasedTime: lastIncreasedTimeBn,
-    }
-    return ret
-  }, combineObject({ positionKey, positions })))
-
-
-  const updatePostion = filterNull(snapshot(
-    (pos, update) => {
-      if (pos.key !== update.args.key) {
-        return null
-      }
-
-      return { ...pos, ...update }
-    },
-    positionChange,
-    vault.listen('UpdatePosition')
-    // tradeReader.positionUpdateEvent
-  ))
-
-
-  const position = replayLatest(multicast(mergeArray([
-    positionChange,
-    updatePostion,
-    filterNull(snapshot(
-      (pos, update): trade.IPositionGetter | null => {
-        if (pos.key !== update.args.key) {
-          return null
-        }
-
-        return {
-          ...pos,
-          size: 0n,
-          collateral: 0n,
-          averagePrice: 0n,
-          entryFundingRate: 0n,
-          reserveAmount: 0n,
-          realisedPnl: 0n,
-          lastIncreasedTime: 0n,
-        }
-      },
-      positionChange,
-      mergeArray([vault.listen('ClosePosition'), vault.listen('LiquidatePosition')])
-      // mergeArray([tradeReader.positionCloseEvent, tradeReader.positionLiquidateEvent])
-    ))
-  ])))
 
   const stableFundingRateFactor = replayLatest(multicast(vault.read('stableFundingRateFactor')))
   const fundingRateFactor = replayLatest(multicast(vault.read('fundingRateFactor')))
@@ -307,6 +277,8 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   const swapFee = replayLatest(multicast(skipRepeats(map((params) => {
+    if (!params.position) return 0n
+
     const inputAndIndexStable = params.inputTokenDescription.isUsd && params.indexTokenDescription.isUsd
     const swapFeeBasisPoints = inputAndIndexStable ? GMX.STABLE_SWAP_FEE_BASIS_POINTS : GMX.SWAP_FEE_BASIS_POINTS
     const taxBasisPoints = inputAndIndexStable ? GMX.STABLE_TAX_BASIS_POINTS : GMX.TAX_BASIS_POINTS
@@ -364,6 +336,8 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const marginFee = map(size => getMarginFees(abs(size)), sizeDeltaUsd)
   const fundingFee = map(params => {
+    if (!params.position) return 0n
+
     return getFundingFee(params.position.entryFundingRate, params.collateralTokenPoolInfo.cumulativeRate, params.position.size)
   }, combineObject({ collateralTokenPoolInfo, position }))
 
@@ -373,22 +347,34 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
 
+  const positionList = map(params => {
+    const walletAddress = params.wallet?.account.address
+    if (!walletAddress) return []
+
+    return Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.account === walletAddress)
+  }, combineObject({ processData: config.processData, wallet }))
+
+
+  
+
   const averagePrice = map(params => {
-    if (params.position.averagePrice === 0n) {
-      return 0n
-    }
+    return 0n
+    // if (params.position) {
+    //   const pnl = getPnL(params.isLong, params.position.averagePrice, params.indexTokenPrice, params.position.size)
 
-    if (params.sizeDeltaUsd === 0n) {
-      return params.position.averagePrice
-    }
+    //   return getNextAveragePrice(params.isLong, params.position.sizeInUsd, params.indexTokenPrice, pnl, params.sizeDeltaUsd)
+    // }
 
-    const pnl = getPnL(params.isLong, params.position.averagePrice, params.indexTokenPrice, params.position.size)
-    // const adjustedPnlDelta = pnl < 0n ? params.sizeDeltaUsd * pnl / stake.size : pnl
+    // if (params.sizeDeltaUsd === 0n) {
+    //   return 0n
+    // }
 
-    return getNextAveragePrice(params.isLong, params.position.size, params.indexTokenPrice, pnl, params.sizeDeltaUsd)
-  }, combineObject({ position, isIncrease, indexTokenPrice, sizeDeltaUsd, isLong }))
+    // return getEntryPrice(params.indexToken, params.position.sizeInTokens, params.position.sizeInUsd)
+  }, combineObject({ position, isIncrease, indexTokenPrice, indexToken, sizeDeltaUsd, isLong }))
 
   const liquidationPrice = skipRepeats(map(params => {
+    if (!params.position) return 0n
+
     const stake = params.position
     if (params.position.averagePrice === 0n) {
       if (params.sizeDeltaUsd === 0n) {
@@ -451,39 +437,31 @@ export const $Trade = (config: ITradeComponent) => component((
   const availableIndexLiquidityUsd = tradeReader.getAvailableLiquidityUsd(indexToken, collateralToken)
 
 
-  const accountOpenTradeList = map(params => {
-    return Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.route === params.route)
-  }, combineObject({ processData: config.processData, route }))
-
-  // const position = map(params => {
-  //   return params.processData.mirrorPositionSlot[params.positionKey.key]
-  // }, combineObject({ processData: config.processData, positionKey }))
 
   const openPositionList: Stream<IPositionSlot[]> = mergeArray([
     combineArray((pos, posList) => {
-
-      if (pos.averagePrice === 0n || posList.length === 0) {
+      if (posList.length === 0) {
         return []
       }
 
-      const trade = posList.find(t => t.key === pos.key) || null
-
-      if (pos.averagePrice > 0n && trade === null) {
-        const posSlot = createPositionSlot(unixTimestampNow(), '0x0' as const, '0x00', pos as any, '0x00')
-
-        return [posSlot, ...posList]
+      if (pos === null)  {
+        return posList
       }
 
-      return pos.averagePrice === 0n
-        ? posList.filter(t => t.key !== pos.key)
-        : posList
-    }, position, accountOpenTradeList)
+      const trade = posList.find(t => t.key === pos.positionKey) || null
+
+      if (trade === null) {
+        return posList
+      }
+
+      return posList.filter(t => t.key !== pos.positionKey)
+    }, position, positionList)
   ])
 
   const activePosition = zip((tradeList, pos) => {
     const trade = tradeList.find(t => t.key === pos.key) || null
     return { trade, positionId: pos }
-  }, openPositionList, positionKey)
+  }, openPositionList, positionKeyArgs)
 
 
   const pricefeed = map(params => {
@@ -561,7 +539,7 @@ export const $Trade = (config: ITradeComponent) => component((
             // paddingLeft: '26px'
           })
           : style({}),
-        style({ minHeight: '430px', flex: 1, maxHeight: '65vh', position: 'relative', backgroundColor: pallete.background }),
+        style({ minHeight: '460px', flex: 1, maxHeight: '65vh', position: 'relative', backgroundColor: pallete.background }),
         // screenUtils.isDesktopScreen
         //   ? style({ height: '500px' })
         //   : style({ height: '500px' })

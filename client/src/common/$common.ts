@@ -1,29 +1,16 @@
 import { Behavior, combineObject, isStream, O, Tether } from "@aelea/core"
-import { $text, component, INode, nodeEvent, style, styleBehavior, styleInline } from "@aelea/dom"
+import { $text, component, INode, nodeEvent, style, styleInline } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $icon, $row, $seperator, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
+import { TOKEN_SYMBOL } from "gmx-middleware-const"
 import { $bear, $bull, $Link, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
 import {
-  bnDiv,
-  div,
-  getFundingFee,
-  getMarginFees,
-  getNextLiquidationPrice, getPnL,
-  getTokenDescription,
-  IAbstractRouteIdentity,
-  IPosition, IPositionSettled, IPositionSlot,
-  isPositionSettled,
-  liquidationWeight,
-  OraclePrice,
-  readableFixedBsp,
-  readableFixedUSD30,
-  streamOf,
-  switchMap
-} from "gmx-middleware-utils"
+  bnDiv, div, getFundingFee, getMarginFees, getNextLiquidationPrice, getTokenDescription, IAbstractPositionParams, IOraclePrice, IPosition, IPositionSettled,
+  isPositionSettled, liquidationWeight, readableFixedBsp, readableFixedUSD30, streamOf, switchMap } from "gmx-middleware-utils"
 import { getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-const"
 import { getMpSlotPnL, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -35,7 +22,6 @@ import { IProfileActiveTab } from "../pages/$Profile"
 import { $seperator2 } from "../pages/common"
 import { wallet } from "../wallet/walletLink"
 import { $puppetLogo } from "./$icons"
-import { TOKEN_SYMBOL } from "gmx-middleware-const"
 
 
 export const $midContainer = $column(
@@ -55,7 +41,7 @@ export const $size = (size: bigint, collateral: bigint) => {
   )
 }
 
-export const $routeIntent = (pos: IAbstractRouteIdentity) => {
+export const $routeIntent = (pos: IAbstractPositionParams) => {
   return $row(style({ alignItems: 'center' }))(
     $icon({
       svgOps: style({ borderRadius: '50%', padding: '4px', marginRight: '-6px', zIndex: 0, alignItems: 'center', fill: pallete.message, backgroundColor: pallete.horizon }),
@@ -74,7 +60,7 @@ export const $entry = (pos: IPosition) => {
   )
 }
 
-export const $route = (pos: IAbstractRouteIdentity, size = '34px') => {
+export const $route = (pos: IAbstractPositionParams, size = '34px') => {
   return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
     $icon({
       svgOps: style({ borderRadius: '50%', padding: '4px', marginRight: '-20px', zIndex: 0, alignItems: 'center', fill: pallete.message, backgroundColor: pallete.horizon }),
@@ -125,7 +111,7 @@ export const $tokenIcon = (indexToken: viem.Address, IIcon?: { width?: string })
   })
 }
 
-export const $sizeAndLiquidation = (isLong: boolean, size: bigint, collateral: bigint, averagePrice: bigint, markPrice: Stream<OraclePrice>) => {
+export const $sizeAndLiquidation = (isLong: boolean, size: bigint, collateral: bigint, averagePrice: bigint, markPrice: Stream<IOraclePrice>) => {
 
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
     $text(readableFixedUSD30(size)),
@@ -189,7 +175,7 @@ export const $PnlPercentageValue = (pnl: Stream<bigint> | bigint, collateral: bi
   )
 }
 
-export const $positionSlotPnl = (mp: IPositionMirrorSlot, positionMarkPrice: Stream<OraclePrice> | bigint, shareTarget?: viem.Address) => {
+export const $positionSlotPnl = (mp: IPositionMirrorSlot, positionMarkPrice: Stream<IOraclePrice> | bigint, shareTarget?: viem.Address) => {
   const value = isStream(positionMarkPrice)
     ? map((price) => {
       const pnl = getMpSlotPnL(mp, price, shareTarget)
@@ -200,7 +186,7 @@ export const $positionSlotPnl = (mp: IPositionMirrorSlot, positionMarkPrice: Str
   return $pnlValue(value)
 }
 
-export const $positionSlotRoi = (pos: IPositionMirrorSlot, positionMarkPrice: Stream<OraclePrice> | OraclePrice) => {
+export const $positionSlotRoi = (pos: IPositionMirrorSlot, positionMarkPrice: Stream<IOraclePrice> | IOraclePrice) => {
   const roi = map(markPrice => {
     const delta = getMpSlotPnL(pos, markPrice)
     return readableFixedBsp(div(pos.realisedPnl + delta - pos.cumulativeFee, pos.maxCollateralUsd) * 100n)
@@ -209,7 +195,7 @@ export const $positionSlotRoi = (pos: IPositionMirrorSlot, positionMarkPrice: St
   return $text(roi)
 }
 
-export function $liquidationSeparator(isLong: boolean, size: bigint, collateral: bigint, averagePrice: bigint, markPrice: Stream<OraclePrice>) {
+export function $liquidationSeparator(isLong: boolean, size: bigint, collateral: bigint, averagePrice: bigint, markPrice: Stream<IOraclePrice>) {
 
   const liquidationPrice = getNextLiquidationPrice(isLong, size, collateral, averagePrice)
   const liqWeight = map(price => liquidationWeight(isLong, liquidationPrice, price), markPrice)
