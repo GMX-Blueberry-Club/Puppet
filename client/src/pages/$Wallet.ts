@@ -16,6 +16,7 @@ import { connectContract } from "../logic/common"
 import { IPositionMirrorSettled, IPositionMirrorSlot } from "puppet-middleware-utils"
 import { Stream } from "@most/types"
 import { IGmxProcessState } from "../data/process/process"
+import { ROUTE_DESCRIPTIN_MAP } from "../logic/utils"
 
 export enum IProfileActiveTab {
   BERRIES = 'Trader',
@@ -95,7 +96,7 @@ export const $Wallet = (config: IProfile) => component((
 
         return $column(
           ...subscList.map((subsc) => {
-            const routeType = PUPPET.ROUTE_DESCRIPTIN_MAP[subsc.routeTypeKey]
+            const routeType = ROUTE_DESCRIPTIN_MAP[subsc.routeTypeKey]
 
             return $text(routeType.indexToken)
           })

@@ -9,10 +9,9 @@ import * as GMX from 'gmx-middleware-const'
 import { TOKEN_SYMBOL } from "gmx-middleware-const"
 import { $bear, $bull, $Link, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
 import {
-  bnDiv, div, getFundingFee, getMarginFees, getNextLiquidationPrice, getTokenDescription, IAbstractPositionParams, IOraclePrice, IPosition, IPositionSettled,
+  bnDiv, factor, getFundingFee, getLiquidationPrice, getMarginFees, getTokenDescription, IAbstractPositionParams, IOraclePrice, IPosition, IPositionSettled,
   isPositionSettled, liquidationWeight, readableFixedBsp, readableFixedUSD30, streamOf, switchMap } from "gmx-middleware-utils"
-import { getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-const"
-import { getMpSlotPnL, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
+import { getMpSlotPnL, getPuppetSubscriptionKey, getRouteTypeKey, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile"
 import { $Popover } from "../components/$Popover"
@@ -189,7 +188,7 @@ export const $positionSlotPnl = (mp: IPositionMirrorSlot, positionMarkPrice: Str
 export const $positionSlotRoi = (pos: IPositionMirrorSlot, positionMarkPrice: Stream<IOraclePrice> | IOraclePrice) => {
   const roi = map(markPrice => {
     const delta = getMpSlotPnL(pos, markPrice)
-    return readableFixedBsp(div(pos.realisedPnl + delta - pos.cumulativeFee, pos.maxCollateralUsd) * 100n)
+    return readableFixedBsp(factor(pos.realisedPnl + delta - pos.cumulativeFee, pos.maxCollateralUsd) * 100n)
   }, streamOf(positionMarkPrice))
 
   return $text(roi)
@@ -197,7 +196,7 @@ export const $positionSlotRoi = (pos: IPositionMirrorSlot, positionMarkPrice: St
 
 export function $liquidationSeparator(isLong: boolean, size: bigint, collateral: bigint, averagePrice: bigint, markPrice: Stream<IOraclePrice>) {
 
-  const liquidationPrice = getNextLiquidationPrice(isLong, size, collateral, averagePrice)
+  const liquidationPrice = getLiquidationPrice(isLong, size, collateral, averagePrice)
   const liqWeight = map(price => liquidationWeight(isLong, liquidationPrice, price), markPrice)
 
   return styleInline(map((weight) => {

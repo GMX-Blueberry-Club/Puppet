@@ -1,5 +1,4 @@
-import { ARBITRUM_ADDRESS, mapArrayBy } from "gmx-middleware-const"
-import { getRouteTypeKey } from "./mapUtils.js"
+import { ARBITRUM_ADDRESS } from "gmx-middleware-const"
 
 export const ROUTE_DESCRIPTION = [
   {
@@ -14,4 +13,3 @@ export const ROUTE_DESCRIPTION = [
   },
 ]
 
-export const ROUTE_DESCRIPTIN_MAP = mapArrayBy(ROUTE_DESCRIPTION, r => getRouteTypeKey(r.collateralToken, r.indexToken, r.isLong), r => r)

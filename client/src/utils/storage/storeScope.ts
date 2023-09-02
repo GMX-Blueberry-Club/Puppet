@@ -46,14 +46,17 @@ export function get<TData, TKey extends string, TName extends string, TOptions e
   }, indexDB.get(scope, key))
 }
 
+export function write<TData, TKey extends string, TName extends string, TOptions extends indexDB.IDbStoreConfig>(
+  scope: IStoreScope<TName, TOptions>, writeEvent: Stream<TData>, key: TKey | IStoreScope<TName, TOptions>['name'] = scope.name
+): Stream<TData> {
+  return join(map(data => indexDB.set(scope, data, key), writeEvent))
+}
+
 export function replayWrite<TData, TKey extends string, TName extends string, TOptions extends indexDB.IDbStoreConfig>(
-  scope: IStoreScope<TName, TOptions>, seed: TData, write: Stream<TData>, key: TKey | IStoreScope<TName, TOptions>['name'] = scope.name
+  scope: IStoreScope<TName, TOptions>, seed: TData, writeEvent: Stream<TData>, key: TKey | IStoreScope<TName, TOptions>['name'] = scope.name
 ): Stream<TData> {
   const storedValue = get(scope, seed, key)
-  return continueWith(() => {
-    
-    return join(map(data => indexDB.set(scope, data, key), write))
-  }, storedValue)
+  return continueWith(() => write(scope, writeEvent, key), storedValue)
 }
 
 

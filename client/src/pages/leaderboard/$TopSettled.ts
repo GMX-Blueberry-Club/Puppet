@@ -1,30 +1,28 @@
-import { Behavior, combineObject, replayLatest } from "@aelea/core"
+import { Behavior, combineObject } from "@aelea/core"
 import { $element, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { empty, map, mergeArray, now, startWith } from "@most/core"
+import { pallete } from "@aelea/ui-components-theme"
+import { empty, map, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Table, ISortBy, ScrollRequest, TableColumn } from "gmx-middleware-ui-components"
-import { IAbstractPositionParams, IPositionListSummary, div, getMappedValue, groupArrayMany, pagingQuery, readableFixedBsp, switchMap, unixTimestampNow } from "gmx-middleware-utils"
-import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
+import { IAbstractPositionParams, IPositionListSummary, factor, getMappedValue, groupArrayMany, pagingQuery, readableFixedBsp, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { ROUTE_DESCRIPTION } from "puppet-middleware-const"
+import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetRouteSubscritpion, getRouteTypeKey, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from "viem"
+import { $labelDisplay } from "../../common/$TextField"
 import { $TraderDisplay, $pnlValue, $route, $size } from "../../common/$common"
+import { $DropMultiSelect } from "../../components/form/$Dropdown"
 import { puppetsColumn } from "../../components/table/$TableColumn"
-import { $ProfilePerformanceGraph, getUpdateTickList } from "../../components/trade/$ProfilePerformanceGraph"
+import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceGraph"
 import { IGmxProcessState } from "../../data/process/process"
 import * as store from "../../data/store/store"
+import { rootStoreScope } from "../../data/store/store"
 import { $card } from "../../elements/$common"
 import * as storage from "../../utils/storage/storeScope"
 import { $seperator2 } from "../common"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity"
-import { $DropMultiSelect, $Dropdown, $defaultDropMultiSelectContainer } from "../../components/form/$Dropdown"
-import { ROUTE_DESCRIPTIN_MAP, ROUTE_DESCRIPTION, getRouteTypeKey } from "puppet-middleware-const"
-import { rootStoreScope } from "../../data/store/store"
-import { pallete } from "@aelea/ui-components-theme"
-import { $labelDisplay } from "../../common/$TextField"
-import { $Popover } from "../../components/$Popover"
-import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../../components/form/$Button"
 
 
 
@@ -229,7 +227,7 @@ export const $TopSettled = (config: ITopSettled) => component((
                 return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
                   $pnlValue(pos.pnl),
                   $seperator2,
-                  $text(style({ fontSize: '.85rem' }))(readableFixedBsp(div(pos.pnl, pos.collateral) * 100n)),
+                  $text(style({ fontSize: '.85rem' }))(readableFixedBsp(factor(pos.pnl, pos.collateral) * 100n)),
                 )
               })
             },

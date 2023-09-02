@@ -49,24 +49,6 @@ export const BI_18_PRECISION = BigInt.fromI32(10).pow(18)
 export const BI_22_PRECISION = BigInt.fromI32(10).pow(22)
 
 
-export enum TokenDecimals {
-  USDC = 6,
-  USDT = 6,
-  BTC = 8,
-  WETH = 18,
-  LINK = 18,
-  UNI = 18,
-  MIM = 18,
-  SPELL = 18,
-  SUSHI = 18,
-  AVAX = 18,
-  FRAX = 18,
-  DAI = 18,
-  GMX = 18,
-  GLP = 18,
-}
-
-
 export enum intervalUnixTime {
   SEC = 1,
   SEC60 = 60,

@@ -23,6 +23,7 @@ import { $ButtonCircular, $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary } 
 import { $Dropdown } from "./form/$Dropdown"
 import { TIME_INTERVAL_MAP } from "gmx-middleware-const"
 import { theme } from "../assignThemeSync"
+import { ROUTE_DESCRIPTIN_MAP } from "../logic/utils"
 
 
 
@@ -78,7 +79,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
 
                 return $column(layoutSheet.spacing)(
                   ...routeMap.map(([routeKey, subscList]) => {
-                    const routeType = PUPPET.ROUTE_DESCRIPTIN_MAP[routeKey]
+                    const routeType = ROUTE_DESCRIPTIN_MAP[routeKey]
 
 
 

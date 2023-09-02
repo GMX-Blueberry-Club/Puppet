@@ -1,6 +1,6 @@
-import { OraclePrice, div, getSlotNetPnL } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot } from "./types.js"
+import { IOraclePrice, factor, getSlotNetPnL, hashData } from "gmx-middleware-utils"
 
 
 export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[], shareTarget?: viem.Address): IMirrorPositionListSummary {
@@ -27,7 +27,7 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
 
     const size = seed.size + getParticiapntMpPortion(next, next.maxSizeUsd, shareTarget)
     const collateral = seed.collateral + getParticiapntMpPortion(next, next.maxCollateralUsd, shareTarget)
-    const leverage = seed.leverage + getParticiapntMpPortion(next, div(next.maxSizeUsd, next.maxCollateralUsd), shareTarget)
+    const leverage = seed.leverage + getParticiapntMpPortion(next, factor(next.maxSizeUsd, next.maxCollateralUsd), shareTarget)
 
     const avgSize = size / idxBn
     const avgCollateral = collateral / idxBn
@@ -84,7 +84,7 @@ export function getParticiapntMpPortion(mp: IPositionMirrorSettled | IPositionMi
 }
 
 
-export function getMpSlotPnL(mp: IPositionMirrorSlot, markPrice: OraclePrice, shareTarget?: viem.Address): bigint {
+export function getMpSlotPnL(mp: IPositionMirrorSlot, markPrice: IOraclePrice, shareTarget?: viem.Address): bigint {
   const delta = getSlotNetPnL(mp, markPrice)
   const openPnl = getParticiapntMpPortion(mp, delta, shareTarget)
 
@@ -102,3 +102,28 @@ export function getPortion(supply: bigint, share: bigint, amount: bigint): bigin
     return amount * share / supply
   }
 }
+
+export function getRouteTypeKey(collateralToken: viem.Address, indexToken: viem.Address, isLong: boolean): viem.Hex {
+  return hashData(
+    ["address", "address", "bool"],
+    [collateralToken, indexToken, isLong]
+  )
+}
+
+export function getRouteKey(trader: viem.Address, collateralToken: viem.Address, indexToken: viem.Address, isLong: boolean): viem.Hex {
+  return hashData(
+    ["address", "address", "address", "bool"],
+    [trader, collateralToken, indexToken, isLong]
+  )
+}
+
+export function getPuppetSubscriptionKey(puppet: viem.Address, trader: viem.Address, routeTypeKey: viem.Hex): viem.Hex {
+  return hashData(
+    ["address", "address", "bytes32"],
+    [puppet, trader, routeTypeKey]
+  )
+}
+
+
+
+

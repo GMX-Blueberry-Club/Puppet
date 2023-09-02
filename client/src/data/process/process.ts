@@ -4,19 +4,22 @@ import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, IntervalTime, TIME_INTERVAL_MAP, TO
 import {
   IEventLog1Args,
   ILogTxType,
+  IMarket,
+  IMarketCreatedEvent,
+  IOraclePrice,
+  IOraclePriceUpdateEvent,
   IPositionDecrease,
   IPositionIncrease,
   IPriceInterval,
-  IPriceIntervalIdentity, IMarket, IOraclePrice,
+  IPriceIntervalIdentity,
+  PositionFeesInfo,
   createPricefeedCandle,
-  div,
   getDenominator,
   getIntervalIdentifier,
   getMappedValue,
-  importGlobal, switchMap, unixTimestampNow, IMarketCreatedEvent, IOraclePriceUpdateEvent
+  importGlobal, switchMap, unixTimestampNow
 } from "gmx-middleware-utils"
-import { getRouteTypeKey } from "puppet-middleware-const"
-import { IPositionMirrorSettled, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
+import { IPositionMirrorSettled, IPositionMirrorSlot, IPuppetRouteSubscritpion, getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { IProcessEnvironmentMode, IProcessedStore, IProcessedStoreConfig, defineProcess, validateSeed } from "../../utils/indexer/processor"
@@ -92,6 +95,8 @@ const config: IProcessedStoreConfig = {
 }
 
 
+
+
 export const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
   const req = await (await fetch('/db/sha256-S_e2UoUnYhp4tlj89MW5jodeFZlKEFgIO3Y4PRE7bnU=.json')).json()
   const storedSeed: IProcessedStore<IGmxProcessState> = transformBigints(req)
@@ -131,7 +136,7 @@ export const gmxProcess = defineProcess(
 
         seed.blockMetrics.cumulativeDeltaTime += timeDelta
         seed.blockMetrics.cumulativeBlocks += heightDelta
-        seed.blockMetrics.avgDeltaTime = div(seed.blockMetrics.cumulativeDeltaTime, seed.blockMetrics.cumulativeBlocks)
+        seed.blockMetrics.avgDeltaTime = seed.blockMetrics.cumulativeDeltaTime * BASIS_POINTS_DIVISOR / seed.blockMetrics.cumulativeBlocks
       }
 
       seed.blockMetrics.height = value.blockNumber
@@ -145,11 +150,25 @@ export const gmxProcess = defineProcess(
     step(seed, value) {
       const entity = getEventType<IMarketCreatedEvent>('Market', value, seed.approximatedTimestamp)
       seed.markets[entity.marketToken] = {
+        salt: entity.salt,
         indexToken: entity.indexToken,
         longToken: entity.longToken,
         marketToken: entity.marketToken,
         shortToken: entity.shortToken,
       }
+      return seed
+    },
+  },
+  {
+    source: gmxLog.positionFeeInfo,
+    queryBlockRange: 100000n,
+    step(seed, value) {
+      const entity = getEventdata<PositionFeesInfo>(value)
+      const slot = seed.mirrorPositionSlot[entity.positionKey]
+      if (slot) {
+        slot.feeUpdates = [...slot.feeUpdates, entity]
+      }
+
       return seed
     },
   },
@@ -197,6 +216,7 @@ export const gmxProcess = defineProcess(
         indexToken: market.indexToken,
         latestUpdate: update,
         puppets: [],
+        feeUpdates: [],
         orderKey: update.orderKey,
         routeTypeKey: getRouteTypeKey(update.collateralToken, update.market, update.isLong),
         route: ADDRESS_ZERO,

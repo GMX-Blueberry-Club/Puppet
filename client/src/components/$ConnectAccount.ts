@@ -1,6 +1,6 @@
 import { Behavior, Op } from "@aelea/core"
 import { $Node, $element, $text, attr, component, nodeEvent, style } from "@aelea/dom"
-import { $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
+import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { CHAIN } from "gmx-middleware-const"
 import { $alertContainer, $alertIcon, $walletConnectLogo } from "gmx-middleware-ui-components"
@@ -9,6 +9,7 @@ import { getNetwork } from "@wagmi/core"
 import { IWalletClient, chain, wallet, web3Modal } from "../wallet/walletLink"
 import { $ButtonSecondary } from "./form/$Button"
 import { IButtonCore } from "./form/$ButtonCore"
+import { switchMap } from "gmx-middleware-utils"
 
 
 
@@ -26,7 +27,7 @@ export const $IntermediateConnectButton = (config: IConnectWalletPopover) => com
 
 
   return [
-    switchLatest(map(w3p => {
+    switchMap(w3p => {
       // no wallet connected, show connection flow
       if (!w3p) {
         return $ConnectWeb3Modal()({
@@ -40,9 +41,7 @@ export const $IntermediateConnectButton = (config: IConnectWalletPopover) => com
       }
 
       return switchLatest(config.$$display(now(w3p)))
-
-
-    }, wallet)),
+    }, wallet),
 
     {
     }

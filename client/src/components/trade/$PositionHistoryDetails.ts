@@ -36,21 +36,21 @@ import {
   readableFixedUSD30,
   readableUnitAmount,
   safeDiv,
-  switchMap,
-  div
+  switchMap
 } from "gmx-middleware-utils"
 import { MouseEventParams } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
+
 import * as viem from "viem"
-import { $Popover } from "../$Popover"
-import { $entry, $openPositionPnlBreakdown, $pnlValue, $sizeAndLiquidation } from "../../common/$common"
+import { $Popover } from "../$Popover.js"
+import { $entry, $openPositionPnlBreakdown, $pnlValue, $sizeAndLiquidation } from "../../common/$common.js"
 import { latestTokenPrice } from "../../data/process/process.js"
 import { connectContract, wagmiWriteContract } from "../../logic/common.js"
 import { resolveAddress } from "../../logic/utils.js"
 import { IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
-import { IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "./$PositionEditor"
-import { $heading2 } from "../../common/$text"
+import { IPositionEditorAbstractParams, ITradeParams } from "./$PositionEditor.js"
+import { $heading2 } from "../../common/$text.js"
 import { getRouteTypeKey } from "puppet-middleware-utils"
 
 
@@ -59,6 +59,28 @@ export enum ITradeFocusMode {
   size,
 }
 
+
+
+export interface ITradeConfig {
+  isLong: boolean
+
+  inputToken: viem.Address
+  indexToken: viem.Address
+  collateralToken: viem.Address
+
+  isIncrease: boolean
+  focusMode: ITradeFocusMode
+
+  leverage: bigint
+
+  collateralDelta: bigint
+  sizeDelta: bigint
+
+  sizeDeltaUsd: bigint
+  collateralDeltaUsd: bigint
+
+  slippage: string
+}
 
 
 
@@ -86,7 +108,7 @@ export type IRequestTrade = IRequestTradeParams & {
 
 
 
-export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => component((
+export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => component((
 
   [openEnableTradingPopover, openEnableTradingPopoverTether]: Behavior<any, any>,
   [dismissEnableTradingOverlay, dismissEnableTradingOverlayTether]: Behavior<false, false>,
@@ -120,7 +142,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
     positionRouterAddress
   )
 
-  const { collateralDeltaUsd, collateralToken, collateralDelta, market, isUsdCollateralToken, sizeDelta, focusMode, inputToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage } = config.tradeConfig
+  const { collateralDeltaUsd, collateralToken, collateralDelta, sizeDelta, focusMode, indexToken, inputToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage } = config.tradeConfig
   const {
     availableIndexLiquidityUsd, averagePrice, collateralTokenDescription,
     collateralTokenPoolInfo, collateralTokenPrice, stableFundingRateFactor, fundingRateFactor, executionFee, fundingFee,
@@ -231,8 +253,8 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
   const requestTrade: Stream<IRequestTrade> = multicast(snapshot((params, req) => {
 
     const resolvedInputAddress = resolveAddress(config.chain.id, req.inputToken)
-    const from = req.isIncrease ? resolvedInputAddress : req.isLong ? req.market.indexToken : req.collateralToken
-    const to = req.isIncrease ? req.isLong ? req.market.indexToken : req.collateralToken : resolvedInputAddress
+    const from = req.isIncrease ? resolvedInputAddress : req.isLong ? req.indexToken : req.collateralToken
+    const to = req.isIncrease ? req.isLong ? req.indexToken : req.collateralToken : resolvedInputAddress
 
     const swapRoute = from === to ? [to] : [from, to]
 
@@ -275,7 +297,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
           swapParams,
           params.executionFee,
           req.collateralToken,
-          req.market.indexToken,
+          req.indexToken,
           req.isLong
         ]
       })
@@ -286,7 +308,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
         args: [
           tradeParams,
           swapParams,
-          getRouteTypeKey(req.collateralToken, req.market.indexToken, req.isLong),
+          getRouteTypeKey(req.collateralToken, req.indexToken, req.isLong),
           params.executionFee,
           req.isIncrease
         ]
@@ -365,7 +387,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
                 switchLatest(map(params => {
                   const depositTokenNorm = resolveAddress(config.chain.id, params.inputToken)
-                  const outputToken = params.isLong ? params.market.indexToken : params.collateralToken
+                  const outputToken = params.isLong ? params.indexToken : params.collateralToken
                   const totalSizeUsd = params.position ? params.position.size + params.sizeDeltaUsd : params.sizeDeltaUsd
 
                   const rateFactor = params.isLong ? params.fundingRateFactor : params.stableFundingRateFactor
@@ -386,7 +408,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
                       )
                     )
                   )
-                }, combineObject({ sizeDeltaUsd, collateralToken, market, swapFee, collateralTokenPoolInfo, position, isLong, inputToken, marginFee, stableFundingRateFactor, fundingRateFactor })))
+                }, combineObject({ sizeDeltaUsd, collateralToken, indexToken, swapFee, collateralTokenPoolInfo, position, isLong, inputToken, marginFee, stableFundingRateFactor, fundingRateFactor })))
 
               ),
               'Fees'
@@ -576,7 +598,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
         switchMap(params => {
           const pos = params.position
           if (pos === null) {
-            const tokenDesc = getTokenDescription(params.market.indexToken)
+            const tokenDesc = getTokenDescription(params.indexToken)
             const route = params.isLong ? `Long-${tokenDesc.symbol}` : `Short-${tokenDesc.symbol}/${getTokenDescription(params.collateralToken).symbol}`
 
             return $row(style({ placeContent: 'center', alignItems: 'center' }))(
@@ -664,7 +686,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
             //   // requestPricefeed: requestTradePricefeedTether()
             // })
           )
-        }, combineObject({ position, collateralTokenPoolInfo, fundingRateFactor, stableFundingRateFactor, isLong, market, collateralToken,  }))
+        }, combineObject({ position, collateralTokenPoolInfo, fundingRateFactor, stableFundingRateFactor, isLong, indexToken, collateralToken,  }))
       ),
 
       switchMap(posList => {
@@ -744,7 +766,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
           return null
         }
 
-        return div(state.position.size, state.position.collateral - state.fundingFee)
+        return factor(state.position.size, state.position.collateral - state.fundingFee)
       }, combineObject({ position, fundingFee }), delay(50, clickResetPosition))),
       requestTrade
 

@@ -5,7 +5,7 @@ import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { map, now } from "@most/core"
 import { Stream } from "@most/types"
 import { $Link, $infoTooltipLabel, TableColumn } from "gmx-middleware-ui-components"
-import { div, getPnL, getSlotNetPnL, readableDate, readableFixedBsp, switchMap, timeSince } from "gmx-middleware-utils"
+import { factor, getPnL, getSlotNetPnL, readableDate, readableFixedBsp, switchMap, timeSince } from "gmx-middleware-utils"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile"
@@ -114,7 +114,7 @@ export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IPositionMi
     return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
       $pnlValue(pnl),
       $seperator2,
-      $text(style({ fontSize: '.85rem' }))(readableFixedBsp(div(pnl, collateral) * 100n)),
+      $text(style({ fontSize: '.85rem' }))(readableFixedBsp(factor(pnl, collateral) * 100n)),
     )
   })
 })

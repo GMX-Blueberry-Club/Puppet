@@ -7,7 +7,6 @@ import { empty, map, now, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { $Link, $Table, $arrowRight, $icon, $infoLabel, ScrollRequest } from "gmx-middleware-ui-components"
 import { getMappedValue, groupArrayMany, leverageLabel, pagingQuery, switchMap, unixTimestampNow } from "gmx-middleware-utils"
-import { ROUTE_DESCRIPTIN_MAP } from "puppet-middleware-const"
 import { IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileAvatar, $profileDisplay } from "../$AccountProfile"

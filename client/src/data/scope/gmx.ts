@@ -84,6 +84,26 @@ export const marketCreated = store.createRpcLogEventScope({
   }
 })
 
+// export const positionFeeInfo = store.createRpcLogEventScope({
+//   ...config,
+//   ...GMX.CONTRACT[42161].EventEmitter,
+//   eventName: 'EventLog1',
+//   startBlock: 120000000n,
+//   args: {
+//     eventNameHash: GMX.PositionEvent.PositionFeesInfo
+//   }
+// })
+
+export const positionFeeInfo = store.createRpcLogEventScope({
+  ...config,
+  ...GMX.CONTRACT[42161].EventEmitter,
+  eventName: 'EventLog1',
+  startBlock: 120000000n,
+  args: {
+    eventNameHash: GMX.PositionEvent.PositionFeesCollected
+  }
+})
+
 
 export const oraclePrice = store.createRpcLogEventScope({
   ...config,
