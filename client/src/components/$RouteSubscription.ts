@@ -4,26 +4,26 @@ import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, mergeArray, multicast, skipRepeats, snapshot, startWith } from "@most/core"
 import { Stream } from "@most/types"
+import { TIME_INTERVAL_MAP } from "gmx-middleware-const"
 import { $caretDown, $check, $icon, $infoLabeledValue, $target, $xCross } from "gmx-middleware-ui-components"
-import { formatBps, getMappedValue, groupArrayMany, parseBps, readableDate, readableFixedBsp, switchMap, tokenAmountLabel, unixTimestampNow } from "gmx-middleware-utils"
+import { getMappedValue, groupArrayMany, parseBps, readableDate, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
+import { theme } from "../assignThemeSync"
 import { $TextField } from "../common/$TextField.js"
 import { $route } from "../common/$common"
 import { $heading3 } from "../common/$text.js"
 import { $card2, $iconCircular } from "../elements/$common.js"
 import { connectContract, wagmiWriteContract } from "../logic/common.js"
+import { ROUTE_DESCRIPTIN_MAP } from "../logic/utils"
 import { $seperator2 } from "../pages/common.js"
 import { fadeIn } from "../transitions/enter.js"
 import { $profileDisplay } from "./$AccountProfile.js"
 import { $IntermediateConnectButton } from "./$ConnectAccount.js"
 import { $RouteDepositInfo } from "./$common.js"
-import { $ButtonCircular, $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary } from "./form/$Button.js"
+import { $ButtonCircular, $ButtonPrimaryCtx, $ButtonSecondary } from "./form/$Button.js"
 import { $Dropdown } from "./form/$Dropdown"
-import { TIME_INTERVAL_MAP } from "gmx-middleware-const"
-import { theme } from "../assignThemeSync"
-import { ROUTE_DESCRIPTIN_MAP } from "../logic/utils"
 
 
 
@@ -128,7 +128,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
                                 $infoLabeledValue('Copy Until', readableDate(Number(modSubsc.expiry))),
                                 $infoLabeledValue(
                                   'Allow',
-                                  $text(`${readableFixedBsp(modSubsc.allowance * 100n)}`)
+                                  $text(`${readablePercentage(modSubsc.allowance * 100n)}`)
                                 ),
                                 
                               )
@@ -265,12 +265,12 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
 
       $TextField({
         label: 'Allow %',
-        value: map(x => formatBps(x * 100n), allowance),
+        value: map(x => readablePercentage(x * 100n), allowance),
         labelWidth: 100,
         hint: `% allocated per position adjustment. Lower values decrease risk. Helps with easier management if peformance is below expectation"`,
       })({
         change: inputAllowanceTether(
-          map(x => parseBps(x) / 100n)
+          map(x => parseBps(x))
         )
       }),
       $TextField({

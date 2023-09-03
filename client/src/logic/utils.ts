@@ -7,19 +7,7 @@ import { ROUTE_DESCRIPTION } from "puppet-middleware-const"
 import { getRouteTypeKey } from "puppet-middleware-utils"
 
 
-export function resolveAddress(chain: CHAIN, indexToken: viem.Address): viem.Address {
-  if (indexToken === ADDRESS_ZERO) {
-    return getSafeMappedValue(CHAIN_ADDRESS_MAP, chain, CHAIN.ARBITRUM).NATIVE_TOKEN
-  }
 
-  const contractAddressMap = getSafeMappedValue(TOKEN_ADDRESS_DESCRIPTION_MAP, indexToken, indexToken as any)
-
-  if (contractAddressMap === null) {
-    throw new Error(`Token ${indexToken} does not exist`)
-  }
-
-  return indexToken
-}
 
 export function zipArray<A extends any[], B>(cb: (...args: A) => B, ...streamList: StreamInputArray<A>): Stream<B> {
   return zipArrayMost(cb, streamList)

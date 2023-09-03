@@ -23,35 +23,37 @@ import {
   $infoTooltipLabel
 } from "gmx-middleware-ui-components"
 import {
+  DecreasePositionSwapType,
   IPositionSlot, IPriceInterval,
+  OrderType,
   StateStream,
   abs,
-  factor,
+  div,
   filterNull,
-  formatBps,
-  formatFixed,
+  getBasisPoints,
   getDenominator,
-  getPnL, decimals, getTokenDescription, getTokenUsd,
+  getPnL, getTokenDescription,
   parseReadableNumber,
   readableFixedUSD30,
+  readablePercentage,
   readableUnitAmount,
+  resolveAddress,
   safeDiv,
-  switchMap,
-  div
+  switchMap
 } from "gmx-middleware-utils"
 import { MouseEventParams } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
+import { getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $Popover } from "../$Popover"
 import { $entry, $openPositionPnlBreakdown, $pnlValue, $sizeAndLiquidation } from "../../common/$common"
+import { $heading2 } from "../../common/$text"
 import { latestTokenPrice } from "../../data/process/process.js"
 import { connectContract, wagmiWriteContract } from "../../logic/common.js"
-import { resolveAddress } from "../../logic/utils.js"
 import { IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "./$PositionEditor"
-import { $heading2 } from "../../common/$text"
-import { getRouteTypeKey } from "puppet-middleware-utils"
+import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
 
 
 export enum ITradeFocusMode {
@@ -120,13 +122,16 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
     positionRouterAddress
   )
 
-  const { collateralDeltaUsd, collateralToken, collateralDelta, market, isUsdCollateralToken, sizeDelta, focusMode, inputToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage } = config.tradeConfig
+  const { 
+    collateralDeltaUsd, collateralToken, collateralDelta, market, isUsdCollateralToken, sizeDelta, focusMode,
+    inputToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage 
+  } = config.tradeConfig
   const {
     availableIndexLiquidityUsd, averagePrice, collateralTokenDescription,
-    collateralTokenPoolInfo, collateralTokenPrice, stableFundingRateFactor, fundingRateFactor, executionFee, fundingFee,
+    collateralTokenPoolInfo, collateralTokenPrice, stableFundingRateFactor, fundingRateFactor, executionFee, executionFeeUsd, fundingFee,
     indexTokenDescription, indexTokenPrice, inputTokenDescription, inputTokenPrice,
-    isInputTokenApproved, isTradingEnabled, liquidationPriceUsd: liquidationPrice, marginFee, route,
-    position, swapFee, walletBalance
+    isInputTokenApproved, isTradingEnabled, liquidationPriceUsd, marginFee, route,
+    position, swapFee, walletBalance, markets, priceImpactUsd, totalNextFeesUsd
   } = config.tradeState
 
 
@@ -161,7 +166,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
   const validationError = skipRepeats(map((state) => {
 
     if (state.leverage > GMX.MAX_LEVERAGE_FACTOR) {
-      return `Leverage exceeds ${formatBps(GMX.MAX_LEVERAGE_FACTOR)}x`
+      return `Leverage exceeds ${readablePercentage(GMX.MAX_LEVERAGE_FACTOR)}x`
     }
 
     if (state.isIncrease) {
@@ -210,7 +215,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
     return null
   }, combineObject({
-    leverage, position, swapFee, marginFee, fundingFee, liquidationPrice, walletBalance,
+    leverage, position, swapFee, marginFee, fundingFee, liquidationPrice: liquidationPriceUsd, walletBalance,
     walletBalanceUsd, isIncrease, indexTokenPrice, collateralDelta, collateralDeltaUsd, inputTokenDescription,
     collateralToken, sizeDeltaUsd, availableIndexLiquidityUsd, inputToken, collateralTokenPoolInfo,
     collateralTokenDescription, indexTokenDescription, isLong,
@@ -230,7 +235,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
   const requestTrade: Stream<IRequestTrade> = multicast(snapshot((params, req) => {
 
-    const resolvedInputAddress = resolveAddress(config.chain.id, req.inputToken)
+    const resolvedInputAddress = resolveAddress(config.chain, req.inputToken)
     const from = req.isIncrease ? resolvedInputAddress : req.isLong ? req.market.indexToken : req.collateralToken
     const to = req.isIncrease ? req.isLong ? req.market.indexToken : req.collateralToken : resolvedInputAddress
 
@@ -265,32 +270,67 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
     const value = isNative ? params.executionFee + req.collateralDelta : params.executionFee
 
-    const request = params.route === GMX.ADDRESS_ZERO
-      ? wagmiWriteContract({
-        ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
-        value,
-        functionName: 'registerRouteAccountAndRequestPosition',
-        args: [
-          tradeParams,
-          swapParams,
-          params.executionFee,
-          req.collateralToken,
-          req.market.indexToken,
-          req.isLong
-        ]
-      })
-      : wagmiWriteContract({
-        ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
-        functionName: 'requestPosition',
-        value,
-        args: [
-          tradeParams,
-          swapParams,
-          getRouteTypeKey(req.collateralToken, req.market.indexToken, req.isLong),
-          params.executionFee,
-          req.isIncrease
-        ]
-      })
+    const addresses = {
+      receiver: config.wallet.account.address,
+      callbackContract: GMX.ADDRESS_ZERO,
+      uiFeeReceiver: '0x189b21eda0cff16461913d616a0a4f711cd986cb',
+      market: req.market.marketToken,
+      initialCollateralToken: req.collateralToken,
+      swapPath: swapRoute
+    } as const
+    const numbers = {
+      sizeDeltaUsd: req.sizeDeltaUsd,
+      initialCollateralDeltaAmount: req.collateralDelta,
+      acceptablePrice: acceptablePrice,
+      triggerPrice: acceptablePrice,
+      executionFee: params.executionFee,
+      callbackGasLimit: 0n,
+      minOutputAmount: 0n,
+    } as const
+
+
+    const request = wagmiWriteContract({
+      ...GMX.CONTRACT[config.chain.id].ExchangeRouter,
+      value,
+      functionName: 'createOrder',
+      args: [
+        {
+          addresses, numbers,
+          decreasePositionSwapType: DecreasePositionSwapType.NoSwap,
+          isLong: req.isLong,
+          orderType: OrderType.MarketIncrease,
+          referralCode: BLUEBERRY_REFFERAL_CODE,
+          shouldUnwrapNativeToken: false,
+        }
+      ]
+    })
+
+    // const request = params.route === GMX.ADDRESS_ZERO
+    //   ? wagmiWriteContract({
+    //     ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
+    //     value,
+    //     functionName: 'registerRouteAccountAndRequestPosition',
+    //     args: [
+    //       tradeParams,
+    //       swapParams,
+    //       params.executionFee,
+    //       req.collateralToken,
+    //       req.market.indexToken,
+    //       req.isLong
+    //     ]
+    //   })
+    //   : wagmiWriteContract({
+    //     ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
+    //     functionName: 'requestPosition',
+    //     value,
+    //     args: [
+    //       tradeParams,
+    //       swapParams,
+    //       getRouteTypeKey(req.collateralToken, req.market.indexToken, req.isLong),
+    //       params.executionFee,
+    //       req.isIncrease
+    //     ]
+    //   })
 
 
     return { ...params, ...req, acceptablePrice, request, swapRoute }
@@ -334,7 +374,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
   return [
     config.$container(
-      $column(style({ padding: '16px', placeContent: 'space-between' }), styleInline(map(mode => ({ height: '140px', display: mode ? 'flex' : 'none' }), inTradeMode)))(
+      $column(style({ padding: '16px 0', placeContent: 'space-between' }), styleInline(map(mode => ({ height: '140px', display: mode ? 'flex' : 'none' }), inTradeMode)))(
         $column(layoutSheet.spacingSmall)(
           // $TextField({
           //   label: 'Slippage %',
@@ -358,100 +398,42 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
           //   change: changeSlippageTether()
           // }),
 
+          $column(
+            // switchLatest(map(params => {
+            //   const totalSizeUsd = params.position ? params.position.latestUpdate.sizeInUsd + params.sizeDeltaUsd : params.sizeDeltaUsd
+
+            //   const rateFactor = params.fundingRateFactor
+            //   const rate = safeDiv(rateFactor * params.collateralTokenPoolInfo.reservedAmount, params.collateralTokenPoolInfo.poolAmounts)
+            //   const nextSize = totalSizeUsd * rate / GMX.BASIS_POINTS_DIVISOR / 100n
+
+            //   return $column(
+            //     $infoLabeledValue(
+            //       'Borrow Fee',
+            //       $row(layoutSheet.spacingTiny)(
+            //         $text(style({ color: pallete.indeterminate }))(readableFixedUSD30(nextSize) + ' '),
+            //         $text(` / 1hr`)
+            //       )
+            //     )
+            //   )
+            // }, combineObject({ ...config.tradeState, sizeDeltaUsd }))),
+            $infoLabeledValue('Swap', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, swapFee))),
+            $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, marginFee))),
+            $infoLabeledValue('Price Impact', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(params => `${readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))} ${readableFixedUSD30(params.priceImpactUsd)}`, combineObject({ priceImpactUsd, sizeDeltaUsd })))),
+            $infoLabeledValue('Execution Fee', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(fee => `${readableFixedUSD30(fee)}`, executionFeeUsd))),
+          ),
           $row(style({ placeContent: 'space-between' }))(
+
             $infoTooltipLabel(
               $column(layoutSheet.spacingSmall)(
                 $text('Collateral deducted upon your deposit including Borrow fee at the start of every hour. the rate changes based on utilization, it is calculated as (assets borrowed) / (total assets in pool) * 0.01%'),
-
-                switchLatest(map(params => {
-                  const depositTokenNorm = resolveAddress(config.chain.id, params.inputToken)
-                  const outputToken = params.isLong ? params.market.indexToken : params.collateralToken
-                  const totalSizeUsd = params.position ? params.position.size + params.sizeDeltaUsd : params.sizeDeltaUsd
-
-                  const rateFactor = params.isLong ? params.fundingRateFactor : params.stableFundingRateFactor
-                  const rate = safeDiv(rateFactor * params.collateralTokenPoolInfo.reservedAmount, params.collateralTokenPoolInfo.poolAmounts)
-                  const nextSize = totalSizeUsd * rate / GMX.PERCISION / 100n
-
-                  return $column(
-                    depositTokenNorm !== outputToken ? $row(layoutSheet.spacingTiny)(
-                      $text(style({ color: pallete.foreground }))('Swap'),
-                      $text(style({ color: pallete.indeterminate }))(readableFixedUSD30(params.swapFee))
-                    ) : empty(),
-                    $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate }))(readableFixedUSD30(params.marginFee))),
-                    $infoLabeledValue(
-                      'Borrow Fee',
-                      $row(layoutSheet.spacingTiny)(
-                        $text(style({ color: pallete.indeterminate }))(readableFixedUSD30(nextSize) + ' '),
-                        $text(` / 1hr`)
-                      )
-                    )
-                  )
-                }, combineObject({ sizeDeltaUsd, collateralToken, market, swapFee, collateralTokenPoolInfo, position, isLong, inputToken, marginFee, stableFundingRateFactor, fundingRateFactor })))
-
               ),
-              'Fees'
+              'Total Fees'
             ),
             $text(style({ color: pallete.indeterminate }))(
-              map(params => readableFixedUSD30(params.marginFee + params.swapFee), combineObject({ swapFee, marginFee }))
+              map(total => readableFixedUSD30(total), totalNextFeesUsd)
             ),
           ),
-          switchLatest(map(isIncrease => {
 
-            if (isIncrease) {
-              return $row(style({ placeContent: 'space-between' }))(
-                $infoTooltipLabel(
-                  $column(layoutSheet.spacingTiny)(
-                    $text('BLUEBERRY Payback(Referral) code is used to provide a 10% payback'),
-                    $text('Payback accumulates every time you trade and is distributed once every week back to your account in ETH or AVAX.'),
-                    $row(layoutSheet.spacingTiny)(
-                      $text(style({ color: pallete.foreground }))('Open + Close Payback'),
-                      $text(style({ color: pallete.positive }))(map(params => readableFixedUSD30(params.marginFee * 2000n / GMX.PERCISION), combineObject({ marginFee })))
-                    ),
-                    $text(style({ color: pallete.positive }))('Trading Competition'),
-                    $node(
-                      $text('Monthly trading competition to top traders in the end '),
-                      $anchor(attr({ href: '/app/leaderboard' }))($text(' Leaderboard'))
-                    ),
-                    $row(layoutSheet.spacingTiny)(
-                      $text(style({ color: pallete.foreground }))('Your added contribution'),
-                      $text(style({ color: pallete.positive }))(map(params => readableFixedUSD30(params.marginFee * 2500n / GMX.PERCISION), combineObject({ marginFee })))
-                    ),
-                  ),
-                  'Payback'
-                ),
-                $text(style({ color: pallete.positive }))(map(params => readableFixedUSD30(params.marginFee * 1000n / GMX.PERCISION), combineObject({ marginFee })))
-              )
-            }
-
-            return $row(style({ placeContent: 'space-between' }))(
-              $infoTooltipLabel(
-                $column(layoutSheet.spacingTiny)(
-                  $text('BLUEBERRY Payback(Referral) code is used to provide a 10% payback'),
-                  $text('Payback accumulates every time you trade and is distributed once every week back to your account in ETH or AVAX.'),
-                ),
-                'Receive'
-              ),
-              $text(style({ whiteSpace: 'pre-wrap' }))(map(params => {
-
-                if (params.position === null) {
-                  return 0n
-                }
-
-                const delta = getPnL(params.isLong, params.position.averagePrice, params.indexTokenPrice, -params.sizeDeltaUsd)
-                const adjustedSizeDelta = safeDiv(-params.sizeDeltaUsd * delta, params.position.size)
-                const fees = params.swapFee + params.marginFee
-                const collateralDelta = -params.sizeDeltaUsd === params.position.size
-                  ? params.position.collateral - params.fundingFee
-                  : -params.collateralDeltaUsd
-
-                const total = collateralDelta + adjustedSizeDelta - fees
-                const totalOut = total > 0n ? total : 0n
-                const tokenAmount = decimals(params.inputTokenDescription.decimals, params.inputTokenPrice, totalOut)
-
-                return `${readableUnitAmount(formatFixed(tokenAmount, params.inputTokenDescription.decimals))} ${params.inputTokenDescription.symbol} (${readableFixedUSD30(totalOut)})`
-              }, combineObject({ sizeDeltaUsd, position, collateralDeltaUsd, inputTokenDescription, inputTokenPrice, marginFee, swapFee, indexTokenPrice, isLong, fundingFee })))
-            )
-          }, isIncrease))
 
 
         ),

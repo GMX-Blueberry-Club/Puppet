@@ -9,8 +9,8 @@ import * as GMX from 'gmx-middleware-const'
 import { TOKEN_SYMBOL } from "gmx-middleware-const"
 import { $bear, $bull, $Link, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
 import {
-  bnDiv, factor, getFundingFee, getLiquidationPrice, getMarginFees, getTokenDescription, IAbstractPositionParams, IOraclePrice, IPosition, IPositionSettled,
-  isPositionSettled, liquidationWeight, readableFixedBsp, readableFixedUSD30, streamOf, switchMap } from "gmx-middleware-utils"
+  readableLeverage, factor, getFundingFee, getLiquidationPrice, getMarginFees, getTokenDescription, IAbstractPositionParams, IOraclePrice, IPosition, IPositionSettled,
+  isPositionSettled, liquidationWeight, readablePercentage, readableFixedUSD30, streamOf, switchMap } from "gmx-middleware-utils"
 import { getMpSlotPnL, getPuppetSubscriptionKey, getRouteTypeKey, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile"
@@ -145,7 +145,7 @@ export const $puppets = (puppets: readonly viem.Address[], click: Tether<INode, 
 }
 
 export const $leverage = (size: bigint, collateral: bigint) =>
-  $text(style({ fontWeight: 'bold', letterSpacing: '0.05em', fontSize: '0.85rem' }))(`${Math.round(bnDiv(size, collateral))}x`)
+  $text(style({ fontWeight: 'bold', letterSpacing: '0.05em', fontSize: '0.85rem' }))(`${Math.round(readableLeverage(size, collateral))}x`)
 
 export const $pnlValue = (pnl: Stream<bigint> | bigint, colorful = true) => {
   const pnls = isStream(pnl) ? pnl : now(pnl)
@@ -188,7 +188,7 @@ export const $positionSlotPnl = (mp: IPositionMirrorSlot, positionMarkPrice: Str
 export const $positionSlotRoi = (pos: IPositionMirrorSlot, positionMarkPrice: Stream<IOraclePrice> | IOraclePrice) => {
   const roi = map(markPrice => {
     const delta = getMpSlotPnL(pos, markPrice)
-    return readableFixedBsp(factor(pos.realisedPnl + delta - pos.cumulativeFee, pos.maxCollateralUsd) * 100n)
+    return readablePercentage(factor(pos.realisedPnl + delta - pos.cumulativeFee, pos.maxCollateralUsd) * 100n)
   }, streamOf(positionMarkPrice))
 
   return $text(roi)

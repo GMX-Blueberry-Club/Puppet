@@ -135,6 +135,7 @@ export const nativeBalance = awaitPromises(map(params => {
   return params.publicClient.getBalance({ address: params.wallet.account.address })
 }, combineObject({ publicClient, wallet })))
 
+export const gasPrice = awaitPromises(map(pc => pc.getGasPrice(), publicClient))
 
 export const blockCache = awaitPromises(map(async pc => {
   

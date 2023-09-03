@@ -76,7 +76,6 @@ const IS_MARKET_DISABLED_KEY = "IS_MARKET_DISABLED"
 export async function getMarketPoolInfo(
   chain: ISupportedChain,
   market: IMarket,
-  // marketInfo: IMarketInfo,
 ): Promise<IMarketPoolValueInfo> {
   const datastoreContract = GMX.CONTRACT[chain.id].Datastore
 

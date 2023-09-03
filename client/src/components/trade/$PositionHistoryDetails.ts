@@ -28,30 +28,30 @@ import {
   abs,
   factor,
   filterNull,
-  formatBps,
   formatFixed,
   getDenominator,
-  getPnL, decimals, getTokenDescription, getTokenUsd,
+  getPnL,
+  getTokenDescription,
   parseReadableNumber,
   readableFixedUSD30,
   readableUnitAmount,
+  resolveAddress,
   safeDiv,
   switchMap
 } from "gmx-middleware-utils"
 import { MouseEventParams } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
 
+import { getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $Popover } from "../$Popover.js"
 import { $entry, $openPositionPnlBreakdown, $pnlValue, $sizeAndLiquidation } from "../../common/$common.js"
+import { $heading2 } from "../../common/$text.js"
 import { latestTokenPrice } from "../../data/process/process.js"
 import { connectContract, wagmiWriteContract } from "../../logic/common.js"
-import { resolveAddress } from "../../logic/utils.js"
 import { IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { IPositionEditorAbstractParams, ITradeParams } from "./$PositionEditor.js"
-import { $heading2 } from "../../common/$text.js"
-import { getRouteTypeKey } from "puppet-middleware-utils"
 
 
 export enum ITradeFocusMode {
@@ -252,7 +252,7 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
 
   const requestTrade: Stream<IRequestTrade> = multicast(snapshot((params, req) => {
 
-    const resolvedInputAddress = resolveAddress(config.chain.id, req.inputToken)
+    const resolvedInputAddress = resolveAddress(config.chain, req.inputToken)
     const from = req.isIncrease ? resolvedInputAddress : req.isLong ? req.indexToken : req.collateralToken
     const to = req.isIncrease ? req.isLong ? req.indexToken : req.collateralToken : resolvedInputAddress
 
@@ -386,7 +386,7 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
                 $text('Collateral deducted upon your deposit including Borrow fee at the start of every hour. the rate changes based on utilization, it is calculated as (assets borrowed) / (total assets in pool) * 0.01%'),
 
                 switchLatest(map(params => {
-                  const depositTokenNorm = resolveAddress(config.chain.id, params.inputToken)
+                  const depositTokenNorm = resolveAddress(config.chain, params.inputToken)
                   const outputToken = params.isLong ? params.indexToken : params.collateralToken
                   const totalSizeUsd = params.position ? params.position.size + params.sizeDeltaUsd : params.sizeDeltaUsd
 

@@ -6,7 +6,7 @@ import { pallete } from "@aelea/ui-components-theme"
 import { empty, map, now, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { $Link, $Table, $arrowRight, $icon, $infoLabel, ScrollRequest } from "gmx-middleware-ui-components"
-import { getMappedValue, groupArrayMany, leverageLabel, pagingQuery, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { getMappedValue, groupArrayMany, readableLeverage, pagingQuery, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileAvatar, $profileDisplay } from "../$AccountProfile"
@@ -103,7 +103,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
                   $metricLabel($text('Win / Loss'))
                 ),
                 $metricRow(
-                  $heading2(summary ? leverageLabel(params.summary.stats.avgLeverage) : '-'),
+                  $heading2(summary ? readableLeverage(params.summary.stats.avgLeverage) : '-'),
                   $metricLabel($text('Avg Leverage'))
                 )
               ),

@@ -8,14 +8,13 @@ import { erc20Abi } from "abitype/test"
 import * as GMX from "gmx-middleware-const"
 import {
   IAbstractPositionIdentity, IPriceInterval, IRequestPricefeedApi, ITokenSymbol,
-  filterNull, getMappedValue, getTokenDescription, parseFixed, periodicRun
+  filterNull, getMappedValue, getTokenDescription, parseFixed, periodicRun, resolveAddress
 } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { Address, Chain } from "viem"
 import { arbitrum, avalanche } from "viem/chains"
 import { ISupportedChain } from "../wallet/walletLink"
 import { connectContract } from "./common"
-import { resolveAddress } from "./utils"
 
 
 export type IPositionGetter = IAbstractPositionIdentity & {
@@ -157,7 +156,7 @@ export function getErc20Balance(chain: Chain, token: viem.Address | typeof GMX.A
     return now(0n)
   }
 
-  const tokenAddress = resolveAddress(chain.id, token)
+  const tokenAddress = resolveAddress(chain, token)
 
   const erc20 = readContract({
     address: tokenAddress,

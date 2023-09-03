@@ -8,7 +8,7 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
   const seedAccountSummary: IMirrorPositionListSummary = {
     size: 0n,
     collateral: 0n,
-    leverage: 0n,
+    cummulativeLeverage: 0n,
     puppets: [],
 
     avgLeverage: 0n,
@@ -27,7 +27,7 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
 
     const size = seed.size + getParticiapntMpPortion(next, next.maxSizeUsd, shareTarget)
     const collateral = seed.collateral + getParticiapntMpPortion(next, next.maxCollateralUsd, shareTarget)
-    const leverage = seed.leverage + getParticiapntMpPortion(next, factor(next.maxSizeUsd, next.maxCollateralUsd), shareTarget)
+    const leverage = seed.cummulativeLeverage + getParticiapntMpPortion(next, factor(next.maxSizeUsd, next.maxCollateralUsd), shareTarget)
 
     const avgSize = size / idxBn
     const avgCollateral = collateral / idxBn
@@ -46,7 +46,7 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
     return {
       size,
       collateral,
-      leverage,
+      cummulativeLeverage: leverage,
       avgLeverage,
       avgCollateral,
       avgSize,

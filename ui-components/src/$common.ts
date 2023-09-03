@@ -1,11 +1,11 @@
-import { isStream, O, Op } from "@aelea/core"
+import { combineObject, isStream, O, Op } from "@aelea/core"
 import { $element, $Node, $svg, $text, attr, IBranch, style, styleBehavior, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { empty, map } from "@most/core"
 import { Stream } from "@most/types"
 import { CHAIN } from "gmx-middleware-const"
-import { getTxExplorerUrl, ITokenDescription, shortenTxAddress } from "gmx-middleware-utils"
+import { getTxExplorerUrl, ITokenDescription, shortenTxAddress, switchMap } from "gmx-middleware-utils"
 import { $alertIcon, $arrowRight, $caretDblDown, $info, $tokenIconMap } from "./$icons.js"
 import { $defaultDropContainer, $Tooltip } from "./$Tooltip.js"
 
@@ -53,7 +53,7 @@ export const $infoLabel = (label: string | $Node) => {
 }
 
 export const $infoLabeledValue = (label: string | $Node, value: string | $Node) => {
-  return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+  return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', placeContent: 'space-between' }))(
     $infoLabel(label),
     isStream(value) ? value : $text(value)
   )
@@ -133,29 +133,34 @@ export const $tokenLabelFromSummary = (token: ITokenDescription, $label?: $Node)
   )
 }
 
-export const $hintNumChange = (config: {
-  label?: string,
-  isIncrease: Stream<boolean>,
-  tooltip?: string | $Node,
-  val: Stream<string>,
+interface IHintNumberDisplay {
+  label?: string
+  isIncrease: Stream<boolean>
+  tooltip?: string | $Node
+  val: Stream<string>
   change: Stream<string>
-}) => $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-  config.tooltip
-    ? $infoTooltipLabel(config.tooltip, config.label)
-    : config.label
-      ? $text(style({ color: pallete.foreground }))(config.label) : empty(),
-  $row(layoutSheet.spacingSmall, style({ lineHeight: 1, alignItems: 'center' }))(
-    $text(style({ color: pallete.foreground }))(config.val),
-    $icon({
-      $content: $arrowRight,
-      width: '10px',
-      svgOps: styleBehavior(map(isIncrease => {
-        return isIncrease ? { fill: pallete.positive } : { fill: pallete.indeterminate }
-      }, config.isIncrease)),
-      viewBox: '0 0 32 32'
-    }),
-    $text(style({}))(config.change),
-  ),
+}
+
+export const $hintNumChange = ({ change, isIncrease, val, label, tooltip }: IHintNumberDisplay) => $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+  tooltip
+    ? $infoTooltipLabel(tooltip, label)
+    : label
+      ? $text(style({ color: pallete.foreground }))(label) : empty(),
+  switchMap(params => {
+
+    return $row(layoutSheet.spacingSmall, style({ lineHeight: 1, alignItems: 'center' }))(
+      params.val ? $text(style({ color: pallete.foreground }))(params.val) : empty(),
+      params.val
+        ? $icon({
+          $content: $arrowRight,
+          width: '10px',
+          svgOps: style(params.isIncrease ? { fill: pallete.positive } : { fill: pallete.indeterminate }),
+          viewBox: '0 0 32 32'
+        })
+        : empty(),
+      $text(style({}))(change),
+    )
+  }, combineObject({ val, isIncrease, })),
 )
 
 interface Icon {

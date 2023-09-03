@@ -7,7 +7,7 @@ import { empty, map, now, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Link, $Table, $arrowDown, $arrowRight, $icon, ScrollRequest } from "gmx-middleware-ui-components"
-import { leverageLabel, pagingQuery, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { readableLeverage, pagingQuery, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileAvatar, $profileDisplay } from "../$AccountProfile"
@@ -102,7 +102,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                 $metricLabel($text('Win / Loss'))
               ),
               $metricRow(
-                $heading2(metrics.size ? leverageLabel(metrics.avgLeverage) : '-'),
+                $heading2(metrics.size ? readableLeverage(metrics.cumulativeLeverage, BigInt(metrics.winCount + metrics.lossCount)) : '-'),
                 $metricLabel($text('Avg Leverage'))
               )
             ),
