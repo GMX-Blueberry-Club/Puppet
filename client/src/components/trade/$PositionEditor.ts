@@ -29,11 +29,13 @@ import {
   getNativeTokenDescription, getPnL,
   getTokenDescription, getTokenUsd,
   IMarket,
+  IMarketInfo,
+  IMarketPrice,
+  IOraclePrice,
   IPositionSlot,
   ITokenDescription,
   parseFixed, parseReadableNumber,
   readableFixedUSD30,
-  readableLeverage,
   readableNumber,
   readablePercentage,
   readableTokenAmount,
@@ -67,12 +69,15 @@ export interface ITradeParams {
 
   position: IPositionSlot | null
   isTradingEnabled: boolean
-  isInputTokenApproved: boolean
+  isPrimaryApproved: boolean
 
-  inputTokenPrice: bigint
-  collateralTokenPrice: bigint
+
+  marketPrice: IMarketPrice
+  collateralPrice: IOraclePrice
+  primaryPrice: bigint
+  indexPrice: bigint
+
   availableIndexLiquidityUsd: bigint
-  indexTokenPrice: bigint
   walletBalance: bigint
 
   executionFee: bigint
@@ -83,12 +88,12 @@ export interface ITradeParams {
   priceImpactUsd: bigint
   totalNextFeesUsd: bigint
 
-  inputTokenDescription: ITokenDescription
-  indexTokenDescription: ITokenDescription
-  collateralTokenDescription: ITokenDescription
+  primaryDescription: ITokenDescription
+  indexDescription: ITokenDescription
+  collateralDescription: ITokenDescription
 
   averagePrice: bigint | null
-  liquidationPriceUsd: bigint | null
+  liquidationPrice: bigint | null
 
   stableFundingRateFactor: bigint
   fundingRateFactor: bigint
@@ -102,9 +107,10 @@ export interface ITradeActions {
 
 
 export interface ITradeConfig {
-  isLong: boolean
-  inputToken: viem.Address
   market: IMarket
+  marketInfo: IMarketInfo
+  isLong: boolean
+  primaryToken: viem.Address
   isUsdCollateralToken: boolean
   collateralToken: viem.Address
   isIncrease: boolean
@@ -176,16 +182,16 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
   const { 
     collateralDeltaUsd, collateralToken, collateralDelta, sizeDelta, focusMode,
-    market, inputToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, isUsdCollateralToken
+    market, marketInfo, primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, isUsdCollateralToken
   } = config.tradeConfig
   const {
     availableIndexLiquidityUsd, averagePrice, 
-    collateralTokenPoolInfo, collateralTokenDescription, collateralTokenPrice, executionFee, fundingFee,
+    collateralTokenPoolInfo, collateralDescription, collateralPrice, executionFee, fundingFee,
 
-    indexTokenDescription, indexTokenPrice,
-    inputTokenDescription, inputTokenPrice,
+    indexDescription, marketPrice,
+    primaryDescription, primaryPrice,
 
-    isInputTokenApproved, isTradingEnabled, liquidationPriceUsd, marginFee, route,
+    isPrimaryApproved, isTradingEnabled, liquidationPrice, marginFee, route,
     position, swapFee, walletBalance, markets
   } = config.tradeState
 
@@ -194,7 +200,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
     const amount = params.walletBalance
 
     return params.inputToken === GMX.ADDRESS_ZERO ? amount - 0n : amount
-  }, combineObject({ walletBalance, inputToken })))
+  }, combineObject({ walletBalance, inputToken: primaryToken })))
 
   // const maxWalletBalanceUsd = skipRepeats(map(params => {
   //   const amountUsd = getTokenUsd(params.inputTokenDescription.decimals, params.inputTokenPrice, params.maxWalletBalance)
@@ -203,16 +209,16 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   // }, combineObject({ maxWalletBalance, inputTokenPrice, inputToken, inputTokenDescription })))
 
 
-  const clickMaxCollateral = snapshot(params => {
+  const clickMaxPrimary = snapshot(params => {
     if (params.isIncrease) return params.maxWalletBalance
     if (!params.position) return 0n
 
     const maxCollateral = div(params.position.latestUpdate.sizeInUsd, GMX.MAX_LEVERAGE_FACTOR)
-    const positionCollateralUsd = params.position.latestUpdate.collateralAmount * params.collateralTokenPrice
+    const positionCollateralUsd = params.position.latestUpdate.collateralAmount * params.marketPrice.indexTokenPrice.min
     const deltaUsd = maxCollateral - positionCollateralUsd
 
     return deltaUsd
-  }, combineObject({ isIncrease, maxWalletBalance, position, indexTokenPrice, inputTokenDescription }), clickMax)
+  }, combineObject({ isIncrease, maxWalletBalance, position, marketPrice }), clickMax)
 
 
   const primaryEffects = mergeArray([
@@ -220,32 +226,32 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
     switchLatest(map((focus) => {
       if (focus === ITradeFocusMode.collateral) return empty()
 
-      const effects = mergeArray([config.tradeConfig.leverage, config.tradeState.inputTokenPrice])
+      const effects = mergeArray([config.tradeConfig.leverage, config.tradeState.primaryPrice])
       return sample(config.tradeConfig.sizeDeltaUsd, effects)
     }, config.tradeConfig.focusMode))
   ])
 
   const secondaryEffects = mergeArray([
     inputPrimaryAmount,
-    clickMaxCollateral,
+    clickMaxPrimary,
     switchLatest(map((focus) => {
       if (focus === ITradeFocusMode.size) {
         return empty()
       }
 
-      const effects = mergeArray([config.tradeConfig.leverage, config.tradeState.indexTokenPrice])
+      const effects = mergeArray([config.tradeConfig.leverage, config.tradeState.indexPrice])
       return sample(config.tradeConfig.collateralDeltaUsd, effects)
     }, config.tradeConfig.focusMode)),
   ])
 
 
   const autoFillPrimaryAmount = multicast(mergeArray([
-    clickMaxCollateral,
+    clickMaxPrimary,
     constant(0n, config.tradeActions.requestReset),
     skipRepeats(snapshot((state, sizeDeltaFx) => {
-      const size = state.position ? sizeDeltaFx + state.position.sizeDeltaUsd : sizeDeltaUsd
+      const size = state.position ? sizeDeltaFx + state.position.latestUpdate.sizeInUsd : sizeDeltaFx
       const collateral = div(size, state.leverage)
-      const positionCollateral = state.position ? state.position.collateralAmount - state.fundingFee : 0n
+      const positionCollateral = state.position ? state.position.latestUpdate.collateralAmount - state.fundingFee : 0n
       const collateralDelta = collateral - positionCollateral
 
 
@@ -273,7 +279,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   const autoFillSecondary = multicast(mergeArray([
     constant(0n, config.tradeActions.requestReset),
     snapshot((params, collateralDeltaFx) => {
-      const positionCollateralUsd = params.position ? getTokenUsd(params.collateralTokenPrice, params.position.latestUpdate.collateralAmount) - params.fundingFee : 0n
+      const positionCollateralUsd = params.position ? getTokenUsd(params.collateralTokenPrice.min, params.position.latestUpdate.collateralAmount) - params.fundingFee : 0n
 
       const primaryDeltaUsd = getTokenUsd(params.inputTokenPrice, collateralDeltaFx)
       const positionSizeUsd = params.position ? params.position.latestUpdate.sizeInUsd : 0n
@@ -301,7 +307,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
       const deltaAfterFees = toNumerator / toDenominator
 
       return deltaAfterFees
-    }, combineObject({ leverage, position, fundingFee, swapFee, isIncrease, collateralTokenPrice, inputTokenPrice, inputTokenDescription }), secondaryEffects)
+    }, combineObject({ leverage, position, fundingFee, swapFee, isIncrease, collateralTokenPrice: collateralPrice, inputTokenPrice: primaryPrice, inputTokenDescription: primaryDescription }), secondaryEffects)
   ]))
 
 
@@ -390,25 +396,25 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                     return readableFixedUSD30(totalCollateral)
                   }
 
-                  const pnl = params.position ? getPnL(params.isLong, params.position.averagePrice, params.indexTokenPrice, params.position.size) : 0n
+                  const pnl = params.position ? getPnL(params.isLong, params.position.averagePrice, params.marketPrice.indexTokenPrice.min, params.position.latestUpdate.sizeInUsd) : 0n
 
                   if (params.position?.latestUpdate.sizeDeltaUsd === abs(params.sizeDeltaUsd)) {
                     return 0n
                   }
 
                   const adjustedPnlDelta = params.position && pnl < 0n && !params.isIncrease
-                    ? getAdjustedDelta(params.position.size, abs(params.sizeDeltaUsd), pnl)
+                    ? getAdjustedDelta(params.position.latestUpdate.sizeInUsd, abs(params.sizeDeltaUsd), pnl)
                     : 0n
 
                   const netCollateral = totalCollateral + adjustedPnlDelta
 
                   return readableFixedUSD30(netCollateral)
-                }, combineObject({ sizeDeltaUsd, position, inputTokenPrice, isIncrease, collateralDeltaUsd, swapFee, marginFee, isLong, fundingFee })),
+                }, combineObject({ sizeDeltaUsd, position, inputTokenPrice: primaryPrice, marketPrice, isIncrease, collateralDeltaUsd, swapFee, marginFee, isLong, fundingFee })),
                 isIncrease: config.tradeConfig.isIncrease,
                 tooltip: 'The amount deposited to maintain a leverage position',
                 val: map(params => {
                   return params.position ? readableTokenUsd(params.inputTokenPrice, params.position.latestUpdate.collateralAmount - params.fundingFee) : null
-                }, combineObject({ position, fundingFee, inputTokenPrice })),
+                }, combineObject({ position, fundingFee, inputTokenPrice: primaryPrice })),
               })
             ),
 
@@ -416,11 +422,11 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
               $infoLabel(`Balance`),
               $text(
                 map(params => {
-                  const newLocal = formatFixed(params.walletBalance, params.inputTokenDescription.decimals)
+                  const newLocal = formatFixed(params.walletBalance, params.primaryDescription.decimals)
                   const newLocal_1 = readableNumber({})(newLocal)
                   
-                  return newLocal_1 + ' ' + params.inputTokenDescription.symbol
-                }, combineObject({ inputToken, walletBalance, inputTokenDescription }))
+                  return newLocal_1 + ' ' + params.primaryDescription.symbol
+                }, combineObject({ primaryToken, walletBalance, primaryDescription }))
               ),
             ),
           ),
@@ -441,7 +447,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                       }
 
                       return null
-                    }, combineObject({ inputTokenDescription, inputTokenPrice }), autoFillPrimaryAmount))
+                    }, combineObject({ inputTokenDescription: primaryDescription, inputTokenPrice: primaryPrice }), autoFillPrimaryAmount))
                   )
                 ),
                 switchLatest
@@ -465,7 +471,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
                 return parsedInput
                 // return getTokenUsd(state.inputTokenDescription.decimals, state.inputTokenPrice, parsedInput)
-              }, combineObject({ inputTokenDescription, inputTokenPrice }), src)),
+              }, combineObject({ inputTokenDescription: primaryDescription, inputTokenPrice: primaryPrice }), src)),
             )(),
 
             switchMap(isIncrease => {
@@ -496,7 +502,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 $container: $defaultMiniButtonSecondary(
                   styleBehavior(
                     map(params => {
-                      if (params.position && abs(params.sizeDeltaUsd) === params.position.size) {
+                      if (params.position && abs(params.sizeDeltaUsd) === params.position.latestUpdate.sizeInUsd) {
                         return { display: 'none' }
                       }
 
@@ -530,7 +536,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                     $heading2(tokenDesc.symbol),
                     $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' }),
                   )
-                }, inputTokenDescription)),
+                }, primaryDescription)),
                 // $selection: switchLatest(map(option => {
                 //   return $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
                 //     $icon({
@@ -543,7 +549,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 //   )
                 // }, config.tradeState.inputTokenDescription)),
                 selector: {
-                  value: config.tradeConfig.inputToken,
+                  value: config.tradeConfig.primaryToken,
                   $container: $defaultSelectContainer(style({ minWidth: '290px', left: 0 })),
                   $$option: map(option => {
                     const token = resolveAddress(config.chain, option)
@@ -600,26 +606,26 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
             //   return false
             // }, tradeState),
             color: map(isIncrease => isIncrease ? pallete.foreground : pallete.indeterminate, config.tradeConfig.isIncrease),
-            min: map((state) => {
-              if (state.isIncrease) {
-                if (state.position) {
-                  if (state.focusMode === ITradeFocusMode.size) {
-                    const ratio = div(state.position.size + state.sizeDeltaUsd, state.walletBalanceUsd + state.position.collateral - state.fundingFee)
+            min: map(params => {
+              if (params.isIncrease) {
+                if (params.position) {
+                  if (params.focusMode === ITradeFocusMode.size) {
+                    const ratio = div(params.position.latestUpdate.sizeInUsd + params.sizeDeltaUsd, params.walletBalanceUsd + params.position.collateral - params.fundingFee)
                     return formatDiv(ratio, GMX.MAX_LEVERAGE_FACTOR)
                   }
-                  const totalCollateral = state.collateralDeltaUsd + state.position.collateral - state.fundingFee
+                  const totalCollateral = params.collateralDeltaUsd + params.position.collateral - params.fundingFee
 
-                  return Math.max(MIN_LEVERAGE_NORMAL, formatDiv(div(state.position.size, totalCollateral), GMX.MAX_LEVERAGE_FACTOR))
+                  return Math.max(MIN_LEVERAGE_NORMAL, formatDiv(div(params.position.size, totalCollateral), GMX.MAX_LEVERAGE_FACTOR))
                 }
 
                 return MIN_LEVERAGE_NORMAL
               }
 
-              if (state.focusMode === ITradeFocusMode.size) {
-                const totalSize = state.position ? state.sizeDeltaUsd + state.position.size : state.sizeDeltaUsd
+              if (params.focusMode === ITradeFocusMode.size) {
+                const totalSize = params.position ? params.sizeDeltaUsd + params.position.size : params.sizeDeltaUsd
 
-                if (state.position) {
-                  return formatDiv(div(totalSize, state.position.collateral - state.fundingFee), GMX.MAX_LEVERAGE_FACTOR)
+                if (params.position) {
+                  return formatDiv(div(totalSize, params.position.collateral - params.fundingFee), GMX.MAX_LEVERAGE_FACTOR)
                 }
 
                 return 0
@@ -696,18 +702,18 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                       if (value === 0n) {
                         node.element.value = ''
                       } else {
-                        node.element.value = readableTokenAmount(params.inputTokenDescription.decimals, params.inputTokenPrice, value)
+                        node.element.value = readableTokenAmount(params.primaryDescription.decimals, params.primaryPrice, value)
                       }
 
                       return null
-                    }, combineObject({ indexTokenDescription, indexTokenPrice, inputTokenDescription, inputTokenPrice, }), autoFillSecondary))
+                    }, combineObject({ primaryDescription, primaryPrice, }), autoFillSecondary))
                   )
                 ),
                 switchLatest
               ),
               styleInline(map(focus => focus === ITradeFocusMode.size ? { color: pallete.message } : { color: pallete.foreground }, config.tradeConfig.focusMode)),
               switchFocusModeTether(nodeEvent('focus'), constant(ITradeFocusMode.size)),
-              inputSizeDeltaTetherUsd(nodeEvent('input'), src => snapshot((state, inputEvent) => {
+              inputSizeDeltaTetherUsd(nodeEvent('input'), src => snapshot((params, inputEvent) => {
                 const target = inputEvent.currentTarget
 
                 if (!(target instanceof HTMLInputElement)) {
@@ -720,10 +726,10 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                   return 0n
                 }
 
-                const parsedInput = parseFixed(parseReadableNumber(target.value), state.indexTokenDescription.decimals)
+                const parsedInput = parseFixed(parseReadableNumber(target.value), params.indexTokenDescription.decimals)
 
-                return getTokenUsd(state.indexTokenPrice, parsedInput)
-              }, combineObject({ indexTokenDescription, indexTokenPrice }), src))
+                return getTokenUsd(params.marketPrice.indexTokenPrice.min, parsedInput)
+              }, combineObject({ indexTokenDescription: indexDescription, marketPrice }), src))
             )(),
 
 
@@ -738,9 +744,9 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                     $heading2(tokenDesc.symbol),
                     $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' }),
                   )
-                }, config.tradeConfig.market)),
+                }, market)),
                 selector: {
-                  value: config.tradeConfig.market,
+                  value: market,
                   $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0 })),
                   $$option: map(option => {
                     const tokenDesc = getTokenDescription(option.indexToken)
@@ -887,7 +893,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
           }
 
           return null
-        }, combineObject({ collateralTokenDescription, collateralTokenPrice, collateralDeltaUsd, sizeDeltaUsd, fundingFee }), position)),
+        }, combineObject({ collateralDescription, collateralPrice, collateralDeltaUsd, sizeDeltaUsd, fundingFee }), position)),
         mergeArray([clickClose, slideLeverage]),
       ]),
       switchIsIncrease,

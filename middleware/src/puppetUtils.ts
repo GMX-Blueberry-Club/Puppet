@@ -1,6 +1,6 @@
 import * as viem from "viem"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot } from "./types.js"
-import { IOraclePrice, factor, getSlotNetPnL, hashData } from "gmx-middleware-utils"
+import { IOraclePrice, factor, getPositionPnlUsd, hashData } from "gmx-middleware-utils"
 
 
 export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[], shareTarget?: viem.Address): IMirrorPositionListSummary {
@@ -8,10 +8,9 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
   const seedAccountSummary: IMirrorPositionListSummary = {
     size: 0n,
     collateral: 0n,
-    cummulativeLeverage: 0n,
+    cumulativeLeverage: 0n,
     puppets: [],
 
-    avgLeverage: 0n,
     avgCollateral: 0n,
     avgSize: 0n,
 
@@ -27,11 +26,11 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
 
     const size = seed.size + getParticiapntMpPortion(next, next.maxSizeUsd, shareTarget)
     const collateral = seed.collateral + getParticiapntMpPortion(next, next.maxCollateralUsd, shareTarget)
-    const leverage = seed.cummulativeLeverage + getParticiapntMpPortion(next, factor(next.maxSizeUsd, next.maxCollateralUsd), shareTarget)
+    const cumulativeLeverage = seed.cumulativeLeverage + getParticiapntMpPortion(next, factor(next.maxSizeUsd, next.maxCollateralUsd), shareTarget)
 
     const avgSize = size / idxBn
     const avgCollateral = collateral / idxBn
-    const avgLeverage = leverage / idxBn
+    const avgLeverage = cumulativeLeverage / idxBn
 
 
     const fee = seed.fee + getParticiapntMpPortion(next, next.cumulativeFee, shareTarget)
@@ -46,8 +45,7 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
     return {
       size,
       collateral,
-      cummulativeLeverage: leverage,
-      avgLeverage,
+      cumulativeLeverage,
       avgCollateral,
       avgSize,
       fee,
@@ -85,7 +83,7 @@ export function getParticiapntMpPortion(mp: IPositionMirrorSettled | IPositionMi
 
 
 export function getMpSlotPnL(mp: IPositionMirrorSlot, markPrice: IOraclePrice, shareTarget?: viem.Address): bigint {
-  const delta = getSlotNetPnL(mp, markPrice)
+  const delta = getPositionPnlUsd(mp, markPrice)
   const openPnl = getParticiapntMpPortion(mp, delta, shareTarget)
 
   return openPnl

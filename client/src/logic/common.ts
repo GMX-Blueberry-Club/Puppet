@@ -2,11 +2,16 @@ import { combineArray, fromCallback, isStream } from "@aelea/core"
 import { awaitPromises, map, now } from "@most/core"
 import { Stream } from "@most/types"
 import * as wagmi from "@wagmi/core"
+import { WalletClient } from "@wagmi/core"
 import type { AbiParametersToPrimitiveTypes, Address, ExtractAbiEvent, ExtractAbiFunction } from 'abitype'
 import { ContractClientParams, ContractParams, StreamInput, StreamInputArray, switchMap } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { wallet } from "../wallet/walletLink"
-import { WalletClient } from "@wagmi/core"
+import { O } from "@aelea/core"
+import { http } from "@aelea/ui-components"
+import { filter, mergeArray, multicast } from "@most/core"
+import { ICommunicationMessage } from "gmx-middleware-utils"
+
 
 
 interface IContractConnect<TAbi extends viem.Abi, TChain extends viem.Chain = viem.Chain> {
@@ -76,25 +81,6 @@ export function combineState<A extends object, K extends keyof A>(state: StreamI
 type onlyArray<T> = T extends readonly any[] ? T : never
 
 
-export const contractReader = <
-  TAddress extends Address,
-  TAbi extends viem.Abi,
->(params_: ContractParams<TAbi, TAddress>) => {
-  return <TFunctionName extends string, TArgs extends AbiParametersToPrimitiveTypes<ExtractAbiFunction<TAbi, TFunctionName>['inputs']>>(functionName: viem.InferFunctionName<TAbi, TFunctionName, 'view' | 'pure'>, ...args_: onlyArray<TArgs> | onlyArray<StreamInputArray<onlyArray<TArgs>>>): Stream<wagmi.ReadContractResult<TAbi, TFunctionName>> => {
-
-    const resolveArgs: Stream<onlyArray<TArgs>> = isStream(args_[0]) ? combineArray((..._args) => _args, ...args_ as any) : now(args_ as any) as any
-
-    return awaitPromises(map(async args => {
-      
-      try {
-        return await wagmi.readContract({ ...params_, functionName, args } as any)
-      } catch (error) {
-        console.error(functionName, error)
-        throw error
-      }
-    }, resolveArgs)) as any
-  }
-}
 
 
 export const listenContract = <
@@ -195,5 +181,76 @@ export const waitForTransactionReceipt = async<
   const hash = await hash_
   const req = client.waitForTransactionReceipt({ hash })
   return req
+}
+
+
+export const contractReader = <
+  TAddress extends Address,
+  TAbi extends viem.Abi,
+>(params_: ContractParams<TAbi, TAddress>) => {
+  return <TFunctionName extends string, TArgs extends AbiParametersToPrimitiveTypes<ExtractAbiFunction<TAbi, TFunctionName>['inputs']>>(functionName: viem.InferFunctionName<TAbi, TFunctionName, 'view' | 'pure'>, ...args_: onlyArray<TArgs> | onlyArray<StreamInputArray<onlyArray<TArgs>>>): Stream<wagmi.ReadContractResult<TAbi, TFunctionName>> => {
+
+    const resolveArgs: Stream<onlyArray<TArgs>> = isStream(args_[0]) ? combineArray((..._args) => _args, ...args_ as any) : now(args_ as any) as any
+
+    return awaitPromises(map(async args => {
+      
+      try {
+        return await wagmi.readContract({ ...params_, functionName, args } as any)
+      } catch (error) {
+        console.error(functionName, error)
+        throw error
+      }
+    }, resolveArgs)) as any
+  }
+}
+
+export type IHelloRpcChannels<
+  TAbi extends viem.Abi,
+  TFunctionName extends string
+> = {
+  functionName: viem.InferFunctionName<TAbi, TFunctionName, 'view' | 'pure'>,
+  args: AbiParametersToPrimitiveTypes<ExtractAbiFunction<TAbi, TFunctionName>['inputs']>
+}
+
+
+export type AbiInput<
+  TAbi extends viem.Abi,
+  TFunctionName extends viem.InferFunctionName<TAbi, TFunctionName, 'view' | 'pure'>
+> = {
+  functionName: viem.InferFunctionName<TAbi, TFunctionName, 'view' | 'pure'>,
+  args: AbiParametersToPrimitiveTypes<ExtractAbiFunction<TAbi, TFunctionName>['inputs']>
+}
+
+export const helloRpc = <
+  TAddress extends Address,
+  TAbi extends viem.Abi,
+  TChannelParamsList extends Record<any, AbiInput<TAbi, any>>,
+>(
+  config: ContractParams<TAbi, TAddress>,
+  messages: { [P in keyof TChannelParamsList]: Stream<AbiInput<TAbi, P>> }
+): {[k: string]: Stream<any>}  => {
+  const entriesInMap = Object.entries(config)
+  const outMapEntries = entriesInMap.map(([topic, source]) => {
+    // @ts-ignore
+    return map(body => ({ topic, body }), source)
+  }, {} as any)
+  
+  const wss = http.fromWebsocket<ICommunicationMessage<string, OUT>, ICommunicationMessage<string, IN[keyof IN]>>(`wss://${location.host}/api-ws`, mergeArray(outMapEntries))
+  const multicastConnection = multicast(wss)
+
+  const outMap = entriesInMap.reduce((seed, [topic, source]) => {
+    // @ts-ignore
+    seed[topic] = O(
+      filter((data: ICommunicationMessage<string, any>) => {
+        const isMessageValid = typeof data === 'object' && 'body' in data && 'topic' in data
+        return isMessageValid && data.topic === topic
+      }),
+      map(x => x.body)
+    )(multicastConnection)
+
+    return seed
+  }, {} as any)
+ 
+  return outMap as any
 }
 

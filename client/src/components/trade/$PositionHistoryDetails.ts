@@ -31,9 +31,12 @@ import {
   formatFixed,
   getDenominator,
   getPnL,
+  getTokenAmount,
   getTokenDescription,
+  getTokenUsd,
   parseReadableNumber,
   readableFixedUSD30,
+  readableLeverage,
   readableUnitAmount,
   resolveAddress,
   safeDiv,
@@ -99,7 +102,7 @@ export type IRequestTradeParams = ITradeConfig & { wallet: IWalletClient }
 export type IRequestTrade = IRequestTradeParams & {
   // key: viem.Hex
   executionFee: bigint
-  indexTokenPrice: bigint
+  indexPrice: bigint
   acceptablePrice: bigint
   swapRoute: string[]
   request: Promise<viem.TransactionReceipt>
@@ -142,21 +145,24 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
     positionRouterAddress
   )
 
-  const { collateralDeltaUsd, collateralToken, collateralDelta, sizeDelta, focusMode, indexToken, inputToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage } = config.tradeConfig
+  const { 
+    collateralDeltaUsd, collateralToken, collateralDelta, sizeDelta, focusMode,
+    indexToken, inputToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage 
+  } = config.tradeConfig
   const {
-    availableIndexLiquidityUsd, averagePrice, collateralTokenDescription,
-    collateralTokenPoolInfo, collateralTokenPrice, stableFundingRateFactor, fundingRateFactor, executionFee, fundingFee,
-    indexTokenDescription, indexTokenPrice, inputTokenDescription, inputTokenPrice,
-    isInputTokenApproved, isTradingEnabled, liquidationPriceUsd: liquidationPrice, marginFee, route,
+    availableIndexLiquidityUsd, averagePrice, collateralDescription,
+    collateralTokenPoolInfo, collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee, fundingFee,
+    indexDescription, marketPrice, primaryDescription, primaryPrice,
+    isPrimaryApproved, isTradingEnabled, liquidationPrice, marginFee, route,
     position, swapFee, walletBalance
   } = config.tradeState
 
 
   const walletBalanceUsd = skipRepeats(combineArray(params => {
-    const amountUsd = params.walletBalance * params.inputTokenPrice
+    const amountUsd = params.walletBalance * params.primaryPrice
 
     return params.inputToken === GMX.ADDRESS_ZERO ? amountUsd - GMX.DEDUCT_USD_FOR_GAS : amountUsd
-  }, combineObject({ walletBalance, inputTokenPrice, inputToken, inputTokenDescription })))
+  }, combineObject({ walletBalance, primaryPrice, inputToken, primaryDescription })))
 
 
 
@@ -183,7 +189,7 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
   const validationError = skipRepeats(map((state) => {
 
     if (state.leverage > GMX.MAX_LEVERAGE_FACTOR) {
-      return `Leverage exceeds ${formatBps(GMX.MAX_LEVERAGE_FACTOR)}x`
+      return `Leverage exceeds 100x`
     }
 
     if (state.isIncrease) {
@@ -192,7 +198,7 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
       }
 
       if (state.isIncrease ? state.collateralDelta > state.walletBalance : state.collateralDeltaUsd > state.walletBalanceUsd) {
-        return `Not enough ${state.inputTokenDescription.symbol} in connected account`
+        return `Not enough ${state.inputDescription.symbol} in connected account`
       }
 
       if (state.leverage < GMX.MIN_LEVERAGE_FACTOR) {
@@ -203,40 +209,34 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
       //   return `Min 10 Collateral required`
       // }
     } else {
-
       if (state.position && state.inputToken !== state.collateralToken) {
-        const delta = getPnL(state.isLong, state.position.averagePrice, state.indexTokenPrice, -state.sizeDeltaUsd)
-        const adjustedSizeDelta = safeDiv(abs(state.sizeDeltaUsd) * delta, state.position.size)
+        const delta = getPnL(state.isLong, state.position.averagePrice, state.marketPrice.indexTokenPrice.min, -state.sizeDeltaUsd)
+        const adjustedSizeDelta = safeDiv(abs(state.sizeDeltaUsd) * delta, state.position.maxSizeUsd)
         const fees = state.swapFee + state.marginFee
-        const collateralDelta = -state.sizeDeltaUsd === state.position.size
-          ? state.position.collateral - state.fundingFee
+        const collateralDelta = -state.sizeDeltaUsd === state.position.maxSizeUsd
+          ? getTokenUsd(state.collateralPrice.min, state.position.latestUpdate.collateralAmount) - state.fundingFee
           : -state.collateralDeltaUsd
 
         const totalOut = collateralDelta + adjustedSizeDelta - fees
 
         const nextUsdgAmount = totalOut * getDenominator(GMX.USDG_DECIMALS) / GMX.PERCISION
         if (state.collateralTokenPoolInfo.usdgAmounts + nextUsdgAmount > state.collateralTokenPoolInfo.maxUsdgAmounts) {
-          return `${state.collateralTokenDescription.symbol} pool exceeded, you cannot receive ${state.inputTokenDescription.symbol}, switch to ${state.collateralTokenDescription.symbol} in the first input token switcher`
+          return `${state.collateralDescription.symbol} pool exceeded, you cannot receive ${state.primaryDescription.symbol}, switch to ${state.primaryDescription.symbol} in the first input token switcher`
         }
       }
 
     }
 
     if (!state.isIncrease && state.position === null) {
-      return `No ${state.indexTokenDescription.symbol} position to reduce`
+      return `No ${state.indexDescription.symbol} position to reduce`
     }
 
-    if (state.position && state.liquidationPrice && (state.isLong ? state.liquidationPrice > state.indexTokenPrice : state.liquidationPrice < state.indexTokenPrice)) {
+    if (state.position && state.liquidationPrice && (state.isLong ? state.liquidationPrice > state.marketPrice.indexTokenPrice.min : state.liquidationPrice < state.marketPrice.indexTokenPrice.min)) {
       return `Exceeding liquidation price`
     }
 
     return null
-  }, combineObject({
-    leverage, position, swapFee, marginFee, fundingFee, liquidationPrice, walletBalance,
-    walletBalanceUsd, isIncrease, indexTokenPrice, collateralDelta, collateralDeltaUsd, inputTokenDescription,
-    collateralToken, sizeDeltaUsd, availableIndexLiquidityUsd, inputToken, collateralTokenPoolInfo,
-    collateralTokenDescription, indexTokenDescription, isLong,
-  })))
+  }, combineObject({ ...config.tradeState, ...config.tradeConfig })))
 
 
 
@@ -267,7 +267,7 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
 
     const priceBasisPoints = GMX.PERCISION + allowedSlippage
 
-    const acceptablePrice = params.indexTokenPrice * priceBasisPoints / GMX.PERCISION
+    const acceptablePrice = params.indexPrice.min * priceBasisPoints / GMX.PERCISION
 
     const isNative = req.inputToken === GMX.ADDRESS_ZERO
 
@@ -316,7 +316,7 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
 
 
     return { ...params, ...req, acceptablePrice, request, swapRoute }
-  }, combineObject({ executionFee, indexTokenPrice, route }), requestTradeParams))
+  }, combineObject({ executionFee, indexPrice, route }), requestTradeParams))
 
   const requestTradeError = filterNull(awaitPromises(map(async req => {
     try {
@@ -388,7 +388,7 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
                 switchLatest(map(params => {
                   const depositTokenNorm = resolveAddress(config.chain, params.inputToken)
                   const outputToken = params.isLong ? params.indexToken : params.collateralToken
-                  const totalSizeUsd = params.position ? params.position.size + params.sizeDeltaUsd : params.sizeDeltaUsd
+                  const totalSizeUsd = params.position ? params.position.latestUpdate.sizeInUsd + params.sizeDeltaUsd : params.sizeDeltaUsd
 
                   const rateFactor = params.isLong ? params.fundingRateFactor : params.stableFundingRateFactor
                   const rate = safeDiv(rateFactor * params.collateralTokenPoolInfo.reservedAmount, params.collateralTokenPoolInfo.poolAmounts)
@@ -459,19 +459,19 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
                   return 0n
                 }
 
-                const delta = getPnL(params.isLong, params.position.averagePrice, params.indexTokenPrice, -params.sizeDeltaUsd)
-                const adjustedSizeDelta = safeDiv(-params.sizeDeltaUsd * delta, params.position.size)
+                const delta = getPnL(params.isLong, params.position.averagePrice, params.marketPrice.indexTokenPrice.min, -params.sizeDeltaUsd)
+                const adjustedSizeDelta = safeDiv(-params.sizeDeltaUsd * delta, params.position.latestUpdate.sizeInUsd)
                 const fees = params.swapFee + params.marginFee
-                const collateralDelta = -params.sizeDeltaUsd === params.position.size
+                const collateralDelta = -params.sizeDeltaUsd === params.position.latestUpdate.sizeInUsd
                   ? params.position.collateral - params.fundingFee
                   : -params.collateralDeltaUsd
 
                 const total = collateralDelta + adjustedSizeDelta - fees
                 const totalOut = total > 0n ? total : 0n
-                const tokenAmount = decimals(params.inputTokenDescription.decimals, params.inputTokenPrice, totalOut)
+                const tokenAmount = getTokenAmount(params.primaryPrice, totalOut)
 
-                return `${readableUnitAmount(formatFixed(tokenAmount, params.inputTokenDescription.decimals))} ${params.inputTokenDescription.symbol} (${readableFixedUSD30(totalOut)})`
-              }, combineObject({ sizeDeltaUsd, position, collateralDeltaUsd, inputTokenDescription, inputTokenPrice, marginFee, swapFee, indexTokenPrice, isLong, fundingFee })))
+                return `${readableUnitAmount(formatFixed(tokenAmount, params.primaryDescription.decimals))} ${params.primaryDescription.symbol} (${readableFixedUSD30(totalOut)})`
+              }, combineObject({ sizeDeltaUsd, position, collateralDeltaUsd, primaryDescription, primaryPrice, marginFee, swapFee, marketPrice, isLong, fundingFee })))
             )
           }, isIncrease))
 
@@ -530,11 +530,11 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
               })
             }
 
-            if (params.route && !params.isInputTokenApproved) {
+            if (params.route && !params.isPrimaryApproved) {
 
               return $ButtonPrimaryCtx({
                 request: requestApproveSpend,
-                $content: $text(`Approve ${params.inputTokenDescription.symbol}`)
+                $content: $text(`Approve ${params.primaryDescription.symbol}`)
               })({
                 click: clickApproveInputTokenTether(
                   constant({ route: params.route, inputToken: params.inputToken })
@@ -590,7 +590,7 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
                 )
               })
             )
-          }, combineObject({ isPluginEnabled: getIsPluginEnabled(config.wallet.account.address), isInputTokenApproved, route, isTradingEnabled, inputToken, inputTokenDescription })))
+          }, combineObject({ isPluginEnabled: getIsPluginEnabled(config.wallet.account.address), isPrimaryApproved, route, isTradingEnabled, inputToken, primaryDescription })))
         ),
       ),
 
@@ -613,12 +613,12 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
 
 
             return map(price => {
-              const delta = getPnL(pos.isLong, pos.averagePrice, price, pos.size)
+              // const delta = getPnL(pos.isLong, pos.averagePrice, price, pos.size)
               // const val = formatFixed(delta + pos.realisedPnl - pos.cumulativeFee, 30)
               const val = 0
 
               return val
-            }, indexTokenPrice)
+            }, marketPrice)
 
           }, pnlCrossHairTime))
 
@@ -700,14 +700,14 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
             const positionMarkPrice = latestTokenPrice(config.processData, now(pos.indexToken))
             const cumulativeFee = vault.read('cumulativeFundingRates', pos.collateralToken)
             const pnl = map(params => {
-              const delta = getPnL(pos.isLong, pos.averagePrice, params.positionMarkPrice, pos.size)
+              const delta = getPnL(pos.isLong, pos.averagePrice, params.positionMarkPrice.min, pos.latestUpdate.sizeInUsd)
 
               return pos.realisedPnl + delta - pos.cumulativeFee
             }, combineObject({ positionMarkPrice, cumulativeFee }))
 
 
             return switchLatest(map(currentPost => {
-              if (currentPost === null || currentPost.positionKey === pos.key) {
+              if (currentPost === null || currentPost.key === pos.key) {
                 return empty()
               }
 
@@ -725,7 +725,7 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
                     constant(pos)
                   )
                 }),
-                $sizeAndLiquidation(pos.isLong, pos.size, pos.collateral, pos.averagePrice, positionMarkPrice),
+                $sizeAndLiquidation(pos.isLong, pos.latestUpdate.sizeInUsd, pos.collateral, pos.averagePrice, positionMarkPrice),
                 $infoTooltipLabel(
                   $openPositionPnlBreakdown(pos, cumulativeFee),
                   $pnlValue(pnl)
@@ -766,7 +766,7 @@ export const $PositionHistoryDetails = (config: IPositionDetailsPanel) => compon
           return null
         }
 
-        return factor(state.position.size, state.position.collateral - state.fundingFee)
+        return factor(state.position.latestUpdate.sizeInUsd, state.position.collateral - state.fundingFee)
       }, combineObject({ position, fundingFee }), delay(50, clickResetPosition))),
       requestTrade
 

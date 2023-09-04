@@ -145,7 +145,7 @@ export const $puppets = (puppets: readonly viem.Address[], click: Tether<INode, 
 }
 
 export const $leverage = (size: bigint, collateral: bigint) =>
-  $text(style({ fontWeight: 'bold', letterSpacing: '0.05em', fontSize: '0.85rem' }))(`${Math.round(readableLeverage(size, collateral))}x`)
+  $text(style({ fontWeight: 'bold', letterSpacing: '0.05em', fontSize: '0.85rem' }))(readableLeverage(size, collateral))
 
 export const $pnlValue = (pnl: Stream<bigint> | bigint, colorful = true) => {
   const pnls = isStream(pnl) ? pnl : now(pnl)

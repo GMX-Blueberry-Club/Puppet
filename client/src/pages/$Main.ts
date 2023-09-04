@@ -33,6 +33,7 @@ import * as GMX from "gmx-middleware-const"
 import { Stream } from "@most/types"
 import { newUpdateInvoke } from "../sw/swUtils"
 import { $ButtonPrimary, $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
+import { contractReader, helloRpc } from "../logic/common"
 
 const popStateEvent = eventElementTarget('popstate', window)
 const initialLocation = now(document.location)
@@ -91,6 +92,22 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   const tradeTermsAndConditions = appRoute.create({ fragment: 'terms-and-conditions' })
 
   const leaderboardRoute = appRoute.create({ fragment: 'leaderboard' })
+
+  const gmxContractMap = GMX.CONTRACT['42161']
+
+  const v2Reader = contractReader(gmxContractMap.ReaderV2)
+
+  // const marketInfo: Stream<IMarketInfo> = switchMap(params => {
+  //   const info = v2Reader('getMarketInfo', gmxContractMap.Datastore.address, params.marketPrice, params.market.marketToken)
+  //   return info
+  // }, combineObject({ market, marketPrice }))
+  
+  // const clientApi = helloRpc(gmxContractMap, {
+  //   marketInfo: now({
+  //     functionName: 'getMarketInfo',
+  //     args: ['0x0000000', {}]
+  //   })
+  // })
 
 
   const $liItem = $element('li')(style({ marginBottom: '14px' }))

@@ -150,7 +150,6 @@ export const gmxProcess = defineProcess(
     step(seed, value) {
       const entity = getEventType<IMarketCreatedEvent>('Market', value, seed.approximatedTimestamp)
       seed.markets[entity.marketToken] = {
-        salt: entity.salt,
         indexToken: entity.indexToken,
         longToken: entity.longToken,
         marketToken: entity.marketToken,
@@ -357,7 +356,7 @@ export const initPartialPositionSlot = {
 
 
 export const latestTokenPrice = (process: Stream<IGmxProcessState>, tokenEvent: Stream<viem.Address>) => {
-  return switchMap(token => map(seed => seed.latestPrice[token].min, process), tokenEvent)
+  return switchMap(token => map(seed => seed.latestPrice[token], process), tokenEvent)
 }
 
 export const getEventType = <T extends ILogTxType<any>>(typeName: string, log: IEventLog1Args, blockTimestamp: number): T => {

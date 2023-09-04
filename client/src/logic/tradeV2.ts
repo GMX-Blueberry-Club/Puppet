@@ -1,8 +1,12 @@
 import * as wagmi from "@wagmi/core"
 import * as GMX from "gmx-middleware-const"
-import { IMarket, IMarketInfo, IMarketPoolValueInfo, IMarketPrice, factor, hashData } from "gmx-middleware-utils"
+import { IMarket, IMarketInfo, IMarketPrice, factor, hashData, switchMap } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { ISupportedChain } from "../wallet/walletLink"
+import { contractReader } from "./common"
+import { combineObject } from "@aelea/core"
+import { map } from "@most/core"
+import { Stream } from "@most/types"
 
 
 
@@ -76,10 +80,24 @@ const IS_MARKET_DISABLED_KEY = "IS_MARKET_DISABLED"
 export async function getMarketPoolInfo(
   chain: ISupportedChain,
   market: IMarket,
-): Promise<IMarketPoolValueInfo> {
+  price: IMarketPrice
+): Promise<IMarketInfo> {
   const datastoreContract = GMX.CONTRACT[chain.id].Datastore
+  const readerV2 = GMX.CONTRACT[chain.id].ReaderV2
+  // const v2Reader = contractReader(readerV2)
 
 
+  const priceInfo = wagmi.readContract({
+    ...readerV2,
+    functionName: 'getMarketTokenPrice',
+    args: [datastoreContract.address, market, price.indexTokenPrice, price.longTokenPrice, price.shortTokenPrice, hashKey(MAX_PNL_FACTOR_FOR_TRADERS_KEY), true],
+  })
+  const Info = wagmi.readContract({
+    ...readerV2,
+    functionName: 'getMarketInfo',
+    args: [datastoreContract.address, price, market.marketToken],
+  })
+  
 
   // const isDisabled = wagmi.readContract({
   //   ...datastoreContract,
@@ -383,71 +401,57 @@ export async function getMarketPoolInfo(
   const longInterestUsd = await longInterestUsingLongToken + await longInterestUsingShortToken
   const shortInterestUsd = await shortInterestUsingLongToken + await shortInterestUsingShortToken
 
+  
 
   return {
-    longInterestUsd, shortInterestUsd,
-    
-    
-    // netPnlMax, netPnlMin, pnlLongMax, pnlLongMin, pnlShortMax, pnlShortMin,
-    // poolValueMax, poolValueMin, shortInterestInTokens,
-
-    // totalBorrowingFees,
-    // claimableFundingAmountLong, claimableFundingAmountShort,
-    
-    // longPoolAmount: await longPoolAmount,
-    // shortPoolAmount: await shortPoolAmount,
-
-    maxLongPoolAmount: await maxLongPoolAmount,
-    maxShortPoolAmount: await maxShortPoolAmount,
-    longPoolAmountAdjustment: await longPoolAmountAdjustment,
-    shortPoolAmountAdjustment: await shortPoolAmountAdjustment,
-    reserveFactorLong: await reserveFactorLong,
-    reserveFactorShort: await reserveFactorShort,
-    openInterestReserveFactorLong: await openInterestReserveFactorLong,
-    openInterestReserveFactorShort: await openInterestReserveFactorShort,
-    positionImpactPoolAmount: await positionImpactPoolAmount,
-    swapImpactPoolAmountLong: await swapImpactPoolAmountLong,
-    swapImpactPoolAmountShort: await swapImpactPoolAmountShort,
-    borrowingFactorLong: await borrowingFactorLong,
-    borrowingFactorShort: await borrowingFactorShort,
-    borrowingExponentFactorLong: await borrowingExponentFactorLong,
-    borrowingExponentFactorShort: await borrowingExponentFactorShort,
-    fundingFactor: await fundingFactor,
-    fundingExponentFactor: await fundingExponentFactor,
+    ...(await priceInfo)[1],
     maxPnlFactorForTradersLong: await maxPnlFactorForTradersLong,
     maxPnlFactorForTradersShort: await maxPnlFactorForTradersShort,
+
+    // netPnlMax, netPnlMin, pnlLongMax, pnlLongMin, pnlShortMax, pnlShortMin,
+    // poolValueMax, poolValueMin, shortInterestInTokens,
+    // totalBorrowingFees,
+    // claimableFundingAmountLong, claimableFundingAmountShort,
+    // longPoolAmount: await longPoolAmount,
+    // shortPoolAmount: await shortPoolAmount,
+    // maxLongPoolAmount: await maxLongPoolAmount,
+    // maxShortPoolAmount: await maxShortPoolAmount,
+    // longPoolAmountAdjustment: await longPoolAmountAdjustment,
+    // shortPoolAmountAdjustment: await shortPoolAmountAdjustment,
+    // reserveFactorLong: await reserveFactorLong,
+    // reserveFactorShort: await reserveFactorShort,
+    // openInterestReserveFactorLong: await openInterestReserveFactorLong,
+    // openInterestReserveFactorShort: await openInterestReserveFactorShort,
+
+    // swapImpactPoolAmountLong: await swapImpactPoolAmountLong,
+    // swapImpactPoolAmountShort: await swapImpactPoolAmountShort,
+    // borrowingFactorLong: await borrowingFactorLong,
+    // borrowingFactorShort: await borrowingFactorShort,
+    // borrowingExponentFactorLong: await borrowingExponentFactorLong,
+    // borrowingExponentFactorShort: await borrowingExponentFactorShort,
+    // fundingFactor: await fundingFactor,
+    // fundingExponentFactor: await fundingExponentFactor,
+
     positionFeeFactorForPositiveImpact: await positionFeeFactorForPositiveImpact,
     positionFeeFactorForNegativeImpact: await positionFeeFactorForNegativeImpact,
+    minCollateralFactor: await minCollateralFactor,
+
+    longInterestUsd,
+    shortInterestUsd,
+
+    maxPositionImpactFactorForLiquidations: await maxPositionImpactFactorForLiquidations,
+
     positionImpactFactorPositive: await positionImpactFactorPositive,
     positionImpactFactorNegative: await positionImpactFactorNegative,
-    maxPositionImpactFactorPositive: await maxPositionImpactFactorPositive,
-    maxPositionImpactFactorNegative: await maxPositionImpactFactorNegative,
-    maxPositionImpactFactorForLiquidations: await maxPositionImpactFactorForLiquidations,
-    minCollateralFactor: await minCollateralFactor,
-    minCollateralFactorForOpenInterestLong: await minCollateralFactorForOpenInterestLong,
-    minCollateralFactorForOpenInterestShort: await minCollateralFactorForOpenInterestShort,
     positionImpactExponentFactor: await positionImpactExponentFactor,
+    // maxPositionImpactFactorNegative: await maxPositionImpactFactorNegative,
+    
 
-    swapFeeFactorForPositiveImpact: await swapFeeFactorForPositiveImpact,
-    swapFeeFactorForNegativeImpact: await swapFeeFactorForNegativeImpact,
-    swapImpactFactorPositive: await swapImpactFactorPositive,
-    swapImpactFactorNegative: await swapImpactFactorNegative,
-    swapImpactExponentFactor: await swapImpactExponentFactor,
+    ...await Info,
 
+    positionImpactPoolAmount: await positionImpactPoolAmount,
+    maxPositionImpactFactorPositive: await maxPositionImpactFactorPositive,
 
-    // longInterestUsingLongToken: await longInterestUsingLongToken,
-    // longInterestUsingShortToken: await longInterestUsingShortToken,
-    // shortInterestUsingLongToken: await shortInterestUsingLongToken,
-    // shortInterestUsingShortToken: await shortInterestUsingShortToken,
-    // shortInterestInTokensUsingLongToken: await shortInterestInTokensUsingLongToken,
-    // shortInterestInTokensUsingShortToken: await shortInterestInTokensUsingShortToken,
-    virtualMarketId: await virtualMarketId,
-    virtualLongTokenId: await virtualLongTokenId,
-    virtualShortTokenId: await virtualShortTokenId,
-
-    // borrowingFactorPerSecondForLongs
-    shortInterestInTokens: await shortInterestInTokensUsingLongToken + await shortInterestInTokensUsingShortToken,
-    longInterestInTokens: await longInterestInTokensUsingLongToken + await longInterestInTokensUsingShortToken,
   }
 }
 
