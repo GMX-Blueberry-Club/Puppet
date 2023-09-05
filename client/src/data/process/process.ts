@@ -150,6 +150,7 @@ export const gmxProcess = defineProcess(
     step(seed, value) {
       const entity = getEventType<IMarketCreatedEvent>('Market', value, seed.approximatedTimestamp)
       seed.markets[entity.marketToken] = {
+        salt: entity.salt,
         indexToken: entity.indexToken,
         longToken: entity.longToken,
         marketToken: entity.marketToken,

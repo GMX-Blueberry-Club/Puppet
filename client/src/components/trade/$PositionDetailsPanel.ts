@@ -79,7 +79,7 @@ export type IRequestTradeParams = ITradeConfig & { wallet: IWalletClient }
 export type IRequestTrade = IRequestTradeParams & {
   // key: viem.Hex
   executionFee: bigint
-  indexTokenPrice: bigint
+  indexPrice: bigint
   acceptablePrice: bigint
   swapRoute: string[]
   request: Promise<viem.TransactionReceipt>
@@ -108,19 +108,10 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
   const gmxContractMap = GMX.CONTRACT[config.chain.id]
 
-
   const vault = connectContract(gmxContractMap.Vault)
   const router = connectContract(gmxContractMap.Router)
-
-              
   const positionRouterAddress = GMX.CONTRACT[config.chain.id].PositionRouter.address
 
-
-  const getIsPluginEnabled = (address: viem.Address) => router.read(
-    'approvedPlugins',
-    address,
-    positionRouterAddress
-  )
 
   const { 
     collateralDeltaUsd, collateralToken, collateralDelta, marketInfo, market, isUsdCollateralToken, sizeDelta, focusMode,
@@ -234,9 +225,9 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
 
   const requestTrade: Stream<IRequestTrade> = multicast(snapshot((params, req) => {
-    const resolvedInputAddress = resolveAddress(config.chain, req.primaryToken)
-    const from = req.isIncrease ? resolvedInputAddress : req.isLong ? req.market.indexToken : req.collateralToken
-    const to = req.isIncrease ? req.isLong ? req.market.indexToken : req.collateralToken : resolvedInputAddress
+    const resolvedPrimaryAddress = resolveAddress(config.chain, req.primaryToken)
+    const from = req.isIncrease ? resolvedPrimaryAddress : req.isLong ? req.market.indexToken : req.collateralToken
+    const to = req.isIncrease ? req.isLong ? req.market.indexToken : req.collateralToken : resolvedPrimaryAddress
 
     const swapRoute = from === to ? [to] : [from, to]
 
@@ -248,61 +239,94 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
         ? -slippageN : slippageN
 
     const priceBasisPoints = GMX.PERCISION + allowedSlippage
-
-    const acceptablePrice = params.indexTokenPrice * priceBasisPoints / GMX.PERCISION
-
+    const acceptablePrice = params.indexPrice * priceBasisPoints / GMX.PERCISION
     const isNative = req.primaryToken === GMX.ADDRESS_ZERO
 
 
-    const swapParams = {
-      amount: req.collateralDelta,
-      minOut: 0n,
-      path: swapRoute
-    }
-    const tradeParams = {
-      acceptablePrice,
-      amountIn: 0n,
-      collateralDelta: req.collateralDelta,
-      minOut: 0n,
-      sizeDelta: abs(req.sizeDeltaUsd)
-    }
+    // const swapParams = {
+    //   amount: req.collateralDelta,
+    //   minOut: 0n,
+    //   path: swapRoute
+    // }
+    // const tradeParams = {
+    //   acceptablePrice,
+    //   amountIn: 0n,
+    //   collateralDelta: req.collateralDelta,
+    //   minOut: 0n,
+    //   sizeDelta: abs(req.sizeDeltaUsd)
+    // }
 
     const value = isNative ? params.executionFee + req.collateralDelta : params.executionFee
 
-    const addresses = {
-      receiver: config.wallet.account.address,
-      callbackContract: GMX.ADDRESS_ZERO,
-      uiFeeReceiver: '0x189b21eda0cff16461913d616a0a4f711cd986cb',
-      market: req.market.marketToken,
-      initialCollateralToken: req.collateralToken,
-      swapPath: swapRoute
-    } as const
-    const numbers = {
-      sizeDeltaUsd: req.sizeDeltaUsd,
-      initialCollateralDeltaAmount: req.collateralDelta,
-      acceptablePrice: acceptablePrice,
-      triggerPrice: acceptablePrice,
-      executionFee: params.executionFee,
-      callbackGasLimit: 0n,
-      minOutputAmount: 0n,
-    } as const
 
 
-    const request = wagmiWriteContract({
-      ...GMX.CONTRACT[config.chain.id].ExchangeRouter,
-      value,
+    const orderVaultAddress = GMX.CONTRACT[config.chain.id].OrderVault.address
+
+    const wntCollateralAmount = isNative ? req.collateralDelta : 0n
+    const totalWntAmount = wntCollateralAmount + params.executionFee
+
+    const sendWnt = viem.encodeFunctionData({
+      abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
+      functionName: 'sendWnt',
+      args: [orderVaultAddress, totalWntAmount]
+    })
+
+    
+    const sendTokensCalldata = viem.encodeFunctionData({
+      abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
+      functionName: 'sendTokens',
+      args: [resolvedPrimaryAddress, orderVaultAddress, req.collateralDelta]
+    })
+
+
+    const createOrderCalldata = viem.encodeFunctionData({
+      abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
       functionName: 'createOrder',
       args: [
         {
-          addresses, numbers,
+          addresses: {
+            receiver: config.wallet.account.address,
+            callbackContract: GMX.ADDRESS_ZERO,
+            uiFeeReceiver: GMX.ADDRESS_ZERO,
+            market: req.market.marketToken,
+            initialCollateralToken: req.collateralToken,
+            swapPath: [req.market.marketToken]
+          },
+          numbers: {
+            sizeDeltaUsd: req.sizeDeltaUsd,
+            initialCollateralDeltaAmount: req.collateralDelta,
+            acceptablePrice: acceptablePrice,
+            triggerPrice: acceptablePrice,
+            executionFee: params.executionFee,
+            callbackGasLimit: 0n,
+            minOutputAmount: 0n,
+          },
+          orderType: OrderType.MarketIncrease,
           decreasePositionSwapType: DecreasePositionSwapType.NoSwap,
           isLong: req.isLong,
-          orderType: OrderType.MarketIncrease,
+          shouldUnwrapNativeToken: isNative,
           referralCode: BLUEBERRY_REFFERAL_CODE,
-          shouldUnwrapNativeToken: false,
         }
       ]
     })
+    
+    const request = wagmiWriteContract({
+      ...GMX.CONTRACT[config.chain.id].ExchangeRouter,
+      value,
+      functionName: 'multicall',
+      args: [[
+        sendWnt,
+        ...isNative ? [] : [sendTokensCalldata],
+        createOrderCalldata,
+      ]]
+    })
+
+    // const request = wagmiWriteContract({
+    //   ...GMX.CONTRACT[config.chain.id].ExchangeRouter,
+    //   value,
+    //   functionName: 'createOrder',
+    //   args: 
+    // })
 
     // const request = params.route === GMX.ADDRESS_ZERO
     //   ? wagmiWriteContract({
@@ -333,7 +357,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
 
     return { ...params, ...req, acceptablePrice, request, swapRoute }
-  }, combineObject({ executionFee, indexTokenPrice: indexPrice, route }), requestTradeParams))
+  }, combineObject({ executionFee, indexPrice, route }), requestTradeParams))
 
   const requestTradeError = filterNull(awaitPromises(map(async req => {
     try {
@@ -373,7 +397,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
   return [
     config.$container(
-      $column(style({ padding: '16px 0', placeContent: 'space-between' }), styleInline(map(mode => ({ height: '140px', display: mode ? 'flex' : 'none' }), inTradeMode)))(
+      $column(layoutSheet.spacing, style({ padding: '16px 0', placeContent: 'space-between' }), styleInline(map(mode => ({ display: mode ? 'flex' : 'none' }), inTradeMode)))(
         $column(layoutSheet.spacingSmall)(
           // $TextField({
           //   label: 'Slippage %',
@@ -416,9 +440,9 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
             //   )
             // }, combineObject({ ...config.tradeState, sizeDeltaUsd }))),
             $infoLabeledValue('Swap', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, swapFee))),
-            $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, marginFee))),
-            $infoLabeledValue('Price Impact', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(params => `${readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))} ${readableFixedUSD30(params.priceImpactUsd)}`, combineObject({ priceImpactUsd, sizeDeltaUsd })))),
             $infoLabeledValue('Execution Fee', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(fee => `${readableFixedUSD30(fee)}`, executionFeeUsd))),
+            $infoLabeledValue('Price Impact', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(params => `${readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))} ${readableFixedUSD30(params.priceImpactUsd)}`, combineObject({ priceImpactUsd, sizeDeltaUsd })))),
+            $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, marginFee))),
           ),
           $row(style({ placeContent: 'space-between' }))(
 
@@ -433,17 +457,15 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
             ),
           ),
 
-
-
         ),
 
         $column(layoutSheet.spacingSmall)(
           switchLatest(map(params => {
-            if (!params.isPluginEnabled || !params.isTradingEnabled) {
+            if (!params.isTradingEnabled) {
               return $Popover({
                 $target: $row(style({ placeContent: 'flex-end' }))(
                   $ButtonSecondary({
-                    $content: $text('Enable GMX'),
+                    $content: $text('Enable Trading'),
                     disabled: mergeArray([
                       dismissEnableTradingOverlay,
                       openEnableTradingPopover
@@ -470,18 +492,11 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
                       $anchor(attr({ href: '/app/trading-terms-and-conditions' }))($text('Terms & Conditions'))
                     ),
 
-                    params.isPluginEnabled
-                      ? $ButtonPrimary({
-                        $content: $text('Agree')
-                      })({
-                        click: approveTradingTether(constant(true))
-                      })
-                      : $ButtonPrimaryCtx({
-                        request: requestEnablePlugin,
-                        $content: $text('Enable GMX & Agree')
-                      })({
-                        click: enableTradingPluginTether()
-                      })
+                    $ButtonPrimary({
+                      $content: $text('Approve T&C'),
+                    })({
+                      click: approveTradingTether(constant(true))
+                    })
                   )
                 }, openEnableTradingPopover),
               })({
@@ -489,7 +504,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
               })
             }
 
-            if (params.route && !params.isprimaryTokenApproved) {
+            if (params.route && !params.isPrimaryApproved) {
 
               return $ButtonPrimaryCtx({
                 request: requestApproveSpend,
@@ -527,7 +542,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
               ),
               $ButtonPrimaryCtx({
                 request: map(req => req.request, requestTrade),
-                disabled: combineArray((isDisabled) => isDisabled, disableButtonVlidation),
+                // disabled: combineArray((isDisabled) => isDisabled, disableButtonVlidation),
                 $content: $text(map(params => {
                   let modLabel: string
 
@@ -535,7 +550,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
                     if (params.isIncrease) {
                       modLabel = 'Increase'
                     } else {
-                      modLabel = (params.sizeDeltaUsd + params.position.size === 0n) ? 'Close' : 'Reduce'
+                      modLabel = (params.sizeDeltaUsd + params.position.latestUpdate.sizeInUsd === 0n) ? 'Close' : 'Reduce'
                     }
                   } else {
                     modLabel = 'Open'
@@ -549,11 +564,11 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
                 )
               })
             )
-          }, combineObject({ isPluginEnabled: getIsPluginEnabled(config.wallet.account.address), isPrimaryApproved, route, isTradingEnabled, primaryToken, primaryDescription })))
+          }, combineObject({ isPrimaryApproved, route, isTradingEnabled, primaryToken, primaryDescription })))
         ),
       ),
 
-      styleInline(map(mode => ({ height: '140px', display: mode ? 'none' : 'flex' }), inTradeMode))(
+      styleInline(map(mode => ({ display: mode ? 'none' : 'flex' }), inTradeMode))(
         switchMap(params => {
           const pos = params.position
           if (pos === null) {

@@ -33,13 +33,13 @@ export const $alert = ($content: $Node) => $alertContainer(style({ alignSelf: 'f
   $content,
 )
 
-export const $alertTooltip = ($content: $Node, $anchorContent?: $Node) => {
+export const $alertTooltip = ($content: $Node) => {
   return $Tooltip({
     $content: $content,
     // $dropContainer: $defaultDropContainer,
     $anchor: $alertContainer(
       $icon({ $content: $alertIcon, viewBox: '0 0 24 24', width: '18px', svgOps: style({ minWidth: '18px' }) }),
-      $anchorContent ? style({ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' })($anchorContent) : empty(),
+      style({ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' })($content),
     ),
   })({})
 }

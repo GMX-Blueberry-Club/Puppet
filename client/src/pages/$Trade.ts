@@ -193,7 +193,7 @@ export const $Trade = (config: ITradeComponent) => component((
     multicast(storage.write(tradingStore, changeMarket, 'market')),
   ])
 
-  const collateralDeltaUsd = replayLatest(changeCollateralDeltaUsd, 0n)
+  const collateralDelta = replayLatest(changeCollateralDeltaUsd, 0n)
   const sizeDeltaUsd = replayLatest(changeSizeDeltaUsd, 0n)
 
 
@@ -431,9 +431,9 @@ export const $Trade = (config: ITradeComponent) => component((
   const collateralTokenPoolInfo = replayLatest(multicast(tradeReader.getTokenPoolInfo(collateralToken)))
 
 
-  const collateralDelta = map(params => {
-    return getTokenAmount(params.primaryPrice, params.collateralDeltaUsd)
-  }, combineObject({ primaryPrice, inputTokenDescription: primaryDescription, collateralDeltaUsd }))
+  const collateralDeltaUsd = map(params => {
+    return getTokenUsd(params.primaryPrice, params.collateralDelta)
+  }, combineObject({ primaryPrice, primaryDescription, collateralDelta }))
 
   const sizeDelta = map(params => {
     return getTokenAmount(params.marketPrice.indexTokenPrice.min, params.sizeDeltaUsd)
@@ -727,7 +727,7 @@ export const $Trade = (config: ITradeComponent) => component((
   })({
     leverage: changeLeverageTether(),
     switchIsIncrease: switchIsIncreaseTether(),
-    changeCollateralDeltaUsd: changeCollateralDeltaUsdTether(),
+    changeCollateralDelta: changeCollateralDeltaUsdTether(),
     changeSizeDeltaUsd: changeSizeDeltaUsdTether(),
     changeInputToken: changePrimaryTokenTether(),
     isUsdCollateralToken: changeIsUsdCollateralTokenTether(),
