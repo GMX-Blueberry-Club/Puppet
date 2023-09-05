@@ -83,7 +83,7 @@ export function getParticiapntMpPortion(mp: IPositionMirrorSettled | IPositionMi
 
 
 export function getMpSlotPnL(mp: IPositionMirrorSlot, markPrice: IOraclePrice, shareTarget?: viem.Address): bigint {
-  const delta = getPositionPnlUsd(mp, markPrice)
+  const delta = getPositionPnlUsd(mp.isLong,  mp.latestUpdate.sizeInUsd, mp.latestUpdate.sizeInTokens, markPrice.min)
   const openPnl = getParticiapntMpPortion(mp, delta, shareTarget)
 
   return openPnl
