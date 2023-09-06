@@ -39,6 +39,7 @@ const pwaOptions: Partial<VitePWAOptions> = {
     description: SITE_CONFIG.APP_DESC_LONG,
     theme_color: SITE_CONFIG.THEME_PRIMARY,
     background_color: SITE_CONFIG.THEME_BACKGROUND,
+    start_url: '/app/leaderboard/settled',
     icons: [
       {
         src: 'pwa-192x192.png',

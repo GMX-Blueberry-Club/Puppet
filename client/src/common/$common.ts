@@ -9,9 +9,17 @@ import * as GMX from 'gmx-middleware-const'
 import { TOKEN_SYMBOL } from "gmx-middleware-const"
 import { $bear, $bull, $Link, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
 import {
-  readableLeverage, factor, getFundingFee, getLiquidationPrice, getMarginFees, getTokenDescription, IAbstractPositionParams, IOraclePrice, IPosition, IPositionSettled,
-  isPositionSettled, liquidationWeight, readablePercentage, readableFixedUSD30, streamOf, switchMap } from "gmx-middleware-utils"
-import { getMpSlotPnL, getPuppetSubscriptionKey, getRouteTypeKey, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
+  factor, getBasisPoints, getFundingFee,
+  getMarginFees,
+  getRoughLiquidationPrice,
+  getTokenDescription, getTokenUsd, IAbstractPositionParams, IOraclePrice, IPosition, IPositionSettled,
+  isPositionSettled, liquidationWeight,
+  readableFixedUSD30,
+  readableLeverage,
+  readablePercentage,
+  streamOf, switchMap
+} from "gmx-middleware-utils"
+import { getMpSlotPnL, getParticiapntMpPortion, getParticiapntMpPortion, getPuppetSubscriptionKey, getRouteTypeKey, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile"
 import { $Popover } from "../components/$Popover"
@@ -32,10 +40,10 @@ export const $midContainer = $column(
   })
 )
 
-export const $size = (size: bigint, collateral: bigint) => {
+export const $size = (size: bigint, collateral: bigint, $divider = $seperator2) => {
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
     $text(readableFixedUSD30(size)),   
-    $seperator2,
+    $divider,
     $leverage(size, collateral),
   )
 }
@@ -110,11 +118,13 @@ export const $tokenIcon = (indexToken: viem.Address, IIcon?: { width?: string })
   })
 }
 
-export const $sizeAndLiquidation = (isLong: boolean, size: bigint, collateral: bigint, averagePrice: bigint, markPrice: Stream<IOraclePrice>) => {
+export const $sizeAndLiquidation = (mp: IPositionMirrorSlot, markPrice: Stream<IOraclePrice>, shareTarget?: viem.Address) => {
+  const size = getParticiapntMpPortion(mp, mp.maxSizeUsd, shareTarget)
+  const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, shareTarget)
 
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
     $text(readableFixedUSD30(size)),
-    $liquidationSeparator(isLong, size, collateral, averagePrice, markPrice),
+    $liquidationSeparator(mp.isLong, mp.latestUpdate.sizeInUsd, mp.latestUpdate.sizeInTokens, mp.latestUpdate.collateralAmount, markPrice),
     $leverage(size, collateral),
   )
 }
@@ -144,8 +154,9 @@ export const $puppets = (puppets: readonly viem.Address[], click: Tether<INode, 
   )
 }
 
-export const $leverage = (size: bigint, collateral: bigint) =>
-  $text(style({ fontWeight: 'bold', letterSpacing: '0.05em', fontSize: '0.85rem' }))(readableLeverage(size, collateral))
+export const $leverage = (size: bigint, collateral: bigint) => {
+  return $text(style({ fontWeight: 'bold', letterSpacing: '0.05em', fontSize: '0.85rem' }))(readableLeverage(size, collateral))
+}
 
 export const $pnlValue = (pnl: Stream<bigint> | bigint, colorful = true) => {
   const pnls = isStream(pnl) ? pnl : now(pnl)
@@ -188,16 +199,19 @@ export const $positionSlotPnl = (mp: IPositionMirrorSlot, positionMarkPrice: Str
 export const $positionSlotRoi = (pos: IPositionMirrorSlot, positionMarkPrice: Stream<IOraclePrice> | IOraclePrice) => {
   const roi = map(markPrice => {
     const delta = getMpSlotPnL(pos, markPrice)
-    return readablePercentage(factor(pos.realisedPnl + delta - pos.cumulativeFee, pos.maxCollateralUsd) * 100n)
+    return readablePercentage(getBasisPoints(pos.realisedPnl + delta - pos.cumulativeFee, pos.maxCollateralUsd))
   }, streamOf(positionMarkPrice))
 
   return $text(roi)
 }
 
-export function $liquidationSeparator(isLong: boolean, size: bigint, collateral: bigint, averagePrice: bigint, markPrice: Stream<IOraclePrice>) {
+export function $liquidationSeparator(isLong: boolean, sizeUsd: bigint, sizeInTokens: bigint, collateralAmount: bigint, markPrice: Stream<IOraclePrice>) {
+  const liqWeight = map(price => {
+    const collateralUsd = getTokenUsd(price.max, collateralAmount)
+    const liquidationPrice = getRoughLiquidationPrice(isLong, sizeUsd, sizeInTokens, collateralUsd, collateralAmount)
 
-  const liquidationPrice = getLiquidationPrice(isLong, size, collateral, averagePrice)
-  const liqWeight = map(price => liquidationWeight(isLong, liquidationPrice, price), markPrice)
+    return liquidationWeight(isLong, liquidationPrice, price)
+  }, markPrice)
 
   return styleInline(map((weight) => {
     return { width: '100%', background: `linear-gradient(90deg, ${pallete.negative} ${`${weight * 100}%`}, ${pallete.foreground} 0)` }

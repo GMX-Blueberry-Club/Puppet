@@ -9,7 +9,7 @@ import * as GMX from 'gmx-middleware-const'
 import { $Table, ISortBy, ScrollRequest } from "gmx-middleware-ui-components"
 import { IAbstractPositionParams, pagingQuery, switchMap } from "gmx-middleware-utils"
 import { ROUTE_DESCRIPTION } from "puppet-middleware-const"
-import { IPositionMirrorSlot, IPuppetRouteSubscritpion, getRouteTypeKey } from "puppet-middleware-utils"
+import { IPositionMirrorSlot, IPuppetRouteSubscritpion, getMpSlotPnL, getRouteTypeKey } from "puppet-middleware-utils"
 import { $labelDisplay } from "../../common/$TextField"
 import { $TraderDisplay, $route, $size } from "../../common/$common"
 import { $DropMultiSelect } from "../../components/form/$Dropdown"
@@ -77,7 +77,7 @@ export const $TopOpen = (config: ITopOpen) => component((
         })
         .map(pos => {
           const marketPrice = params.processData.latestPrice[pos.indexToken]
-          const pnl = getSlotNetPnL(pos, marketPrice)
+          const pnl = getMpSlotPnL(pos, marketPrice)
 
           return { ...pos, pnl }
         })

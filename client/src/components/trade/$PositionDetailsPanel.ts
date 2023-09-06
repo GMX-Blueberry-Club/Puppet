@@ -692,7 +692,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
                     constant(pos)
                   )
                 }),
-                $sizeAndLiquidation(pos.isLong, pos.size, pos.collateral, pos.averagePrice, positionMarkPrice),
+                $sizeAndLiquidation(pos, positionMarkPrice),
                 $infoTooltipLabel(
                   $openPositionPnlBreakdown(pos, cumulativeFee),
                   $pnlValue(pnl)

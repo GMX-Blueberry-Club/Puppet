@@ -1,21 +1,21 @@
 import { O, Op, Tether } from "@aelea/core"
-import { $Node, $text, INode, style } from "@aelea/dom"
+import { $text, INode, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { map, now } from "@most/core"
 import { Stream } from "@most/types"
+import * as GMX from 'gmx-middleware-const'
 import { $Link, $infoTooltipLabel, TableColumn } from "gmx-middleware-ui-components"
-import { factor, getBasisPoints, getPnL, getSlotNetPnL, readableDate, readablePercentage, switchMap, timeSince } from "gmx-middleware-utils"
+import { getBasisPoints, readableDate, readablePercentage, switchMap, timeSince } from "gmx-middleware-utils"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile"
-import { $entry, $openPositionPnlBreakdown, $pnlValue, $puppets, $size, $sizeAndLiquidation, $positionSlotPnl, $positionSlotRoi } from "../../common/$common"
+import { $entry, $openPositionPnlBreakdown, $pnlValue, $positionSlotPnl, $positionSlotRoi, $puppets, $size, $sizeAndLiquidation } from "../../common/$common"
 import { IGmxProcessState, latestTokenPrice } from "../../data/process/process"
 import { $txnIconLink } from "../../elements/$common"
+import { contractReader } from "../../logic/common"
 import { IProfileActiveTab } from "../../pages/$Profile"
 import { $seperator2 } from "../../pages/common"
-import { contractReader } from "../../logic/common"
-import * as GMX from 'gmx-middleware-const'
 
 
 const $tableHeader = (primaryLabel: string, secondaryLabel: string) => $column(style({ textAlign: 'right' }))(
@@ -24,15 +24,12 @@ const $tableHeader = (primaryLabel: string, secondaryLabel: string) => $column(s
 )
 
 
-export const slotSizeColumn = <T extends IPositionMirrorSettled | IPositionMirrorSlot>(processData: Stream<IGmxProcessState>, shareTarget?: viem.Address): TableColumn<T> => ({
+export const slotSizeColumn = <T extends IPositionMirrorSlot>(processData: Stream<IGmxProcessState>, shareTarget?: viem.Address): TableColumn<T> => ({
   $head: $tableHeader('Size', 'Leverage'),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $$body: map(mp => {
     const positionMarkPrice = latestTokenPrice(processData, now(mp.indexToken))
-    const size = getParticiapntMpPortion(mp, mp.maxSizeUsd, shareTarget)
-    const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, shareTarget)
-
-    return $sizeAndLiquidation(mp.isLong, size, collateral, mp.averagePrice, positionMarkPrice)
+    return $sizeAndLiquidation(mp, positionMarkPrice, shareTarget)
   })
 })
 
