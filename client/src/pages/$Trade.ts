@@ -448,9 +448,13 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ primaryPrice, primaryDescription, collateralPrice, marketPrice, marketInfo, collateralDeltaUsd, totalFeeUsd, position, indexPrice }))
 
 
+  const focusPrice = replayLatest(multicast(changefocusPrice), null)
+  const yAxisCoords = replayLatest(multicast(changeYAxisCoords), null)
+  const isFocused = replayLatest(multicast(changeIsFocused), false)
 
   // [config]
   const tradeConfig: StateStream<ITradeConfig> = {
+    focusPrice,
     marketInfo,
     market,
     focusMode,
@@ -606,9 +610,6 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ timeframe: chartInterval, market, processData: config.processData }))
 
 
-  const focusPrice = replayLatest(multicast(changefocusPrice), null)
-  const yAxisCoords = replayLatest(multicast(changeYAxisCoords), null)
-  const isFocused = replayLatest(multicast(changeIsFocused), false)
 
 
   const tradeState: StateStream<ITradeParams> = {

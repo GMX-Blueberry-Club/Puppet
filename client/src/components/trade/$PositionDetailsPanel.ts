@@ -35,6 +35,7 @@ import {
   getPnL, getTokenDescription,
   parseReadableNumber,
   readableFixedUSD30,
+  readableNumber,
   readablePercentage,
   readableUnitAmount,
   resolveAddress,
@@ -116,7 +117,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
   const { 
     collateralDeltaUsd, collateralToken, collateralDelta, marketInfo, market, isUsdCollateralToken, sizeDelta, focusMode,
-    primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage 
+    primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, focusPrice
   } = config.tradeConfig
   const {
     availableIndexLiquidityUsd, averagePrice, collateralDescription,
@@ -539,21 +540,23 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
               $ButtonPrimaryCtx({
                 request: map(req => req.request, requestTrade),
                 // disabled: combineArray((isDisabled) => isDisabled, disableButtonVlidation),
-                $content: $text(map(params => {
+                $content: $text(map(_params => {
                   let modLabel: string
 
-                  if (params.position) {
-                    if (params.isIncrease) {
+                  if (_params.position) {
+                    if (_params.isIncrease) {
                       modLabel = 'Increase'
                     } else {
-                      modLabel = (params.sizeDeltaUsd + params.position.latestUpdate.sizeInUsd === 0n) ? 'Close' : 'Reduce'
+                      modLabel = (_params.sizeDeltaUsd + _params.position.latestUpdate.sizeInUsd === 0n) ? 'Close' : 'Reduce'
                     }
                   } else {
                     modLabel = 'Open'
                   }
 
-                  return modLabel
-                }, combineObject({ position, sizeDeltaUsd, isIncrease })))
+                  const focusPriceLabel = _params.focusPrice ? ` @ ${readableUnitAmount(_params.focusPrice)}`: ''
+
+                  return modLabel + focusPriceLabel
+                }, combineObject({ position, sizeDeltaUsd, isIncrease, focusPrice })))
               })({
                 click: clickProposeTradeTether(
                   constant(config.wallet)
