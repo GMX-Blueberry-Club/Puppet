@@ -12,21 +12,31 @@ export interface ICandlesticksChart extends IChartConfig<'Candlestick'> {
 export const $CandleSticks = (config: ICandlesticksChart) => {
 
   const chartConfig: DeepPartial<ChartOptions> = {
-    grid: {
-      horzLines: {
-        color: '#eee',
-        visible: false,
-      },
-      vertLines: {
-        color: 'transparent',
-        visible: false
-      },
-    },
     overlayPriceScales: {
       borderColor: pallete.indeterminate,
       borderVisible: false,
     },
-    
+    leftPriceScale: {
+      visible: false
+    },
+    rightPriceScale: {
+      borderColor: 'yellow',
+      autoScale: true,
+      visible: false,
+      scaleMargins: {
+        top: 0.4,
+        bottom: 0,
+      }
+    },
+    timeScale: {
+      
+      fixLeftEdge: true,
+      fixRightEdge: true,
+      rightOffset: 0,
+      rightBarStaysOnScroll: true,
+      secondsVisible: true,
+      timeVisible: true,
+    },
     crosshair: {
       mode: CrosshairMode.Normal,
       horzLine: {
@@ -46,7 +56,6 @@ export const $CandleSticks = (config: ICandlesticksChart) => {
         style: LineStyle.Solid,
       }
     },
-
     ...config.chartConfig
   }
 

@@ -706,7 +706,7 @@ export const $Trade = (config: ITradeComponent) => component((
             ? style({ pointerEvents: 'none', flexDirection: 'row', marginTop: '12px', zIndex: 20, placeContent: 'space-between', alignItems: 'flex-start' })
             : style({ pointerEvents: 'none', flex: 0, flexDirection: 'row', zIndex: 20, margin: '8px', alignItems: 'flex-start' })
         )(
-          $row(layoutSheet.spacing, style({ pointerEvents: 'all' }))(
+          $row(layoutSheet.spacingBig, style({ pointerEvents: 'all' }))(
             $column(layoutSheet.spacingSmall)(
               $infoLabel('Borrow Rate'),
               $row(style({ whiteSpace: 'pre' }))(
@@ -799,7 +799,7 @@ export const $Trade = (config: ITradeComponent) => component((
             time: fst.blockTimestamp as Time
           }
 
-          const rightOffset = ((document.body.clientWidth - CONTAINER_WIDTH) / 2) / 8
+          const rightOffset = ((document.body.clientWidth - CONTAINER_WIDTH) / 2) / 14
 
           return $CandleSticks({
             $content: $row(
@@ -845,13 +845,13 @@ export const $Trade = (config: ITradeComponent) => component((
               priceLineColor: pallete.foreground,
               baseLineStyle: LineStyle.SparseDotted,
 
-              upColor: pallete.foreground,
-              borderUpColor: pallete.foreground,
-              wickUpColor: pallete.foreground,
+              upColor: '#27a69a',
+              borderUpColor: '#27a69a',
+              wickUpColor: '#27a69a',
 
-              downColor: 'transparent',
-              borderDownColor: colorAlpha(pallete.foreground, .5),
-              wickDownColor: colorAlpha(pallete.foreground, .5),
+              downColor: '#fd534f',
+              borderDownColor: '#fd534f',
+              wickDownColor: '#fd534f',
             },
             priceLines: [
               map(val => {
@@ -923,21 +923,25 @@ export const $Trade = (config: ITradeComponent) => component((
             }, initialTick, combineObject({ marketPrice, indexTokenDescription: indexDescription })),
             containerOp: style({ position: 'absolute', inset: 0, borderRadius: '20px', overflow: 'hidden' }),
             chartConfig: {
+
               rightPriceScale: {
+                borderColor: 'yellow',
                 visible: true,
-                autoScale: true,
                 entireTextOnly: true,
                 borderVisible: false,
                 scaleMargins: {
-                  top: 0.15,
-                  bottom: 0.15
+                  top: 0.1,
+                  bottom: 0.05
                 }
               },
               timeScale: {
                 timeVisible: true,
                 secondsVisible: false,
                 borderVisible: false,
+                // fixLeftEdge: true,
+                // rightOffset: 100,
                 rightOffset: rightOffset,
+                // fixRightEdge: true,
                 shiftVisibleRangeOnNewBar: true,
               }
             },

@@ -69,16 +69,13 @@ export const $Baseline = (config: IBaselineChart) => {
     handleScale: false,
     handleScroll: false,
     timeScale: {
-      // rightOffset: 110,
       secondsVisible: false,
       timeVisible: true,
       shiftVisibleRangeOnNewBar: true,
-      rightOffset: 0,
-      fixLeftEdge: true,
+      rightBarStaysOnScroll: true,
       fixRightEdge: true,
       borderVisible: false,
-      // visible: false,
-      // rightBarStaysOnScroll: true,
+      
     },
     ...config.chartConfig || {}
   }

@@ -62,30 +62,25 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
     rightPriceScale: {
       visible: false,
     },
-    handleScale: {
-
-    },
     grid: {
       horzLines: {
-        color: '#eee',
         visible: false,
       },
       vertLines: {
-        color: 'transparent',
         visible: false
       },
     },
     overlayPriceScales: {
       borderVisible: false,
     },
-    leftPriceScale: {
-      autoScale: true,
-      visible: false,
-      scaleMargins: {
-        bottom: 0,
-        top: 0,
-      }
-    },
+    // leftPriceScale: {
+    //   autoScale: true,
+    //   visible: false,
+    //   scaleMargins: {
+    //     bottom: 0,
+    //     top: 0,
+    //   }
+    // },
     layout: {
       textColor: pallete.message,
       background: {
@@ -95,7 +90,6 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
       fontSize: 12
     },
     timeScale: {
-      
       rightOffset: 0,
       secondsVisible: true,
       timeVisible: true,
@@ -160,7 +154,6 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
 
 
 
-
   const ignoreAll = filter(() => false)
 
   const priceLineConfigList = config.priceLines || []
@@ -182,7 +175,7 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
           }),
           styleInline(
             map(params => {
-              if (params.coords === null) {
+              if (params.isFocused === false && params.coords === null) {
                 return { display: 'none' }
               }
 
@@ -232,8 +225,6 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
           const { width, height } = containerDimension.contentRect
           chartApi.resize(width, height)
           timeScale.resetTimeScale()
-          timeScale.fitContent()
-
 
           return empty()
         }, containerDimension),
@@ -243,13 +234,13 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
     {
       yAxisCoords: config.yAxisState
         ? mergeArray([
-          filterNull(map(coords => {
+          map(coords => {
             if (coords.isFocused) {
               return null
             }
 
             return coords.crosshairMove?.point?.y || null
-          }, combineObject({ crosshairMove, isFocused: config.yAxisState.isFocused }))),
+          }, combineObject({ crosshairMove, isFocused: config.yAxisState.isFocused })),
           snapshot((params, range) => {
             if (!params.isFocused || params.coords === null || !params.price) {
               return null
