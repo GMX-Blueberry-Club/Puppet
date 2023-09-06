@@ -6,7 +6,7 @@ import { dark } from './src/common/theme'
 
 
 const SITE_CONFIG = {
-  URL:  'https://puppet.house',
+  WEBSITE:  'https://puppet.house',
   TWITTER_HASH:  'PuppetFinance',
   APP_NAME:  'Puppet',
   APP_DESC_SHORT:  'Copy Trading',
