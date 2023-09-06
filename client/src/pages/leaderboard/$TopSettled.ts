@@ -7,7 +7,7 @@ import { empty, map, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Table, ISortBy, ScrollRequest, TableColumn } from "gmx-middleware-ui-components"
-import { IAbstractPositionParams, IPositionListSummary, factor, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IAbstractPositionParams, IPositionListSummary, factor, getMappedValue, groupArrayMany, pagingQuery, readableLeverage, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { ROUTE_DESCRIPTION } from "puppet-middleware-const"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetRouteSubscritpion, getRouteTypeKey, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -227,7 +227,9 @@ export const $TopSettled = (config: ITopSettled) => component((
                 return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
                   $pnlValue(pos.pnl),
                   $seperator2,
-                  $text(style({ fontSize: '.85rem' }))(readablePercentage(factor(pos.pnl, pos.collateral) * 100n)),
+                  $text(style({ fontSize: '.85rem' }))(
+                    readableLeverage(pos.size, pos.collateral)
+                  ),
                 )
               })
             },

@@ -30,8 +30,6 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
 
     const avgSize = size / idxBn
     const avgCollateral = collateral / idxBn
-    const avgLeverage = cumulativeLeverage / idxBn
-
 
     const fee = seed.fee + getParticiapntMpPortion(next, next.cumulativeFee, shareTarget)
     const pnl = seed.pnl + getParticiapntMpPortion(next, next.realisedPnl, shareTarget)

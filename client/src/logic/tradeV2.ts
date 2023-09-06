@@ -371,7 +371,6 @@ export async function getMarketPoolInfo(
     args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_IN_TOKENS_KEY), market.marketToken, market.longToken, false])],
   })
 
-
   const shortInterestInTokensUsingShortToken = wagmi.readContract({
     ...datastoreContract,
     functionName: 'getUint',
@@ -398,9 +397,6 @@ export async function getMarketPoolInfo(
 
 
   
-  const longInterestUsd = await longInterestUsingLongToken + await longInterestUsingShortToken
-  const shortInterestUsd = await shortInterestUsingLongToken + await shortInterestUsingShortToken
-
   
 
   return {
@@ -418,10 +414,23 @@ export async function getMarketPoolInfo(
     // maxShortPoolAmount: await maxShortPoolAmount,
     // longPoolAmountAdjustment: await longPoolAmountAdjustment,
     // shortPoolAmountAdjustment: await shortPoolAmountAdjustment,
-    // reserveFactorLong: await reserveFactorLong,
-    // reserveFactorShort: await reserveFactorShort,
-    // openInterestReserveFactorLong: await openInterestReserveFactorLong,
-    // openInterestReserveFactorShort: await openInterestReserveFactorShort,
+
+    reserveFactorLong: await reserveFactorLong,
+    reserveFactorShort: await reserveFactorShort,
+
+    openInterestReserveFactorLong: await openInterestReserveFactorLong,
+    openInterestReserveFactorShort: await openInterestReserveFactorShort,
+
+    longInterestInTokensUsingLongToken: await longInterestInTokensUsingLongToken,
+    longInterestInTokensUsingShortToken: await longInterestInTokensUsingShortToken,
+    shortInterestInTokensUsingLongToken: await shortInterestInTokensUsingLongToken,
+    shortInterestInTokensUsingShortToken: await shortInterestInTokensUsingShortToken,
+
+    longInterestInTokens: await longInterestInTokensUsingLongToken + await longInterestInTokensUsingShortToken,
+    shortInterestInTokens: await shortInterestInTokensUsingLongToken + await shortInterestInTokensUsingShortToken,
+
+    // longInterestUsd: await longInterestUsingLongToken + await longInterestUsingShortToken,
+    // shortInterestUsd: await shortInterestUsingLongToken + await shortInterestUsingShortToken,
 
     // swapImpactPoolAmountLong: await swapImpactPoolAmountLong,
     // swapImpactPoolAmountShort: await swapImpactPoolAmountShort,
@@ -436,8 +445,8 @@ export async function getMarketPoolInfo(
     positionFeeFactorForNegativeImpact: await positionFeeFactorForNegativeImpact,
     minCollateralFactor: await minCollateralFactor,
 
-    longInterestUsd,
-    shortInterestUsd,
+
+
 
     maxPositionImpactFactorForLiquidations: await maxPositionImpactFactorForLiquidations,
 

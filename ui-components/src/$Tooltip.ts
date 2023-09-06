@@ -22,7 +22,7 @@ export const $defaultDropContainer = $column(style({
   background: pallete.background,
   boxShadow: `${colorAlpha(pallete.message, .14)} 0px 4px 20px 8px, ${colorAlpha(pallete.message, .1)} 0px 1px 3px 1px`,
   padding: '16px',
-  minWidth: '250px',
+  minWidth: '300px',
   borderRadius: '8px',
   fontWeight: 'normal',
 }))

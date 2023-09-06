@@ -54,6 +54,7 @@ import { IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "./$PositionEditor"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
+import { $TradePnlHistory } from "./$TradePnlHistory"
 
 
 export enum ITradeFocusMode {
@@ -119,10 +120,10 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
   } = config.tradeConfig
   const {
     availableIndexLiquidityUsd, averagePrice, collateralDescription,
-    collateralTokenPoolInfo, collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee, executionFeeUsd, fundingFee,
+    collateralTokenPoolInfo, collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee, executionFeeUsd,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
-    isTradingEnabled, liquidationPrice, marginFee, route,
-    position, swapFee, walletBalance, markets, priceImpactUsd, totalNextFeesUsd
+    isTradingEnabled, liquidationPrice, marginFeeUsd, route, netPositionValueUsd,
+    position, swapFee, walletBalance, markets, priceImpactUsd, totalFeeUsd
   } = config.tradeState
 
 
@@ -181,14 +182,14 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
       if (state.position && state.primaryToken !== state.collateralToken) {
         const delta = getPnL(state.isLong, state.position.averagePrice, state.indexPrice, -state.sizeDeltaUsd)
         const adjustedSizeDelta = safeDiv(abs(state.sizeDeltaUsd) * delta, state.position.latestUpdate.sizeInUsd)
-        const fees = state.swapFee + state.marginFee
+        const fees = state.swapFee + state.marginFeeUsd
         const collateralDelta = -state.sizeDeltaUsd === state.position.latestUpdate.sizeInUsd
-          ? state.position.collateral - state.fundingFee
+          ? state.position.collateral - state.totalFeeUsd
           : -state.collateralDeltaUsd
 
         const totalOut = collateralDelta + adjustedSizeDelta - fees
 
-        const nextUsdgAmount = totalOut * getDenominator(GMX.USDG_DECIMALS) / GMX.PERCISION
+        const nextUsdgAmount = totalOut * getDenominator(GMX.USDG_DECIMALS) / GMX.PRECISION
         if (state.collateralTokenPoolInfo.usdgAmounts + nextUsdgAmount > state.collateralTokenPoolInfo.maxUsdgAmounts) {
           return `${state.collateralDescription.symbol} pool exceeded, you cannot receive ${state.primaryDescription.symbol}, switch to ${state.collateralDescription.symbol} in the first input token switcher`
         }
@@ -205,12 +206,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
     }
 
     return null
-  }, combineObject({
-    leverage, position, swapFee, marginFee, fundingFee, liquidationPrice, walletBalance,
-    walletBalanceUsd, isIncrease, indexPrice, collateralDelta, collateralDeltaUsd, primaryDescription,
-    collateralToken, sizeDeltaUsd, availableIndexLiquidityUsd, primaryToken, collateralTokenPoolInfo,
-    collateralDescription, indexDescription, isLong,
-  })))
+  }, combineObject({ ...config.tradeState, ...config.tradeConfig })))
 
 
 
@@ -238,8 +234,8 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
       : req.isIncrease
         ? -slippageN : slippageN
 
-    const priceBasisPoints = GMX.PERCISION + allowedSlippage
-    const acceptablePrice = params.indexPrice * priceBasisPoints / GMX.PERCISION
+    const priceBasisPoints = GMX.PRECISION + allowedSlippage
+    const acceptablePrice = params.indexPrice * priceBasisPoints / GMX.PRECISION
     const isNative = req.primaryToken === GMX.ADDRESS_ZERO
 
 
@@ -442,7 +438,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
             $infoLabeledValue('Swap', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, swapFee))),
             $infoLabeledValue('Execution Fee', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(fee => `${readableFixedUSD30(fee)}`, executionFeeUsd))),
             $infoLabeledValue('Price Impact', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(params => `${readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))} ${readableFixedUSD30(params.priceImpactUsd)}`, combineObject({ priceImpactUsd, sizeDeltaUsd })))),
-            $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, marginFee))),
+            $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, marginFeeUsd))),
           ),
           $row(style({ placeContent: 'space-between' }))(
 
@@ -453,7 +449,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
               'Total Fees'
             ),
             $text(style({ color: pallete.indeterminate }))(
-              map(total => readableFixedUSD30(total), totalNextFeesUsd)
+              map(total => readableFixedUSD30(total), totalFeeUsd)
             ),
           ),
 
@@ -581,13 +577,10 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
           }
 
           const hoverChartPnl = switchLatest(map((chartCxChange) => {
-            if (Number.isFinite(chartCxChange)) {
-              return now(chartCxChange)
-            }
-
+            if (Number.isFinite(chartCxChange)) return now(chartCxChange)
 
             return map(price => {
-              const delta = getPnL(pos.isLong, pos.averagePrice, price, pos.size)
+              // const delta = getPnL(pos.isLong, pos.averagePrice, price, pos.size)
               // const val = formatFixed(delta + pos.realisedPnl - pos.cumulativeFee, 30)
               const val = 0
 
@@ -598,7 +591,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
           const rateFactor = params.isLong ? params.fundingRateFactor : params.stableFundingRateFactor
           const rate = safeDiv(rateFactor * params.collateralTokenPoolInfo.reservedAmount, params.collateralTokenPoolInfo.poolAmounts)
-          const nextSize = pos.size * rate / GMX.PERCISION / 100n
+          const nextSize = pos.latestUpdate.sizeInUsd * rate / GMX.BASIS_POINTS_DIVISOR / 100n
 
 
           return $column(style({ position: 'relative' }))(
@@ -735,6 +728,13 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
           return null
         }
       }, requestApproveSpend))),
+
+      leverage: filterNull(snapshot((params, positionSlot) => {
+        if (params.position === null) return null
+
+        const positionLeverage = div(params.position.latestUpdate.sizeInUsd, params.netPositionValueUsd)
+        return positionLeverage
+      }, combineObject({ netPositionValueUsd, position }), delay(50, clickResetPosition))),
 
       // leverage: filterNull(snapshot(state => {
       //   if (state.position === null) {

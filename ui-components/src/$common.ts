@@ -2,7 +2,7 @@ import { combineObject, isStream, O, Op } from "@aelea/core"
 import { $element, $Node, $svg, $text, attr, IBranch, style, styleBehavior, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map } from "@most/core"
+import { empty, map, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import { CHAIN } from "gmx-middleware-const"
 import { getTxExplorerUrl, ITokenDescription, shortenTxAddress, switchMap } from "gmx-middleware-utils"
@@ -141,27 +141,38 @@ interface IHintNumberDisplay {
   change: Stream<string>
 }
 
-export const $hintNumChange = ({ change, isIncrease, val, label, tooltip }: IHintNumberDisplay) => $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-  tooltip
-    ? $infoTooltipLabel(tooltip, label)
-    : label
-      ? $text(style({ color: pallete.foreground }))(label) : empty(),
-  switchMap(params => {
+export const $hintNumChange = ({ change, isIncrease, val, label, tooltip }: IHintNumberDisplay) => {
 
-    return $row(layoutSheet.spacingSmall, style({ lineHeight: 1, alignItems: 'center' }))(
-      params.val ? $text(style({ color: pallete.foreground }))(params.val) : empty(),
-      params.val
-        ? $icon({
+  const arrowColor = map(ic => ic ? pallete.positive : pallete.indeterminate, isIncrease)
+
+  const displayChange = skipRepeats(map(str => {
+    return !!str
+  }, change))
+
+  return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+    tooltip
+      ? $infoTooltipLabel(tooltip, label)
+      : label
+        ? $text(style({ color: pallete.foreground }))(label) : empty(),
+    $row(layoutSheet.spacingSmall, style({ lineHeight: 1, alignItems: 'center' }))(
+      $text(style({ color: pallete.foreground }))(val),
+
+      switchMap(display => {
+        if (!display) return empty()
+
+        return $icon({
           $content: $arrowRight,
           width: '10px',
-          svgOps: style(params.isIncrease ? { fill: pallete.positive } : { fill: pallete.indeterminate }),
-          viewBox: '0 0 32 32'
+          svgOps: styleBehavior(map(params => {
+            return params.change ? { fill: params.arrowColor } : { display: 'none' }
+          }, combineObject({ change, arrowColor }))),
+          viewBox: '0 0 32 32'  
         })
-        : empty(),
-      $text(style({}))(change),
-    )
-  }, combineObject({ val, isIncrease, })),
-)
+      }, displayChange),
+      $text(map(str => str ?? '', change)),
+    ),
+  )
+}
 
 interface Icon {
   /**  in pixels */

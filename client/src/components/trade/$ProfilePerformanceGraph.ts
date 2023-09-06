@@ -131,15 +131,12 @@ export function performanceTimeline(config: IPerformanceTimeline) {
     },
     gapMap: (acc, next, intervalSlot) => {
       const pendingPnl = Object.values(acc.positionSlot).reduce((pnlAcc, slot) => {
-        if  (slot.update.collateralAmount === 0n) {
-          return pnlAcc
-        }
-
+        if  (slot.update.collateralAmount === 0n) return pnlAcc
         const mp = slot.source
         const tickerId = `${mp.indexToken}:${interval}` as const
         const tokenPrice = getClosestpricefeedCandle(config.processData.pricefeed, tickerId, intervalSlot, 0)
-        const lstUpdate = mp.latestUpdate
-        const pnl = getPositionPnlUsd(lstUpdate, { isPriceFeed: true, max: tokenPrice.c, minPrice: tokenPrice.c, token: mp.indexToken  })
+
+        const pnl = getPositionPnlUsd(slot.update.isLong, slot.update.sizeInUsd, slot.update.sizeInTokens, tokenPrice.c)
         const pnlShare = getParticiapntMpPortion(mp, pnl, config.targetShare)
 
         return pnlAcc + pnlShare
