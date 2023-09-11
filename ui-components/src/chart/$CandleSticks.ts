@@ -29,7 +29,6 @@ export const $CandleSticks = (config: ICandlesticksChart) => {
       }
     },
     timeScale: {
-      
       fixLeftEdge: true,
       fixRightEdge: true,
       rightOffset: 0,

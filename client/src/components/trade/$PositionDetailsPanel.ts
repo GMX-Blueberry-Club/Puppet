@@ -167,7 +167,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
         return `Not enough liquidity. current capcity ${readableFixedUSD30(state.availableIndexLiquidityUsd)}`
       }
 
-      if (state.isIncrease ? state.collateralDelta > state.walletBalance : state.collateralDeltaUsd > state.walletBalanceUsd) {
+      if (state.isIncrease ? state.collateralDelta > state.walletBalance : state.collateralDeltaUsd > state.walletBalance) {
         return `Not enough ${state.primaryDescription.symbol} in connected account`
       }
 
@@ -178,31 +178,32 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
       // if (state.position === null && state.collateralDeltaUsd < 10n ** 30n * 10n) {
       //   return `Min 10 Collateral required`
       // }
-    } else {
-
-      if (state.position && state.primaryToken !== state.collateralToken) {
-        const delta = getPnL(state.isLong, state.position.averagePrice, state.indexPrice, -state.sizeDeltaUsd)
-        const adjustedSizeDelta = safeDiv(abs(state.sizeDeltaUsd) * delta, state.position.latestUpdate.sizeInUsd)
-        const fees = state.swapFee + state.marginFeeUsd
-        const collateralDelta = -state.sizeDeltaUsd === state.position.latestUpdate.sizeInUsd
-          ? state.position.collateral - state.totalFeeUsd
-          : -state.collateralDeltaUsd
-
-        const totalOut = collateralDelta + adjustedSizeDelta - fees
-
-        const nextUsdgAmount = totalOut * getDenominator(GMX.USDG_DECIMALS) / GMX.PRECISION
-        if (state.collateralTokenPoolInfo.usdgAmounts + nextUsdgAmount > state.collateralTokenPoolInfo.maxUsdgAmounts) {
-          return `${state.collateralDescription.symbol} pool exceeded, you cannot receive ${state.primaryDescription.symbol}, switch to ${state.collateralDescription.symbol} in the first input token switcher`
-        }
-      }
-
     }
+    // else {
+    //   if (state.position && state.primaryToken !== state.collateralToken) {
+    //     const delta = getPnL(state.isLong, state.position.averagePrice, state.indexPrice, -state.sizeDeltaUsd)
+    //     const adjustedSizeDelta = safeDiv(abs(state.sizeDeltaUsd) * delta, state.position.latestUpdate.sizeInUsd)
+    //     const fees = state.swapFee + state.marginFeeUsd
+    //     const collateralDelta = -state.sizeDeltaUsd === state.position.latestUpdate.sizeInUsd
+    //       ? state.position.collateral - state.totalFeeUsd
+    //       : -state.collateralDeltaUsd
+
+    //     const totalOut = collateralDelta + adjustedSizeDelta - fees
+
+    //     const nextUsdgAmount = totalOut * getDenominator(GMX.USDG_DECIMALS) / GMX.PRECISION
+    //     if (state.collateralTokenPoolInfo.usdgAmounts + nextUsdgAmount > state.collateralTokenPoolInfo.maxUsdgAmounts) {
+    //       return `${state.collateralDescription.symbol} pool exceeded, you cannot receive ${state.primaryDescription.symbol}, switch to ${state.collateralDescription.symbol} in the first input token switcher`
+    //     }
+    //   }
+    // }
 
     if (!state.isIncrease && state.position === null) {
       return `No ${state.indexDescription.symbol} position to reduce`
     }
 
-    if (state.position && state.liquidationPrice && (state.isLong ? state.liquidationPrice > state.indexPrice : state.liquidationPrice < state.indexPrice)) {
+    const indexPriceUsd = state.indexPrice * getDenominator(getTokenDescription(state.market.indexToken).decimals)
+
+    if (state.position && state.liquidationPrice && (state.isLong ? state.liquidationPrice > indexPriceUsd : state.liquidationPrice < indexPriceUsd)) {
       return `Exceeding liquidation price`
     }
 
@@ -268,13 +269,10 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
       args: [orderVaultAddress, totalWntAmount]
     })
 
-    
-    const sendTokensCalldata = viem.encodeFunctionData({
-      abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-      functionName: 'sendTokens',
-      args: [resolvedPrimaryAddress, orderVaultAddress, req.collateralDelta]
-    })
 
+    const orderType = req.isIncrease
+      ? req.focusPrice ? OrderType.LimitIncrease : OrderType.MarketIncrease
+      : req.focusPrice ? OrderType.LimitDecrease : OrderType.MarketDecrease
 
     const createOrderCalldata = viem.encodeFunctionData({
       abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
@@ -290,15 +288,15 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
             swapPath: [req.market.marketToken]
           },
           numbers: {
-            sizeDeltaUsd: req.sizeDeltaUsd,
-            initialCollateralDeltaAmount: req.collateralDelta,
+            sizeDeltaUsd: abs(req.sizeDeltaUsd),
+            initialCollateralDeltaAmount: abs(req.collateralDelta),
             acceptablePrice: acceptablePrice,
             triggerPrice: acceptablePrice,
             executionFee: params.executionFee,
             callbackGasLimit: 0n,
             minOutputAmount: 0n,
           },
-          orderType: OrderType.MarketIncrease,
+          orderType,
           decreasePositionSwapType: DecreasePositionSwapType.NoSwap,
           isLong: req.isLong,
           shouldUnwrapNativeToken: isNative,
@@ -313,7 +311,13 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
       functionName: 'multicall',
       args: [[
         sendWnt,
-        ...isNative ? [] : [sendTokensCalldata],
+        ...isNative && !isIncrease ? [] : [
+          viem.encodeFunctionData({
+            abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
+            functionName: 'sendTokens',
+            args: [resolvedPrimaryAddress, orderVaultAddress, req.collateralDelta]
+          })
+        ],
         createOrderCalldata,
       ]]
     })
@@ -391,6 +395,8 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
     return recpt
   }, clickApproveprimaryToken))
 
+
+  const newLocal = switchMap(() => position, clickResetPosition)
 
   return [
     config.$container(
@@ -733,11 +739,11 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
       }, requestApproveSpend))),
 
       leverage: filterNull(snapshot((params, positionSlot) => {
-        if (params.position === null) return null
+        if (positionSlot === null) return null
 
-        const positionLeverage = div(params.position.latestUpdate.sizeInUsd, params.netPositionValueUsd)
-        return positionLeverage
-      }, combineObject({ netPositionValueUsd, position }), delay(50, clickResetPosition))),
+
+        return div(positionSlot.latestUpdate.sizeInUsd, params.netPositionValueUsd)
+      }, combineObject({ netPositionValueUsd }), newLocal)),
 
       // leverage: filterNull(snapshot(state => {
       //   if (state.position === null) {

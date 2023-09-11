@@ -150,7 +150,7 @@ export const gmxProcess = defineProcess(
     step(seed, value) {
       const entity = getEventType<IMarketCreatedEvent>('Market', value, seed.approximatedTimestamp)
       seed.markets[entity.marketToken] = {
-        salt: entity.salt,
+        // salt: entity.salt,
         indexToken: entity.indexToken,
         longToken: entity.longToken,
         marketToken: entity.marketToken,
@@ -159,19 +159,19 @@ export const gmxProcess = defineProcess(
       return seed
     },
   },
-  {
-    source: gmxLog.positionFeeInfo,
-    queryBlockRange: 100000n,
-    step(seed, value) {
-      const entity = getEventdata<PositionFeesInfo>(value)
-      const slot = seed.mirrorPositionSlot[entity.positionKey]
-      if (slot) {
-        slot.feeUpdates = [...slot.feeUpdates, entity]
-      }
+  // {
+  //   source: gmxLog.positionFeeInfo,
+  //   queryBlockRange: 100000n,
+  //   step(seed, value) {
+  //     const entity = getEventdata<PositionFeesInfo>(value)
+  //     const slot = seed.mirrorPositionSlot[entity.positionKey]
+  //     if (slot) {
+  //       slot.feeUpdates = [...slot.feeUpdates, entity]
+  //     }
 
-      return seed
-    },
-  },
+  //     return seed
+  //   },
+  // },
   {
     source: gmxLog.oraclePrice,
     queryBlockRange: 100000n,
@@ -216,7 +216,7 @@ export const gmxProcess = defineProcess(
         indexToken: market.indexToken,
         latestUpdate: update,
         puppets: [],
-        feeUpdates: [],
+        // feeUpdates: [],
         orderKey: update.orderKey,
         routeTypeKey: getRouteTypeKey(update.collateralToken, update.market, update.isLong),
         route: ADDRESS_ZERO,

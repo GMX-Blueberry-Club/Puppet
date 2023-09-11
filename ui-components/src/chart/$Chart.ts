@@ -190,37 +190,35 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
         : empty(),
 
       ignoreAll(mergeArray([
-        mergeArray([
-          config.appendData
-            ? tap(next => {
-              if (next && next.time) {
-                seriesApi.update(next)
-              }
+        config.appendData
+          ? tap(next => {
+            if (next && next.time) {
+              seriesApi.update(next)
+            }
 
-            }, config.appendData)
-            : empty(),
-          ...priceLineConfigList.map(lineStreamConfig => {
-            return scan((prev, params) => {
-              if (prev && params === null) {
-                seriesApi.removePriceLine(prev)
-              }
+          }, config.appendData)
+          : empty(),
+        ...priceLineConfigList.map(lineStreamConfig => {
+          return scan((prev, params) => {
+            if (prev && params === null) {
+              seriesApi.removePriceLine(prev)
+            }
 
-              if (params) {
-                if (prev) {
-                  prev.applyOptions(params)
-                  return prev
-                } else {
-                  return seriesApi.createPriceLine(params)
-                }
+            if (params) {
+              if (prev) {
+                prev.applyOptions(params)
+                return prev
+              } else {
+                return seriesApi.createPriceLine(params)
               }
+            }
 
-              return null
-            }, null as IPriceLine | null, lineStreamConfig)
-          }),
-          tap(next => {
-            seriesApi.setMarkers(next)
-          }, config.markers || empty()),
-        ]),
+            return null
+          }, null as IPriceLine | null, lineStreamConfig)
+        }),
+        tap(next => {
+          seriesApi.setMarkers(next)
+        }, config.markers || empty()),
         combineArray(([containerDimension]) => {
           const { width, height } = containerDimension.contentRect
           chartApi.resize(width, height)
@@ -242,11 +240,11 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
             return coords.crosshairMove?.point?.y || null
           }, combineObject({ crosshairMove, isFocused: config.yAxisState.isFocused })),
           snapshot((params, range) => {
-            if (!params.isFocused || params.coords === null || !params.price) {
-              return null
+            if (params.isFocused && params.price) {
+              return seriesApi.priceToCoordinate(params.price)
             }
 
-            return seriesApi.priceToCoordinate(params.price)
+            return null
           }, combineObject(config.yAxisState), visibleLogicalRangeChange),
 
         ]) : empty(),
@@ -267,7 +265,7 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
             return coords ? seriesApi.coordinateToPrice(coords) : null
           }, combineObject(config.yAxisState), config.yAxisState.coords)
         ])) : empty(),
-      isFocused: config.yAxisState ? snapshot((focused) => !focused, config.yAxisState.isFocused, click) : empty(),
+      isFocused: config.yAxisState ? snapshot(focused => !focused, config.yAxisState.isFocused, click) : empty(),
       crosshairMove,
       click,
       visibleLogicalRangeChange,
