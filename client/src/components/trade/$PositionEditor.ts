@@ -111,6 +111,7 @@ export interface ITradeActions {
 
 
 export interface ITradeConfig {
+  focusPrice: number | null
   market: IMarket
   marketInfo: IMarketInfo
   isLong: boolean
@@ -238,13 +239,15 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
       const nextCollateralTokenAmount = getTokenAmount(params.indexPrice, nextCollateralUsd)
       const positionCollateral = params.position ? getTokenAmount(params.indexPrice, params.netPositionValueUsd) : 0n
       const nextCollateralDeltaAmount = nextCollateralTokenAmount - positionCollateral
-      const nextDeltaBps = abs(div(nextCollateralDeltaAmount, positionCollateral))
 
-      if (nextDeltaBps < 100n) {
-        return 0n
-      }
 
       if (params.position) {
+        const nextDeltaBps = abs(div(nextCollateralDeltaAmount, positionCollateral))
+
+        if (nextDeltaBps < 100n) {
+          return 0n
+        }
+
         const positionMultiplier = div(params.position.latestUpdate.sizeInUsd, params.netPositionValueUsd)
         const nextMultiplier = params.isIncrease ? params.leverage - positionMultiplier : positionMultiplier - params.leverage
         const multiplierDelta = params.isIncrease ? positionMultiplier - nextMultiplier : nextMultiplier - positionMultiplier

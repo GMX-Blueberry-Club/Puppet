@@ -4,9 +4,9 @@ import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, mergeArray, multicast, skipRepeats, snapshot, startWith } from "@most/core"
 import { Stream } from "@most/types"
-import { TIME_INTERVAL_MAP } from "gmx-middleware-const"
+import { BASIS_POINTS_DIVISOR, TIME_INTERVAL_MAP } from "gmx-middleware-const"
 import { $caretDown, $check, $icon, $infoLabeledValue, $target, $xCross } from "gmx-middleware-ui-components"
-import { getMappedValue, groupArrayMany, parseBps, readableDate, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { formatFixed, getMappedValue, groupArrayMany, parseBps, readableDate, readablePercentage, readableUnitAmount, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -222,7 +222,7 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
   [clickSubmit, clickSubmitTether]: Behavior<any>,
   [selectRouteType, selectRouteTypeTether]: Behavior<viem.Hex>,
 ) => {
-  const routeTypeList = Object.keys(PUPPET.ROUTE_DESCRIPTIN_MAP) as viem.Hex[]
+  const routeTypeList = Object.keys(ROUTE_DESCRIPTIN_MAP) as viem.Hex[]
 
 
   const subscribed = startWith(true, clickUnsubscribe)
@@ -249,12 +249,12 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
           $container: $row(style({ borderRadius: '30px', backgroundColor: pallete.background, padding: '4px 8px', position: 'relative', border: `1px solid ${colorAlpha(pallete.foreground, .2)}`, cursor: 'pointer' })),
           selector: {
             list: routeTypeList,
-            $$option: map(key => $route(getMappedValue(PUPPET.ROUTE_DESCRIPTIN_MAP, key))),
+            $$option: map(key => $route(getMappedValue(ROUTE_DESCRIPTIN_MAP, key))),
             value: routeTypeKey,
           },
           $selection: switchMap(key => {
             return $row(layoutSheet.spacingSmall)(
-              $route(getMappedValue(PUPPET.ROUTE_DESCRIPTIN_MAP, key)),
+              $route(getMappedValue(ROUTE_DESCRIPTIN_MAP, key)),
               $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
             )
           }, routeTypeKey),
@@ -265,7 +265,9 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
 
       $TextField({
         label: 'Allow %',
-        value: map(x => readablePercentage(x * 100n), allowance),
+        value: map(x => {
+          return formatFixed(x, 2)
+        }, allowance),
         labelWidth: 100,
         hint: `% allocated per position adjustment. Lower values decrease risk. Helps with easier management if peformance is below expectation"`,
       })({
