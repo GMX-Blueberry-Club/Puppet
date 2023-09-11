@@ -471,6 +471,9 @@ export const $Trade = (config: ITradeComponent) => component((
     return collateralUsd + pnl - fees.borrowing.borrowingFeeUsd - pendingFundingFeesUsd
   }, combineObject({ marketPrice, marketInfo, positionFees, indexPrice, collateralPrice, collateralDescription }), position)
 
+  const focusPrice = replayLatest(multicast(changefocusPrice), null)
+  const yAxisCoords = replayLatest(multicast(changeYAxisCoords), null)
+  const isFocused = replayLatest(multicast(changeIsFocused), false)
 
   const focusPrice = replayLatest(multicast(changefocusPrice), null)
   const yAxisCoords = mergeArray([
