@@ -266,7 +266,7 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
       $TextField({
         label: 'Allow %',
         value: map(x => {
-          return formatFixed(x, 2)
+          return formatFixed(x, 4)
         }, allowance),
         labelWidth: 100,
         hint: `% allocated per position adjustment. Lower values decrease risk. Helps with easier management if peformance is below expectation"`,

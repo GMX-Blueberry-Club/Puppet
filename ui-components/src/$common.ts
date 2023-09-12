@@ -154,7 +154,7 @@ export const $hintNumChange = ({ change, isIncrease, val, label, tooltip }: IHin
       ? $infoTooltipLabel(tooltip, label)
       : label
         ? $text(style({ color: pallete.foreground }))(label) : empty(),
-    $row(layoutSheet.spacingSmall, style({ lineHeight: 1, alignItems: 'center' }))(
+    $row(layoutSheet.spacingTiny, style({ lineHeight: 1, alignItems: 'center' }))(
       $text(style({ color: pallete.foreground }))(val),
 
       switchMap(display => {

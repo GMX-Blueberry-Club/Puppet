@@ -7,8 +7,8 @@ import { fetchBalance, readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
 import * as GMX from "gmx-middleware-const"
 import {
-  IAbstractPositionIdentity, IPriceInterval, IRequestPricefeedApi, ITokenSymbol,
-  filterNull, getMappedValue, getTokenDescription, parseFixed, periodicRun, resolveAddress
+  IAbstractPositionIdentity, IPriceInterval, IRequestPricefeedApi, ITokenDescription, ITokenSymbol,
+  filterNull, getDenominator, getMappedValue, getTokenDescription, parseFixed, periodicRun, resolveAddress
 } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { Address, Chain } from "viem"
@@ -86,9 +86,8 @@ const gmxIOPriceMapSource = {
   })))),
 }
 
-export function latestPriceFromExchanges(indexToken: viem.Address): Stream<bigint> {
-  const existingToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION_MAP, indexToken)
-  const symbol = derievedSymbolMapping[existingToken.symbol] || existingToken
+export function latestPriceFromExchanges(tokendescription: ITokenDescription): Stream<bigint> {
+  const symbol = derievedSymbolMapping[tokendescription.symbol]
 
   if (symbol === null) {
     console.warn(`no symbol ${symbol} found in mapping`)
@@ -140,7 +139,7 @@ export function latestPriceFromExchanges(indexToken: viem.Address): Stream<bigin
     return prev === 0 ? next : (prev + next) / 2
   }, 0, allSources))
 
-  return map(ev => parseFixed(ev, 30), avgPrice)
+  return map(ev => parseFixed(ev, GMX.USD_DECIMALS) / getDenominator(tokendescription.decimals), avgPrice)
 }
 
 
@@ -265,8 +264,10 @@ export function connectTrade(chain: ISupportedChain) {
 }
 
 
-export const exchangesWebsocketPriceSource = (chain: ISupportedChain, token: viem.Address) => {
-  return latestPriceFromExchanges(token)
+export const exchangesWebsocketPriceSource = (token: viem.Address) => {
+  const existingToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION_MAP, token)
+
+  return latestPriceFromExchanges(existingToken)
   // const source = gmxIOPriceMapSource[chain.id]
 
   // if (!source) {

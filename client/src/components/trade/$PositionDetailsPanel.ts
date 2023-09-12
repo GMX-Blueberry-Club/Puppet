@@ -125,16 +125,8 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
     collateralTokenPoolInfo, collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee, executionFeeUsd,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
     isTradingEnabled, liquidationPrice, marginFeeUsd, route, netPositionValueUsd,
-    position, swapFee, walletBalance, markets, priceImpactUsd, totalFeeUsd
+    position, swapFee, walletBalance, markets, priceImpactUsd, adjustmentFeeUsd
   } = config.tradeState
-
-
-  const walletBalanceUsd = skipRepeats(combineArray(params => {
-    const amountUsd = params.walletBalance * params.primaryPrice
-
-    return params.primaryToken === GMX.ADDRESS_ZERO ? amountUsd - GMX.DEDUCT_USD_FOR_GAS : amountUsd
-  }, combineObject({ walletBalance, primaryPrice, primaryToken })))
-
 
 
 
@@ -255,9 +247,6 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
     //   sizeDelta: abs(req.sizeDeltaUsd)
     // }
 
-    const value = isNative ? params.executionFee + req.collateralDelta : params.executionFee
-
-
 
     const orderVaultAddress = GMX.CONTRACT[config.chain.id].OrderVault.address
 
@@ -306,19 +295,20 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
       ]
     })
     
+
     const request = wagmiWriteContract({
       ...GMX.CONTRACT[config.chain.id].ExchangeRouter,
-      value,
+      value: totalWntAmount,
       functionName: 'multicall',
       args: [[
         sendWnt,
-        ...isNative && !isIncrease ? [] : [
+        ...!isNative && req.isIncrease ? [
           viem.encodeFunctionData({
             abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
             functionName: 'sendTokens',
             args: [resolvedPrimaryAddress, orderVaultAddress, req.collateralDelta]
           })
-        ],
+        ] : [],
         createOrderCalldata,
       ]]
     })
@@ -397,183 +387,10 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
   }, clickApproveprimaryToken))
 
 
-  const newLocal = switchMap(() => position, clickResetPosition)
+  const resetLeverage = switchMap(() => position, clickResetPosition)
 
   return [
     config.$container(
-      $column(layoutSheet.spacing, style({ padding: '16px 0', placeContent: 'space-between' }), styleInline(map(mode => ({ display: mode ? 'flex' : 'none' }), inTradeMode)))(
-        $column(layoutSheet.spacingSmall)(
-          // $TextField({
-          //   label: 'Slippage %',
-          //   labelStyle: { flex: 1 },
-          //   value: config.tradeConfig.slippage,
-          //   inputOp: style({ width: '60px', maxWidth: '60px', textAlign: 'right', fontWeight: 'normal' }),
-          //   validation: map(n => {
-          //     const val = Number(n)
-          //     const valid = val >= 0
-          //     if (!valid) {
-          //       return 'Invalid Basis point'
-          //     }
-
-          //     if (val > 5) {
-          //       return 'Slippage should be less than 5%'
-          //     }
-
-          //     return null
-          //   }),
-          // })({
-          //   change: changeSlippageTether()
-          // }),
-
-          $column(
-            // switchLatest(map(params => {
-            //   const totalSizeUsd = params.position ? params.position.latestUpdate.sizeInUsd + params.sizeDeltaUsd : params.sizeDeltaUsd
-
-            //   const rateFactor = params.fundingRateFactor
-            //   const rate = safeDiv(rateFactor * params.collateralTokenPoolInfo.reservedAmount, params.collateralTokenPoolInfo.poolAmounts)
-            //   const nextSize = totalSizeUsd * rate / GMX.BASIS_POINTS_DIVISOR / 100n
-
-            //   return $column(
-            //     $infoLabeledValue(
-            //       'Borrow Fee',
-            //       $row(layoutSheet.spacingTiny)(
-            //         $text(style({ color: pallete.indeterminate }))(readableFixedUSD30(nextSize) + ' '),
-            //         $text(` / 1hr`)
-            //       )
-            //     )
-            //   )
-            // }, combineObject({ ...config.tradeState, sizeDeltaUsd }))),
-            $infoLabeledValue('Swap', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, swapFee))),
-            $infoLabeledValue('Execution Fee', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(fee => `${readableFixedUSD30(fee)}`, executionFeeUsd))),
-            $infoLabeledValue('Price Impact', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(params => `${readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))} ${readableFixedUSD30(params.priceImpactUsd)}`, combineObject({ priceImpactUsd, sizeDeltaUsd })))),
-            $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, marginFeeUsd))),
-          ),
-          $row(style({ placeContent: 'space-between' }))(
-
-            $infoTooltipLabel(
-              $column(layoutSheet.spacingSmall)(
-                $text('Collateral deducted upon your deposit including Borrow fee at the start of every hour. the rate changes based on utilization, it is calculated as (assets borrowed) / (total assets in pool) * 0.01%'),
-              ),
-              'Total Fees'
-            ),
-            $text(style({ color: pallete.indeterminate }))(
-              map(total => readableFixedUSD30(total), totalFeeUsd)
-            ),
-          ),
-
-        ),
-
-        $column(layoutSheet.spacingSmall)(
-          switchLatest(map(params => {
-            if (!params.isTradingEnabled) {
-              return $Popover({
-                $target: $row(style({ placeContent: 'flex-end' }))(
-                  $ButtonSecondary({
-                    $content: $text('Enable Trading'),
-                    disabled: mergeArray([
-                      dismissEnableTradingOverlay,
-                      openEnableTradingPopover
-                    ])
-                  })({
-                    click: openEnableTradingPopoverTether()
-                  })
-                ),
-                $popContent: map(() => {
-
-                  return $column(layoutSheet.spacing, style({ maxWidth: '400px' }))(
-                    $heading2(`By using Puppet, I agree to the following Disclaimer`),
-                    $text(style({}))(`By accessing, I agree that ${document.location.href} is an interface that interacts with external GMX smart contracts, and does not have access to my funds.`),
-
-                    $alert(
-                      $node(
-                        $text('This beta version may contain bugs. Feedback and issue reports are greatly appreciated.'),
-                        $anchor(attr({ href: 'https://discord.com/channels/941356283234250772/1068946527021695168' }))($text('discord'))
-                      )
-                    ),
-
-                    $node(
-                      $text(style({ whiteSpace: 'pre-wrap' }))(`By clicking Agree you accept the `),
-                      $anchor(attr({ href: '/app/trading-terms-and-conditions' }))($text('Terms & Conditions'))
-                    ),
-
-                    $ButtonPrimary({
-                      $content: $text('Approve T&C'),
-                    })({
-                      click: approveTradingTether(constant(true))
-                    })
-                  )
-                }, openEnableTradingPopover),
-              })({
-                overlayClick: dismissEnableTradingOverlayTether(constant(false))
-              })
-            }
-
-            if (params.route && !params.isPrimaryApproved) {
-
-              return $ButtonPrimaryCtx({
-                request: requestApproveSpend,
-                $content: $text(`Approve ${params.primaryDescription.symbol}`)
-              })({
-                click: clickApproveprimaryTokenTether(
-                  constant({ route: params.route, primaryToken: params.primaryToken })
-                )
-              })
-            }
-
-            const disableButtonVlidation = map((error) => {
-              if (error) {
-                return true
-              }
-
-              return false
-            }, validationError)
-            return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', flex: 1 }))(
-              $row(style({ flex: 1, minWidth: 0 }))(
-                switchLatest(map(error => {
-                  if (error === null) {
-                    return empty()
-                  }
-
-                  return $alertTooltip(
-                    $text(error)
-                  )
-                }, mergeArray([requestTradeError, validationError])))
-              ),
-              style({ padding: '8px', alignSelf: 'center' })(
-                $ButtonSecondary({ $content: $text('Reset') })({
-                  click: clickResetPositionTether(constant(null))
-                })
-              ),
-              $ButtonPrimaryCtx({
-                request: map(req => req.request, requestTrade),
-                // disabled: combineArray((isDisabled) => isDisabled, disableButtonVlidation),
-                $content: $text(map(_params => {
-                  let modLabel: string
-
-                  if (_params.position) {
-                    if (_params.isIncrease) {
-                      modLabel = 'Increase'
-                    } else {
-                      modLabel = (_params.sizeDeltaUsd + _params.position.latestUpdate.sizeInUsd === 0n) ? 'Close' : 'Reduce'
-                    }
-                  } else {
-                    modLabel = 'Open'
-                  }
-
-                  const focusPriceLabel = _params.focusPrice ? ` @ ${readableUnitAmount(_params.focusPrice)}`: ''
-
-                  return modLabel + focusPriceLabel
-                }, combineObject({ position, sizeDeltaUsd, isIncrease, focusPrice })))
-              })({
-                click: clickProposeTradeTether(
-                  constant(config.wallet)
-                )
-              })
-            )
-          }, combineObject({ isPrimaryApproved, route, isTradingEnabled, primaryToken, primaryDescription })))
-        ),
-      ),
-
       // styleInline(map(mode => ({ display: mode ? 'none' : 'flex' }), inTradeMode))(
       //   switchMap(params => {
       //     const pos = params.position
@@ -666,6 +483,176 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
       //   }, combineObject({ position, collateralTokenPoolInfo, fundingRateFactor, stableFundingRateFactor, isLong, market, collateralToken,  }))
       // ),
 
+      $column(layoutSheet.spacingSmall)(
+        $column(layoutSheet.spacing, style({ padding: '16px 0', placeContent: 'space-between' }), styleInline(map(mode => ({ display: mode ? 'flex' : 'none' }), inTradeMode)))(
+          // $TextField({
+          //   label: 'Slippage %',
+          //   labelStyle: { flex: 1 },
+          //   value: config.tradeConfig.slippage,
+          //   inputOp: style({ width: '60px', maxWidth: '60px', textAlign: 'right', fontWeight: 'normal' }),
+          //   validation: map(n => {
+          //     const val = Number(n)
+          //     const valid = val >= 0
+          //     if (!valid) {
+          //       return 'Invalid Basis point'
+          //     }
+
+          //     if (val > 5) {
+          //       return 'Slippage should be less than 5%'
+          //     }
+
+          //     return null
+          //   }),
+          // })({
+          //   change: changeSlippageTether()
+          // }),
+
+          $column(
+            // switchLatest(map(params => {
+            //   const totalSizeUsd = params.position ? params.position.latestUpdate.sizeInUsd + params.sizeDeltaUsd : params.sizeDeltaUsd
+
+            //   const rateFactor = params.fundingRateFactor
+            //   const rate = safeDiv(rateFactor * params.collateralTokenPoolInfo.reservedAmount, params.collateralTokenPoolInfo.poolAmounts)
+            //   const nextSize = totalSizeUsd * rate / GMX.BASIS_POINTS_DIVISOR / 100n
+
+            //   return $column(
+            //     $infoLabeledValue(
+            //       'Borrow Fee',
+            //       $row(layoutSheet.spacingTiny)(
+            //         $text(style({ color: pallete.indeterminate }))(readableFixedUSD30(nextSize) + ' '),
+            //         $text(` / 1hr`)
+            //       )
+            //     )
+            //   )
+            // }, combineObject({ ...config.tradeState, sizeDeltaUsd }))),
+            $infoLabeledValue('Swap', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, swapFee))),
+            $infoLabeledValue('Execution Fee', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(fee => `${readableFixedUSD30(fee)}`, executionFeeUsd))),
+            $infoLabeledValue('Price Impact', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(params => `${readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))} ${readableFixedUSD30(params.priceImpactUsd)}`, combineObject({ priceImpactUsd, sizeDeltaUsd })))),
+            $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, marginFeeUsd))),
+          ),
+          $row(style({ placeContent: 'space-between' }))(
+
+            $infoTooltipLabel(
+              $column(layoutSheet.spacingSmall)(
+                $text('Collateral deducted upon your deposit including Borrow fee at the start of every hour. the rate changes based on utilization, it is calculated as (assets borrowed) / (total assets in pool) * 0.01%'),
+              ),
+              'Total Fees'
+            ),
+            $text(style({ color: pallete.indeterminate }))(
+              map(total => readableFixedUSD30(total), adjustmentFeeUsd)
+            ),
+          ),
+        ),
+        switchLatest(map(params => {
+          if (!params.isTradingEnabled) {
+            return $Popover({
+              $target: $row(style({ placeContent: 'flex-end' }))(
+                $ButtonSecondary({
+                  $content: $text('Enable Trading'),
+                  disabled: mergeArray([
+                    dismissEnableTradingOverlay,
+                    openEnableTradingPopover
+                  ])
+                })({
+                  click: openEnableTradingPopoverTether()
+                })
+              ),
+              $popContent: map(() => {
+
+                return $column(layoutSheet.spacing, style({ maxWidth: '400px' }))(
+                  $heading2(`By using Puppet, I agree to the following Disclaimer`),
+                  $text(style({}))(`By accessing, I agree that ${document.location.href} is an interface that interacts with external GMX smart contracts, and does not have access to my funds.`),
+
+                  $alert(
+                    $node(
+                      $text('This beta version may contain bugs. Feedback and issue reports are greatly appreciated.'),
+                      $anchor(attr({ href: 'https://discord.com/channels/941356283234250772/1068946527021695168' }))($text('discord'))
+                    )
+                  ),
+
+                  $node(
+                    $text(style({ whiteSpace: 'pre-wrap' }))(`By clicking Agree you accept the `),
+                    $anchor(attr({ href: '/app/trading-terms-and-conditions' }))($text('Terms & Conditions'))
+                  ),
+
+                  $ButtonPrimary({
+                    $content: $text('Approve T&C'),
+                  })({
+                    click: approveTradingTether(constant(true))
+                  })
+                )
+              }, openEnableTradingPopover),
+            })({
+              overlayClick: dismissEnableTradingOverlayTether(constant(false))
+            })
+          }
+
+          if (params.route && !params.isPrimaryApproved) {
+
+            return $ButtonPrimaryCtx({
+              request: requestApproveSpend,
+              $content: $text(`Approve ${params.primaryDescription.symbol}`)
+            })({
+              click: clickApproveprimaryTokenTether(
+                constant({ route: params.route, primaryToken: params.primaryToken })
+              )
+            })
+          }
+
+          const disableButtonVlidation = map((error) => {
+            if (error) {
+              return true
+            }
+
+            return false
+          }, validationError)
+
+          return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', flex: 1 }))(
+            $row(style({ flex: 1, minWidth: 0 }))(
+              switchLatest(map(error => {
+                if (error === null) {
+                  return empty()
+                }
+
+                return $alertTooltip(
+                  $text(error)
+                )
+              }, mergeArray([requestTradeError, validationError])))
+            ),
+            style({ padding: '8px', alignSelf: 'center' })(
+              $ButtonSecondary({ $content: $text('Reset') })({
+                click: clickResetPositionTether(constant(null))
+              })
+            ),
+            $ButtonPrimaryCtx({
+              request: map(req => req.request, requestTrade),
+              // disabled: combineArray((isDisabled) => isDisabled, disableButtonVlidation),
+              $content: $text(map(_params => {
+                let modLabel: string
+
+                if (_params.position) {
+                  if (_params.isIncrease) {
+                    modLabel = 'Increase'
+                  } else {
+                    modLabel = (_params.sizeDeltaUsd + _params.position.latestUpdate.sizeInUsd === 0n) ? 'Close' : 'Reduce'
+                  }
+                } else {
+                  modLabel = 'Open'
+                }
+
+                const focusPriceLabel = _params.focusPrice ? ` @ ${readableUnitAmount(_params.focusPrice)}`: ''
+
+                return modLabel + focusPriceLabel
+              }, combineObject({ position, sizeDeltaUsd, isIncrease, focusPrice })))
+            })({
+              click: clickProposeTradeTether(
+                constant(config.wallet)
+              )
+            })
+          )
+        }, combineObject({ isPrimaryApproved, route, isTradingEnabled, primaryToken, primaryDescription })))
+      ),
+
       switchMap(posList => {
         if (posList.length === 0) {
           return empty()
@@ -683,26 +670,23 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
             }, combineObject({ positionMarkPrice, cumulativeFee }))
 
 
-            return switchLatest(map(currentPost => {
-              // if (currentPost === null || currentPost.key === pos.key) {
-              //   return empty()
-              // }
+            return switchLatest(map(activePositionSlot => {
+              const isActive = activePositionSlot?.key === pos.key
 
-              return $row(layoutSheet.spacing,
-                $card2(style({
-                  // [screenUtils.isDesktopScreen ? 'borderTop' : 'borderBottom']: `1px solid ${colorAlpha(pallete.foreground, .20)}`,
-                  // padding: '16px', placeContent: 'space-between', borderRadius: '20px', backgroundColor: pallete.background,
-                }))
-              )(
-                $ButtonPrimary({
-                  $content: $entry(pos),
-                  $container: $defaultMiniButtonSecondary
-                })({
-                  click: switchTradeTether(
-                    constant(pos)
-                  )
-                }),
-                $sizeAndLiquidation(pos, positionMarkPrice),
+              return $card2(layoutSheet.spacing)(
+                
+                $row(style({ placeContent: 'space-between' }))(
+                  $ButtonPrimary({
+                    $content: $entry(pos),
+                    $container: $defaultMiniButtonSecondary
+                  })({
+                    click: switchTradeTether(
+                      constant(pos)
+                    )
+                  }),
+                  $sizeAndLiquidation(pos, positionMarkPrice),
+                ),
+
                 // $infoTooltipLabel(
                 //   $openPositionPnlBreakdown(pos, cumulativeFee),
                 //   $pnlValue(pnl)
@@ -744,7 +728,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
 
         return div(positionSlot.latestUpdate.sizeInUsd, params.netPositionValueUsd)
-      }, combineObject({ netPositionValueUsd }), newLocal)),
+      }, combineObject({ netPositionValueUsd }), resetLeverage)),
 
       // leverage: filterNull(snapshot(state => {
       //   if (state.position === null) {

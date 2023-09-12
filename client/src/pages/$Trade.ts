@@ -66,6 +66,7 @@ import * as storage from "../utils/storage/storeScope"
 import { walletLink } from "../wallet"
 import { gasPrice, wallet } from "../wallet/walletLink"
 import { $seperator2 } from "./common"
+import { exchangesWebsocketPriceSource } from "../logic/trade"
 
 
 export type ITradeComponent = IPositionEditorAbstractParams
@@ -205,7 +206,7 @@ export const $Trade = (config: ITradeComponent) => component((
     multicast(storage.write(tradingStore, changeMarket, 'market')),
   ])
 
-  const collateralDelta = replayLatest(changeCollateralDeltaUsd, 0n)
+  const collateralDeltaUsd = replayLatest(changeCollateralDeltaUsd, 0n)
   const sizeDeltaUsd = replayLatest(changeSizeDeltaUsd, 0n)
 
 
@@ -235,17 +236,21 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ market, processData }))
 
 
-  const indexPrice = switchMap(market => {
-    const marketUpdatePrice = map(params => {
-      if (params.isUsdCollateralToken)  {
-        return params.processData.latestPrice[market.shortToken].min
-      }
-      
-      return params.processData.latestPrice[market.longToken].min
-    }, combineObject({ processData, isUsdCollateralToken }))
 
-    return marketUpdatePrice
-  }, market)
+
+  const indexToken = map(params => {
+    return params.market.indexToken
+  }, combineObject({ market }))
+
+  const latestPriceSocketSource = multicast(switchMap(token => exchangesWebsocketPriceSource(token), indexToken))
+
+
+  const indexPrice = mergeArray([
+    // latestPriceSocketSource,
+    map(params => {
+      return params.processData.latestPrice[params.indexToken].min
+    }, combineObject({ processData, indexToken }))
+  ])
 
   const primaryPrice = map(params => {
     const token = resolveAddress(config.chain, params.primaryToken)
@@ -338,7 +343,7 @@ export const $Trade = (config: ITradeComponent) => component((
     return getTokenDescription(token)
   }, walletLink.chain, primaryToken)
 
-  const indexDescription = map(mkt => getTokenDescription(mkt.indexToken), market)
+  const indexDescription = map(token => getTokenDescription(token), indexToken)
   const collateralDescription = map((address) => getTokenDescription(address), collateralToken)
 
 
@@ -435,16 +440,15 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ marketInfo, sizeDeltaUsd, isLong, priceImpactUsd }))
 
 
-  const totalFeeUsd = map(params => {
+  const adjustmentFeeUsd = map(params => {
     return params.marginFeeUsd + params.swapFee + params.priceImpactUsd
   }, combineObject({ swapFee, marginFeeUsd, priceImpactUsd }))
 
 
 
-
-  const collateralDeltaUsd = map(params => {
-    return getTokenUsd(params.primaryPrice, params.collateralDelta)
-  }, combineObject({ primaryPrice, primaryDescription, collateralDelta }))
+  const collateralDelta = map(params => {
+    return getTokenAmount(params.primaryPrice, params.collateralDeltaUsd)
+  }, combineObject({ primaryPrice, collateralDeltaUsd }))
 
   const sizeDelta = map(params => {
     return getTokenAmount(params.marketPrice.indexTokenPrice.min, params.sizeDeltaUsd)
@@ -464,11 +468,15 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
     const latestUpdate = positionSlot.latestUpdate
-    const collateralUsd = getTokenUsd(params.indexPrice, latestUpdate.collateralAmount)
+    const collateralUsd = getTokenUsd(params.collateralPrice.max, latestUpdate.collateralAmount)
     const pnl = getCappedPositionPnlUsd(params.marketPrice, params.marketInfo, latestUpdate.isLong, latestUpdate.sizeInUsd, latestUpdate.sizeInTokens, params.indexPrice)
 
 
-    return collateralUsd + pnl - fees.borrowing.borrowingFeeUsd - pendingFundingFeesUsd
+
+    const netValue = collateralUsd - fees.borrowing.borrowingFeeUsd - pendingFundingFeesUsd
+
+    console.log(netValue)
+    return netValue
   }, combineObject({ marketPrice, marketInfo, positionFees, indexPrice, collateralPrice, collateralDescription }), position)
 
   const focusPrice = replayLatest(multicast(changefocusPrice), null)
@@ -498,7 +506,13 @@ export const $Trade = (config: ITradeComponent) => component((
     collateralDeltaUsd,
   }
 
+  // everything in done in a single Position Editor box, here's example of adjusting existing position
 
+  // in GMX's there are different ui boxes for different things with limited flexibility
+
+  // for example, it's not possible right now to only adjust size which is possible through the contract
+
+  // adjusting is size is common trading behaviour, i use it very often to increase leverage increase of an upside
 
   const positionList = map(params => {
     const walletAddress = params.wallet?.account.address
@@ -512,19 +526,19 @@ export const $Trade = (config: ITradeComponent) => component((
   
 
   const averagePrice = map(params => {
-    const positionSizeUsd = params.position ? params.position.latestUpdate.sizeInUsd : 0n
-    const positionSizeInTokens = params.position ? params.position.latestUpdate.sizeDeltaInTokens : 0n
+    if (params.position === null) return 0n
+    
+    const size = params.position.latestUpdate.sizeInUsd + params.sizeDeltaUsd
+    const sizeInTokens = params.position.latestUpdate.sizeInTokens + params.sizeDelta
+    const avg = (size / sizeInTokens) * getTokenDenominator(params.indexToken)
 
-    const size = positionSizeUsd + params.sizeDeltaUsd
-    const sizeInTokens = positionSizeInTokens + params.sizeDelta
-
-    return div(size, sizeInTokens * getTokenDenominator(params.market.indexToken))
-  }, combineObject({ market, position, sizeDeltaUsd, sizeDelta }))
+    return avg
+  }, combineObject({ collateralPrice, indexToken, indexPrice, position, sizeDeltaUsd, sizeDelta }))
 
   const liquidationPrice = skipRepeats(map(params => {
 
     const positionSizeUsd = params.position ? params.position.latestUpdate.sizeInUsd : 0n
-    const positionSizeInTokens = params.position ? params.position.latestUpdate.sizeDeltaInTokens : 0n
+    const positionSizeInTokens = params.position ? params.position.latestUpdate.sizeInTokens : 0n
 
     const positionCollateral = params.position ? getTokenUsd(params.collateralPrice.max, params.position.latestUpdate.collateralAmount) : 0n
     const positionCollateralInTokens = params.position ? params.position.latestUpdate.collateralAmount : 0n
@@ -535,10 +549,10 @@ export const $Trade = (config: ITradeComponent) => component((
     const collateral = positionCollateralInTokens + params.collateralDelta
     const collateralUsd = positionCollateral + params.collateralDeltaUsd
 
-    const lp = getLiquidationPrice(params.marketPrice, params.marketInfo, params.isLong, params.collateralToken, params.market.indexToken, size, sizeUsd, collateral, collateralUsd)
+    const lp = getLiquidationPrice(params.marketPrice, params.marketInfo, params.isLong, params.collateralToken, params.indexToken, size, sizeUsd, collateral, collateralUsd)
     
     return lp
-  }, combineObject({ position, positionFees, sizeDeltaUsd, sizeDelta, isLong, marketPrice, marketInfo, collateralDeltaUsd, collateralDelta, collateralToken, collateralPrice, market })))
+  }, combineObject({ position, positionFees, sizeDeltaUsd, sizeDelta, isLong, marketPrice, marketInfo, collateralDeltaUsd, collateralDelta, collateralToken, collateralPrice, indexToken })))
 
 
 
@@ -625,11 +639,11 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   const pricefeed = map(params => {
-    const feed = getIntervalIdentifier(params.market.indexToken, params.timeframe)
+    const feed = getIntervalIdentifier(params.indexToken, params.chartInterval)
     const candleFeed = Object.values(params.processData.pricefeed[feed])
 
     return candleFeed
-  }, combineObject({ timeframe: chartInterval, market, processData: config.processData }))
+  }, combineObject({ chartInterval, indexToken, processData: config.processData }))
 
 
 
@@ -657,7 +671,7 @@ export const $Trade = (config: ITradeComponent) => component((
     marginFeeUsd,
     swapFee,
     priceImpactUsd,
-    totalFeeUsd,
+    adjustmentFeeUsd,
 
     primaryDescription,
     indexDescription,
@@ -684,7 +698,7 @@ export const $Trade = (config: ITradeComponent) => component((
   })({
     leverage: changeLeverageTether(),
     switchIsIncrease: switchIsIncreaseTether(),
-    changeCollateralDelta: changeCollateralDeltaUsdTether(),
+    changeCollateralDeltaUsd: changeCollateralDeltaUsdTether(),
     changeSizeDeltaUsd: changeSizeDeltaUsdTether(),
     changeInputToken: changePrimaryTokenTether(),
     isUsdCollateralToken: changeIsUsdCollateralTokenTether(),
@@ -806,14 +820,14 @@ export const $Trade = (config: ITradeComponent) => component((
 
           switchLatest(snapshot((params, feed) => {
 
-            const tf = params.timeframe
+            const tf = params.chartInterval
             const fst = feed[feed.length - 1]
 
             const initialTick = {
-              open: formatFixed(fst.o * getDenominator(params.indexTokenDescription.decimals), 30),
-              high: formatFixed(fst.h * getDenominator(params.indexTokenDescription.decimals), 30),
-              low: formatFixed(fst.l * getDenominator(params.indexTokenDescription.decimals), 30),
-              close: formatFixed(fst.c * getDenominator(params.indexTokenDescription.decimals), 30),
+              open: formatFixed(fst.o * getDenominator(params.indexDescription.decimals), 30),
+              high: formatFixed(fst.h * getDenominator(params.indexDescription.decimals), 30),
+              low: formatFixed(fst.l * getDenominator(params.indexDescription.decimals), 30),
+              close: formatFixed(fst.c * getDenominator(params.indexDescription.decimals), 30),
               time: fst.blockTimestamp as Time
             }
 
@@ -850,10 +864,10 @@ export const $Trade = (config: ITradeComponent) => component((
                 }, focusPrice))
               ),
               data: feed.map(({ o, h, l, c, blockTimestamp }) => {
-                const open = formatFixed(o * getDenominator(params.indexTokenDescription.decimals), 30)
-                const high = formatFixed(h * getDenominator(params.indexTokenDescription.decimals), 30)
-                const low = formatFixed(l * getDenominator(params.indexTokenDescription.decimals), 30)
-                const close = formatFixed(c * getDenominator(params.indexTokenDescription.decimals), 30)
+                const open = formatFixed(o * getDenominator(params.indexDescription.decimals), 30)
+                const high = formatFixed(h * getDenominator(params.indexDescription.decimals), 30)
+                const low = formatFixed(l * getDenominator(params.indexDescription.decimals), 30)
+                const close = formatFixed(c * getDenominator(params.indexDescription.decimals), 30)
 
                 return { open, high, low, close, time: Number(blockTimestamp) as Time }
               }),
@@ -907,7 +921,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
               ],
               appendData: scan((prev: CandlestickData, next): CandlestickData => {
-                const marketPrice = formatFixed(next.marketPrice.indexTokenPrice.min * getDenominator(params.indexTokenDescription.decimals), GMX.USD_DECIMALS)
+                const marketPrice = formatFixed(next.indexPrice * getDenominator(params.indexDescription.decimals), GMX.USD_DECIMALS)
               
                 const timeNow = unixTimestampNow()
 
@@ -936,7 +950,7 @@ export const $Trade = (config: ITradeComponent) => component((
                   close: marketPrice,
                   time
                 }
-              }, initialTick, combineObject({ marketPrice, indexTokenDescription: indexDescription })),
+              }, initialTick, combineObject({ indexPrice, indexTokenDescription: indexDescription })),
               containerOp: style({ position: 'absolute', inset: 0, borderRadius: '20px', overflow: 'hidden' }),
               chartConfig: {
 
@@ -976,7 +990,7 @@ export const $Trade = (config: ITradeComponent) => component((
             })
 
               
-          }, combineObject({ timeframe: chartInterval, indexToken: market, indexTokenDescription: indexDescription }), pricefeed)),
+          }, combineObject({ chartInterval, indexDescription }), pricefeed)),
 
 
 
