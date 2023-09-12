@@ -13,6 +13,7 @@ import {
   getMarginFees,
   getRoughLiquidationPrice,
   getTokenDescription, getTokenUsd, IAbstractPositionParams, IOraclePrice, IPosition, IPositionSettled,
+  IPositionSlot,
   isPositionSettled, liquidationWeight,
   readableFixedUSD30,
   readableLeverage,
@@ -220,7 +221,7 @@ export function $liquidationSeparator(isLong: boolean, sizeUsd: bigint, sizeInTo
   )
 }
 
-export const $openPositionPnlBreakdown = (pos: IPosition, cumulativeTokenFundingRates: bigint) => {
+export const $openPositionPnlBreakdown = (pos: IPositionSlot, cumulativeTokenFundingRates: bigint) => {
   const nextFundingFee = getFundingFee(pos.entryFundingRate, cumulativeTokenFundingRates, pos.size)
   const totalMarginFee = getMarginFees(pos.cumulativeSize)
 

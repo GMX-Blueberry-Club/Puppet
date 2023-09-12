@@ -473,13 +473,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const focusPrice = replayLatest(multicast(changefocusPrice), null)
   const yAxisCoords = replayLatest(multicast(changeYAxisCoords), null)
-  const isFocused = replayLatest(multicast(changeIsFocused), false)
 
-  const focusPrice = replayLatest(multicast(changefocusPrice), null)
-  const yAxisCoords = mergeArray([
-    constant(null, clickResetPosition),
-    replayLatest(multicast(changeYAxisCoords), null)
-  ])
   const isFocused = mergeArray([
     constant(false, clickResetPosition),
     replayLatest(multicast(changeIsFocused), false)
@@ -620,7 +614,7 @@ export const $Trade = (config: ITradeComponent) => component((
         return posList
       }
 
-      return posList.filter(t => t.key !== pos.key)
+      return posList //.filter(t => t.key !== pos.key)
     }, position, positionList)
   ])
 

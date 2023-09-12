@@ -430,7 +430,7 @@ export async function getMarketPoolInfo(
     shortInterestInTokens: await shortInterestInTokensUsingLongToken + await shortInterestInTokensUsingShortToken,
 
     // longInterestUsd: await longInterestUsingLongToken + await longInterestUsingShortToken,
-    // shortInterestUsd: await shortInterestUsingLongToken + await shortInterestUsingShortToken,
+    shortInterestUsd: await shortInterestUsingLongToken + await shortInterestUsingShortToken,
 
     // swapImpactPoolAmountLong: await swapImpactPoolAmountLong,
     // swapImpactPoolAmountShort: await swapImpactPoolAmountShort,

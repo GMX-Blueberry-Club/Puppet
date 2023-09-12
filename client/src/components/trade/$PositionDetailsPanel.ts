@@ -56,6 +56,7 @@ import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButton
 import { IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "./$PositionEditor"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
 import { $TradePnlHistory } from "./$TradePnlHistory"
+import { $card2 } from "../../elements/$common"
 
 
 export enum ITradeFocusMode {
@@ -573,104 +574,104 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
         ),
       ),
 
-      styleInline(map(mode => ({ display: mode ? 'none' : 'flex' }), inTradeMode))(
-        switchMap(params => {
-          const pos = params.position
-          if (pos === null) {
-            const tokenDesc = getTokenDescription(params.market.indexToken)
-            const route = params.isLong ? `Long-${tokenDesc.symbol}` : `Short-${tokenDesc.symbol}/${getTokenDescription(params.collateralToken).symbol}`
+      // styleInline(map(mode => ({ display: mode ? 'none' : 'flex' }), inTradeMode))(
+      //   switchMap(params => {
+      //     const pos = params.position
+      //     if (pos === null) {
+      //       const tokenDesc = getTokenDescription(params.market.indexToken)
+      //       const route = params.isLong ? `Long-${tokenDesc.symbol}` : `Short-${tokenDesc.symbol}/${getTokenDescription(params.collateralToken).symbol}`
 
-            return $row(style({ placeContent: 'center', alignItems: 'center' }))(
-              $text(style({ color: pallete.foreground }))(`No active ${route} position`)
-            )
-          }
+      //       return $row(style({ placeContent: 'center', alignItems: 'center' }))(
+      //         $text(style({ color: pallete.foreground }))(`No active ${route} position`)
+      //       )
+      //     }
 
-          const hoverChartPnl = switchLatest(map((chartCxChange) => {
-            if (Number.isFinite(chartCxChange)) return now(chartCxChange)
+      //     const hoverChartPnl = switchLatest(map((chartCxChange) => {
+      //       if (Number.isFinite(chartCxChange)) return now(chartCxChange)
 
-            return map(price => {
-              // const delta = getPnL(pos.isLong, pos.averagePrice, price, pos.size)
-              // const val = formatFixed(delta + pos.realisedPnl - pos.cumulativeFee, 30)
-              const val = 0
+      //       return map(price => {
+      //         // const delta = getPnL(pos.isLong, pos.averagePrice, price, pos.size)
+      //         // const val = formatFixed(delta + pos.realisedPnl - pos.cumulativeFee, 30)
+      //         const val = 0
 
-              return val
-            }, indexPrice)
+      //         return val
+      //       }, indexPrice)
 
-          }, pnlCrossHairTime))
+      //     }, pnlCrossHairTime))
 
-          const rateFactor = params.isLong ? params.fundingRateFactor : params.stableFundingRateFactor
-          const rate = safeDiv(rateFactor * params.collateralTokenPoolInfo.reservedAmount, params.collateralTokenPoolInfo.poolAmounts)
-          const nextSize = pos.latestUpdate.sizeInUsd * rate / GMX.BASIS_POINTS_DIVISOR / 100n
+      //     const rateFactor = params.isLong ? params.fundingRateFactor : params.stableFundingRateFactor
+      //     const rate = safeDiv(rateFactor * params.collateralTokenPoolInfo.reservedAmount, params.collateralTokenPoolInfo.poolAmounts)
+      //     const nextSize = pos.latestUpdate.sizeInUsd * rate / GMX.BASIS_POINTS_DIVISOR / 100n
 
 
-          return $column(style({ position: 'relative' }))(
-            $row(
-              style({
-                display: 'flex',
-                alignItems: 'center',
-                lineHeight: 1,
-                height: '1px',
-                zIndex: 10,
-                position: 'absolute',
-                placeContent: 'space-between',
-                inset: '18px 16px',
-              })
-            )(
-              $infoLabeledValue(
-                'Borrow Fee',
-                $row(layoutSheet.spacingTiny)(
-                  $text(style({ color: pallete.indeterminate }))(readableFixedUSD30(nextSize) + ' '),
-                  $text(` / 1hr`)
-                )
-              ),
-              $infoTooltipLabel(
-                // $openPositionPnlBreakdown(pos, now(params.collateralTokenPoolInfo.cumulativeRate)),
-                $NumberTicker({
-                  textStyle: {
-                    fontSize: '1.25em',
-                    fontWeight: 'bold',
-                  },
-                  value$: map(hoverValue => {
-                    const newLocal2 = readableUnitAmount(hoverValue)
-                    const newLocal = parseReadableNumber(newLocal2)
-                    return newLocal
-                  }, motion({ ...MOTION_NO_WOBBLE, precision: 15, stiffness: 210 }, 0, hoverChartPnl)),
-                  incrementColor: pallete.positive,
-                  decrementColor: pallete.negative
-                }),
-              ),
-            ),
-            // $TradePnlHistory({
-            //   $container: $column(style({ flex: 1, overflow: 'hidden', borderRadius: '20px' })),
-            //   position: pos,
-            //   chain: config.chain.id,
-            //   pricefeed,
-            //   chartConfig: {
-            //     leftPriceScale: {
-            //       scaleMargins: {
-            //         top: 0.38,
-            //         bottom: 0,
-            //       }
-            //     },
-            //     // timeScale: {
-            //     //   visible: false
-            //     // }
-            //   },
-            //   latestPrice: indexTokenPrice
-            // })({
-            //   crosshairMove: crosshairMoveTether(),
-            //   // requestPricefeed: requestTradePricefeedTether()
-            // })
-          )
-        }, combineObject({ position, collateralTokenPoolInfo, fundingRateFactor, stableFundingRateFactor, isLong, market, collateralToken,  }))
-      ),
+      //     return $column(style({ position: 'relative' }))(
+      //       $row(
+      //         style({
+      //           display: 'flex',
+      //           alignItems: 'center',
+      //           lineHeight: 1,
+      //           height: '1px',
+      //           zIndex: 10,
+      //           position: 'absolute',
+      //           placeContent: 'space-between',
+      //           inset: '18px 16px',
+      //         })
+      //       )(
+      //         $infoLabeledValue(
+      //           'Borrow Fee',
+      //           $row(layoutSheet.spacingTiny)(
+      //             $text(style({ color: pallete.indeterminate }))(readableFixedUSD30(nextSize) + ' '),
+      //             $text(` / 1hr`)
+      //           )
+      //         ),
+      //         $infoTooltipLabel(
+      //           // $openPositionPnlBreakdown(pos, now(params.collateralTokenPoolInfo.cumulativeRate)),
+      //           $NumberTicker({
+      //             textStyle: {
+      //               fontSize: '1.25em',
+      //               fontWeight: 'bold',
+      //             },
+      //             value$: map(hoverValue => {
+      //               const newLocal2 = readableUnitAmount(hoverValue)
+      //               const newLocal = parseReadableNumber(newLocal2)
+      //               return newLocal
+      //             }, motion({ ...MOTION_NO_WOBBLE, precision: 15, stiffness: 210 }, 0, hoverChartPnl)),
+      //             incrementColor: pallete.positive,
+      //             decrementColor: pallete.negative
+      //           }),
+      //         ),
+      //       ),
+      //       // $TradePnlHistory({
+      //       //   $container: $column(style({ flex: 1, overflow: 'hidden', borderRadius: '20px' })),
+      //       //   position: pos,
+      //       //   chain: config.chain.id,
+      //       //   pricefeed,
+      //       //   chartConfig: {
+      //       //     leftPriceScale: {
+      //       //       scaleMargins: {
+      //       //         top: 0.38,
+      //       //         bottom: 0,
+      //       //       }
+      //       //     },
+      //       //     // timeScale: {
+      //       //     //   visible: false
+      //       //     // }
+      //       //   },
+      //       //   latestPrice: indexTokenPrice
+      //       // })({
+      //       //   crosshairMove: crosshairMoveTether(),
+      //       //   // requestPricefeed: requestTradePricefeedTether()
+      //       // })
+      //     )
+      //   }, combineObject({ position, collateralTokenPoolInfo, fundingRateFactor, stableFundingRateFactor, isLong, market, collateralToken,  }))
+      // ),
 
       switchMap(posList => {
         if (posList.length === 0) {
           return empty()
         }
 
-        return $column(style({ flex: 1 }))(
+        return $column(layoutSheet.spacing, style({ flex: 1 }))(
           ...posList.map(pos => {
 
             const positionMarkPrice = latestTokenPrice(config.processData, now(pos.indexToken))
@@ -683,15 +684,15 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
 
 
             return switchLatest(map(currentPost => {
-              if (currentPost === null || currentPost.key === pos.key) {
-                return empty()
-              }
+              // if (currentPost === null || currentPost.key === pos.key) {
+              //   return empty()
+              // }
 
               return $row(layoutSheet.spacing,
-                style({
-                  [screenUtils.isDesktopScreen ? 'borderTop' : 'borderBottom']: `1px solid ${colorAlpha(pallete.foreground, .20)}`,
-                  padding: '16px', placeContent: 'space-between', borderRadius: '20px', backgroundColor: pallete.background,
-                })
+                $card2(style({
+                  // [screenUtils.isDesktopScreen ? 'borderTop' : 'borderBottom']: `1px solid ${colorAlpha(pallete.foreground, .20)}`,
+                  // padding: '16px', placeContent: 'space-between', borderRadius: '20px', backgroundColor: pallete.background,
+                }))
               )(
                 $ButtonPrimary({
                   $content: $entry(pos),
@@ -702,10 +703,10 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
                   )
                 }),
                 $sizeAndLiquidation(pos, positionMarkPrice),
-                $infoTooltipLabel(
-                  $openPositionPnlBreakdown(pos, cumulativeFee),
-                  $pnlValue(pnl)
-                ),
+                // $infoTooltipLabel(
+                //   $openPositionPnlBreakdown(pos, cumulativeFee),
+                //   $pnlValue(pnl)
+                // ),
               )
             }, position))
           })

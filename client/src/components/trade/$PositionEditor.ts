@@ -820,13 +820,9 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
         filterNull(zip((params, positionSlot) => {
           if (positionSlot === null) return null
 
-          const newLocal = div(positionSlot.latestUpdate.sizeInUsd, params.netPositionValueUsd)
+          const lev = div(positionSlot.latestUpdate.sizeInUsd, params.netPositionValueUsd)
 
-          if (newLocal === 0n) {
-            debugger
-          }
-
-          return newLocal
+          return lev
         }, combineObject({ netPositionValueUsd }), position)),
         slideLeverage,
         switchMap(ii=> ii ? empty() : clickPrimary, isIncrease)
