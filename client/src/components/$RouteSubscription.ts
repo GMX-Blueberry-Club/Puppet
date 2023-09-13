@@ -2,7 +2,7 @@ import { Behavior, O, combineObject } from "@aelea/core"
 import { $element, $text, attr, component, nodeEvent, style, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { constant, empty, map, mergeArray, multicast, skipRepeats, snapshot, startWith } from "@most/core"
+import { constant, empty, map, mergeArray, multicast, skipRepeats, snapshot, startWith, take } from "@most/core"
 import { Stream } from "@most/types"
 import { BASIS_POINTS_DIVISOR, TIME_INTERVAL_MAP } from "gmx-middleware-const"
 import { $caretDown, $check, $icon, $infoLabeledValue, $target, $xCross } from "gmx-middleware-ui-components"
@@ -10,20 +10,20 @@ import { formatFixed, getMappedValue, groupArrayMany, parseBps, readableDate, re
 import * as PUPPET from "puppet-middleware-const"
 import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { theme } from "../assignThemeSync"
+import { theme } from "../assignThemeSync.js"
 import { $TextField } from "../common/$TextField.js"
-import { $route } from "../common/$common"
+import { $route } from "../common/$common.js"
 import { $heading3 } from "../common/$text.js"
 import { $card2, $iconCircular } from "../elements/$common.js"
 import { connectContract, wagmiWriteContract } from "../logic/common.js"
-import { ROUTE_DESCRIPTIN_MAP } from "../logic/utils"
+import { ROUTE_DESCRIPTIN_MAP } from "../logic/utils.js"
 import { $seperator2 } from "../pages/common.js"
 import { fadeIn } from "../transitions/enter.js"
 import { $profileDisplay } from "./$AccountProfile.js"
 import { $IntermediateConnectButton } from "./$ConnectAccount.js"
 import { $RouteDepositInfo } from "./$common.js"
 import { $ButtonCircular, $ButtonPrimaryCtx, $ButtonSecondary } from "./form/$Button.js"
-import { $Dropdown } from "./form/$Dropdown"
+import { $Dropdown } from "./form/$Dropdown.js"
 
 
 
@@ -225,7 +225,7 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
   const routeTypeList = Object.keys(ROUTE_DESCRIPTIN_MAP) as viem.Hex[]
 
 
-  const subscribed = startWith(true, clickUnsubscribe)
+  const subscribed = startWith(!!config.routeSubscription?.subscribed || false, clickUnsubscribe)
   const allowance = startWith(config.routeSubscription?.allowance || 500n, inputAllowance)
   const routeTypeKey = startWith(routeTypeList.find(key => key === config.routeSubscription?.routeTypeKey) || routeTypeList[0], selectRouteType)
   const initEnddate = config.routeSubscription?.expiry ? config.routeSubscription?.expiry : BigInt(unixTimestampNow() + TIME_INTERVAL_MAP.YEAR)
@@ -265,14 +265,12 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
 
       $TextField({
         label: 'Allow %',
-        value: map(x => {
-          return formatFixed(x, 4)
-        }, allowance),
+        value: take(1, map(x => formatFixed(x, 4) * 100, allowance)),
         labelWidth: 100,
         hint: `% allocated per position adjustment. Lower values decrease risk. Helps with easier management if peformance is below expectation"`,
       })({
         change: inputAllowanceTether(
-          map(x => parseBps(x))
+          map(x => parseBps(x / 100))
         )
       }),
       $TextField({

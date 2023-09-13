@@ -5,8 +5,8 @@ import { IToken, LAB_CHAIN } from "@gambitdao/gbc-middleware"
 import { $anchor, $calendar, $caretDblDown, $ethScan } from "gmx-middleware-ui-components"
 import { getAccountExplorerUrl, getTxExplorerUrl, shortenAddress } from "gmx-middleware-utils"
 import { Address } from "viem"
-import { $berryByToken } from "../components/$common"
-import { $trash } from "./$icons"
+import { $berryByToken } from "../components/$common.js"
+import { $trash } from "./$icons.js"
 
 export const $TrashBtn = $ButtonIcon($trash)
 

@@ -5,8 +5,8 @@ import { blueberrySubgraph } from "@gambitdao/gbc-middleware"
 import { awaitPromises, empty, now } from "@most/core"
 import { IEnsRegistration, switchMap } from "gmx-middleware-utils"
 import { Address } from "viem"
-import { $jazzicon } from "../common/$avatar"
-import { $berryByToken } from "./$common"
+import { $jazzicon } from "../common/$avatar.js"
+import { $berryByToken } from "./$common.js"
 
 
 export interface IAccountPreview {

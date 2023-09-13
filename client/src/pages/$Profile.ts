@@ -12,13 +12,13 @@ import {
 } from "gmx-middleware-utils"
 import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from 'viem'
-import { $PuppetProfile } from "../components/participant/$Puppet"
-import { $TraderProfile } from "../components/participant/$Trader"
-import { IGmxProcessState } from "../data/process/process"
-import * as store from "../data/store/store"
-import * as storage from "../utils/storage/storeScope"
-import { $LastAtivity } from "./components/$LastActivity"
-import { rootStoreScope } from "../data/store/store"
+import { $PuppetProfile } from "../components/participant/$Puppet.js"
+import { $TraderProfile } from "../components/participant/$Trader.js"
+import { IGmxProcessState } from "../data/process/process.js"
+import * as store from "../data/store/store.js"
+import * as storage from "../utils/storage/storeScope.js"
+import { $LastAtivity } from "./components/$LastActivity.js"
+import { rootStoreScope } from "../data/store/store.js"
 
 
 export enum IProfileActiveTab {

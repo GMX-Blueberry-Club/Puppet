@@ -2,7 +2,7 @@ import { Op, Behavior } from "@aelea/core"
 import { NodeComposeFn, $Node, component, IBranch, nodeEvent, style } from "@aelea/dom"
 import { constant, switchLatest, now } from "@most/core"
 import { Stream } from "@most/types"
-import { $defaultSelectContainer } from "./$Dropdown"
+import { $defaultSelectContainer } from "./$Dropdown.js"
 
 export interface ISelect<T> {
   list: T[]

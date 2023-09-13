@@ -48,25 +48,25 @@ import { $ButtonToggle, $CandleSticks, $Table, $infoLabel, $infoLabeledValue, $t
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
-import { $midContainer } from "../common/$common"
-import { $IntermediateConnectButton } from "../components/$ConnectAccount"
-import { $CardTable } from "../components/$common"
-import { $ButtonSecondary } from "../components/form/$Button"
-import { $Dropdown } from "../components/form/$Dropdown"
-import { $PositionDetailsPanel, IRequestTrade } from "../components/trade/$PositionDetailsPanel"
-import { $PositionEditor, IPositionEditorAbstractParams, ITradeConfig, ITradeFocusMode, ITradeParams } from "../components/trade/$PositionEditor"
-import { latestTokenPrice } from "../data/process/process"
-import { rootStoreScope } from "../data/store/store"
-import { $caretDown } from "../elements/$icons"
-import { connectContract, contractReader } from "../logic/common"
-import * as trade from "../logic/trade"
-import { getExecuteGasFee, getExecutionFee, getMarketPoolInfo, hashKey } from "../logic/tradeV2"
-import * as indexDB from "../utils/storage/indexDB"
-import * as storage from "../utils/storage/storeScope"
-import { walletLink } from "../wallet"
-import { gasPrice, wallet } from "../wallet/walletLink"
-import { $seperator2 } from "./common"
-import { exchangesWebsocketPriceSource } from "../logic/trade"
+import { $midContainer } from "../common/$common.js"
+import { $IntermediateConnectButton } from "../components/$ConnectAccount.js"
+import { $CardTable } from "../components/$common.js"
+import { $ButtonSecondary } from "../components/form/$Button.js"
+import { $Dropdown } from "../components/form/$Dropdown.js"
+import { $PositionDetailsPanel, IRequestTrade } from "../components/trade/$PositionDetailsPanel.js"
+import { $PositionEditor, IPositionEditorAbstractParams, ITradeConfig, ITradeFocusMode, ITradeParams } from "../components/trade/$PositionEditor.js"
+import { latestTokenPrice } from "../data/process/process.js"
+import { rootStoreScope } from "../data/store/store.js"
+import { $caretDown } from "../elements/$icons.js"
+import { connectContract, contractReader } from "../logic/common.js"
+import * as trade from "../logic/trade.js"
+import { getExecuteGasFee, getExecutionFee, getMarketPoolInfo, hashKey } from "../logic/tradeV2.js"
+import * as indexDB from "../utils/storage/indexDB.js"
+import * as storage from "../utils/storage/storeScope.js"
+import { walletLink } from "../wallet/index.js"
+import { gasPrice, wallet } from "../wallet/walletLink.js"
+import { $seperator2 } from "./common.js"
+import { exchangesWebsocketPriceSource } from "../logic/trade.js"
 
 
 export type ITradeComponent = IPositionEditorAbstractParams
@@ -225,7 +225,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   
-  const collateralPrice = latestTokenPrice(config.processData, collateralToken)
+  const collateralPrice = switchMap(token => latestTokenPrice(config.processData, token), collateralToken)
 
   const marketPrice = map((params): IMarketPrice => {
     const longTokenPrice = params.processData.latestPrice[params.market.longToken]
@@ -725,7 +725,7 @@ export const $Trade = (config: ITradeComponent) => component((
             // paddingLeft: '26px'
             })
             : style({}),
-          style({ minHeight: '460px', flex: 1, maxHeight: '55vh', position: 'relative', backgroundColor: pallete.background }),
+          style({ flex: 1, minHeight: '460px', maxHeight: '45vh', position: 'relative', backgroundColor: pallete.background }),
         // screenUtils.isDesktopScreen
         //   ? style({ height: '500px' })
         //   : style({ height: '500px' })
@@ -742,14 +742,19 @@ export const $Trade = (config: ITradeComponent) => component((
               $column(layoutSheet.spacingSmall)(
                 $infoLabel('Borrow Rate'),
                 $row(style({ whiteSpace: 'pre' }))(
-                  $text(map(rate => readableFactorPercentage(rate), borrowRatePerInterval)),
+                  switchMap(rate => $text(style({ color: rate ? pallete.negative : '' }))(readableFactorPercentage(-rate)), borrowRatePerInterval),
                   $text(style({ color: pallete.foreground }))(' / hr')
                 )
               ),
               $column(layoutSheet.spacingSmall)(
                 $infoLabel('Funding Rate'),
                 $row(style({ whiteSpace: 'pre' }))(
-                  $text(map(rate => readableFactorPercentage(rate), fundingRatePerInterval)),
+                  switchMap(params => {
+                    const isPositive = params.fundingRatePerInterval > 0n
+                    const color = isPositive ? pallete.positive : pallete.negative
+                    const label = isPositive ? '+' : ''
+                    return $text(style({ color }))(label + readableFactorPercentage(params.fundingRatePerInterval))
+                  }, combineObject({ fundingRatePerInterval, isLong })),
                   $text(style({ color: pallete.foreground }))(' / hr')
                 )
               ),

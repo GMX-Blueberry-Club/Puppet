@@ -42,6 +42,7 @@ import {
   readableNumber,
   readablePercentage,
   readableTokenAmount,
+  readableTokenUsd,
   readableUnitAmount,
   resolveAddress,
   StateStream, switchMap
@@ -49,8 +50,8 @@ import {
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { $Slider } from "../$Slider.js"
-import { $heading2 } from "../../common/$text"
-import { IGmxProcessState } from "../../data/process/process.js"
+import { $heading2 } from "../../common/$text.js"
+import { IGmxProcessState, latestTokenPrice } from "../../data/process/process.js"
 import { $caretDown } from "../../elements/$icons.js"
 import { connectContract } from "../../logic/common.js"
 import * as trade from "../../logic/trade.js"
@@ -233,7 +234,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
     clickMaxPrimary,
     skipRepeats(snapshot((params, nextSizeDeltaUsdFx) => {
       const positionSizeUsd = params.position ? params.position.latestUpdate.sizeInUsd : 0n
-      const nextFeeUsd = abs(params.adjustmentFeeUsd * params.leverage / GMX.BASIS_POINTS_DIVISOR)
+      const nextFeeUsd = -abs(params.adjustmentFeeUsd * params.leverage / GMX.BASIS_POINTS_DIVISOR)
       const totalSize = nextSizeDeltaUsdFx + positionSizeUsd
       const nextCollateralUsd = div(totalSize + nextFeeUsd, params.leverage)
 
@@ -497,7 +498,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                   $$option: map(option => {
                     const token = resolveAddress(config.chain, option)
                     const balanceAmount = trade.getErc20Balance(config.chain, option, address)
-                    const price = pricefeed.read('getPrimaryPrice', token, false)
+                    const price = latestTokenPrice(config.processData, token)
                     const tokenDesc = option === GMX.ADDRESS_ZERO ? getNativeTokenDescription(chainId) : getTokenDescription(option)
 
                     return $row(style({ placeContent: 'space-between', flex: 1 }))(
@@ -506,7 +507,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                         $text(style({ whiteSpace: 'nowrap' }))(map(bn => readableUnitAmount(formatFixed(bn, tokenDesc.decimals)) + ` ${tokenDesc.symbol}`, balanceAmount)),
                         $text(
                           map(params => {
-                            return getTokenUsd(params.price, params.balanceAmount).toString()
+                            return readableTokenUsd(params.price.min, params.balanceAmount)
                           }, combineObject({ balanceAmount, price }))
                         ),
                       )

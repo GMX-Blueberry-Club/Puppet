@@ -5,12 +5,12 @@ import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { $alertIcon, $Tooltip } from "gmx-middleware-ui-components"
 import { awaitPromises, constant, empty, map, mergeArray, multicast, never, now, recoverWith, skipRepeats, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { $ButtonCore, $defaultButtonCore, IButtonCore } from "./$ButtonCore"
+import { $ButtonCore, $defaultButtonCore, IButtonCore } from "./$ButtonCore.js"
 import * as viem from "viem"
 import { invertColor } from "gmx-middleware-utils"
-import { $iconCircular } from "../../elements/$common"
-import { $IntermediateConnectButton, $SwitchNetworkDropdown } from "../$ConnectAccount"
-import { theme } from "../../assignThemeSync"
+import { $iconCircular } from "../../elements/$common.js"
+import { $IntermediateConnectButton, $SwitchNetworkDropdown } from "../$ConnectAccount.js"
+import { theme } from "../../assignThemeSync.js"
 
 
 

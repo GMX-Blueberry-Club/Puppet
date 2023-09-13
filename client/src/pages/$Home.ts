@@ -5,12 +5,12 @@ import { $column, $icon, $row, designSheet, layoutSheet, screenUtils } from "@ae
 import { pallete } from "@aelea/ui-components-theme"
 import { empty, map, tap } from "@most/core"
 import { $Link, $anchor } from "gmx-middleware-ui-components"
-import { $gmxLogo, $puppetLogo } from "../common/$icons"
-import { $ButtonSecondary } from "../components/form/$Button"
+import { $gmxLogo, $puppetLogo } from "../common/$icons.js"
+import { $ButtonSecondary } from "../components/form/$Button.js"
 import { filterNull, switchMap } from "gmx-middleware-utils"
 import { Stream } from "@most/types"
-import { $seperator2 } from "./common"
-import { $labeledDivider } from "../elements/$common"
+import { $seperator2 } from "./common.js"
+import { $labeledDivider } from "../elements/$common.js"
 
 
 
@@ -113,7 +113,7 @@ export const $Home = (config: ITreasury) => component((
         $column(style({ textAlign: 'center' }))(
           $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.85rem', whiteSpace: 'pre-wrap', letterSpacing: '2px' }))('Matching top Traders\nwith Investors'),
         ),
-        $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Copy, Climb, Conquer. Traders earn more, investors pick high-performing traders on a single deposit.`),
+        $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Copy Top Traders with a Single Deposit | Trade to Earn More`),
 
         $node(),
 

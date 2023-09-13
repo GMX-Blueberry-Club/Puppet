@@ -13,8 +13,8 @@ import {
 import * as viem from "viem"
 import { Address, Chain } from "viem"
 import { arbitrum, avalanche } from "viem/chains"
-import { ISupportedChain } from "../wallet/walletLink"
-import { connectContract } from "./common"
+import { ISupportedChain } from "../wallet/walletLink.js"
+import { connectContract } from "./common.js"
 
 
 export type IPositionGetter = IAbstractPositionIdentity & {

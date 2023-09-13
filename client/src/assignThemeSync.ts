@@ -1,6 +1,6 @@
 
 import type { Theme } from "@aelea/ui-components-theme"
-import { dark, light } from "./common/theme"
+import { dark, light } from "./common/theme.js"
 
 const THEME_PALLETE_SELECTED_KEY = `!!THEME_PALLETE_SELECTED_KEY`
 const themeFromStorage = localStorage.getItem(THEME_PALLETE_SELECTED_KEY)

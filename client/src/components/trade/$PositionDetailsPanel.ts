@@ -46,17 +46,17 @@ import { MouseEventParams } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
 import { getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { $Popover } from "../$Popover"
-import { $entry, $openPositionPnlBreakdown, $pnlValue, $sizeAndLiquidation } from "../../common/$common"
-import { $heading2 } from "../../common/$text"
+import { $Popover } from "../$Popover.js"
+import { $entry, $openPositionPnlBreakdown, $pnlValue, $sizeAndLiquidation } from "../../common/$common.js"
+import { $heading2 } from "../../common/$text.js"
 import { latestTokenPrice } from "../../data/process/process.js"
 import { connectContract, wagmiWriteContract } from "../../logic/common.js"
 import { IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
-import { IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "./$PositionEditor"
+import { IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
-import { $TradePnlHistory } from "./$TradePnlHistory"
-import { $card2 } from "../../elements/$common"
+import { $TradePnlHistory } from "./$TradePnlHistory.js"
+import { $card2 } from "../../elements/$common.js"
 
 
 export enum ITradeFocusMode {
@@ -542,115 +542,116 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
               map(total => readableFixedUSD30(total), adjustmentFeeUsd)
             ),
           ),
-        ),
-        switchLatest(map(params => {
-          if (!params.isTradingEnabled) {
-            return $Popover({
-              $target: $row(style({ placeContent: 'flex-end' }))(
-                $ButtonSecondary({
-                  $content: $text('Enable Trading'),
-                  disabled: mergeArray([
-                    dismissEnableTradingOverlay,
-                    openEnableTradingPopover
-                  ])
-                })({
-                  click: openEnableTradingPopoverTether()
-                })
-              ),
-              $popContent: map(() => {
-
-                return $column(layoutSheet.spacing, style({ maxWidth: '400px' }))(
-                  $heading2(`By using Puppet, I agree to the following Disclaimer`),
-                  $text(style({}))(`By accessing, I agree that ${document.location.href} is an interface that interacts with external GMX smart contracts, and does not have access to my funds.`),
-
-                  $alert(
-                    $node(
-                      $text('This beta version may contain bugs. Feedback and issue reports are greatly appreciated.'),
-                      $anchor(attr({ href: 'https://discord.com/channels/941356283234250772/1068946527021695168' }))($text('discord'))
-                    )
-                  ),
-
-                  $node(
-                    $text(style({ whiteSpace: 'pre-wrap' }))(`By clicking Agree you accept the `),
-                    $anchor(attr({ href: '/app/trading-terms-and-conditions' }))($text('Terms & Conditions'))
-                  ),
-
-                  $ButtonPrimary({
-                    $content: $text('Approve T&C'),
+          switchLatest(map(params => {
+            if (!params.isTradingEnabled) {
+              return $Popover({
+                $target: $row(style({ placeContent: 'flex-end' }))(
+                  $ButtonSecondary({
+                    $content: $text('Enable Trading'),
+                    disabled: mergeArray([
+                      dismissEnableTradingOverlay,
+                      openEnableTradingPopover
+                    ])
                   })({
-                    click: approveTradingTether(constant(true))
+                    click: openEnableTradingPopoverTether()
                   })
-                )
-              }, openEnableTradingPopover),
-            })({
-              overlayClick: dismissEnableTradingOverlayTether(constant(false))
-            })
-          }
+                ),
+                $popContent: map(() => {
 
-          if (params.route && !params.isPrimaryApproved) {
+                  return $column(layoutSheet.spacing, style({ maxWidth: '400px' }))(
+                    $heading2(`By using Puppet, I agree to the following Disclaimer`),
+                    $text(style({}))(`By accessing, I agree that ${document.location.href} is an interface that interacts with external GMX smart contracts, and does not have access to my funds.`),
 
-            return $ButtonPrimaryCtx({
-              request: requestApproveSpend,
-              $content: $text(`Approve ${params.primaryDescription.symbol}`)
-            })({
-              click: clickApproveprimaryTokenTether(
-                constant({ route: params.route, primaryToken: params.primaryToken })
-              )
-            })
-          }
+                    $alert(
+                      $node(
+                        $text('This beta version may contain bugs. Feedback and issue reports are greatly appreciated.'),
+                        $anchor(attr({ href: 'https://discord.com/channels/941356283234250772/1068946527021695168' }))($text('discord'))
+                      )
+                    ),
 
-          const disableButtonVlidation = map((error) => {
-            if (error) {
-              return true
+                    $node(
+                      $text(style({ whiteSpace: 'pre-wrap' }))(`By clicking Agree you accept the `),
+                      $anchor(attr({ href: '/app/trading-terms-and-conditions' }))($text('Terms & Conditions'))
+                    ),
+
+                    $ButtonPrimary({
+                      $content: $text('Approve T&C'),
+                    })({
+                      click: approveTradingTether(constant(true))
+                    })
+                  )
+                }, openEnableTradingPopover),
+              })({
+                overlayClick: dismissEnableTradingOverlayTether(constant(false))
+              })
             }
 
-            return false
-          }, validationError)
+            if (params.route && !params.isPrimaryApproved) {
 
-          return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', flex: 1 }))(
-            $row(style({ flex: 1, minWidth: 0 }))(
-              switchLatest(map(error => {
-                if (error === null) {
-                  return empty()
-                }
-
-                return $alertTooltip(
-                  $text(error)
+              return $ButtonPrimaryCtx({
+                request: requestApproveSpend,
+                $content: $text(`Approve ${params.primaryDescription.symbol}`)
+              })({
+                click: clickApproveprimaryTokenTether(
+                  constant({ route: params.route, primaryToken: params.primaryToken })
                 )
-              }, mergeArray([requestTradeError, validationError])))
-            ),
-            style({ padding: '8px', alignSelf: 'center' })(
-              $ButtonSecondary({ $content: $text('Reset') })({
-                click: clickResetPositionTether(constant(null))
               })
-            ),
-            $ButtonPrimaryCtx({
-              request: map(req => req.request, requestTrade),
-              // disabled: combineArray((isDisabled) => isDisabled, disableButtonVlidation),
-              $content: $text(map(_params => {
-                let modLabel: string
+            }
 
-                if (_params.position) {
-                  if (_params.isIncrease) {
-                    modLabel = 'Increase'
-                  } else {
-                    modLabel = (_params.sizeDeltaUsd + _params.position.latestUpdate.sizeInUsd === 0n) ? 'Close' : 'Reduce'
+            const disableButtonVlidation = map((error) => {
+              if (error) {
+                return true
+              }
+
+              return false
+            }, validationError)
+
+            return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', flex: 1 }))(
+              $row(style({ flex: 1, minWidth: 0 }))(
+                switchLatest(map(error => {
+                  if (error === null) {
+                    return empty()
                   }
-                } else {
-                  modLabel = 'Open'
-                }
 
-                const focusPriceLabel = _params.focusPrice ? ` @ ${readableUnitAmount(_params.focusPrice)}`: ''
+                  return $alertTooltip(
+                    $text(error)
+                  )
+                }, mergeArray([requestTradeError, validationError])))
+              ),
+              style({ padding: '8px', alignSelf: 'center' })(
+                $ButtonSecondary({ $content: $text('Reset') })({
+                  click: clickResetPositionTether(constant(null))
+                })
+              ),
+              $ButtonPrimaryCtx({
+                request: map(req => req.request, requestTrade),
+                // disabled: combineArray((isDisabled) => isDisabled, disableButtonVlidation),
+                $content: $text(map(_params => {
+                  let modLabel: string
 
-                return modLabel + focusPriceLabel
-              }, combineObject({ position, sizeDeltaUsd, isIncrease, focusPrice })))
-            })({
-              click: clickProposeTradeTether(
-                constant(config.wallet)
-              )
-            })
-          )
-        }, combineObject({ isPrimaryApproved, route, isTradingEnabled, primaryToken, primaryDescription })))
+                  if (_params.position) {
+                    if (_params.isIncrease) {
+                      modLabel = 'Increase'
+                    } else {
+                      modLabel = (_params.sizeDeltaUsd + _params.position.latestUpdate.sizeInUsd === 0n) ? 'Close' : 'Reduce'
+                    }
+                  } else {
+                    modLabel = 'Open'
+                  }
+
+                  const focusPriceLabel = _params.focusPrice ? ` @ ${readableUnitAmount(_params.focusPrice)}`: ''
+
+                  return modLabel + focusPriceLabel
+                }, combineObject({ position, sizeDeltaUsd, isIncrease, focusPrice })))
+              })({
+                click: clickProposeTradeTether(
+                  constant(config.wallet)
+                )
+              })
+            )
+          }, combineObject({ isPrimaryApproved, route, isTradingEnabled, primaryToken, primaryDescription })))
+        ),
+        
       ),
 
       switchMap(posList => {
@@ -661,7 +662,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
         return $column(layoutSheet.spacing, style({ flex: 1 }))(
           ...posList.map(pos => {
 
-            const positionMarkPrice = latestTokenPrice(config.processData, now(pos.indexToken))
+            const positionMarkPrice = latestTokenPrice(config.processData, pos.indexToken)
             const cumulativeFee = vault.read('cumulativeFundingRates', pos.collateralToken)
             const pnl = map(params => {
               const delta = getPnL(pos.isLong, pos.averagePrice, params.positionMarkPrice.min, pos.size)

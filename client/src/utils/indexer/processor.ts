@@ -3,10 +3,10 @@ import { fromPromise, map, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, getblockOrderIdentifier, max, min, switchMap } from "gmx-middleware-utils"
 import * as viem from "viem"
-import { zipArray } from "../../logic/utils"
-import * as indexDB from "../storage/indexDB"
-import * as store from "../storage/storeScope"
-import { IIndexEventLogScopeParams, fetchTradesRecur } from "./rpc"
+import { zipArray } from "../../logic/utils.js"
+import * as indexDB from "../storage/indexDB.js"
+import * as store from "../storage/storeScope.js"
+import { IIndexEventLogScopeParams, fetchTradesRecur } from "./rpc.js"
 
 
 export enum IProcessEnvironmentMode {

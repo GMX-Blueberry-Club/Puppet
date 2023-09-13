@@ -4,7 +4,7 @@ import { pallete } from "@aelea/ui-components-theme"
 import { empty, map, periodic } from "@most/core"
 import { readableFixedUSD30, unixTimestampNow } from "gmx-middleware-utils"
 import { $alertIcon, $defaultDropContainer, $Tooltip } from "gmx-middleware-ui-components"
-import { $pnlValue } from "../../common/$common"
+import { $pnlValue } from "../../common/$common.js"
 
 
 export const $alertTooltip = ($content: $Branch) => {

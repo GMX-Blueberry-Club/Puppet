@@ -6,7 +6,7 @@ import { Stream } from "@most/types"
 import { colorAlpha } from "@aelea/ui-components-theme"
 import { observer } from '@aelea/ui-components'
 import { switchMap } from 'gmx-middleware-utils'
-import { fadeIn } from '../transitions/enter'
+import { fadeIn } from '../transitions/enter.js'
 
 
 interface IPocus {

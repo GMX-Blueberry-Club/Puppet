@@ -1,6 +1,6 @@
 import * as PUPPET from "puppet-middleware-const"
-import { rootStoreScope } from "../store/store"
-import * as store from "../../utils/indexer/rpc"
+import { rootStoreScope } from "../store/store.js"
+import * as store from "../../utils/indexer/rpc.js"
 
 
 const config = {

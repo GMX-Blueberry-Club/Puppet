@@ -6,8 +6,8 @@ import { $xCross } from "gmx-middleware-ui-components"
 import { combine, constant, delay, empty, filter, map, merge, mergeArray, multicast, never, now, scan, skip, skipRepeats, snapshot, startWith, switchLatest, take, tap, zip } from "@most/core"
 import { append, remove } from "@most/prelude"
 import { Stream } from "@most/types"
-import { $caretDown } from "../../elements/$icons"
-import { $Select, ISelect } from "./$Select"
+import { $caretDown } from "../../elements/$icons.js"
+import { $Select, ISelect } from "./$Select.js"
 
 
 export const buttonPrimaryStyle = style({

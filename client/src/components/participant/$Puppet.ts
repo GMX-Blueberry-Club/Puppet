@@ -9,18 +9,18 @@ import { $Link, $Table, $arrowRight, $icon, $infoLabel, ScrollRequest } from "gm
 import { getMappedValue, groupArrayMany, readableLeverage, pagingQuery, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from 'viem'
-import { $profileAvatar, $profileDisplay } from "../$AccountProfile"
-import { $TraderDisplay, $pnlValue, $route } from "../../common/$common"
-import { $heading2, $heading3 } from "../../common/$text"
-import { IGmxProcessState } from "../../data/process/process"
-import { $card, $card2 } from "../../elements/$common"
-import { $seperator2 } from "../../pages/common"
-import { entryColumn, pnlSlotColumn, positionTimeColumn, settledPnlColumn, settledSizeColumn, slotSizeColumn } from "../table/$TableColumn"
-import { $ProfilePerformanceCard, $ProfilePerformanceGraph, getUpdateTickList } from "../trade/$ProfilePerformanceGraph"
+import { $profileAvatar, $profileDisplay } from "../$AccountProfile.js"
+import { $TraderDisplay, $pnlValue, $route } from "../../common/$common.js"
+import { $heading2, $heading3 } from "../../common/$text.js"
+import { IGmxProcessState } from "../../data/process/process.js"
+import { $card, $card2 } from "../../elements/$common.js"
+import { $seperator2 } from "../../pages/common.js"
+import { entryColumn, pnlSlotColumn, positionTimeColumn, settledPnlColumn, settledSizeColumn, slotSizeColumn } from "../table/$TableColumn.js"
+import { $ProfilePerformanceCard, $ProfilePerformanceGraph, getUpdateTickList } from "../trade/$ProfilePerformanceGraph.js"
 import * as GMX from 'gmx-middleware-const'
-import { $metricValue } from "./profileUtils"
-import { $LastAtivity } from "../../pages/components/$LastActivity"
-import { IProfileActiveTab } from "../../pages/$Profile"
+import { $metricValue } from "./profileUtils.js"
+import { $LastAtivity } from "../../pages/components/$LastActivity.js"
+import { IProfileActiveTab } from "../../pages/$Profile.js"
 
 
 

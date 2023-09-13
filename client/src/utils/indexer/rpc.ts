@@ -2,7 +2,7 @@ import { chain, delay, map, now, recoverWith } from "@most/core"
 import { Stream } from "@most/types"
 import { ILogOrdered, ILogOrderedEvent } from "gmx-middleware-utils"
 import * as viem from "viem"
-import * as store from "../storage/storeScope"
+import * as store from "../storage/storeScope.js"
 
 
 export type IIndexRpcEventLogConfig<

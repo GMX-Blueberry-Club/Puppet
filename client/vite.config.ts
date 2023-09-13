@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import { ManifestOptions, VitePWA, VitePWAOptions } from 'vite-plugin-pwa'
 import replace from '@rollup/plugin-replace'
 
-import { dark } from './src/common/theme'
+import { dark } from './src/common/theme.js'
 
 
 const SITE_CONFIG = {

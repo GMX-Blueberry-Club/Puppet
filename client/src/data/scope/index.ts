@@ -1,4 +1,4 @@
 
 
-export * as gmxLog from './gmx'
-export * as puppetLog from './puppet'
+export * as gmxLog from './gmx.js'
+export * as puppetLog from './puppet.js'

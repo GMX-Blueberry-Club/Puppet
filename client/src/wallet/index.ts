@@ -1,1 +1,1 @@
-export * as walletLink from './walletLink'
+export * as walletLink from './walletLink.js'

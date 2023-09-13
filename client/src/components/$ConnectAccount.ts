@@ -6,9 +6,9 @@ import { CHAIN } from "gmx-middleware-const"
 import { $alertContainer, $alertIcon, $walletConnectLogo } from "gmx-middleware-ui-components"
 import { awaitPromises, empty, filter, map, mergeArray, now, snapshot, switchLatest, tap } from "@most/core"
 import { getNetwork } from "@wagmi/core"
-import { IWalletClient, chain, wallet, web3Modal } from "../wallet/walletLink"
-import { $ButtonSecondary } from "./form/$Button"
-import { IButtonCore } from "./form/$ButtonCore"
+import { IWalletClient, chain, wallet, web3Modal } from "../wallet/walletLink.js"
+import { $ButtonSecondary } from "./form/$Button.js"
+import { IButtonCore } from "./form/$ButtonCore.js"
 import { switchMap } from "gmx-middleware-utils"
 
 

@@ -22,10 +22,10 @@ import {
 import { IPositionMirrorSettled, IPositionMirrorSlot, IPuppetRouteSubscritpion, getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
-import { IProcessEnvironmentMode, IProcessedStore, IProcessedStoreConfig, defineProcess, validateSeed } from "../../utils/indexer/processor"
-import { transformBigints } from "../../utils/storage/storeScope"
-import * as gmxLog from "../scope/gmx"
-import { rootStoreScope } from "../store/store"
+import { IProcessEnvironmentMode, IProcessedStore, IProcessedStoreConfig, defineProcess, validateSeed } from "../../utils/indexer/processor.js"
+import { transformBigints } from "../../utils/storage/storeScope.js"
+import * as gmxLog from "../scope/gmx.js"
+import { rootStoreScope } from "../store/store.js"
 
 
 export interface IProcessMetrics {
@@ -356,8 +356,8 @@ export const initPartialPositionSlot = {
 
 
 
-export const latestTokenPrice = (process: Stream<IGmxProcessState>, tokenEvent: Stream<viem.Address>) => {
-  return switchMap(token => map(seed => seed.latestPrice[token], process), tokenEvent)
+export const latestTokenPrice = (process: Stream<IGmxProcessState>, token: viem.Address) => {
+  return map(seed => seed.latestPrice[token], process)
 }
 
 export const getEventType = <T extends ILogTxType<any>>(typeName: string, log: IEventLog1Args, blockTimestamp: number): T => {

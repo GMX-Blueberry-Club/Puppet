@@ -9,13 +9,13 @@ import { $Link, $infoTooltipLabel, TableColumn } from "gmx-middleware-ui-compone
 import { getBasisPoints, readableDate, readablePercentage, switchMap, timeSince } from "gmx-middleware-utils"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from 'viem'
-import { $profileDisplay } from "../$AccountProfile"
-import { $entry, $openPositionPnlBreakdown, $pnlValue, $positionSlotPnl, $positionSlotRoi, $puppets, $size, $sizeAndLiquidation } from "../../common/$common"
-import { IGmxProcessState, latestTokenPrice } from "../../data/process/process"
-import { $txnIconLink } from "../../elements/$common"
-import { contractReader } from "../../logic/common"
-import { IProfileActiveTab } from "../../pages/$Profile"
-import { $seperator2 } from "../../pages/common"
+import { $profileDisplay } from "../$AccountProfile.js"
+import { $entry, $openPositionPnlBreakdown, $pnlValue, $positionSlotPnl, $positionSlotRoi, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
+import { IGmxProcessState, latestTokenPrice } from "../../data/process/process.js"
+import { $txnIconLink } from "../../elements/$common.js"
+import { contractReader } from "../../logic/common.js"
+import { IProfileActiveTab } from "../../pages/$Profile.js"
+import { $seperator2 } from "../../pages/common.js"
 
 
 const $tableHeader = (primaryLabel: string, secondaryLabel: string) => $column(style({ textAlign: 'right' }))(
@@ -28,7 +28,7 @@ export const slotSizeColumn = <T extends IPositionMirrorSlot>(processData: Strea
   $head: $tableHeader('Size', 'Leverage'),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $$body: map(mp => {
-    const positionMarkPrice = latestTokenPrice(processData, now(mp.indexToken))
+    const positionMarkPrice = latestTokenPrice(processData, mp.indexToken)
     return $sizeAndLiquidation(mp, positionMarkPrice, shareTarget)
   })
 })
@@ -65,7 +65,7 @@ export const pnlSlotColumn = <T extends IPositionMirrorSlot>(processData: Stream
   $head: $tableHeader('PnL', 'ROI'),
   columnOp: style({ placeContent: 'flex-end' }),
   $$body: map((pos) => {
-    const positionMarkPrice = latestTokenPrice(processData, now(pos.indexToken))
+    const positionMarkPrice = latestTokenPrice(processData, pos.indexToken)
     const cumulativeTokenFundingRates = contractReader(GMX.CONTRACT['42161'].Vault)('cumulativeFundingRates', pos.collateralToken)
 
     return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(

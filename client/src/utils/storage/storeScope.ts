@@ -1,6 +1,6 @@
 import { continueWith, join, map } from "@most/core"
 import { Stream } from "@most/types"
-import * as indexDB from './indexDB'
+import * as indexDB from './indexDB.js'
 
 
 // stringify with bigint support

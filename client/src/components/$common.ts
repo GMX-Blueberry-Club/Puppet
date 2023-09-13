@@ -9,14 +9,14 @@ import { $Table, $alertTooltip, $defaultVScrollContainer, $infoLabeledValue, $in
 import { IAbstractPositionParams, getMappedValue, parseFixed, switchMap, tokenAmount, tokenAmountLabel } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
-import { $TextField } from "../common/$TextField"
-import { $route } from "../common/$common"
-import { $card } from "../elements/$common"
-import { connectContract, wagmiWriteContract } from "../logic/common"
-import { IWalletClient, nativeBalance } from "../wallet/walletLink"
-import { $berry } from "./$DisplayBerry"
-import { $Popover } from "./$Popover"
-import { $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "./form/$Button"
+import { $TextField } from "../common/$TextField.js"
+import { $route } from "../common/$common.js"
+import { $card } from "../elements/$common.js"
+import { connectContract, wagmiWriteContract } from "../logic/common.js"
+import { IWalletClient, nativeBalance } from "../wallet/walletLink.js"
+import { $berry } from "./$DisplayBerry.js"
+import { $Popover } from "./$Popover.js"
+import { $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "./form/$Button.js"
 
 
 export const $CardTable = <T, FilterState>(config: TableOption<T, FilterState>) => {

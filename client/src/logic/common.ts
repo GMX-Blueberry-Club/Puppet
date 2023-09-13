@@ -6,7 +6,7 @@ import { WalletClient } from "@wagmi/core"
 import type { AbiParametersToPrimitiveTypes, Address, ExtractAbiEvent, ExtractAbiFunction } from 'abitype'
 import { ContractClientParams, ContractParams, StreamInput, StreamInputArray, switchMap } from "gmx-middleware-utils"
 import * as viem from "viem"
-import { wallet } from "../wallet/walletLink"
+import { wallet } from "../wallet/walletLink.js"
 import { O } from "@aelea/core"
 import { http } from "@aelea/ui-components"
 import { filter, mergeArray, multicast } from "@most/core"

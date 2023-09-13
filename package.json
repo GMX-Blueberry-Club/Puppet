@@ -3,6 +3,10 @@
   "license": "AGPL-3.0",
   "private": true,
   "packageManager": "pnpm@8.5.1",
+  "workspaces": [
+    "*",
+    "gmx-middleware/*"
+  ],
   "scripts": {
     "build": "pnpm recursive run build",
     "dev": "concurrently -n contracts,client -c cyan,magenta \"cd packages/contracts && pnpm run dev\" \"cd packages/client && pnpm run dev\"",

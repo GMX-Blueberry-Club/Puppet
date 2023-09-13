@@ -8,7 +8,7 @@ import { $Baseline, $bear, $bull, $infoTooltipLabel, IMarker } from "gmx-middlew
 import { filterNull, parseReadableNumber, readableFixedUSD30, readableUnitAmount } from "gmx-middleware-utils"
 import { BaselineData, ChartOptions, DeepPartial, MouseEventParams, Time } from "lightweight-charts"
 import { IPositionMirrorSettled, IPositionMirrorSlot } from "puppet-middleware-utils"
-import { IPerformanceTimeline, performanceTimeline } from "./$ProfilePerformanceGraph"
+import { IPerformanceTimeline, performanceTimeline } from "./$ProfilePerformanceGraph.js"
 
 
 export interface ITradeCardPreview extends Omit<IPerformanceTimeline, 'positionList'> {

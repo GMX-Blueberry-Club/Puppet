@@ -22,14 +22,14 @@ import {
 } from "gmx-middleware-utils"
 import { getMpSlotPnL, getParticiapntMpPortion, getParticiapntMpPortion, getPuppetSubscriptionKey, getRouteTypeKey, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile"
-import { $Popover } from "../components/$Popover"
-import { $RouteSubscriptionEditor } from "../components/$RouteSubscription"
-import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
-import { IProfileActiveTab } from "../pages/$Profile"
-import { $seperator2 } from "../pages/common"
-import { wallet } from "../wallet/walletLink"
-import { $puppetLogo } from "./$icons"
+import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile.js"
+import { $Popover } from "../components/$Popover.js"
+import { $RouteSubscriptionEditor } from "../components/$RouteSubscription.js"
+import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button.js"
+import { IProfileActiveTab } from "../pages/$Profile.js"
+import { $seperator2 } from "../pages/common.js"
+import { wallet } from "../wallet/walletLink.js"
+import { $puppetLogo } from "./$icons.js"
 
 
 export const $midContainer = $column(

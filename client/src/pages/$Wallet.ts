@@ -7,16 +7,16 @@ import { $ButtonToggle, $defaulButtonToggleContainer } from "gmx-middleware-ui-c
 import {
   IRequestAccountTradeListApi, groupArrayMany, switchMap
 } from "gmx-middleware-utils"
-import { gmxData } from "../data/process"
-import { IWalletClient } from "../wallet/walletLink"
+import { gmxData } from "../data/process/index.js"
+import { IWalletClient } from "../wallet/walletLink.js"
 import * as GMX from "gmx-middleware-const"
 import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
-import { connectContract } from "../logic/common"
+import { connectContract } from "../logic/common.js"
 import { IPositionMirrorSettled, IPositionMirrorSlot } from "puppet-middleware-utils"
 import { Stream } from "@most/types"
-import { IGmxProcessState } from "../data/process/process"
-import { ROUTE_DESCRIPTIN_MAP } from "../logic/utils"
+import { IGmxProcessState } from "../data/process/process.js"
+import { ROUTE_DESCRIPTIN_MAP } from "../logic/utils.js"
 
 export enum IProfileActiveTab {
   BERRIES = 'Trader',

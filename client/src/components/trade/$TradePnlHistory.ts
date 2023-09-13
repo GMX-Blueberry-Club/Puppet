@@ -18,7 +18,7 @@ import {
   unixTimestampNow
 } from "gmx-middleware-utils"
 import { ChartOptions, DeepPartial, MouseEventParams, Time } from "lightweight-charts"
-import { IGmxProcessState } from "../../data/process/process"
+import { IGmxProcessState } from "../../data/process/process.js"
 
 interface ITradePnlPreview {
   $container: NodeComposeFn<$Node>

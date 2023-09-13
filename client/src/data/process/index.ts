@@ -1,3 +1,3 @@
 
 
-export * as gmxData from './process'
+export * as gmxData from './process.js'
