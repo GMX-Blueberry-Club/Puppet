@@ -48,6 +48,7 @@ export interface IDropdown<T> {
 export const $defaultOptionContainer = $row(layoutSheet.spacingSmall, style({ alignItems: 'center', borderBottom: `1px solid ${pallete.horizon}`, padding: '12px 20px', width: '100%' }), style({ cursor: 'pointer' }), stylePseudo(':hover', { backgroundColor: pallete.horizon }))
 export const $defaultSelectContainer = $column(
   style({
+    left: 0,
     minWidth: '80px', overflow: 'hidden',
     border: `1px solid ${pallete.horizon}`,
     borderRadius: '20px',
@@ -327,7 +328,7 @@ export const $DropMultiSelect = <T>({
 
           const $floatingContainer = (selector.$container || $defaultSelectContainer)(
             style({
-              padding: '8px', zIndex: 50, left: 0,
+              padding: '8px', zIndex: 50,
               position: 'absolute', visibility: 'hidden'
             })
           )

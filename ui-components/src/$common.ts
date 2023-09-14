@@ -154,23 +154,28 @@ export const $hintNumChange = ({ change, isIncrease, val, label, tooltip }: IHin
       ? $infoTooltipLabel(tooltip, label)
       : label
         ? $text(style({ color: pallete.foreground }))(label) : empty(),
-    $row(layoutSheet.spacingTiny, style({ lineHeight: 1, alignItems: 'center' }))(
-      $text(style({ color: pallete.foreground }))(val),
 
-      switchMap(display => {
-        if (!display) return empty()
+    switchMap(display => {
+      if (!display) {
+        return $text(val)
+      }
 
-        return $icon({
+      return $row(layoutSheet.spacingTiny, style({ lineHeight: 1, alignItems: 'center' }))(
+        $text(style({ color: pallete.foreground }))(val),
+
+        $icon({
           $content: $arrowRight,
           width: '10px',
           svgOps: styleBehavior(map(params => {
             return params.change ? { fill: params.arrowColor } : { display: 'none' }
           }, combineObject({ change, arrowColor }))),
           viewBox: '0 0 32 32'  
-        })
-      }, displayChange),
-      $text(map(str => str ?? '', change)),
-    ),
+        }),
+      
+        $text(map(str => str ?? '', change)),
+      )
+    }, displayChange),
+    
   )
 }
 

@@ -716,310 +716,305 @@ export const $Trade = (config: ITradeComponent) => component((
   return [
     $column(screenUtils.isDesktopScreen ? style({  flex: 1 }) : style({  }))(
 
+      screenUtils.isMobileScreen
+        ? $midContainer(style({ padding: '26px 12px 26px' }))(
+          $tradebox,
+        )
+        : empty(),
 
-      $column(style({ flexDirection: screenUtils.isDesktopScreen ? 'column' : 'column-reverse' }))(
-        
-        $column(
-          screenUtils.isDesktopScreen
-            ? style({ 
+      $column(
+        screenUtils.isDesktopScreen
+          ? style({ 
             // paddingLeft: '26px'
-            })
-            : style({}),
-          style({ flex: 1, minHeight: '460px', maxHeight: '45vh', position: 'relative', backgroundColor: pallete.background }),
+          })
+          : style({}),
+        style({ height: '45vh', minHeight: '460px', position: 'relative', backgroundColor: pallete.background }),
         // screenUtils.isDesktopScreen
         //   ? style({ height: '500px' })
         //   : style({ height: '500px' })
+      )(
+
+
+
+        $tradeMidContainer(
+          screenUtils.isDesktopScreen
+            ? style({ pointerEvents: 'none', flexDirection: 'row', marginTop: '12px', zIndex: 20, placeContent: 'space-between', alignItems: 'flex-start' })
+            : style({ pointerEvents: 'none', flex: 0, flexDirection: 'row', zIndex: 20, margin: '8px', alignItems: 'flex-start' })
         )(
-
-
-
-          $tradeMidContainer(
-            screenUtils.isDesktopScreen
-              ? style({ pointerEvents: 'none', flexDirection: 'row', marginTop: '12px', zIndex: 20, placeContent: 'space-between', alignItems: 'flex-start' })
-              : style({ pointerEvents: 'none', flex: 0, flexDirection: 'row', zIndex: 20, margin: '8px', alignItems: 'flex-start' })
-          )(
-            $row(layoutSheet.spacingBig, style({ pointerEvents: 'all' }))(
-              $column(layoutSheet.spacingSmall)(
-                $infoLabel('Borrow Rate'),
-                $row(style({ whiteSpace: 'pre' }))(
-                  switchMap(rate => $text(style({ color: rate ? pallete.negative : '' }))(readableFactorPercentage(-rate)), borrowRatePerInterval),
-                  $text(style({ color: pallete.foreground }))(' / hr')
-                )
-              ),
-              $column(layoutSheet.spacingSmall)(
-                $infoLabel('Funding Rate'),
-                $row(style({ whiteSpace: 'pre' }))(
-                  switchMap(params => {
-                    const isPositive = params.fundingRatePerInterval > 0n
-                    const color = isPositive ? pallete.positive : pallete.negative
-                    const label = isPositive ? '+' : ''
-                    return $text(style({ color }))(label + readableFactorPercentage(params.fundingRatePerInterval))
-                  }, combineObject({ fundingRatePerInterval, isLong })),
-                  $text(style({ color: pallete.foreground }))(' / hr')
-                )
-              ),
-              $column(layoutSheet.spacingSmall)(
-                $infoLabel('Available Liquidity'),
-                $text(map(amountUsd => readableFixedUSD30(amountUsd), availableIndexLiquidityUsd))
+          $row(layoutSheet.spacingBig, style({ pointerEvents: 'all' }))(
+            $column(layoutSheet.spacingSmall)(
+              $infoLabel('Borrow Rate'),
+              $row(style({ whiteSpace: 'pre' }))(
+                switchMap(rate => $text(style({ color: rate ? pallete.negative : '' }))(readableFactorPercentage(-rate)), borrowRatePerInterval),
+                $text(style({ color: pallete.foreground }))(' / hr')
               )
             ),
-
-            screenUtils.isDesktopScreen
-              ? style({ pointerEvents: 'all' })(
-                $ButtonToggle({
-                  selected: chartInterval,
-                  options: [
-                    GMX.TIME_INTERVAL_MAP.MIN5,
-                    GMX.TIME_INTERVAL_MAP.MIN15,
-                    GMX.TIME_INTERVAL_MAP.MIN60,
-                    GMX.TIME_INTERVAL_MAP.HR4,
-                    GMX.TIME_INTERVAL_MAP.HR24,
-                    // GMX.TIME_INTERVAL_MAP.DAY7,
-                  ],
-                  $$option: map(option => {
-                    const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
-
-                    return $text(timeframeLabel)
-                  })
-                })({ select: selectTimeFrameTether() })
+            $column(layoutSheet.spacingSmall)(
+              $infoLabel('Funding Rate'),
+              $row(style({ whiteSpace: 'pre' }))(
+                switchMap(params => {
+                  const isPositive = params.fundingRatePerInterval > 0n
+                  const color = isPositive ? pallete.positive : pallete.negative
+                  const label = isPositive ? '+' : ''
+                  return $text(style({ color }))(label + readableFactorPercentage(params.fundingRatePerInterval))
+                }, combineObject({ fundingRatePerInterval, isLong })),
+                $text(style({ color: pallete.foreground }))(' / hr')
               )
-              : $Dropdown({
-                $selection: switchLatest(map((option) => {
-                  const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
-
-                  return style({ padding: '8px', alignSelf: 'center' })(
-                    $ButtonSecondary({
-                      $content: $row(
-                        $text(timeframeLabel),
-                        $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
-                      )
-                    })({})
-                  )
-                }, chartInterval)),
-                selector: {
-                  value: chartInterval,
-                  $$option: map((option) => {
-                    const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
-
-                    return $text(style({ fontSize: '.85rem' }))(timeframeLabel)
-                  }),
-                  list: [
-                    GMX.TIME_INTERVAL_MAP.MIN5,
-                    GMX.TIME_INTERVAL_MAP.MIN15,
-                    GMX.TIME_INTERVAL_MAP.MIN60,
-                    GMX.TIME_INTERVAL_MAP.HR4,
-                    GMX.TIME_INTERVAL_MAP.HR24,
-                  // GMX.TIME_INTERVAL_MAP.DAY7,
-                  ],
-                }
-              })({
-                select: selectTimeFrameTether()
-              }),
-          
-
-            screenUtils.isDesktopScreen
-              ? $column(style({ position: 'absolute', pointerEvents: 'all', zIndex: 20, bottom: '40px', width: '440px', left: '0' }))(
-                $tradebox,
-              ) : empty(),
+            ),
+            $column(layoutSheet.spacingSmall)(
+              $infoLabel('Available Liquidity'),
+              $text(map(amountUsd => readableFixedUSD30(amountUsd), availableIndexLiquidityUsd))
+            )
           ),
 
-          switchLatest(snapshot((params, feed) => {
+          screenUtils.isDesktopScreen
+            ? style({ pointerEvents: 'all' })(
+              $ButtonToggle({
+                selected: chartInterval,
+                options: [
+                  GMX.TIME_INTERVAL_MAP.MIN5,
+                  GMX.TIME_INTERVAL_MAP.MIN15,
+                  GMX.TIME_INTERVAL_MAP.MIN60,
+                  GMX.TIME_INTERVAL_MAP.HR4,
+                  GMX.TIME_INTERVAL_MAP.HR24,
+                  // GMX.TIME_INTERVAL_MAP.DAY7,
+                ],
+                $$option: map(option => {
+                  const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
 
-            const tf = params.chartInterval
-            const fst = feed[feed.length - 1]
-
-            const initialTick = {
-              open: formatFixed(fst.o * getDenominator(params.indexDescription.decimals), 30),
-              high: formatFixed(fst.h * getDenominator(params.indexDescription.decimals), 30),
-              low: formatFixed(fst.l * getDenominator(params.indexDescription.decimals), 30),
-              close: formatFixed(fst.c * getDenominator(params.indexDescription.decimals), 30),
-              time: fst.blockTimestamp as Time
-            }
-
-            const rightOffset = screenUtils.isDesktopScreen ? ((document.body.clientWidth - CONTAINER_WIDTH) / 2) / 14 : 5
-
-            return $CandleSticks({
-              $content: $row(
-                styleBehavior(map(state => {
-                  return { border: `1px solid ${state ? pallete.primary : pallete.horizon}` }
-                }, isFocused)),
-                style({
-                  backgroundColor: pallete.background,
-                  transition: 'border-color .15s ease-in-out',
-                  fontSize: '.85rem',
-                  padding: '6px 8px',
-                  borderRadius: '30px',
+                  return $text(timeframeLabel)
                 })
-              )(
+              })({ select: selectTimeFrameTether() })
+            )
+            : $Dropdown({
+              $selection: switchLatest(map((option) => {
+                const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
 
-                switchMap(state => {
-                  if (!state) {
-                    return empty()
-                  }
+                return style({ padding: '8px', alignSelf: 'center' })(
+                  $ButtonSecondary({
+                    $content: $row(
+                      $text(timeframeLabel),
+                      $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
+                    )
+                  })({})
+                )
+              }, chartInterval)),
+              selector: {
+                value: chartInterval,
+                $$option: map((option) => {
+                  const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
 
-                  return $row(layoutSheet.spacingSmall)(
-                    $infoLabeledValue('Size', $text(map(value => `${readableFixedUSD30(value)}`, sizeDeltaUsd))),
-                    $infoLabeledValue('Collateral', $text(map(value => `${readableFixedUSD30(value)}`, collateralDeltaUsd))),
-                  )
-                }, isFocused),
-                $icon({ $content: $target, width: '16px', svgOps: style({ margin: '0 6px' }), viewBox: '0 0 32 32' }),
+                  return $text(style({ fontSize: '.85rem' }))(timeframeLabel)
+                }),
+                list: [
+                  GMX.TIME_INTERVAL_MAP.MIN5,
+                  GMX.TIME_INTERVAL_MAP.MIN15,
+                  GMX.TIME_INTERVAL_MAP.MIN60,
+                  GMX.TIME_INTERVAL_MAP.HR4,
+                  GMX.TIME_INTERVAL_MAP.HR24,
+                  // GMX.TIME_INTERVAL_MAP.DAY7,
+                ],
+              }
+            })({
+              select: selectTimeFrameTether()
+            }),
+          
 
-                $text(map(ev => {
-                  return ev ? readableUnitAmount(ev) : ''
-                }, focusPrice))
-              ),
-              data: feed.map(({ o, h, l, c, blockTimestamp }) => {
-                const open = formatFixed(o * getDenominator(params.indexDescription.decimals), 30)
-                const high = formatFixed(h * getDenominator(params.indexDescription.decimals), 30)
-                const low = formatFixed(l * getDenominator(params.indexDescription.decimals), 30)
-                const close = formatFixed(c * getDenominator(params.indexDescription.decimals), 30)
+          screenUtils.isDesktopScreen
+            ? $column(style({ position: 'absolute', pointerEvents: 'all', zIndex: 20, bottom: '40px', width: '440px', left: '0' }))(
+              $tradebox,
+            ) : empty(),
+        ),
 
-                return { open, high, low, close, time: Number(blockTimestamp) as Time }
-              }),
-              seriesConfig: {
-                priceLineColor: pallete.foreground,
-                baseLineStyle: LineStyle.SparseDotted,
+        switchLatest(snapshot((params, feed) => {
 
-                upColor: '#27a69a',
-                borderUpColor: '#27a69a',
-                wickUpColor: '#27a69a',
+          const tf = params.chartInterval
+          const fst = feed[feed.length - 1]
 
-                downColor: '#fd534f',
-                borderDownColor: '#fd534f',
-                wickDownColor: '#fd534f',
-              },
-              priceLines: [
-                map(val => {
-                  if (val === 0n) {
-                    return null
-                  }
+          const initialTick = {
+            open: formatFixed(fst.o * getDenominator(params.indexDescription.decimals), 30),
+            high: formatFixed(fst.h * getDenominator(params.indexDescription.decimals), 30),
+            low: formatFixed(fst.l * getDenominator(params.indexDescription.decimals), 30),
+            close: formatFixed(fst.c * getDenominator(params.indexDescription.decimals), 30),
+            time: fst.blockTimestamp as Time
+          }
 
-                  return {
-                    price: formatFixed(val, 30),
-                    color: pallete.foreground,
-                    lineVisible: true,
-                    // axisLabelColor: '#fff',
-                    // axisLabelTextColor: 'red',
-                    // axisLabelVisible: true,
-                    lineWidth: 1,
-                    title: `Entry`,
-                    lineStyle: LineStyle.SparseDotted,
-                  }
-                }, averagePrice),
-                map(val => {
-                  if (val === 0n) {
-                    return null
-                  }
+          const rightOffset = screenUtils.isDesktopScreen ? ((document.body.clientWidth - CONTAINER_WIDTH) / 2) / 14 : 5
 
-                  return {
-                    price: formatFixed(val, 30),
-                    color: pallete.negative,
-                    lineVisible: true,
-                    // axisLabelColor: 'red',
-                    // axisLabelVisible: true,
-                    // axisLabelTextColor: 'red',
-                    lineWidth: 1,
-                    title: `Liquidation`,
-                    lineStyle: LineStyle.SparseDotted,
-                  }
-                }, liquidationPrice)
+          return $CandleSticks({
+            $content: $row(
+              styleBehavior(map(state => {
+                return { border: `1px solid ${state ? pallete.primary : pallete.horizon}` }
+              }, isFocused)),
+              style({
+                backgroundColor: pallete.background,
+                transition: 'border-color .15s ease-in-out',
+                fontSize: '.85rem',
+                padding: '6px 8px',
+                borderRadius: '30px',
+              })
+            )(
 
-              ],
-              appendData: scan((prev: CandlestickData, next): CandlestickData => {
-                const marketPrice = formatFixed(next.indexPrice * getDenominator(params.indexDescription.decimals), GMX.USD_DECIMALS)
-              
-                const timeNow = unixTimestampNow()
+              switchMap(state => {
+                if (!state) {
+                  return empty()
+                }
 
-                const prevTimeSlot = Math.floor(prev.time as number / tf)
-                const nextTimeSlot = Math.floor(timeNow / tf)
-                const time = nextTimeSlot * tf as Time
+                return $row(layoutSheet.spacingSmall)(
+                  $infoLabeledValue('Size', $text(map(value => `${readableFixedUSD30(value)}`, sizeDeltaUsd))),
+                  $infoLabeledValue('Collateral', $text(map(value => `${readableFixedUSD30(value)}`, collateralDeltaUsd))),
+                )
+              }, isFocused),
+              $icon({ $content: $target, width: '16px', svgOps: style({ margin: '0 6px' }), viewBox: '0 0 32 32' }),
 
-                const isNext = nextTimeSlot > prevTimeSlot
+              $text(map(ev => {
+                return ev ? readableUnitAmount(ev) : ''
+              }, focusPrice))
+            ),
+            data: feed.map(({ o, h, l, c, blockTimestamp }) => {
+              const open = formatFixed(o * getDenominator(params.indexDescription.decimals), 30)
+              const high = formatFixed(h * getDenominator(params.indexDescription.decimals), 30)
+              const low = formatFixed(l * getDenominator(params.indexDescription.decimals), 30)
+              const close = formatFixed(c * getDenominator(params.indexDescription.decimals), 30)
 
-                document.title = `${next.indexTokenDescription.symbol} ${readableUnitAmount(marketPrice)}`
+              return { open, high, low, close, time: Number(blockTimestamp) as Time }
+            }),
+            seriesConfig: {
+              priceLineColor: pallete.foreground,
+              baseLineStyle: LineStyle.SparseDotted,
 
-                if (isNext) {
-                  return {
-                    open: marketPrice,
-                    high: marketPrice,
-                    low: marketPrice,
-                    close: marketPrice,
-                    time
-                  }
+              upColor: '#27a69a',
+              borderUpColor: '#27a69a',
+              wickUpColor: '#27a69a',
+
+              downColor: '#fd534f',
+              borderDownColor: '#fd534f',
+              wickDownColor: '#fd534f',
+            },
+            priceLines: [
+              map(val => {
+                if (val === 0n) {
+                  return null
                 }
 
                 return {
-                  open: prev.open,
-                  high: marketPrice > prev.high ? marketPrice : prev.high,
-                  low: marketPrice < prev.low ? marketPrice : prev.low,
+                  price: formatFixed(val, 30),
+                  color: pallete.foreground,
+                  lineVisible: true,
+                  // axisLabelColor: '#fff',
+                  // axisLabelTextColor: 'red',
+                  // axisLabelVisible: true,
+                  lineWidth: 1,
+                  title: `Entry`,
+                  lineStyle: LineStyle.SparseDotted,
+                }
+              }, averagePrice),
+              map(val => {
+                if (val === 0n) {
+                  return null
+                }
+
+                return {
+                  price: formatFixed(val, 30),
+                  color: pallete.negative,
+                  lineVisible: true,
+                  // axisLabelColor: 'red',
+                  // axisLabelVisible: true,
+                  // axisLabelTextColor: 'red',
+                  lineWidth: 1,
+                  title: `Liquidation`,
+                  lineStyle: LineStyle.SparseDotted,
+                }
+              }, liquidationPrice)
+
+            ],
+            appendData: scan((prev: CandlestickData, next): CandlestickData => {
+              const marketPrice = formatFixed(next.indexPrice * getDenominator(params.indexDescription.decimals), GMX.USD_DECIMALS)
+              
+              const timeNow = unixTimestampNow()
+
+              const prevTimeSlot = Math.floor(prev.time as number / tf)
+              const nextTimeSlot = Math.floor(timeNow / tf)
+              const time = nextTimeSlot * tf as Time
+
+              const isNext = nextTimeSlot > prevTimeSlot
+
+              document.title = `${next.indexTokenDescription.symbol} ${readableUnitAmount(marketPrice)}`
+
+              if (isNext) {
+                return {
+                  open: marketPrice,
+                  high: marketPrice,
+                  low: marketPrice,
                   close: marketPrice,
                   time
                 }
-              }, initialTick, combineObject({ indexPrice, indexTokenDescription: indexDescription })),
-              containerOp: style({ position: 'absolute', inset: 0, borderRadius: '20px', overflow: 'hidden' }),
-              chartConfig: {
+              }
 
-                rightPriceScale: {
-                  borderColor: 'yellow',
-                  visible: true,
-                  entireTextOnly: true,
-                  borderVisible: false,
-                  scaleMargins: {
-                    top: 0.1,
-                    bottom: 0.05
-                  }
-                },
-                timeScale: {
-                  timeVisible: true,
-                  secondsVisible: false,
-                  borderVisible: false,
-                  // fixLeftEdge: true,
-                  // rightOffset: 100,
-                  rightOffset: rightOffset,
-                  // fixRightEdge: true,
-                  shiftVisibleRangeOnNewBar: true,
+              return {
+                open: prev.open,
+                high: marketPrice > prev.high ? marketPrice : prev.high,
+                low: marketPrice < prev.low ? marketPrice : prev.low,
+                close: marketPrice,
+                time
+              }
+            }, initialTick, combineObject({ indexPrice, indexTokenDescription: indexDescription })),
+            containerOp: style({ position: 'absolute', inset: 0, borderRadius: '20px', overflow: 'hidden' }),
+            chartConfig: {
+
+              rightPriceScale: {
+                borderColor: 'yellow',
+                visible: true,
+                entireTextOnly: true,
+                borderVisible: false,
+                scaleMargins: {
+                  top: 0.1,
+                  bottom: 0.05
                 }
               },
-              yAxisState: {
-                price: focusPrice,
-                isFocused: isFocused,
-                coords: yAxisCoords
+              timeScale: {
+                timeVisible: true,
+                secondsVisible: false,
+                borderVisible: false,
+                // fixLeftEdge: true,
+                // rightOffset: 100,
+                rightOffset: rightOffset,
+                // fixRightEdge: true,
+                shiftVisibleRangeOnNewBar: true,
               }
-            })({
-              yAxisCoords: changeYAxisCoordsTether(),
-              focusPrice: changefocusPriceTether(),
-              isFocused: changeIsFocusedTether(),
-              // crosshairMove: chartCrosshairMoveTether(),
-              click: chartClickTether(),
-              visibleLogicalRangeChange: chartVisibleLogicalRangeChangeTether(),
-            })
+            },
+            yAxisState: {
+              price: focusPrice,
+              isFocused: isFocused,
+              coords: yAxisCoords
+            }
+          })({
+            yAxisCoords: changeYAxisCoordsTether(),
+            focusPrice: changefocusPriceTether(),
+            isFocused: changeIsFocusedTether(),
+            // crosshairMove: chartCrosshairMoveTether(),
+            click: chartClickTether(),
+            visibleLogicalRangeChange: chartVisibleLogicalRangeChangeTether(),
+          })
 
               
-          }, combineObject({ chartInterval, indexDescription }), pricefeed)),
+        }, combineObject({ chartInterval, indexDescription }), pricefeed)),
 
 
 
 
-          screenUtils.isDesktopScreen
-            ? $node(style({
-              background: `linear-gradient(to right, ${pallete.background} 0%, ${colorAlpha(pallete.background, .9)} 32%, transparent 45%)`,
-              position: 'absolute',
-              inset: 0,
-              margin: `0px -100px`,
-              zIndex: 10,
-              pointerEvents: 'none',
-            }))()
-            : empty(),
-        ),
-
-        screenUtils.isMobileScreen
-          ? $midContainer(style({ padding: '26px 12px 26px' }))(
-            $tradebox,
-          )
+        screenUtils.isDesktopScreen
+          ? $node(style({
+            background: `linear-gradient(to right, ${pallete.background} 0%, ${colorAlpha(pallete.background, .9)} 32%, transparent 45%)`,
+            position: 'absolute',
+            inset: 0,
+            margin: `0px -100px`,
+            zIndex: 10,
+            pointerEvents: 'none',
+          }))()
           : empty(),
       ),
 
-      
 
       switchMap(params => {
         return $tradeMidContainer(layoutSheet.spacingSmall)(

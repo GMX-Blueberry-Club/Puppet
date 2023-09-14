@@ -12,12 +12,12 @@ import {
   IPositionIncrease,
   IPriceInterval,
   IPriceIntervalIdentity,
-  PositionFeesInfo,
   createPricefeedCandle,
   getDenominator,
   getIntervalIdentifier,
   getMappedValue,
-  importGlobal, switchMap, unixTimestampNow
+  importGlobal,
+  unixTimestampNow
 } from "gmx-middleware-utils"
 import { IPositionMirrorSettled, IPositionMirrorSlot, IPuppetRouteSubscritpion, getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"

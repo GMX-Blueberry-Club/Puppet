@@ -324,8 +324,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
           switchMap((cb) => {
             return fadeIn(
-              $row(style({ position: 'absolute', right: '10px', bottom: '10px' }))(
-                $alertContainer(
+              $row(style({ position: 'absolute', zIndex: 100, right: '10px', bottom: '10px' }))(
+                $alertContainer(style({ backgroundColor: pallete.horizon }))(
                   filterNull(constant(null, clickUpdateVersion)) as any,
 
                   $text('New version Available'),

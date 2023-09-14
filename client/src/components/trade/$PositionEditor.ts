@@ -447,12 +447,14 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
                 if (
                   params.walletBalance === 0n
-                  || getBasisPoints(params.collateralDelta, params.walletBalance) > 9000n
                   // || params.sizeDelta > 0n
                   || !params.isIncrease && params.position === null
                 ) {
                   return true
                 }
+
+                // const bps = getBasisPoints(params.collateralDelta, params.walletBalance)
+                // if (bps > 9000n && ) {}
 
                 return false
               }, combineObject({ isIncrease, collateralDelta, sizeDelta, walletBalance, position })),
@@ -494,7 +496,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 // }, config.tradeState.inputTokenDescription)),
                 selector: {
                   value: config.tradeConfig.primaryToken,
-                  $container: $defaultSelectContainer(style({ minWidth: '290px', left: 0 })),
+                  $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0, left: 'auto' })),
                   $$option: map(option => {
                     const token = resolveAddress(config.chain, option)
                     const balanceAmount = trade.getErc20Balance(config.chain, option, address)
