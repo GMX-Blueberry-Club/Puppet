@@ -19,6 +19,7 @@ import {
   getMappedValue,
   getMarginFee,
   getMarginFees,
+  getNativeTokenAddress,
   getNativeTokenDescription,
   getPnL,
   getPositionKey,
@@ -67,6 +68,7 @@ import { walletLink } from "../wallet/index.js"
 import { gasPrice, wallet } from "../wallet/walletLink.js"
 import { $seperator2 } from "./common.js"
 import { exchangesWebsocketPriceSource } from "../logic/trade.js"
+import { $MarketInfoList } from "../components/$MarketList"
 
 
 export type ITradeComponent = IPositionEditorAbstractParams
@@ -140,7 +142,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const processData = config.processData
 
   const chainId = config.chain.id
-  const nativeToken = GMX.CHAIN_ADDRESS_MAP[chainId].NATIVE_TOKEN
+  const nativeToken = getNativeTokenAddress(config.chain)
   const gmxContractMap = GMX.CONTRACT[config.chain.id]
   const puppetContractMap = PUPPET.CONTRACT[config.chain.id]
 
@@ -335,9 +337,9 @@ export const $Trade = (config: ITradeComponent) => component((
   const inputTokenWeight = vault.read('tokenWeights', primaryToken)
   const inputTokenDebtUsd = vault.read('usdgAmounts', primaryToken)
 
-  const primaryDescription = combineArray((network, token) => {
+  const primaryDescription = combineArray((chain, token) => {
     if (token === GMX.ADDRESS_ZERO) {
-      return getNativeTokenDescription(network.id)
+      return getNativeTokenDescription(chain)
     }
 
     return getTokenDescription(token)
@@ -492,6 +494,7 @@ export const $Trade = (config: ITradeComponent) => component((
     focusPrice: switchMap(focus => focus ? focusPrice : now(null), isFocused),
     marketInfo,
     market,
+    indexToken,
     focusMode,
     slippage,
     isLong,
@@ -753,7 +756,9 @@ export const $Trade = (config: ITradeComponent) => component((
               $infoLabel('Funding Rate'),
               $row(style({ whiteSpace: 'pre' }))(
                 switchMap(params => {
-                  const isPositive = params.fundingRatePerInterval > 0n
+                  const isPositive = params.isLong
+                    ? params.fundingRatePerInterval < 0n
+                    : params.fundingRatePerInterval > 0n
                   const color = isPositive ? pallete.positive : pallete.negative
                   const label = isPositive ? '+' : ''
                   return $text(style({ color }))(label + readableFactorPercentage(params.fundingRatePerInterval))
@@ -1023,26 +1028,30 @@ export const $Trade = (config: ITradeComponent) => component((
               const intent = params.isLong ? `Long-${params.indexDescription.symbol}` : `Short-${params.indexDescription.symbol}/${params.indexDescription.symbol}`
 
               return $node(layoutSheet.spacing, style({ flex: 1, display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column' }))(
-                $PositionDetailsPanel({
-                  ...config,
-                  chain: config.chain,
-                  openPositionList,
-                  parentRoute: config.parentRoute,
-                  pricefeed,
-                  tradeConfig,
-                  wallet: w3p,
-                  tradeState,
-                  $container: $column(style({ width: '440px' }))
-                })({
-                  clickResetPosition: clickResetPositionTether(),
-                  approvePrimaryToken: changeInputTokenApprovedTether(),
-                  enableTrading: enableTradingTether(),
-                  requestTrade: requestTradeTether(),
-                  switchTrade: switchTradeTether(),
-                  leverage: changeLeverageTether(),
-                // changeCollateralDeltaUsd: changeCollateralDeltaUsdTether(),
-                // changeSizeDeltaUsd: changeSizeDeltaUsdTether(),
-                }),
+
+                $column(
+                  $PositionDetailsPanel({
+                    ...config,
+                    chain: config.chain,
+                    openPositionList,
+                    parentRoute: config.parentRoute,
+                    pricefeed,
+                    tradeConfig,
+                    wallet: w3p,
+                    tradeState,
+                    $container: $column(style({ width: '440px' }))
+                  })({
+                    clickResetPosition: clickResetPositionTether(),
+                    approvePrimaryToken: changeInputTokenApprovedTether(),
+                    enableTrading: enableTradingTether(),
+                    requestTrade: requestTradeTether(),
+                    switchTrade: switchTradeTether(),
+                    leverage: changeLeverageTether(),
+                    // changeCollateralDeltaUsd: changeCollateralDeltaUsdTether(),
+                    // changeSizeDeltaUsd: changeSizeDeltaUsdTether(),
+                  }),
+
+                ),
 
                 $seperator2,
 
@@ -1180,8 +1189,6 @@ export const $Trade = (config: ITradeComponent) => component((
         ) 
       }, combineObject({ position, indexDescription, isLong })),
         
-      
-
     ),
 
     {

@@ -28,6 +28,7 @@ import {
   formatFixed,
   getAdjustedDelta,
   getBasisPoints,
+  getNativeTokenAddress,
   getNativeTokenDescription, getPnL,
   getTokenAmount,
   getTokenDescription, getTokenUsd,
@@ -53,11 +54,13 @@ import { $Slider } from "../$Slider.js"
 import { $heading2 } from "../../common/$text.js"
 import { IGmxProcessState, latestTokenPrice } from "../../data/process/process.js"
 import { $caretDown } from "../../elements/$icons.js"
-import { connectContract } from "../../logic/common.js"
+import { connectContract, getMappedValue2 } from "../../logic/common.js"
 import * as trade from "../../logic/trade.js"
 import { account } from "../../wallet/walletLink.js"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown.js"
+import { $Popover } from "../$Popover"
+import { $MarketInfoList } from "../$MarketList"
 
 
 
@@ -114,6 +117,7 @@ export interface ITradeConfig {
   market: IMarket
   marketInfo: IMarketInfo
   isLong: boolean
+  indexToken: viem.Address
   primaryToken: viem.Address
   isUsdCollateralToken: boolean
   collateralToken: viem.Address
@@ -165,6 +169,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
   [changeInputToken, changeInputTokenTether]: Behavior<viem.Address, viem.Address>,
   [changeMarket, changeMarketTether]: Behavior<IMarket>,
+  [clickChooseMarketPopover, clickChooseMarketPopoverTether]: Behavior<any>,
   [changeIsUsdCollateralToken, changeIsUsdCollateralTokenTether]: Behavior<boolean>,
 
   [switchIsIncrease, switchisIncreaseTether]: Behavior<boolean, boolean>,
@@ -181,7 +186,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
 
   const { 
-    collateralToken, collateralDelta, collateralDeltaUsd, sizeDelta, focusMode,
+    collateralToken, collateralDelta, collateralDeltaUsd, sizeDelta, focusMode, indexToken,
     market, marketInfo, primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, isUsdCollateralToken
   } = config.tradeConfig
   const {
@@ -318,19 +323,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
         })
       )(
 
-
-        // $Popover({
-        //   $target: $row(clickOpenTradeConfigTether(nodeEvent('click')), style({ padding: '6px 12px', border: `2px solid ${pallete.horizon}`, borderRadius: '30px' }))(
-        //     $text('Advanced'),
-        //     $icon({ $content: $caretDown, width: '14px', svgOps: style({ marginRight: '-5px' }), viewBox: '0 0 32 32' }),
-        //   ),
-        //   $popContent: map((_) => {
-        //     return $text('fff')
-        //   }, clickOpenTradeConfig),
-        // })({
-        //   // overlayClick: clickPopoverClaimTether()
-        // })
-
+        
         $ButtonToggle({
           $container: $row(layoutSheet.spacingSmall),
           selected: config.tradeConfig.isLong,
@@ -465,24 +458,28 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
 
             switchLatest(map(params => {
-              const address = params.account.address
-              if (!config.chain.id || !address) {
+              const walletAddress = params.account.address
+              if (!config.chain.id || !walletAddress) {
                 return empty()
               }
 
-              const chainId = config.chain.id
 
               return $Dropdown({
                 $container: $row(style({ position: 'relative', alignSelf: 'center' })),
-                $selection: switchLatest(map(tokenDesc => {
-                  // const tokenDesc = getTokenDescription(option)
+                $selection: switchLatest(map(token => {
+                  const tokenDesc = token === GMX.ADDRESS_ZERO
+                    ? getNativeTokenDescription(config.chain)
+                    : getTokenDescription(resolveAddress(config.chain, token))
 
-                  return $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
-                    $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '34px', svgOps: style({ paddingRight: '4px' }), viewBox: '0 0 32 32' }),
-                    $heading2(tokenDesc.symbol),
-                    $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' }),
-                  )
-                }, primaryDescription)),
+                  return $ButtonSecondary({
+                    $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
+                      $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '34px', svgOps: style({ paddingRight: '4px' }), viewBox: '0 0 32 32' }),
+                      $heading2(tokenDesc.symbol),
+                      $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' }),
+                    ),
+                    $container: $defaultMiniButtonSecondary(style({ borderColor: pallete.foreground, backgroundColor: 'transparent' })),
+                  })({})
+                }, primaryToken)),
                 // $selection: switchLatest(map(option => {
                 //   return $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
                 //     $icon({
@@ -499,9 +496,9 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                   $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0, left: 'auto' })),
                   $$option: map(option => {
                     const token = resolveAddress(config.chain, option)
-                    const balanceAmount = trade.getErc20Balance(config.chain, option, address)
+                    const balanceAmount = trade.getErc20Balance(config.chain, option, walletAddress)
                     const price = latestTokenPrice(config.processData, token)
-                    const tokenDesc = option === GMX.ADDRESS_ZERO ? getNativeTokenDescription(chainId) : getTokenDescription(option)
+                    const tokenDesc = option === GMX.ADDRESS_ZERO ? getNativeTokenDescription(config.chain) : getTokenDescription(option)
 
                     return $row(style({ placeContent: 'space-between', flex: 1 }))(
                       $tokenLabelFromSummary(tokenDesc),
@@ -517,8 +514,8 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                   }),
                   list: [
                     GMX.ADDRESS_ZERO,
-                    ...config.tokenIndexMap[chainId] || [],
-                    ...config.tokenStableMap[chainId] || [],
+                    ...config.tokenIndexMap[config.chain.id] || [],
+                    ...config.tokenStableMap[config.chain.id] || [],
                   ],
                 }
               })({
@@ -690,6 +687,35 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
 
             switchMap(list => {
+
+              return $Popover({
+                $target: switchLatest(map(token => {
+                  const nativeToken = getNativeTokenAddress(config.chain)
+                  const tokenDesc = token === nativeToken
+                    ? getNativeTokenDescription(config.chain)
+                    : getTokenDescription(resolveAddress(config.chain, token))
+
+                  return $ButtonSecondary({
+                    $container: $defaultMiniButtonSecondary,
+                    $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
+                      $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '34px', svgOps: style({ paddingRight: '4px' }), viewBox: '0 0 32 32' }),
+                      $heading2(tokenDesc.symbol),
+                      $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' }),
+                    )
+                  })({
+                    click: clickChooseMarketPopoverTether()
+                  })
+                }, indexToken)),
+                $popContent: map((_) => {
+                  return $MarketInfoList({
+                    chain: config.chain,
+                    processData: config.processData,
+                  })({})
+                }, clickChooseMarketPopover),
+              })({
+                // overlayClick: clickPopoverClaimTether()
+              })
+
               return $Dropdown({
                 $container: $row(style({ position: 'relative', alignSelf: 'center' })),
                 $selection: switchLatest(map(option => {

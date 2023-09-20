@@ -400,7 +400,7 @@ export async function getMarketPoolInfo(
   
 
   return {
-    ...(await priceInfo)[1],
+    poolInfo: (await priceInfo)[1],
     maxPnlFactorForTradersLong: await maxPnlFactorForTradersLong,
     maxPnlFactorForTradersShort: await maxPnlFactorForTradersShort,
 

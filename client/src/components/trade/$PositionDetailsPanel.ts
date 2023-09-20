@@ -483,8 +483,9 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
       //   }, combineObject({ position, collateralTokenPoolInfo, fundingRateFactor, stableFundingRateFactor, isLong, market, collateralToken,  }))
       // ),
 
-      $column(layoutSheet.spacingSmall)(
-        $column(layoutSheet.spacing, style({ padding: '16px 0', placeContent: 'space-between' }), styleInline(map(mode => ({ display: mode ? 'flex' : 'none' }), inTradeMode)))(
+
+      switchMap(posList => {
+        const $adjustmentDetails = $column(layoutSheet.spacing, style({ padding: '16px 0', placeContent: 'space-between' }), styleInline(map(mode => ({ display: mode ? 'flex' : 'none' }), inTradeMode)))(
           // $TextField({
           //   label: 'Slippage %',
           //   labelStyle: { flex: 1 },
@@ -496,25 +497,20 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
           //     if (!valid) {
           //       return 'Invalid Basis point'
           //     }
-
           //     if (val > 5) {
           //       return 'Slippage should be less than 5%'
           //     }
-
           //     return null
           //   }),
           // })({
           //   change: changeSlippageTether()
           // }),
-
           $column(
             // switchLatest(map(params => {
             //   const totalSizeUsd = params.position ? params.position.latestUpdate.sizeInUsd + params.sizeDeltaUsd : params.sizeDeltaUsd
-
             //   const rateFactor = params.fundingRateFactor
             //   const rate = safeDiv(rateFactor * params.collateralTokenPoolInfo.reservedAmount, params.collateralTokenPoolInfo.poolAmounts)
             //   const nextSize = totalSizeUsd * rate / GMX.BASIS_POINTS_DIVISOR / 100n
-
             //   return $column(
             //     $infoLabeledValue(
             //       'Borrow Fee',
@@ -528,19 +524,19 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
             $infoLabeledValue('Swap', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, swapFee))),
             $infoLabeledValue('Execution Fee', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(fee => `${readableFixedUSD30(fee)}`, executionFeeUsd))),
             $infoLabeledValue('Price Impact', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(params => `${readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))} ${readableFixedUSD30(params.priceImpactUsd)}`, combineObject({ priceImpactUsd, sizeDeltaUsd })))),
-            $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, marginFeeUsd))),
+            $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, marginFeeUsd)))
           ),
           $row(style({ placeContent: 'space-between' }))(
 
             $infoTooltipLabel(
               $column(layoutSheet.spacingSmall)(
-                $text('Collateral deducted upon your deposit including Borrow fee at the start of every hour. the rate changes based on utilization, it is calculated as (assets borrowed) / (total assets in pool) * 0.01%'),
+                $text('Collateral deducted upon your deposit including Borrow fee at the start of every hour. the rate changes based on utilization, it is calculated as (assets borrowed) / (total assets in pool) * 0.01%')
               ),
               'Total Fees'
             ),
             $text(style({ color: pallete.indeterminate }))(
               map(total => readableFixedUSD30(total), adjustmentFeeUsd)
-            ),
+            )
           ),
           switchLatest(map(params => {
             if (!params.isTradingEnabled) {
@@ -598,13 +594,6 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
               })
             }
 
-            const disableButtonVlidation = map((error) => {
-              if (error) {
-                return true
-              }
-
-              return false
-            }, validationError)
 
             return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', flex: 1 }))(
               $row(style({ flex: 1, minWidth: 0 }))(
@@ -639,7 +628,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
                     modLabel = 'Open'
                   }
 
-                  const focusPriceLabel = _params.focusPrice ? ` @ ${readableUnitAmount(_params.focusPrice)}`: ''
+                  const focusPriceLabel = _params.focusPrice ? ` @ ${readableUnitAmount(_params.focusPrice)}` : ''
 
                   return modLabel + focusPriceLabel
                 }, combineObject({ position, sizeDeltaUsd, isIncrease, focusPrice })))
@@ -650,13 +639,10 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
               })
             )
           }, combineObject({ isPrimaryApproved, route, isTradingEnabled, primaryToken, primaryDescription })))
-        ),
-        
-      ),
+        )
 
-      switchMap(posList => {
         if (posList.length === 0) {
-          return empty()
+          return $adjustmentDetails
         }
 
         return $column(layoutSheet.spacing, style({ flex: 1 }))(
@@ -674,6 +660,7 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
             return switchLatest(map(activePositionSlot => {
               const isActive = activePositionSlot?.key === pos.key
 
+
               return $card2(layoutSheet.spacing)(
                 
                 $row(style({ placeContent: 'space-between' }))(
@@ -687,6 +674,8 @@ export const $PositionDetailsPanel = (config: IPositionDetailsPanel) => componen
                   }),
                   $sizeAndLiquidation(pos, positionMarkPrice),
                 ),
+
+                isActive ? $adjustmentDetails : empty()
 
                 // $infoTooltipLabel(
                 //   $openPositionPnlBreakdown(pos, cumulativeFee),

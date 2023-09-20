@@ -5,7 +5,7 @@ import { pallete } from "@aelea/ui-components-theme"
 import { empty, map, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import { CHAIN } from "gmx-middleware-const"
-import { getTxExplorerUrl, ITokenDescription, shortenTxAddress, switchMap } from "gmx-middleware-utils"
+import { getTokenDescription, getTxExplorerUrl, IMarket, ITokenDescription, shortenTxAddress, switchMap } from "gmx-middleware-utils"
 import { $alertIcon, $arrowRight, $caretDblDown, $info, $tokenIconMap } from "./$icons.js"
 import { $defaultDropContainer, $Tooltip } from "./$Tooltip.js"
 
@@ -130,6 +130,22 @@ export const $tokenLabelFromSummary = (token: ITokenDescription, $label?: $Node)
       $text(style({ color: pallete.foreground }))(token.name)
     ),
     style({ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }, $label || empty())
+  )
+}
+
+export const $marketLabel = (market: IMarket) => {
+  const indexTokenDescription = getTokenDescription(market.indexToken)
+  const longTokenDescription = getTokenDescription(market.longToken)
+  const shortTokenDescription = getTokenDescription(market.shortToken)
+  const $iconG = $tokenIconMap[indexTokenDescription.symbol]
+
+  return $row(layoutSheet.spacing, style({ cursor: 'pointer', alignItems: 'center', }))(
+    $icon({ $content: $iconG, width: '34px', viewBox: '0 0 32 32' }),
+    $column(layoutSheet.flex)(
+      $text(style({ fontWeight: 'bold' }))(indexTokenDescription.symbol),
+      $text(style({ fontSize: '.75rem', color: pallete.foreground }))(`${longTokenDescription.symbol}/${shortTokenDescription.symbol}`),
+    ),
+    // style({ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }, $label || empty())
   )
 }
 
