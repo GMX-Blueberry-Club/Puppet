@@ -122,8 +122,6 @@ export const $TopOpen = (config: ITopOpen) => component((
         ),
 
         switchMap(params => {
-
-
           return $Table({
             dataSource: params.dataSource,
             sortBy: params.sortBy,

@@ -10,7 +10,7 @@ import { getBasisPoints, readableDate, readablePercentage, switchMap, timeSince 
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile.js"
-import { $entry, $openPositionPnlBreakdown, $pnlValue, $positionSlotPnl, $positionSlotRoi, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
+import { $entry, $openPnl, $openPositionPnlBreakdown, $pnlValue, $positionSlotPnl, $positionSlotRoi, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
 import { IGmxProcessState, latestTokenPrice } from "../../data/process/process.js"
 import { $txnIconLink } from "../../elements/$common.js"
 import { contractReader } from "../../logic/common.js"
@@ -50,7 +50,7 @@ export const settledSizeColumn = (shareTarget?: viem.Address): TableColumn<IPosi
 export const entryColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSlot> = {
   $head: $text('Entry'),
   $$body: map((pos) => {
-    return $entry(pos)
+    return $entry(pos.isLong, pos.indexToken, pos.averagePrice)
   })
 }
 
@@ -64,20 +64,8 @@ export const puppetsColumn = <T extends {puppets: readonly `0x${string}`[]}>(cli
 export const pnlSlotColumn = <T extends IPositionMirrorSlot>(processData: Stream<IGmxProcessState>, shareTarget?: viem.Address): TableColumn<T> => ({
   $head: $tableHeader('PnL', 'ROI'),
   columnOp: style({ placeContent: 'flex-end' }),
-  $$body: map((pos) => {
-    const positionMarkPrice = latestTokenPrice(processData, pos.indexToken)
-    const cumulativeTokenFundingRates = contractReader(GMX.CONTRACT['42161'].Vault)('cumulativeFundingRates', pos.collateralToken)
-
-    return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
-      style({ flexDirection: 'row-reverse' })(
-        $infoTooltipLabel(
-          switchMap(ff => $openPositionPnlBreakdown(pos, ff), cumulativeTokenFundingRates),
-          $positionSlotPnl(pos, positionMarkPrice, shareTarget)
-        )
-      ),
-      $seperator2,
-      style({ fontSize: '.85rem' })($positionSlotRoi(pos, positionMarkPrice)),
-    )
+  $$body: map(pos => {
+    return $openPnl(processData, pos, shareTarget)
   })
 })
 

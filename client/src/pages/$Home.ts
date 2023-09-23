@@ -1,5 +1,5 @@
 import { Behavior, fromCallback } from "@aelea/core"
-import { $element, $node, $text, component, eventElementTarget, style, styleInline } from "@aelea/dom"
+import { $element, $node, $text, attr, component, eventElementTarget, style, styleInline } from "@aelea/dom"
 import { Route } from "@aelea/router"
 import { $column, $icon, $row, designSheet, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
@@ -11,6 +11,7 @@ import { filterNull, switchMap } from "gmx-middleware-utils"
 import { Stream } from "@most/types"
 import { $seperator2 } from "./common.js"
 import { $labeledDivider } from "../elements/$common.js"
+import { $heading1 } from "../common/$text"
 
 
 
@@ -248,7 +249,7 @@ export const $Home = (config: ITreasury) => component((
         $text(style({ color: pallete.foreground, position: 'absolute', bottom: '50px', left: '50%', transform: 'translateX(-50%)' }))('Learn More'),
 
         $wheelWrapper(style({
-          right: 'calc(100% + 15px)',
+          right: 'calc(100% + 3vw)',
         }))(
           $wheel(style({ animation: `${wheelClockwise} 55s linear infinite` }))(
             $cabin(style({ left: '50%', top: '-35px', animation: `${wheelCounterClockwise} 55s linear infinite` }))(
@@ -262,9 +263,7 @@ export const $Home = (config: ITreasury) => component((
           )
         ),
         $wheelWrapper(style({
-          // transform: 'translate(-50%, -50%)',
-          left: 'calc(100% + 15px)',
-          // transform: `translate3d(calc(50% - 400px), 0%, 0px)`,
+          left: 'calc(100% + 3vw)',
         }))(
           $wheel(style({ animation: `${wheelClockwise} 35s linear infinite` }))(
             $cabin(style({ left: '50%', top: '-35px', animation: `${wheelCounterClockwise} 35s linear infinite` }))(
@@ -281,6 +280,44 @@ export const $Home = (config: ITreasury) => component((
 
       ),
 
+
+      $snapSection(style({ margin: '0 auto', maxWidth: '1240px', flexDirection: 'row', gap: '70px' }))(
+        $column(layoutSheet.spacing, style({ flex: 1 }))(
+          $heading1('Pick Top Traders to Copy'),
+          $text(`Explore the leaderboard to find traders. pick ones you like. define rules to better protect your deposit.`),
+          $text(`every time each trader open or maintain a position, a percentage of your deposit is used to copy the position.`),
+        ),
+        $row(style({ flex: 1 }))(
+          $element('video')(attr({
+            playsinline: '',
+            width: '100%',
+            height: '100%',
+            loop: '',
+            autoplay: '',
+          }))(
+            $element('source')(attr({ type: 'video/mp4', src: '/video/leaderboard-pick-traders.mp4' }))()
+          )
+        )
+      ),
+
+      $snapSection(style({ margin: '0 auto', maxWidth: '1240px', flexDirection: 'row', gap: '70px' }))(
+        $column(layoutSheet.spacing, style({ flex: 1 }))(
+          $heading1('Traders Earn More'),
+          $text('Traders earn more by having more puppets copying their trades.'),
+          $text('Trading done seamlessly with their own funds and without directly knowing or managing puppets funds.'),
+        ),
+        $row(style({ flex: 1 }))(
+          $element('video')(attr({
+            playsinline: '',
+            width: '100%',
+            height: '100%',
+            loop: '',
+            autoplay: '',
+          }))(
+            $element('source')(attr({ type: 'video/mp4', src: '/video/trade-adjust.mp4' }))()
+          )
+        )
+      ),
 
       $snapSection(
 

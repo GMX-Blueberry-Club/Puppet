@@ -7,7 +7,7 @@ import { map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { TOKEN_SYMBOL } from "gmx-middleware-const"
-import { $bear, $bull, $Link, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
+import { $bear, $bull, $infoTooltipLabel, $Link, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
 import {
   factor, getBasisPoints, getFundingFee,
   getMarginFees,
@@ -30,6 +30,8 @@ import { IProfileActiveTab } from "../pages/$Profile.js"
 import { $seperator2 } from "../pages/common.js"
 import { wallet } from "../wallet/walletLink.js"
 import { $puppetLogo } from "./$icons.js"
+import { IGmxProcessState, latestTokenPrice } from "../data/process/process"
+import { contractReader } from "../logic/common"
 
 
 export const $midContainer = $column(
@@ -41,6 +43,7 @@ export const $midContainer = $column(
   })
 )
 
+
 export const $size = (size: bigint, collateral: bigint, $divider = $seperator2) => {
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
     $text(readableFixedUSD30(size)),   
@@ -49,22 +52,22 @@ export const $size = (size: bigint, collateral: bigint, $divider = $seperator2) 
   )
 }
 
-export const $routeIntent = (pos: IAbstractPositionParams) => {
+export const $routeIntent = (isLong: boolean, indexToken: viem.Address) => {
   return $row(style({ alignItems: 'center' }))(
     $icon({
       svgOps: style({ borderRadius: '50%', padding: '4px', marginRight: '-6px', zIndex: 0, alignItems: 'center', fill: pallete.message, backgroundColor: pallete.horizon }),
-      $content: pos.isLong ? $bull : $bear,
+      $content: isLong ? $bull : $bear,
       viewBox: '0 0 32 32',
       width: '26px'
     }),
-    $tokenIcon(pos.indexToken, { width: '28px' }),
+    $tokenIcon(indexToken, { width: '28px' }),
   )
 }
 
-export const $entry = (pos: IPosition) => {
+export const $entry = (isLong: boolean, indexToken: viem.Address, averagePrice: bigint) => {
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'center', placeContent: 'center', fontSize: '.85rem' }))(
-    $routeIntent(pos),
-    $text(readableFixedUSD30(pos.averagePrice))
+    $routeIntent(isLong, indexToken),
+    $text(readableFixedUSD30(averagePrice))
   )
 }
 
@@ -152,6 +155,40 @@ export const $puppets = (puppets: readonly viem.Address[], click: Tether<INode, 
       )
     }),
     // $content
+  )
+}
+
+export const $openPnl = (processData: Stream<IGmxProcessState>, pos: IPositionSlot, shareTarget?: viem.Address) => {
+  const positionMarkPrice = latestTokenPrice(processData, pos.indexToken)
+  const cumulativeTokenFundingRates = contractReader(GMX.CONTRACT['42161'].Vault)('cumulativeFundingRates', pos.collateralToken)
+
+
+  return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
+    style({ flexDirection: 'row-reverse' })(
+      $infoTooltipLabel(
+        switchMap(ff => $openPositionPnlBreakdown(pos, ff), cumulativeTokenFundingRates),
+        $positionSlotPnl(pos, positionMarkPrice, shareTarget)
+      )
+    ),
+    $seperator2,
+    style({ fontSize: '.85rem' })($positionSlotRoi(pos, positionMarkPrice)),
+  )
+}
+
+export const $stake = (processData: Stream<IGmxProcessState>, pos: IPositionSlot, shareTarget?: viem.Address) => {
+  const positionMarkPrice = latestTokenPrice(processData, pos.indexToken)
+  const cumulativeTokenFundingRates = contractReader(GMX.CONTRACT['42161'].Vault)('cumulativeFundingRates', pos.collateralToken)
+
+
+  return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
+    style({ flexDirection: 'row-reverse' })(
+      $infoTooltipLabel(
+        switchMap(ff => $openPositionPnlBreakdown(pos, ff), cumulativeTokenFundingRates),
+        $positionSlotPnl(pos, positionMarkPrice, shareTarget)
+      )
+    ),
+    $seperator2,
+    style({ fontSize: '.85rem' })($positionSlotRoi(pos, positionMarkPrice)),
   )
 }
 

@@ -286,7 +286,6 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
         const positionMultiplier = div(params.position.latestUpdate.sizeInUsd, totalCollateral)
         const deltaMultiplier = delta(positionMultiplier, params.leverage) // params.isIncrease ? params.leverage - positionMultiplier : positionMultiplier - params.leverage
 
-        console.log(deltaMultiplier)
 
         if (deltaMultiplier < 500n) {
           return 0n
@@ -363,7 +362,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
           $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between' }))(
             style({ flexDirection: 'row-reverse' })(
               $hintNumChange({
-                label: screenUtils.isDesktopScreen ? `Pay` : undefined,
+                label: screenUtils.isDesktopScreen ? `Collateral` : undefined,
                 change: map(params => {
                   if (params.position === null) return null
 

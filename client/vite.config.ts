@@ -22,7 +22,7 @@ const prefixedParentEnv = Object.fromEntries(
 
 const pwaOptions: Partial<VitePWAOptions> = {
   workbox: {
-    cleanupOutdatedCaches: false
+    cleanupOutdatedCaches: true
   },
   registerType: 'prompt',
   strategies: 'injectManifest',
@@ -37,7 +37,7 @@ const pwaOptions: Partial<VitePWAOptions> = {
     name: SITE_CONFIG.APP_NAME,
     short_name: SITE_CONFIG.APP_NAME,
     description: SITE_CONFIG.APP_DESC_LONG,
-    theme_color: SITE_CONFIG.THEME_PRIMARY,
+    theme_color: SITE_CONFIG.THEME_BACKGROUND,
     background_color: SITE_CONFIG.THEME_BACKGROUND,
     start_url: '/app/leaderboard/settled',
     icons: [
