@@ -78,9 +78,7 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
       if (idbSeed) {
         const invalidIndexDBSeedError = validateSeed(config.blueprint.config, idbSeed.config)
 
-        if (invalidIndexDBSeedError) {
-          return loadSeedFile
-        }
+        if (invalidIndexDBSeedError) return loadSeedFile
 
         const blockNumber = idbSeed.blockNumber || config.blueprint.config.startBlock
         const orderId = idbSeed.orderId || getblockOrderIdentifier(blockNumber)
@@ -88,7 +86,7 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
         return now({ ...idbSeed, blockNumber, orderId })
       }
 
-      return loadSeedFile
+      return { ...idbSeed, loadSeedFile }
 
     }, storedIdbSeed)
     : map(idbSeed => {
