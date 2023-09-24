@@ -839,7 +839,6 @@ export const $Trade = (config: ITradeComponent) => component((
             close: formatFixed(fst.c * getDenominator(params.indexDescription.decimals), 30),
             time: fst.blockTimestamp as Time
           }
-
           const rightOffset = screenUtils.isDesktopScreen ? ((document.body.clientWidth - CONTAINER_WIDTH) / 2) / 14 : 5
 
           return $CandleSticks({
