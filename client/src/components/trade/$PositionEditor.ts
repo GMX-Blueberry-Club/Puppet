@@ -355,28 +355,28 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
       ),
 
       $column(style({ borderRadius: `${BOX_SPACING}px`, backgroundColor: pallete.middleground }))(
-        $column(layoutSheet.spacingSmall, style({ padding: '24px', borderRadius: '20px 20px 0 0', border: `1px solid ${colorAlpha(pallete.foreground, .20)}` }),
+        $column(layoutSheet.spacingSmall, style({ padding: `${BOX_SPACING}px`, borderRadius: `${BOX_SPACING}px ${BOX_SPACING}px 0 0`, border: `1px solid ${colorAlpha(pallete.foreground, .20)}` }),
           styleInline(now({ borderBottom: 'none' })),
           styleInline(map(params => {
             return params.focusMode === ITradeFocusMode.collateral ? { borderColor: params.isIncrease ? `${pallete.primary}` : `${pallete.indeterminate}` } : { borderColor: '' }
           }, combineObject({ focusMode, isIncrease })))
         )(
           $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between' }))(
-            // style({ flexDirection: 'row-reverse' })(
-            //   $hintNumChange({
-            //     label: screenUtils.isDesktopScreen ? `Collateral` : undefined,
-            //     change: map(params => {
-            //       if (params.position === null) return null
+            style({ flexDirection: 'row-reverse' })(
+              $hintNumChange({
+                label: screenUtils.isDesktopScreen ? `Collateral` : undefined,
+                change: map(params => {
+                  if (params.position === null) return null
 
-            //       return readableFixedUSD30(params.netPositionValueUsd + params.collateralDeltaUsd)
-            //     }, combineObject({ sizeDeltaUsd, position, primaryPrice, marketPrice, isIncrease, netPositionValueUsd, collateralDeltaUsd, collateralPrice, swapFee, marginFeeUsd, isLong, totalFeeUsd: adjustmentFeeUsd })),
-            //     isIncrease: config.tradeConfig.isIncrease,
-            //     tooltip: 'The amount deposited after fees to maintain a leverage position',
-            //     val: map(params => {
-            //       return readableFixedUSD30(params.netPositionValueUsd || params.collateralDeltaUsd)
-            //     }, combineObject({ collateralDeltaUsd, netPositionValueUsd })),
-            //   })
-            // ),
+                  return readableFixedUSD30(params.netPositionValueUsd + params.collateralDeltaUsd)
+                }, combineObject({ sizeDeltaUsd, position, primaryPrice, marketPrice, isIncrease, netPositionValueUsd, collateralDeltaUsd, collateralPrice, swapFee, marginFeeUsd, isLong, totalFeeUsd: adjustmentFeeUsd })),
+                isIncrease: config.tradeConfig.isIncrease,
+                tooltip: 'The amount deposited after fees to maintain a leverage position',
+                val: map(params => {
+                  return readableFixedUSD30(params.netPositionValueUsd || params.collateralDeltaUsd)
+                }, combineObject({ collateralDeltaUsd, netPositionValueUsd })),
+              })
+            ),
 
             $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
               $infoLabel(`Balance`),
@@ -632,7 +632,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
         ),
 
 
-        $column(layoutSheet.spacingSmall, style({ padding: '24px', borderRadius: '0 0 20px 20px', border: `1px solid ${colorAlpha(pallete.foreground, .20)}` }),
+        $column(layoutSheet.spacingSmall, style({ padding: `${BOX_SPACING}px`, borderRadius: `0 0 ${BOX_SPACING}px ${BOX_SPACING}px`, border: `1px solid ${colorAlpha(pallete.foreground, .20)}` }),
           styleInline(now({ borderTopStyle: 'none' })),
           // style({ backgroundColor: pallete.horizon, padding: '12px', border: `1px solid ${colorAlpha(pallete.foreground, .20)}` }),
 

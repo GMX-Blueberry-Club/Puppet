@@ -1,6 +1,6 @@
 import { Behavior, combineObject } from "@aelea/core"
 import { $Node, $node, $text, NodeComposeFn, attr, component, style } from "@aelea/dom"
-import { $column, $row, layoutSheet } from "@aelea/ui-components"
+import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
 import {
@@ -51,6 +51,7 @@ import { wagmiWriteContract } from "../../logic/common.js"
 import { IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "./$PositionEditor.js"
+import { $seperator2 } from "../../pages/common"
 
 
 export enum ITradeFocusMode {
@@ -118,7 +119,7 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
   return [
     config.$container(
       switchMap(posList => {
-        return $card2(layoutSheet.spacing, style({ flex: 1 }))(
+        return $column(layoutSheet.spacing, style({ flex: 1 }))(
 
           ...posList.map(pos => {
 
@@ -136,11 +137,12 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
 
 
               return $column(layoutSheet.spacing)(
+                style({ marginRight: screenUtils.isDesktopScreen ? '-16px' : '' })($seperator2),
                 
                 $row(style({ placeContent: 'space-between', alignItems: 'center' }))(
                   $ButtonPrimary({
                     $content: $entry(pos.isLong, pos.indexToken, pos.averagePrice),
-                    $container: $defaultMiniButtonSecondary(style({ borderRadius: '20px', borderColor: isActive ? pallete.primary : colorAlpha(pallete.foreground, .20) }))
+                    $container: $defaultMiniButtonSecondary(style({ borderRadius: '20px', borderColor: 'transparent', backgroundColor: isActive ? pallete.primary : pallete.middleground }))
                   })({
                     click: switchTradeTether(
                       constant(pos)
@@ -149,7 +151,7 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
                   $sizeAndLiquidation(pos, positionMarkPrice),
                   $openPnl(config.processData, pos),
                 ),
-
+ 
                 // isActive
                 //   ? $column(layoutSheet.spacing, styleInline(map(mode => ({ display: mode ? 'flex' : 'none' }), inTradeMode)))(
                 //     $seperator2,

@@ -114,10 +114,7 @@ export const gmxProcess = defineProcess(
   {
     mode: SW_DEV ? IProcessEnvironmentMode.DEV : IProcessEnvironmentMode.PROD,
     seed: seedFile,
-    blueprint: {
-      config,
-      state,
-    },
+    blueprint: { config, state, },
     parentScope: rootStoreScope,
   },
   {

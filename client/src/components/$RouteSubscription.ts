@@ -22,7 +22,7 @@ import { fadeIn } from "../transitions/enter.js"
 import { $profileDisplay } from "./$AccountProfile.js"
 import { $IntermediateConnectButton } from "./$ConnectAccount.js"
 import { $RouteDepositInfo } from "./$common.js"
-import { $ButtonCircular, $ButtonPrimaryCtx, $ButtonSecondary } from "./form/$Button.js"
+import { $ButtonCircular, $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary } from "./form/$Button.js"
 import { $Dropdown } from "./form/$Dropdown.js"
 
 
@@ -294,16 +294,15 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
 
       $seperator2,
 
-      $row(style({ placeContent: 'space-between' }))(
-        $ButtonSecondary({
+      $row(style({ placeContent: 'flex-end', alignItems: 'center' }))(
+        $ButtonPrimary({
           $content: $text('Change'),
         })({
           click: clickSubmitTether()
         }),
-
         
         config.routeSubscription ? 
-          $ButtonSecondary({
+          $ButtonPrimary({
             $content: $text('Unsubscribe'),
           })({
             click: clickUnsubscribeTether(constant(false))

@@ -26,6 +26,7 @@ import {
   readableDate,
   readableFixedUSD30,
   resolveAddress,
+  switchMap,
   timeSince,
   unixTimestampNow
 } from "gmx-middleware-utils"
@@ -34,6 +35,7 @@ import { $heading2 } from "../../common/$text.js"
 import { connectContract, wagmiWriteContract } from "../../logic/common.js"
 import { IWalletClient } from "../../wallet/walletLink.js"
 import { IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "./$PositionEditor.js"
+import { $route } from "../../common/$common"
 
 
 export enum ITradeFocusMode {
@@ -81,7 +83,7 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
 
 
   const { 
-    collateralDeltaUsd, collateralToken, collateralDelta, marketInfo, market, isUsdCollateralToken, sizeDelta, focusMode,
+    collateralDeltaUsd, collateralToken, indexToken, collateralDelta, marketInfo, market, isUsdCollateralToken, sizeDelta, focusMode,
     primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, focusPrice
   } = config.tradeConfig
   const {
@@ -333,7 +335,14 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
         })({})
         : $column(layoutSheet.spacingSmall)(
           $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
-            $heading2(style({ flex: 1 }))('Position Adjustment'),
+            switchMap(params => {
+
+              return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+                $text(`No active`),
+                $route(params),
+                $text(' position')
+              )
+            }, combineObject({ isIncrease, isLong, collateralToken, indexToken })),
           )
         )
     ),

@@ -72,6 +72,10 @@ export const $entry = (isLong: boolean, indexToken: viem.Address, averagePrice: 
 }
 
 export const $route = (pos: IAbstractPositionParams, size = '34px') => {
+  const indexDescription = getTokenDescription(pos.indexToken)
+  const collateralDescription = getTokenDescription(pos.collateralToken)
+  const seocndSideLabel = indexDescription.symbol === collateralDescription.symbol ? '' : '-' + collateralDescription.symbol
+  
   return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
     $icon({
       svgOps: style({ borderRadius: '50%', padding: '4px', marginRight: '-20px', zIndex: 0, alignItems: 'center', fill: pallete.message, backgroundColor: pallete.horizon }),
@@ -80,7 +84,7 @@ export const $route = (pos: IAbstractPositionParams, size = '34px') => {
       width: '26px'
     }),
     $tokenIcon(pos.indexToken, { width: '28px' }),
-    $text(style({ fontSize: '.85rem' }))(`${getTokenDescription(pos.indexToken).symbol}/${getTokenDescription(pos.collateralToken).symbol}`),
+    $text(style({ fontSize: '.85rem' }))(`${indexDescription.symbol}${seocndSideLabel}`),
   )
 }
 

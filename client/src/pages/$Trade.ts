@@ -1016,7 +1016,7 @@ export const $Trade = (config: ITradeComponent) => component((
       ),
 
 
-      $tradeMidContainer(layoutSheet.spacingSmall)(
+      $tradeMidContainer(layoutSheet.spacingSmall, style({ padding: screenUtils.isMobileScreen ? '0 12px' : '' }))(
         switchMap(params => {
           return $column(style({ flex: 1 }))(
             $IntermediateConnectButton({
@@ -1043,10 +1043,6 @@ export const $Trade = (config: ITradeComponent) => component((
                       requestTrade: requestTradeTether(),
                       leverage: changeLeverageTether(),
                     }),
-
-                    style({ marginRight: screenUtils.isDesktopScreen ? '-16px' : '' })(
-                      $seperator2,
-                    ),
 
                     $PositionListDetails({
                       ...config,
