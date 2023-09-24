@@ -13,7 +13,7 @@ import * as viem from 'viem'
 import { $profileAvatar, $profileDisplay } from "../$AccountProfile.js"
 import { $heading2, $heading3 } from "../../common/$text.js"
 import { IGmxProcessState } from "../../data/process/process.js"
-import { $card, $card2 } from "../../elements/$common.js"
+import { $card, $card2 } from "../../common/elements/$common.js"
 import { $seperator2 } from "../../pages/common.js"
 import { entryColumn, pnlSlotColumn, positionTimeColumn, puppetsColumn, settledPnlColumn, settledSizeColumn, slotSizeColumn } from "../table/$TableColumn.js"
 import { $ProfilePerformanceCard, getUpdateTickList } from "../trade/$ProfilePerformanceGraph.js"

@@ -19,7 +19,7 @@ import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerform
 import { IGmxProcessState } from "../../data/process/process.js"
 import * as store from "../../data/store/store.js"
 import { rootStoreScope } from "../../data/store/store.js"
-import { $card } from "../../elements/$common.js"
+import { $card } from "../../common/elements/$common.js"
 import * as storage from "../../utils/storage/storeScope.js"
 import { $seperator2 } from "../common.js"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity.js"

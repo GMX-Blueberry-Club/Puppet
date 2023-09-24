@@ -8,7 +8,7 @@ import { Stream } from "@most/types"
 import { $ButtonCore, $defaultButtonCore, IButtonCore } from "./$ButtonCore.js"
 import * as viem from "viem"
 import { invertColor } from "gmx-middleware-utils"
-import { $iconCircular } from "../../elements/$common.js"
+import { $iconCircular } from "../../common/elements/$common.js"
 import { $IntermediateConnectButton, $SwitchNetworkDropdown } from "../$ConnectAccount.js"
 import { theme } from "../../assignThemeSync.js"
 

@@ -58,7 +58,7 @@ import { $PositionListDetails, IRequestTrade } from "../components/trade/$Positi
 import { $PositionEditor, IPositionEditorAbstractParams, ITradeConfig, ITradeFocusMode, ITradeParams } from "../components/trade/$PositionEditor.js"
 import { latestTokenPrice } from "../data/process/process.js"
 import { rootStoreScope } from "../data/store/store.js"
-import { $caretDown } from "../elements/$icons.js"
+import { $caretDown } from "../common/elements/$icons.js"
 import { connectContract, contractReader } from "../logic/common.js"
 import * as trade from "../logic/trade.js"
 import { getExecuteGasFee, getExecutionFee, getMarketPoolInfo, hashKey } from "../logic/tradeV2.js"

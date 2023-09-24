@@ -8,7 +8,7 @@ import {
   mergeArray,
   multicast, now, sample, skipRepeats,
   snapshot,
-  switchLatest, throttle, zip
+  switchLatest, tap, throttle, zip
 } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
@@ -53,7 +53,7 @@ import { arbitrum } from "viem/chains"
 import { $Slider } from "../$Slider.js"
 import { $heading2 } from "../../common/$text.js"
 import { IGmxProcessState, latestTokenPrice } from "../../data/process/process.js"
-import { $caretDown } from "../../elements/$icons.js"
+import { $caretDown } from "../../common/elements/$icons.js"
 import { connectContract, getMappedValue2 } from "../../logic/common.js"
 import * as trade from "../../logic/trade.js"
 import { account } from "../../wallet/walletLink.js"
@@ -241,7 +241,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
       const positionSizeUsd = params.position ? params.position.latestUpdate.sizeInUsd : 0n
       const nextFeeUsd = -abs(params.adjustmentFeeUsd * params.leverage / GMX.BASIS_POINTS_DIVISOR)
       const totalSize = nextSizeDeltaUsdFx + positionSizeUsd
-      const nextCollateralUsd = div(totalSize + nextFeeUsd, params.leverage)
+      const nextCollateralUsd = div(totalSize - nextFeeUsd, params.leverage)
 
       if (params.position) {
         const positionMultiplier = div(totalSize, params.netPositionValueUsd)
@@ -336,7 +336,9 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
               $text(isLong ? 'Long' : 'Short'),
             )
           })
-        })({ select: switchIsLongTether() }),
+        })({
+          select: switchIsLongTether()
+        }),
 
         $ButtonToggle({
           $container: $row(layoutSheet.spacingSmall),
@@ -360,21 +362,21 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
           }, combineObject({ focusMode, isIncrease })))
         )(
           $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between' }))(
-            style({ flexDirection: 'row-reverse' })(
-              $hintNumChange({
-                label: screenUtils.isDesktopScreen ? `Collateral` : undefined,
-                change: map(params => {
-                  if (params.position === null) return null
+            // style({ flexDirection: 'row-reverse' })(
+            //   $hintNumChange({
+            //     label: screenUtils.isDesktopScreen ? `Collateral` : undefined,
+            //     change: map(params => {
+            //       if (params.position === null) return null
 
-                  return readableFixedUSD30(params.netPositionValueUsd + params.collateralDeltaUsd)
-                }, combineObject({ sizeDeltaUsd, position, primaryPrice, marketPrice, isIncrease, netPositionValueUsd, collateralDeltaUsd, collateralPrice, swapFee, marginFeeUsd, isLong, totalFeeUsd: adjustmentFeeUsd })),
-                isIncrease: config.tradeConfig.isIncrease,
-                tooltip: 'The amount deposited after fees to maintain a leverage position',
-                val: map(params => {
-                  return readableFixedUSD30(params.netPositionValueUsd || params.collateralDeltaUsd)
-                }, combineObject({ collateralDeltaUsd, netPositionValueUsd })),
-              })
-            ),
+            //       return readableFixedUSD30(params.netPositionValueUsd + params.collateralDeltaUsd)
+            //     }, combineObject({ sizeDeltaUsd, position, primaryPrice, marketPrice, isIncrease, netPositionValueUsd, collateralDeltaUsd, collateralPrice, swapFee, marginFeeUsd, isLong, totalFeeUsd: adjustmentFeeUsd })),
+            //     isIncrease: config.tradeConfig.isIncrease,
+            //     tooltip: 'The amount deposited after fees to maintain a leverage position',
+            //     val: map(params => {
+            //       return readableFixedUSD30(params.netPositionValueUsd || params.collateralDeltaUsd)
+            //     }, combineObject({ collateralDeltaUsd, netPositionValueUsd })),
+            //   })
+            // ),
 
             $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
               $infoLabel(`Balance`),
@@ -842,7 +844,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
       changeInputToken,
       changeMarket,
       switchFocusMode: mergeArray([
-        constant(ITradeFocusMode.collateral, clickPrimary),
+        // constant(ITradeFocusMode.collateral, clickPrimary),
         switchFocusMode,
       ]),
       leverage: mergeArray([

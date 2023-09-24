@@ -16,7 +16,7 @@ import { $DropMultiSelect } from "../../components/form/$Dropdown.js"
 import { entryColumn, pnlSlotColumn, puppetsColumn, slotSizeColumn } from "../../components/table/$TableColumn.js"
 import { IGmxProcessState } from "../../data/process/process.js"
 import { rootStoreScope } from "../../data/store/store.js"
-import { $card } from "../../elements/$common.js"
+import { $card } from "../../common/elements/$common.js"
 import * as storage from "../../utils/storage/storeScope.js"
 
 

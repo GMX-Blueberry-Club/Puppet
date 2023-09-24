@@ -10,7 +10,7 @@ import { $ButtonSecondary } from "../components/form/$Button.js"
 import { filterNull, switchMap } from "gmx-middleware-utils"
 import { Stream } from "@most/types"
 import { $seperator2 } from "./common.js"
-import { $labeledDivider } from "../elements/$common.js"
+import { $labeledDivider } from "../common/elements/$common.js"
 import { $heading1 } from "../common/$text"
 
 

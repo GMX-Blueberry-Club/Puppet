@@ -12,7 +12,7 @@ import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile.js"
 import { $entry, $openPnl, $openPositionPnlBreakdown, $pnlValue, $positionSlotPnl, $positionSlotRoi, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
 import { IGmxProcessState, latestTokenPrice } from "../../data/process/process.js"
-import { $txnIconLink } from "../../elements/$common.js"
+import { $txnIconLink } from "../../common/elements/$common.js"
 import { contractReader } from "../../logic/common.js"
 import { IProfileActiveTab } from "../../pages/$Profile.js"
 import { $seperator2 } from "../../pages/common.js"
