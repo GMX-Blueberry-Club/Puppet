@@ -73,6 +73,7 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
     return seedFile
   }, config.seed)
 
+    
   const seed = config.mode === IProcessEnvironmentMode.PROD
     ? switchMap(idbSeed => {
       if (idbSeed) {
@@ -86,7 +87,9 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
         return now({ ...idbSeed, blockNumber, orderId })
       }
 
-      return { ...idbSeed, loadSeedFile }
+      return map(db => {
+        return { ...db, blockNumber: db.blockNumber || config.blueprint.config.startBlock, orderId: db.orderId || getblockOrderIdentifier(config.blueprint.config.startBlock) }
+      }, loadSeedFile)
 
     }, storedIdbSeed)
     : map(idbSeed => {
