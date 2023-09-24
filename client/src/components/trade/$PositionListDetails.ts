@@ -118,7 +118,7 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
   return [
     config.$container(
       switchMap(posList => {
-        return $column(layoutSheet.spacing, style({ flex: 1 }))(
+        return $card2(layoutSheet.spacing, style({ flex: 1 }))(
 
           ...posList.map(pos => {
 
@@ -135,12 +135,12 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
               const isActive = activePositionSlot?.key === pos.key
 
 
-              return $card2(layoutSheet.spacing, style({ boxShadow: 'none', border: isActive ? `1px solid ${pallete.primary}` : `1px solid ${colorAlpha(pallete.foreground, .20)}` }))(
+              return $column(layoutSheet.spacing)(
                 
                 $row(style({ placeContent: 'space-between', alignItems: 'center' }))(
                   $ButtonPrimary({
                     $content: $entry(pos.isLong, pos.indexToken, pos.averagePrice),
-                    $container: $defaultMiniButtonSecondary(style({ borderRadius: '20px' }))
+                    $container: $defaultMiniButtonSecondary(style({ borderRadius: '20px', borderColor: isActive ? pallete.primary : colorAlpha(pallete.foreground, .20) }))
                   })({
                     click: switchTradeTether(
                       constant(pos)

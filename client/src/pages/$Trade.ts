@@ -1024,7 +1024,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
                 return $node(layoutSheet.spacing, style({ flex: 1, display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column' }))(
 
-                  $column(layoutSheet.spacing, style({ padding: '20px 0', flex: 1 }))(
+                  $column(layoutSheet.spacing, style({ padding: '20px 0', flex: 1, maxWidth: '500px' }))(
                     $PositionAdjustmentDetails({
                       ...config,
                       chain: config.chain,
@@ -1048,54 +1048,55 @@ export const $Trade = (config: ITradeComponent) => component((
                       $seperator2,
                     ),
 
-                    switchMap(tradeParams => {
-                      if (params.position === null) {
-                        const intent = tradeParams.isLong ? `Long-${tradeParams.indexDescription.symbol}` : `Short-${tradeParams.indexDescription.symbol}/${tradeParams.indexDescription.symbol}`
-
-                        $column(layoutSheet.spacingSmall, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
-                          $text(style({ fontSize: '1.5rem' }))('Trade History'),
-                          $text(style({ color: pallete.foreground }))(
-                            `No active ${intent} position`
-                          )
-                        )
-                      }
-
-                      return $PositionDetails({
-                        ...config,
-                        chain: config.chain,
-                        parentRoute: config.parentRoute,
-                        position: params.position,
-                        openPositionList,
-                        pricefeed,
-                        tradeConfig,
-                        tradeState,
-                        wallet: w3p,
-                        $container: $column
-                      })({
-                 
-                      })
-                    }, combineObject({ indexDescription, isLong }))
+                    $PositionListDetails({
+                      ...config,
+                      position: params.position,
+                      chain: config.chain,
+                      parentRoute: config.parentRoute,
+                      openPositionList,
+                      pricefeed,
+                      tradeConfig,
+                      tradeState,
+                      wallet: w3p,
+                      $container: $column
+                    })({
+                      switchTrade: switchTradeTether(),
+                    // changeCollateralDeltaUsd: changeCollateralDeltaUsdTether(),
+                    // changeSizeDeltaUsd: changeSizeDeltaUsdTether(),
+                    }),
+                    
                   ),
 
                   $seperator2,
 
+                  switchMap(tradeParams => {
+                    if (params.position === null) {
+                      const intent = tradeParams.isLong ? `Long-${tradeParams.indexDescription.symbol}` : `Short-${tradeParams.indexDescription.symbol}/${tradeParams.indexDescription.symbol}`
+
+                      $column(layoutSheet.spacingSmall, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
+                        $text(style({ fontSize: '1.5rem' }))('Trade History'),
+                        $text(style({ color: pallete.foreground }))(
+                          `No active ${intent} position`
+                        )
+                      )
+                    }
+
+                    return $PositionDetails({
+                      ...config,
+                      chain: config.chain,
+                      parentRoute: config.parentRoute,
+                      position: params.position,
+                      openPositionList,
+                      pricefeed,
+                      tradeConfig,
+                      tradeState,
+                      wallet: w3p,
+                      $container: $column(style({ padding: '20px 0' }))
+                    })({
+                 
+                    })
+                  }, combineObject({ indexDescription, isLong })),
                   
-                  $PositionListDetails({
-                    ...config,
-                    position: params.position,
-                    chain: config.chain,
-                    parentRoute: config.parentRoute,
-                    openPositionList,
-                    pricefeed,
-                    tradeConfig,
-                    tradeState,
-                    wallet: w3p,
-                    $container: $column(style({ padding: '20px 0', flex: 1 }))
-                  })({
-                    switchTrade: switchTradeTether(),
-                    // changeCollateralDeltaUsd: changeCollateralDeltaUsdTether(),
-                    // changeSizeDeltaUsd: changeSizeDeltaUsdTether(),
-                  }),
                   
                 )
               })
