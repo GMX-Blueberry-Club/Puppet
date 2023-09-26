@@ -1,5 +1,5 @@
 import { Behavior, combineObject, replayLatest } from "@aelea/core"
-import { $element, $node, $text, component, eventElementTarget, nodeEvent, style, styleBehavior } from "@aelea/dom"
+import { $element, $node, $text, attr, component, eventElementTarget, nodeEvent, style, styleBehavior } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
@@ -28,12 +28,13 @@ import { rootStoreScope } from "../data/store/store.js"
 import * as store from "../utils/storage/storeScope.js"
 import { $midContainer } from "../common/$common.js"
 import { $heading2, $heading3 } from "../common/$text.js"
-import { $alert, $alertContainer, $anchor, $defaultVScrollLoader, $spinner } from "gmx-middleware-ui-components"
+import { $alert, $alertContainer, $anchor, $defaultVScrollLoader, $icon, $infoLabel, $spinner } from "gmx-middleware-ui-components"
 import * as GMX from "gmx-middleware-const"
 import { Stream } from "@most/types"
 import { newUpdateInvoke } from "../sw/swUtils.js"
 import { $ButtonPrimary, $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button.js"
 import { contractReader, helloRpc } from "../logic/common.js"
+import { $puppetLogo } from "../common/$icons"
 
 const popStateEvent = eventElementTarget('popstate', window)
 const initialLocation = now(document.location)
@@ -147,6 +148,11 @@ export const $MainGmxHouse = ({ baseRoute = '' }: Website) => component((
   return [
 
     $rootContainer(style({ overflowY: 'auto', height: '100vh' }))(
+
+      // $row(style({ alignItems: 'center', placeContent: 'center' }))(
+        
+      // ),
+      
       mergeArray([
 
       

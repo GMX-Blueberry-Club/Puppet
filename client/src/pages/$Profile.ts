@@ -72,21 +72,19 @@ export const $Profile = (config: IProfile) => component((
 
     $column(layoutSheet.spacingBig, style({ paddingTop: '50px', }))(
 
-      $column(layoutSheet.spacingBig, style({ alignItems: 'center', placeContent: 'center' }))(
-        
-
-        $ButtonToggle({
-          $container: $defaulButtonToggleContainer(style({ alignSelf: 'center', })),
-          selected: mergeArray([
-            router.match<IRouteOption>(traderRoute)(now(options[0])),
-            router.match<IRouteOption>(puppetRoute)(now(options[1])),
-          ]),
-          options,
-          $$option: map(option => {
-            return $text(option.label)
-          })
-        })({ select: selectProfileModeTether() }),
-      ),
+      // $column(layoutSheet.spacingBig, style({ alignItems: 'center', placeContent: 'center' }))(       
+      //   $ButtonToggle({
+      //     $container: $defaulButtonToggleContainer(style({ alignSelf: 'center', })),
+      //     selected: mergeArray([
+      //       router.match<IRouteOption>(traderRoute)(now(options[0])),
+      //       router.match<IRouteOption>(puppetRoute)(now(options[1])),
+      //     ]),
+      //     options,
+      //     $$option: map(option => {
+      //       return $text(option.label)
+      //     })
+      //   })({ select: selectProfileModeTether() }),
+      // ),
 
       
 

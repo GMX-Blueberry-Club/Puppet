@@ -1,12 +1,12 @@
 import { Behavior, combineObject } from "@aelea/core"
-import { $element, $text, component, style } from "@aelea/dom"
+import { $element, $node, $text, attr, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { empty, map, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
-import { $Table, ISortBy, ScrollRequest, TableColumn } from "gmx-middleware-ui-components"
+import { $Table, $icon, $infoLabel, ISortBy, ScrollRequest, TableColumn } from "gmx-middleware-ui-components"
 import { IAbstractPositionParams, IPositionListSummary, factor, getMappedValue, groupArrayMany, pagingQuery, readableLeverage, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { ROUTE_DESCRIPTION } from "puppet-middleware-const"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetRouteSubscritpion, getRouteTypeKey, summariesMirrorTrader } from "puppet-middleware-utils"
@@ -23,6 +23,7 @@ import { $card } from "../../common/elements/$common.js"
 import * as storage from "../../utils/storage/storeScope.js"
 import { $seperator2 } from "../common.js"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity.js"
+import { $puppetLogo } from "../../common/$icons"
 
 
 
@@ -106,24 +107,36 @@ export const $TopSettled = (config: ITopSettled) => component((
       $card(layoutSheet.spacingBig, style({ flex: 1 }))(
 
         $row(layoutSheet.spacingBig, style({ placeContent: 'space-between', alignItems: 'flex-start' }))(
-          $DropMultiSelect({
-            // $container: $row(layoutSheet.spacingTiny, style({ display: 'flex', position: 'relative' })),
-            $input: $element('input')(style({ width: '100px' })),
-            $label: $labelDisplay(style({ color: pallete.foreground }))('Markets'),
-            placeholder: 'All / Select',
-            $$chip: map(rt => $route(rt)),
-            selector: {
-              list: ROUTE_DESCRIPTION,
-              $$option: map(route => {
-                return style({
-                  padding: '8px'
-                }, $route(route))
-              })
-            },
-            value: routeList
-          })({
-            select: routeTypeChangeTether()
-          }),
+
+          $element('a')(
+            layoutSheet.spacingSmall,
+            attr({ href: 'https://x.com/PuppetCopy' }),
+            style({ display: 'flex', alignItems: 'center', color: pallete.message, textDecoration: 'none' })
+          )(
+            $infoLabel('Powered by '),
+            $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+              $icon({ $content: $puppetLogo, width: '25px', viewBox: '0 0 32 32' }),
+              $text('Puppet')
+            ),
+          ),
+          // $DropMultiSelect({
+          //   // $container: $row(layoutSheet.spacingTiny, style({ display: 'flex', position: 'relative' })),
+          //   $input: $element('input')(style({ width: '100px' })),
+          //   $label: $labelDisplay(style({ color: pallete.foreground }))('Markets'),
+          //   placeholder: 'All / Select',
+          //   $$chip: map(rt => $route(rt)),
+          //   selector: {
+          //     list: ROUTE_DESCRIPTION,
+          //     $$option: map(route => {
+          //       return style({
+          //         padding: '8px'
+          //       }, $route(route))
+          //     })
+          //   },
+          //   value: routeList
+          // })({
+          //   select: routeTypeChangeTether()
+          // }),
 
           // $Popover({
           //   $target: $ButtonSecondary({
