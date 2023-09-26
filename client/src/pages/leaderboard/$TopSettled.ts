@@ -101,12 +101,12 @@ export const $TopSettled = (config: ITopSettled) => component((
 
 
   return [
-    $column(style({ width: '100%' }))(
+    $column(
 
 
       $card(layoutSheet.spacingBig, style({ flex: 1 }))(
 
-        $row(layoutSheet.spacingBig, style({ placeContent: 'space-between', alignItems: 'flex-start' }))(
+        $row(layoutSheet.spacingBig, style({ placeContent: 'space-between', alignItems: 'center' }))(
 
           $element('a')(
             layoutSheet.spacingSmall,
@@ -185,7 +185,7 @@ export const $TopSettled = (config: ITopSettled) => component((
           const columns: TableColumn<IMirrorPositionListSummary & { trader: viem.Address, settledTradeList: IPositionMirrorSettled[] }>[] = [
             {
               $head: $text('Trader'),
-              gridTemplate: 'minmax(140px, 180px)',
+              gridTemplate: '150px',
               columnOp: style({ alignItems: 'center' }),
               $bodyCallback: map(pos => {
 

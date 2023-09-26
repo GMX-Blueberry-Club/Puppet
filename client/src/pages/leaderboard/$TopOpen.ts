@@ -119,7 +119,7 @@ export const $TopOpen = (config: ITopOpen) => component((
             columns: [
               {
                 $head: $text('Trader'),
-                gridTemplate: 'minmax(180px, 190px)',
+                gridTemplate: '150px',
                 columnOp: style({ alignItems: 'center' }),
                 $bodyCallback: map(pos => {
                   return $TraderDisplay({
