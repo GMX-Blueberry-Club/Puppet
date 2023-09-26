@@ -1,4 +1,4 @@
-import { Behavior, O, combineObject } from "@aelea/core"
+import { Behavior, O, combineArray, combineObject } from "@aelea/core"
 import { $Node, $node, $text, NodeComposeFn, attr, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
@@ -320,7 +320,13 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
     return null
   }, combineObject({ ...config.tradeState, ...config.tradeConfig })))
 
+  const disableButtonValidation = map((error) => {
+    if (error) {
+      return true
+    }
 
+    return false
+  }, validationError)
 
   return [
     config.$container(layoutSheet.spacing)(
@@ -379,6 +385,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
       switchLatest(map(params => {
         if (!params.isTradingEnabled) {
           return $Popover({
+            open: openEnableTradingPopover,
             $target: $row(style({ placeContent: 'flex-end' }))(
               $ButtonSecondary({
                 $content: $text('Enable Trading'),
@@ -390,31 +397,28 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
                 click: openEnableTradingPopoverTether()
               })
             ),
-            $popContent: map(() => {
+            $content: $column(layoutSheet.spacing, style({ maxWidth: '400px' }))(
+              $heading2(`By using Puppet, I agree to the following Disclaimer`),
+              $text(style({}))(`By accessing, I agree that ${document.location.href} is an interface that interacts with external GMX smart contracts, and does not have access to my funds.`),
 
-              return $column(layoutSheet.spacing, style({ maxWidth: '400px' }))(
-                $heading2(`By using Puppet, I agree to the following Disclaimer`),
-                $text(style({}))(`By accessing, I agree that ${document.location.href} is an interface that interacts with external GMX smart contracts, and does not have access to my funds.`),
-
-                $alert(
-                  $node(
-                    $text('This beta version may contain bugs. Feedback and issue reports are greatly appreciated.'),
-                    $anchor(attr({ href: 'https://discord.com/channels/941356283234250772/1068946527021695168' }))($text('discord'))
-                  )
-                ),
-
+              $alert(
                 $node(
-                  $text(style({ whiteSpace: 'pre-wrap' }))(`By clicking Agree you accept the `),
-                  $anchor(attr({ href: '/app/trading-terms-and-conditions' }))($text('Terms & Conditions'))
-                ),
+                  $text('This beta version may contain bugs. Feedback and issue reports are greatly appreciated.'),
+                  $anchor(attr({ href: 'https://discord.com/channels/941356283234250772/1068946527021695168' }))($text('discord'))
+                )
+              ),
 
-                $ButtonPrimary({
-                  $content: $text('Approve T&C'),
-                })({
-                  click: approveTradingTether(constant(true))
-                })
-              )
-            }, openEnableTradingPopover),
+              $node(
+                $text(style({ whiteSpace: 'pre-wrap' }))(`By clicking Agree you accept the `),
+                $anchor(attr({ href: '/app/trading-terms-and-conditions' }))($text('Terms & Conditions'))
+              ),
+
+              $ButtonPrimary({
+                $content: $text('Approve T&C'),
+              })({
+                click: approveTradingTether(constant(true))
+              })
+            ),
           })({
             overlayClick: dismissEnableTradingOverlayTether(constant(false))
           })
@@ -446,13 +450,22 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
             }, mergeArray([requestTradeError, validationError])))
           ),
           style({ padding: '8px', alignSelf: 'center' })(
-            $ButtonSecondary({ $content: $text('Reset') })({
+            $ButtonSecondary({ 
+              $content: $text('Reset'),
+              disabled: map(params => {
+                return params.sizeDelta === 0n || params.collateralDelta === 0n
+              }, combineObject({ sizeDelta, collateralDelta }))
+            })({
               click: clickResetPositionTether(constant(null))
             })
           ),
           $ButtonPrimaryCtx({
             request: map(req => req.request, requestTrade),
-            // disabled: combineArray((isDisabled) => isDisabled, disableButtonVlidation),
+            disabled: map(params => {
+              const newLocal = params.disableButtonValidation || params.sizeDelta === 0n || params.collateralDelta === 0n
+              console.log(newLocal)
+              return newLocal
+            }, combineObject({ disableButtonValidation, sizeDelta, collateralDelta })),
             $content: $text(map(_params => {
               let modLabel: string
 

@@ -90,14 +90,14 @@ export const $Admin = component((
           columns: [
             {
               $head: $text('Name'),
-              $$body: map(scope => {
+              $bodyCallback: map(scope => {
                 return $text(scope.eventName)
               })
             },
             {
               columnOp: style({  placeContent: 'center' }),
               $head: $text('Size'),
-              $$body: map(log => {
+              $bodyCallback: map(log => {
                 const logCount = indexDb.read(log.scope, store => store.count())
 
                 return $text(
@@ -109,7 +109,7 @@ export const $Admin = component((
             {
               columnOp: style({ placeContent: 'center' }),
               $head: $text('Block Range'),
-              $$body: map(log => {
+              $bodyCallback: map(log => {
 
                 const fst = indexDb.cursor(log.scope, null, 'next')
                 const lst = indexDb.cursor(log.scope, null, 'prev')
@@ -134,7 +134,7 @@ export const $Admin = component((
             {
               columnOp: style({  placeContent: 'center' }),
               $head: $text('DB File'),
-              $$body: map(log => {
+              $bodyCallback: map(log => {
                 const hoverB = hoverDownloadBtnTether(
                   nodeEvent('pointerover'),
                   switchMap(() => {

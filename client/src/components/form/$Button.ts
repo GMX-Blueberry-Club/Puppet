@@ -86,6 +86,7 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
 
 
   const duringRequest = multicast(mergeArray([
+    now(false),
     constant(true, click),
     awaitPromises(map(async req => {
       try {
@@ -156,7 +157,7 @@ export const $ButtonCircular = ({ $iconPath, disabled = empty() }: IButtonCircul
 
   return [
     ops(
-      $row(style({ cursor: 'pointer', padding: '6px' }))(
+      $row(style({ cursor: 'pointer', padding: '6px', margin: '-6px' }))(
         $iconCircular($iconPath)
       )
     ),

@@ -3,18 +3,18 @@
 import { $node, $Node, component, nodeEvent, INode, style, styleBehavior, NodeComposeFn, $text } from '@aelea/dom'
 import { O, Behavior, combineObject, combineArray, replayLatest } from '@aelea/core'
 import { pallete } from "@aelea/ui-components-theme"
-import { constant, empty, filter, map, merge, multicast, now, switchLatest, take, tap, until, zip } from "@most/core"
+import { constant, empty, filter, fromPromise, map, merge, multicast, now, switchLatest, take, tap, until, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { colorAlpha } from "@aelea/ui-components-theme"
 import { $column, observer } from '@aelea/ui-components'
-import { IMarketInfo, IMarketPoolInfo, applyFactor, factor, getAvailableReservedUsd, getBorrowingFactorPerInterval, getFundingFactorPerInterval, getTokenDescription, getTokenUsd, readableFactorPercentage, readableFixedUSD30, switchMap } from 'gmx-middleware-utils'
+import { IMarketFees, IMarketInfo, IMarketPool, IMarketUsageInfo, applyFactor, factor, getAvailableReservedUsd, getBorrowingFactorPerInterval, getFundingFactorPerInterval, getTokenDescription, getTokenUsd, readableFactorPercentage, readableFixedUSD30, switchMap } from 'gmx-middleware-utils'
 import { fadeIn } from '../transitions/enter.js'
 import * as GMX from "gmx-middleware-const"
 import { contractReader } from '../logic/common'
 import { IGmxProcessState } from '../data/process/process'
 import { ISupportedChain } from '../wallet/walletLink'
-import { $Table, $marketLabel, $tokenLabelFromSummary } from 'gmx-middleware-ui-components'
-import { hashKey } from '../logic/tradeV2'
+import { $Table, $marketSmallLabel, $tokenLabelFromSummary } from 'gmx-middleware-ui-components'
+import { getMarketPoolUsage, hashKey } from '../logic/tradeV2'
 
 
 interface IMarketList {
@@ -28,7 +28,7 @@ export const $MarketInfoList = ({
   processData,
   chain,
 }: IMarketList) => component((
-  [overlayClick, overlayClickTether]: Behavior<INode, any>,
+  [clickMarket, clickMarketTether]: Behavior<INode, any>,
 ) => {
   const gmxContractMap = GMX.CONTRACT[chain.id]
   const v2Reader = contractReader(gmxContractMap.ReaderV2)
@@ -52,67 +52,47 @@ export const $MarketInfoList = ({
   }, combineObject({ processData }))
 
 
-
   return [
     $container(
       $Table({
         dataSource: marketParamList,
+        $rowCallback: map(params => {
+          return $column(clickMarketTether(nodeEvent('click'), constant(params.market)))
+        }),
+        scrollConfig: {
+          $container: $column
+        },
         columns: [
           {
             $head: $text('Market'),
-            $$body: map(params => {
-              return $marketLabel(params.market)
+            $bodyCallback: map(params => {
+              return $marketSmallLabel(params.market)
             })
           },
           {
             $head: $text('Funding Rate'),
             gridTemplate: 'minmax(110px, 120px)',
-            $$body: map(params => {
-              const info: Stream<IMarketInfo> = v2Reader('getMarketInfo', gmxContractMap.Datastore.address, params.price, params.market.marketToken)
+            $bodyCallback: map(params => {
+              const fees: Stream<IMarketFees> = v2Reader('getMarketInfo', gmxContractMap.Datastore.address, params.price, params.market.marketToken)
+              const usage: Stream<IMarketUsageInfo> = fromPromise(getMarketPoolUsage(chain, params.market))
 
-              // const longBorrowRatePerInterval =  map(marketInfo => {
-              //   return getBorrowingFactorPerInterval(marketInfo, true, GMX.TIME_INTERVAL_MAP.MIN60)
-              // }, info)
+              const fundingFactorPerInterval  = map(marketParams => {
+                return getFundingFactorPerInterval(params.price, marketParams.usage, marketParams.fees, GMX.TIME_INTERVAL_MAP.MIN60)
+              }, combineObject({ usage, fees }))
 
-              
-              // const shortBorrowRatePerInterval =  map(marketInfo => {
-              //   return getFundingFactorPerInterval(marketInfo, false, GMX.TIME_INTERVAL_MAP.MIN60)
-              // }, info)
-
-
-
-              const fundingRatePerInterval  = map(marketInfo => {
-                const longsPayShorts = marketInfo.nextFunding.longsPayShorts
-                const isLargerSide = true
-
-                if (isLargerSide) return -marketInfo.nextFunding.fundingFactorPerSecond * BigInt(GMX.TIME_INTERVAL_MAP.MIN60)
-
-                const longInterestUsd = getTokenUsd(params.price.longTokenPrice.max, marketInfo.longInterestInTokens)
-                const shortInterestUsd = getTokenUsd(params.price.longTokenPrice.max, marketInfo.shortInterestInTokens)
-
-                const largerInterestUsd = longsPayShorts ? longInterestUsd : shortInterestUsd
-                const smallerInterestUsd = longsPayShorts ? shortInterestUsd : longInterestUsd
-
-                const ratio = smallerInterestUsd > 0n
-                  ? factor(largerInterestUsd, smallerInterestUsd)
-                  : 0n
-
-                return applyFactor(ratio, marketInfo.nextFunding.fundingFactorPerSecond) * BigInt(GMX.TIME_INTERVAL_MAP.MIN60)
-              }, info)
-
-              return $text(map(fr => readableFactorPercentage(fr), fundingRatePerInterval))
+              return $text(map(fr => readableFactorPercentage(fr), fundingFactorPerInterval))
             })
           },
           {
             $head: $text('Borrow Rate Long'),
             gridTemplate: '90px',
-            $$body: map(params => {
-              const info: Stream<IMarketInfo> = v2Reader('getMarketInfo', gmxContractMap.Datastore.address, params.price, params.market.marketToken)
+            $bodyCallback: map(params => {
+              const marketFees: Stream<IMarketFees> = v2Reader('getMarketInfo', gmxContractMap.Datastore.address, params.price, params.market.marketToken)
 
 
-              const shortBorrowRatePerInterval =  map(marketInfo => {
-                return getBorrowingFactorPerInterval(marketInfo, true, GMX.TIME_INTERVAL_MAP.MIN60)
-              }, info)
+              const shortBorrowRatePerInterval =  map(fees => {
+                return getBorrowingFactorPerInterval(fees, true, GMX.TIME_INTERVAL_MAP.MIN60)
+              }, marketFees)
 
 
               return $text(map(fr => readableFactorPercentage(fr), shortBorrowRatePerInterval))
@@ -121,13 +101,13 @@ export const $MarketInfoList = ({
           {
             $head: $text('Borrow Rate Short'),
             gridTemplate: '90px',
-            $$body: map(params => {
-              const info: Stream<IMarketInfo> = v2Reader('getMarketInfo', gmxContractMap.Datastore.address, params.price, params.market.marketToken)
+            $bodyCallback: map(params => {
+              const marketFees: Stream<IMarketFees> = v2Reader('getMarketInfo', gmxContractMap.Datastore.address, params.price, params.market.marketToken)
 
 
               const shortBorrowRatePerInterval =  map(marketInfo => {
                 return getBorrowingFactorPerInterval(marketInfo, false, GMX.TIME_INTERVAL_MAP.MIN60)
-              }, info)
+              }, marketFees)
 
 
               return $text(map(fr => readableFactorPercentage(fr), shortBorrowRatePerInterval))
@@ -135,7 +115,7 @@ export const $MarketInfoList = ({
           },
           // {
           //   $head: $text('Liquidity'),
-          //   $$body: map(params => {
+          //   $body: map(params => {
           //     const info: Stream<IMarketInfo> = v2Reader('getMarketInfo', gmxContractMap.Datastore.address, params.price, params.market.marketToken)
 
           //     const availableIndexLiquidityUsd =  map(marketInfo => {
@@ -159,7 +139,7 @@ export const $MarketInfoList = ({
       })({})
     ),
 
-    { overlayClick }
+    { clickMarket }
   ]
 })
 

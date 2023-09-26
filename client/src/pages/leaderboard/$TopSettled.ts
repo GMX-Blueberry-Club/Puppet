@@ -174,7 +174,7 @@ export const $TopSettled = (config: ITopSettled) => component((
               $head: $text('Trader'),
               gridTemplate: 'minmax(140px, 180px)',
               columnOp: style({ alignItems: 'center' }),
-              $$body: map(pos => {
+              $bodyCallback: map(pos => {
 
                 return $TraderDisplay({
                   route: config.route,
@@ -187,14 +187,13 @@ export const $TopSettled = (config: ITopSettled) => component((
                 })
               })
             },
-          
             ...screenUtils.isDesktopScreen
               ? [
                 {
                   $head: $text('Win / Loss'),
                   // gridTemplate: 'minmax(110px, 120px)',
                   columnOp: style({ alignItems: 'center', placeContent: 'center' }),
-                  $$body: map((pos: IMirrorPositionListSummary) => {
+                  $bodyCallback: map((pos: IMirrorPositionListSummary) => {
                     return $row(
                       $text(`${pos.winCount} / ${pos.lossCount}`)
                     )
@@ -210,7 +209,7 @@ export const $TopSettled = (config: ITopSettled) => component((
               ),
               sortBy: 'size',
               columnOp: style({ placeContent: 'flex-end' }),
-              $$body: map((pos) => {
+              $bodyCallback: map((pos) => {
                 return $size(pos.size, pos.collateral)
               })
             },
@@ -222,7 +221,7 @@ export const $TopSettled = (config: ITopSettled) => component((
               sortBy: 'pnl',
               gridTemplate: '90px',
               columnOp: style({ placeContent: 'flex-end' }),
-              $$body: map(pos => {
+              $bodyCallback: map(pos => {
 
                 return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
                   $pnlValue(pos.pnl),
@@ -239,7 +238,7 @@ export const $TopSettled = (config: ITopSettled) => component((
                   $head: $text(`Last ${getMappedValue(LAST_ACTIVITY_LABEL_MAP, params.activityTimeframe)} activity`),
                   gridTemplate: '160px',
                   columnOp: style({ alignItems: 'center', placeContent: 'center' }),
-                  $$body: map((pos: IMirrorPositionListSummary & { trader: viem.Address, settledTradeList: IPositionMirrorSettled[]}) => {
+                  $bodyCallback: map((pos: IMirrorPositionListSummary & { trader: viem.Address, settledTradeList: IPositionMirrorSettled[]}) => {
                     
                     return screenUtils.isDesktopScreen
                       ? $ProfilePerformanceGraph({

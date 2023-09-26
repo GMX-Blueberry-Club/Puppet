@@ -1,77 +1,67 @@
-import { Behavior, O, combineArray, combineObject, replayLatest } from "@aelea/core"
+import { Behavior, combineArray, combineObject, replayLatest } from "@aelea/core"
 import { $node, $text, component, style, styleBehavior } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import {
   IMarket,
+  IMarketInfo,
+  IMarketPool,
   IMarketPrice,
-  IPositionDecrease,
-  IPositionIncrease,
   IPositionSlot,
   PositionInfo,
   StateStream,
-  abs,
-  div,
-  filterNull, formatFixed,
-  getAdjustedDelta, getAvailableReservedUsd,  getBorrowingFactorPerInterval,  getCappedPositionPnlUsd,  getDenominator,
-  getEntryPrice,
-  getFeeBasisPoints, getFundingFactorPerInterval, getFundingFee, getIntervalIdentifier,
+  formatFixed,
+  getAvailableReservedUsd, getBorrowingFactorPerInterval, getCappedPositionPnlUsd, getDenominator,
+  getFundingFactorPerInterval, getFundingFactorPerInterval2,
+  getIntervalIdentifier,
   getLiquidationPrice,
   getMappedValue,
   getMarginFee,
-  getMarginFees,
   getNativeTokenAddress,
   getNativeTokenDescription,
-  getPnL,
   getPositionKey,
-  getPositionPendingFeesUsd,
-  getPositionPnlUsd,
   getPriceImpactForPosition,
   getTokenAmount,
   getTokenDenominator,
   getTokenDescription,
   getTokenUsd,
-  readableDate,
   readableFactorPercentage,
   readableFixedUSD30,
-  readablePercentage,
-  readableUnitAmount, resolveAddress, safeDiv, switchMap,
-  timeSince,
+  readableUnitAmount, resolveAddress,
+  switchMap,
   unixTimestampNow
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, combine, constant, debounce, empty, fromPromise, map, mergeArray, multicast, now, sample, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, tap, zip } from "@most/core"
+import { awaitPromises, constant, debounce, empty, fromPromise, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, tap, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/test"
 import * as GMX from "gmx-middleware-const"
-import { $ButtonToggle, $CandleSticks, $Table, $infoLabel, $infoLabeledValue, $target, $txHashRef } from "gmx-middleware-ui-components"
+import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $target } from "gmx-middleware-ui-components"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
+import { IPositionMirrorSlot } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $midContainer } from "../common/$common.js"
+import { $caretDown } from "../common/elements/$icons.js"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount.js"
-import { $CardTable } from "../components/$common.js"
 import { $ButtonSecondary } from "../components/form/$Button.js"
 import { $Dropdown } from "../components/form/$Dropdown.js"
-import { $PositionListDetails, IRequestTrade } from "../components/trade/$PositionListDetails.js"
+import { $PositionAdjustmentDetails } from "../components/trade/$PositionAdjustmentDetails"
+import { $PositionDetails } from "../components/trade/$PositionDetails.js"
 import { $PositionEditor, IPositionEditorAbstractParams, ITradeConfig, ITradeFocusMode, ITradeParams } from "../components/trade/$PositionEditor.js"
+import { $PositionListDetails, IRequestTrade } from "../components/trade/$PositionListDetails.js"
 import { latestTokenPrice } from "../data/process/process.js"
 import { rootStoreScope } from "../data/store/store.js"
-import { $caretDown } from "../common/elements/$icons.js"
 import { connectContract, contractReader } from "../logic/common.js"
 import * as trade from "../logic/trade.js"
-import { getExecuteGasFee, getExecutionFee, getMarketPoolInfo, hashKey } from "../logic/tradeV2.js"
+import { exchangesWebsocketPriceSource } from "../logic/trade.js"
+import { getExecuteGasFee, getExecutionFee, getFullMarketInfo, getMarketConfig, getMarketPoolUsage, hashKey } from "../logic/tradeV2.js"
 import * as indexDB from "../utils/storage/indexDB.js"
 import * as storage from "../utils/storage/storeScope.js"
 import { walletLink } from "../wallet/index.js"
 import { gasPrice, wallet } from "../wallet/walletLink.js"
 import { $seperator2 } from "./common.js"
-import { exchangesWebsocketPriceSource } from "../logic/trade.js"
-import { $MarketInfoList } from "../components/$MarketList"
-import { $PositionDetails } from "../components/trade/$PositionDetails.js"
-import { IPositionMirrorSlot } from "puppet-middleware-utils"
-import { $PositionAdjustmentDetails } from "../components/trade/$PositionAdjustmentDetails"
 
 
 export type ITradeComponent = IPositionEditorAbstractParams
@@ -263,10 +253,41 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ processData, primaryToken }))
 
 
+  const marketPoolUsage = replayLatest(multicast(switchMap(params => {
+    const poolInfo = fromPromise(getMarketPoolUsage(config.chain, params.market))
 
-  const marketInfo = replayLatest(multicast(switchMap(params => {
-    return fromPromise(getMarketPoolInfo(config.chain, params.market, params.marketPrice))
+    return poolInfo
   }, combineObject({ market, marketPrice }))))
+
+  const marketConfig = replayLatest(multicast(switchMap(params => {
+    const poolInfo = fromPromise(getMarketConfig(config.chain, params.market))
+
+    return poolInfo
+  }, combineObject({ market, marketPrice }))))
+
+  const marketPool: Stream<IMarketPool> = replayLatest(multicast(switchMap(params => {
+    const data = v2Reader(
+      'getMarketTokenPrice',
+      gmxContractMap.Datastore.address,
+      params.market,
+      params.marketPrice.indexTokenPrice,
+      params.marketPrice.longTokenPrice,
+      params.marketPrice.shortTokenPrice,
+      hashKey("MAX_PNL_FACTOR_FOR_TRADERS"),
+      true
+    )
+
+    return map(res => res[1], data)
+  }, combineObject({ market, marketPrice }))))
+
+  const marketInfo: Stream<IMarketInfo> = replayLatest(multicast(switchMap(params => {
+    const query = getFullMarketInfo(config.chain, params.market, params.marketPrice)
+    return map(res => {
+
+      return { ...res, market: params.market, price: params.marketPrice }
+    }, query)
+  }, combineObject({ market, marketPrice }))))
+
 
 
 
@@ -418,12 +439,10 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   const priceImpactUsd = map(params => {
-    if (params.sizeDeltaUsd === 0n) {
-      return 0n
-    }
+    if (params.sizeDeltaUsd === 0n) return 0n
 
-    const longInterestUsd = getTokenUsd(params.marketPrice.longTokenPrice.max, params.marketInfo.longInterestInTokens)
-    const shortInterestUsd = getTokenUsd(params.marketPrice.longTokenPrice.max, params.marketInfo.shortInterestInTokens)
+    const longInterestUsd = getTokenUsd(params.marketPrice.longTokenPrice.max, params.marketInfo.usage.longInterestInTokens)
+    const shortInterestUsd = getTokenUsd(params.marketPrice.longTokenPrice.max, params.marketInfo.usage.shortInterestInTokens)
 
     return getPriceImpactForPosition(
       params.marketInfo,
@@ -602,11 +621,14 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ marketInfo, marketPrice, isLong })) // tradeReader.getAvailableLiquidityUsd(market, collateralToken)
 
   const borrowRatePerInterval = map(params => {
-    return getBorrowingFactorPerInterval(params.marketInfo, params.isLong, params.borrowRateIntervalDisplay)
+    return getBorrowingFactorPerInterval(params.marketInfo.fees, params.isLong, params.borrowRateIntervalDisplay)
   }, combineObject({ marketInfo, isLong, borrowRateIntervalDisplay }))
 
   const fundingRatePerInterval  = map(params => {
-    return getFundingFactorPerInterval(params.marketPrice, params.marketInfo, params.isLong, params.fundingRateIntervalDisplay)
+    const newLocal = getFundingFactorPerInterval(params.marketPrice, params.marketInfo.usage, params.marketInfo.fees, params.fundingRateIntervalDisplay)
+    const newLocal2 = getFundingFactorPerInterval2(params.marketPrice, params.marketInfo.usage, params.marketInfo.fees, params.isLong, params.fundingRateIntervalDisplay)
+
+    return newLocal
   }, combineObject({ marketPrice, marketInfo, isLong, fundingRateIntervalDisplay }))
 
 
@@ -1087,7 +1109,7 @@ export const $Trade = (config: ITradeComponent) => component((
                       tradeConfig,
                       tradeState,
                       wallet: w3p,
-                      $container: $column(style({ padding: '20px 0' }))
+                      $container: $column(style({ padding: '20px 0', flex: 1 }))
                     })({
                  
                     })

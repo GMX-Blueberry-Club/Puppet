@@ -149,6 +149,16 @@ export const $marketLabel = (market: IMarket) => {
   )
 }
 
+export const $marketSmallLabel = (market: IMarket) => {
+  const indexTokenDescription = getTokenDescription(market.indexToken)
+  const $iconG = $tokenIconMap[indexTokenDescription.symbol]
+
+  return $row(layoutSheet.spacingSmall, style({ cursor: 'pointer', alignItems: 'center', }))(
+    $icon({ $content: $iconG, width: '24px', viewBox: '0 0 32 32' }),
+    $text(style({ fontWeight: 'bold' }))(indexTokenDescription.symbol),
+  )
+}
+
 interface IHintNumberDisplay {
   label?: string
   isIncrease: Stream<boolean>

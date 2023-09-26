@@ -20,7 +20,7 @@ import {
   readablePercentage,
   streamOf, switchMap
 } from "gmx-middleware-utils"
-import { getMpSlotPnL, getParticiapntMpPortion, getParticiapntMpPortion, getPuppetSubscriptionKey, getRouteTypeKey, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
+import { getMpSlotPnL, getParticiapntMpPortion, getPuppetSubscriptionKey, getRouteTypeKey, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile.js"
 import { $Popover } from "../components/$Popover.js"
@@ -364,7 +364,7 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
               click: popRouteSubscriptionEditorTether()
             }),
           ),
-          $popContent: map(() => {
+          $content: map(() => {
             return $RouteSubscriptionEditor({ routeSubscription })({
               changeRouteSubscription: modifySubscribeListTether(map(partialSubsc => {
                 return { ...{ trader: config.trader, puppet: w3p.account.address, routeTypeKey: routeTypeKey }, ...partialSubsc }

@@ -1,5 +1,5 @@
 import { Behavior, combineObject, O } from "@aelea/core"
-import { $element, $Node, $text, attr, component, INode, NodeComposeFn, nodeEvent, style, styleInline } from "@aelea/dom"
+import { $element, $node, $Node, $text, attr, component, INode, NodeComposeFn, nodeEvent, style, styleInline } from "@aelea/dom"
 import { Route } from "@aelea/router"
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
@@ -17,6 +17,7 @@ import {
   $ButtonToggle,
   $hintNumChange, $infoLabel,
   $infoTooltipLabel,
+  $moreDots,
   $tokenIconMap, $tokenLabelFromSummary
 } from "gmx-middleware-ui-components"
 import {
@@ -57,10 +58,11 @@ import { $caretDown } from "../../common/elements/$icons.js"
 import { connectContract, getMappedValue2 } from "../../logic/common.js"
 import * as trade from "../../logic/trade.js"
 import { account } from "../../wallet/walletLink.js"
-import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
+import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown.js"
 import { $Popover } from "../$Popover"
 import { $MarketInfoList } from "../$MarketList"
+import { $iconCircular } from "../../common/elements/$common"
 
 
 
@@ -160,6 +162,7 @@ const MIN_LEVERAGE_NORMAL = formatFixed(GMX.MIN_LEVERAGE_FACTOR, 4) / LIMIT_LEVE
 
 export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
+  [clickSettingsPopover, clickSettingsPopoverTether]: Behavior<any, boolean>,
   [switchIsLong, switchIsLongTether]: Behavior<boolean, boolean>,
 
   [switchFocusMode, switchFocusModeTether]: Behavior<any, ITradeFocusMode>,
@@ -307,12 +310,12 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   return [
     config.$container(
       $row(
+        layoutSheet.spacing,
         // styleInline(map(isIncrease => isIncrease ? { borderColor: 'none' } : {}, config.tradeConfig.isIncrease)),
         style({
           padding: '12px',
           marginBottom: `-${BOX_SPACING}px`,
           paddingBottom: `${BOX_SPACING + 12}px`,
-          placeContent: 'space-between',
           alignItems: 'center',
           backgroundColor: pallete.background,
           border: `1px solid ${colorAlpha(pallete.foreground, .20)}`,
@@ -340,17 +343,31 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
           select: switchIsLongTether()
         }),
 
-        $ButtonToggle({
-          $container: $row(layoutSheet.spacingSmall),
-          selected: config.tradeConfig.isIncrease,
-          options: [
-            true,
-            false,
-          ],
-          $$option: map(option => {
-            return $text(style({}))(option ? 'Increase' : 'Decrease')
-          })
-        })({ select: switchisIncreaseTether() }),
+        // $ButtonToggle({
+        //   $container: $row(layoutSheet.spacingSmall),
+        //   selected: config.tradeConfig.isIncrease,
+        //   options: [
+        //     true,
+        //     false,
+        //   ],
+        //   $$option: map(option => {
+        //     return $text(style({}))(option ? 'Increase' : 'Decrease')
+        //   })
+        // })({ select: switchisIncreaseTether() }),
+
+        $node(style({ flex: 1 }))(),
+
+
+        $Popover({
+          open: clickSettingsPopover,
+          $target: $ButtonCircular({
+            // disabled: clickSettingsPopover,
+            $iconPath: $moreDots,
+          })({ click: clickSettingsPopoverTether() }),
+          $content: $text('henloo')
+        })({
+          // overlayClick: clickSettingsPopoverTether()
+        }),
 
       ),
 
@@ -414,24 +431,32 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 switchLatest
               ),
               styleInline(map(focus => focus === ITradeFocusMode.collateral ? { color: pallete.message } : { color: pallete.foreground }, config.tradeConfig.focusMode)),
-              switchFocusModeTether(nodeEvent('focus'), constant(ITradeFocusMode.collateral)),
-              inputPrimaryAmountTether(nodeEvent('input'), src => snapshot((state, inputEvent) => {
-                const target = inputEvent.target
+              switchFocusModeTether(
+                nodeEvent('focus'),
+                constant(ITradeFocusMode.collateral),
+                // multicast
+              ),
+              inputPrimaryAmountTether(
+                nodeEvent('input'),
+                src => snapshot((state, inputEvent) => {
+                  const target = inputEvent.target
 
-                if (!(target instanceof HTMLInputElement)) {
-                  console.warn(new Error('Target is not type of input'))
-                  return 0n
-                }
+                  if (!(target instanceof HTMLInputElement)) {
+                    console.warn(new Error('Target is not type of input'))
+                    return 0n
+                  }
 
-                if (target.value === '') {
-                  return 0n
-                }
+                  if (target.value === '') {
+                    return 0n
+                  }
 
-                const val = parseReadableNumber(target.value)
-                const parsedInput = parseFixed(val, state.primaryDescription.decimals)
+                  const val = parseReadableNumber(target.value)
+                  const parsedInput = parseFixed(val, state.primaryDescription.decimals)
 
-                return getTokenUsd(state.primaryPrice, parsedInput)
-              }, combineObject({ primaryDescription, primaryPrice }), src)),
+                  return getTokenUsd(state.primaryPrice, parsedInput)
+                }, combineObject({ primaryDescription, primaryPrice }), src),
+                // multicast
+              ),
             )(),
 
 
@@ -646,7 +671,6 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
           }, combineObject({ focusMode, isIncrease })))
         )(
           $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-
             $field(
               O(
                 map(node =>
@@ -666,30 +690,39 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 switchLatest
               ),
               styleInline(map(focus => focus === ITradeFocusMode.size ? { color: pallete.message } : { color: pallete.foreground }, config.tradeConfig.focusMode)),
-              switchFocusModeTether(nodeEvent('focus'), constant(ITradeFocusMode.size)),
-              inputSizeDeltaTetherUsd(nodeEvent('input'), src => snapshot((params, inputEvent) => {
-                const target = inputEvent.currentTarget
+              switchFocusModeTether(
+                nodeEvent('focus'),
+                constant(ITradeFocusMode.size),
+                // multicast
+              ),
+              inputSizeDeltaTetherUsd(
+                nodeEvent('input'),
+                src => snapshot((params, inputEvent) => {
+                  const target = inputEvent.currentTarget
 
-                if (!(target instanceof HTMLInputElement)) {
-                  console.warn(new Error('Target is not type of input'))
+                  if (!(target instanceof HTMLInputElement)) {
+                    console.warn(new Error('Target is not type of input'))
 
-                  return 0n
-                }
+                    return 0n
+                  }
 
-                if (target.value === '') {
-                  return 0n
-                }
+                  if (target.value === '') {
+                    return 0n
+                  }
 
-                const parsedInput = parseFixed(parseReadableNumber(target.value), params.indexDescription.decimals)
+                  const parsedInput = parseFixed(parseReadableNumber(target.value), params.indexDescription.decimals)
 
-                return getTokenUsd(params.marketPrice.indexTokenPrice.min, parsedInput)
-              }, combineObject({ indexDescription, marketPrice }), src))
+                  return getTokenUsd(params.marketPrice.indexTokenPrice.min, parsedInput)
+                }, combineObject({ indexDescription, marketPrice }), src),
+                // multicast
+              )
             )(),
 
 
             switchMap(list => {
 
               return $Popover({
+                open: clickChooseMarketPopover,
                 $target: switchLatest(map(token => {
                   const nativeToken = getNativeTokenAddress(config.chain)
                   const tokenDesc = token === nativeToken
@@ -707,12 +740,10 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                     click: clickChooseMarketPopoverTether()
                   })
                 }, indexToken)),
-                $popContent: map((_) => {
-                  return $MarketInfoList({
-                    chain: config.chain,
-                    processData: config.processData,
-                  })({})
-                }, clickChooseMarketPopover),
+                $content: $MarketInfoList({
+                  chain: config.chain,
+                  processData: config.processData,
+                })({}),
               })({
                 // overlayClick: clickPopoverClaimTether()
               })

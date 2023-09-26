@@ -47,6 +47,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
   )
 
   const $extraMenuPopover = $Popover({
+    open: clickPopoverClaim,
     dismiss: routeChangeMulticast,
     $target: $circleButtonAnchor(
       $icon({
@@ -64,55 +65,53 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
         viewBox: '0 0 32 32'
       }),
     ),
-    $popContent: map((_) => {
-      return $column(layoutSheet.spacingBig)(
+    $content: $column(layoutSheet.spacingBig)(
         
-        // ...screenUtils.isMobileScreen ? $menuItemList : [],
-        // $row(layoutSheet.spacingBig, style({ flexWrap: 'wrap', width: '210px' }))(
-        //   $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://docs.blueberry.club/' }))(
-        //     $icon({ $content: $gitbook, width: '22px', viewBox: `0 0 32 32` })
-        //   ),
-        //   $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://discord.com/invite/7ZMmeU3z9j' }))(
-        //     $icon({ $content: $discord, width: '22px', viewBox: `0 0 32 32` })
-        //   ),
-        //   $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://twitter.com/PuppetFinance' }))(
-        //     $icon({ $content: $twitter, width: '22px', viewBox: `0 0 24 24` })
-        //   ),
-        //   $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://www.instagram.com/blueberryclub.eth' }))(
-        //     $icon({ $content: $instagram, width: '18px', viewBox: `0 0 32 32` })
-        //   ),
-        //   $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://github.com/nissoh/blueberry-club' }))(
-        //     $icon({ $content: $github, width: '22px', viewBox: `0 0 32 32` })
-        //   ),
-        // ),
+      // ...screenUtils.isMobileScreen ? $menuItemList : [],
+      // $row(layoutSheet.spacingBig, style({ flexWrap: 'wrap', width: '210px' }))(
+      //   $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://docs.blueberry.club/' }))(
+      //     $icon({ $content: $gitbook, width: '22px', viewBox: `0 0 32 32` })
+      //   ),
+      //   $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://discord.com/invite/7ZMmeU3z9j' }))(
+      //     $icon({ $content: $discord, width: '22px', viewBox: `0 0 32 32` })
+      //   ),
+      //   $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://twitter.com/PuppetFinance' }))(
+      //     $icon({ $content: $twitter, width: '22px', viewBox: `0 0 24 24` })
+      //   ),
+      //   $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://www.instagram.com/blueberryclub.eth' }))(
+      //     $icon({ $content: $instagram, width: '18px', viewBox: `0 0 32 32` })
+      //   ),
+      //   $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://github.com/nissoh/blueberry-club' }))(
+      //     $icon({ $content: $github, width: '22px', viewBox: `0 0 32 32` })
+      //   ),
+      // ),
 
-        $ButtonSecondary({
-          $content: $Picker([light, dark])({})
-        })({}),
+      $ButtonSecondary({
+        $content: $Picker([light, dark])({})
+      })({}),
 
 
-        switchLatest(snapshot((_, wallet) => {
-          if (wallet === null) {
-            return empty()
-          }
+      switchLatest(snapshot((_, wallet) => {
+        if (wallet === null) {
+          return empty()
+        }
 
-          return $ButtonSecondary({
-            $content: $text('Disconnect Wallet')
-          })({
-            click: walletChangeTether(
-              map(async xx => {
+        return $ButtonSecondary({
+          $content: $text('Disconnect Wallet')
+        })({
+          click: walletChangeTether(
+            map(async xx => {
 
-                // Check if connection is already established
-                await disconnect()
+              // Check if connection is already established
+              await disconnect()
 
-              }),
-              awaitPromises
-            )
-          })
-        }, walletChange, walletLink.wallet)),
+            }),
+            awaitPromises
+          )
+        })
+      }, walletChange, walletLink.wallet)),
 
-      )
-    }, clickPopoverClaim),
+    ),
   })({
     // overlayClick: clickPopoverClaimTether()
   })
@@ -231,6 +230,7 @@ export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: 
   )
 
   const $extraMenuPopover = $Popover({
+    open: clickPopoverClaim,
     dismiss: routeChangeMulticast,
     $target: $circleButtonAnchor(
       $icon({
@@ -248,64 +248,62 @@ export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: 
         viewBox: '0 0 32 32'
       }),
     ),
-    $popContent: map((_) => {
-      return $column(layoutSheet.spacingBig, style({ marginTop: '-40px' }))(
-        $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
-          // $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', disabled: now(false), route: parentRoute.create({ fragment: 'feefwefwe' }) })({
-          click: routeChangeTether()
-        }),
-        $Link({ $content: $pageLink($stackedCoins, 'Leaderboard'), url: '/app/leaderboard', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
-          click: routeChangeTether()
-        }),
+    $content: $column(layoutSheet.spacingBig, style({ marginTop: '-40px' }))(
+      $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+        // $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', disabled: now(false), route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+        click: routeChangeTether()
+      }),
+      $Link({ $content: $pageLink($stackedCoins, 'Leaderboard'), url: '/app/leaderboard', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+        click: routeChangeTether()
+      }),
 
-        // ...screenUtils.isMobileScreen ? $menuItemList : [],
-        $row(layoutSheet.spacingBig, style({ flexWrap: 'wrap', width: '210px' }))(
-          $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://docs.blueberry.club/' }))(
-            $icon({ $content: $gitbook, width: '22px', viewBox: `0 0 32 32` })
-          ),
-          $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://discord.com/invite/7ZMmeU3z9j' }))(
-            $icon({ $content: $discord, width: '22px', viewBox: `0 0 32 32` })
-          ),
-          $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://twitter.com/PuppetFinance' }))(
-            $icon({ $content: $twitter, width: '22px', viewBox: `0 0 24 24` })
-          ),
-          $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://www.instagram.com/blueberryclub.eth' }))(
-            $icon({ $content: $instagram, width: '18px', viewBox: `0 0 32 32` })
-          ),
-          $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://github.com/nissoh/blueberry-club' }))(
-            $icon({ $content: $github, width: '22px', viewBox: `0 0 32 32` })
-          ),
+      // ...screenUtils.isMobileScreen ? $menuItemList : [],
+      $row(layoutSheet.spacingBig, style({ flexWrap: 'wrap', width: '210px' }))(
+        $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://docs.blueberry.club/' }))(
+          $icon({ $content: $gitbook, width: '22px', viewBox: `0 0 32 32` })
         ),
+        $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://discord.com/invite/7ZMmeU3z9j' }))(
+          $icon({ $content: $discord, width: '22px', viewBox: `0 0 32 32` })
+        ),
+        $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://twitter.com/PuppetFinance' }))(
+          $icon({ $content: $twitter, width: '22px', viewBox: `0 0 24 24` })
+        ),
+        $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://www.instagram.com/blueberryclub.eth' }))(
+          $icon({ $content: $instagram, width: '18px', viewBox: `0 0 32 32` })
+        ),
+        $anchor(layoutSheet.displayFlex, style({ padding: '0 4px', border: `2px solid ${pallete.horizon}`, borderRadius: '50%', alignItems: 'center', placeContent: 'center', height: '42px', width: '42px' }), attr({ href: 'https://github.com/nissoh/blueberry-club' }))(
+          $icon({ $content: $github, width: '22px', viewBox: `0 0 32 32` })
+        ),
+      ),
 
-        $ButtonSecondary({
-          $content: $Picker([light, dark])({})
+      $ButtonSecondary({
+        $content: $Picker([light, dark])({})
+      })({
+
+      }),
+
+
+      switchLatest(snapshot((_, wallet) => {
+        if (wallet === null) {
+          return empty()
+        }
+
+        return $ButtonSecondary({
+          $content: $text('Disconnect Wallet')
         })({
+          click: walletChangeTether(
+            map(async xx => {
 
-        }),
+              // Check if connection is already established
+              await disconnect()
 
+            }),
+            awaitPromises
+          )
+        })
+      }, walletChange, walletLink.wallet)),
 
-        switchLatest(snapshot((_, wallet) => {
-          if (wallet === null) {
-            return empty()
-          }
-
-          return $ButtonSecondary({
-            $content: $text('Disconnect Wallet')
-          })({
-            click: walletChangeTether(
-              map(async xx => {
-
-                // Check if connection is already established
-                await disconnect()
-
-              }),
-              awaitPromises
-            )
-          })
-        }, walletChange, walletLink.wallet)),
-
-      )
-    }, clickPopoverClaim),
+    ),
   })({
     // overlayClick: clickPopoverClaimTether()
   })

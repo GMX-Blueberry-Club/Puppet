@@ -10,7 +10,7 @@ import { $QuantumScroll, IScrollPagable, QuantumScroll, ScrollRequest } from "./
 
 export type TablePageResponse<T> = T[] | Omit<IScrollPagable, '$items'> & { page: T[] }
 
-export interface TableOption<T, FilterState> {
+export interface TableOption<T> {
 
   columns: TableColumn<T>[]
   gridTemplateColumns?: string
@@ -19,10 +19,11 @@ export interface TableOption<T, FilterState> {
   $between?: $Node
   scrollConfig?: Omit<QuantumScroll, 'dataSource'>
 
+  $rowCallback?: Op<T, NodeComposeFn<$Node>>
+
   $container?: NodeComposeFn<$Node>
   $rowContainer?: NodeComposeFn<$Node>
-  $headerRowContainer?: NodeComposeFn<$Node>
-  $bodyRowContainer?: NodeComposeFn<$Node>
+  $headerContainer?: NodeComposeFn<$Node>
 
   $cell?: NodeComposeFn<$Node>
   $bodyCell?: NodeComposeFn<$Node>
@@ -34,7 +35,7 @@ export interface TableOption<T, FilterState> {
 
 export interface TableColumn<T> {
   $head: $Node
-  $$body: Op<T, $Node>
+  $bodyCallback: Op<T, $Node>
   sortBy?: keyof T,
 
   gridTemplate?: string
@@ -69,13 +70,12 @@ export const $defaultTableRowContainer = $row(style({ display: 'grid' }), screen
 
 export const $defaultTableContainer = $column(layoutSheet.spacingSmall)
 
-export const $Table = <T, FilterState = never>({
+export const $Table = <T>({
   dataSource, columns, scrollConfig,
 
   $container = $defaultTableContainer,
   $rowContainer = $defaultTableRowContainer,
-  $headerRowContainer = $rowContainer,
-  $bodyRowContainer = $rowContainer,
+  $headerContainer = $rowContainer,
   $cell = $defaultTableCell,
   $bodyCell = $cell,
   $headerCell = $defaultTableHeaderCell,
@@ -83,14 +83,14 @@ export const $Table = <T, FilterState = never>({
   sortBy,
   $between = empty(),
   $sortArrowDown = $caretDown
-}: TableOption<T, FilterState>) => component((
+}: TableOption<T>) => component((
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest, ScrollRequest>,
   [sortByChange, sortByChangeTether]: Behavior<INode, keyof T>
 ) => {
 
   const gridTemplateColumns = columns.map(col => col.gridTemplate || '1fr').join(' ')
 
-  const $header = $headerRowContainer(
+  const $header = $headerContainer(
     style({ gridTemplateColumns })
   )(
     ...columns.map(col => {
@@ -132,12 +132,12 @@ export const $Table = <T, FilterState = never>({
     dataSource: map((res) => {
       const $items = (Array.isArray(res) ? res : res.page).map(rowData => {
 
-        return $bodyRowContainer(
+        return $rowContainer(
           style({ gridTemplateColumns, })
         )(
           ...columns.map(col => {
             return $bodyCell(col.columnOp || O())(
-              switchLatest(col.$$body(now(rowData)))
+              switchLatest(col.$bodyCallback(now(rowData)))
             )
           })
         )

@@ -150,6 +150,11 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
                   }),
                   $sizeAndLiquidation(pos, positionMarkPrice),
                   $openPnl(config.processData, pos),
+
+                  $ButtonSecondary({
+                    $content: $text('Close'),
+                    $container: $defaultMiniButtonSecondary
+                  })({})
                 ),
  
                 // isActive

@@ -299,7 +299,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
       //           {
       //             $head: $text('Trader'),
       //             columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
-      //             $$body: map((pos) => {
+      //             $body: map((pos) => {
       //               return $TraderDisplay({
       //                 route: config.route,
       //                 subscriptionList: config.subscriptionList,
@@ -323,7 +323,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
       //           {
       //             $head: $text('Trader'),
       //             columnOp: style({ minWidth: '120px', flex: 2, alignItems: 'center' }),
-      //             $$body: map((pos) => {
+      //             $body: map((pos) => {
       //               return $TraderDisplay({
       //                 route: config.route,
       //                 subscriptionList: config.subscriptionList,

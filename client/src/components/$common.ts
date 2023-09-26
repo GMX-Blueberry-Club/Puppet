@@ -118,7 +118,7 @@ export const $RouteDepositInfo = (config: IRouteDepositInfoConfig) => component(
               }, orchestrator.read('puppetAccountBalance', config.wallet.account.address, config.routeDescription.indexToken))
             )
           ),
-          $popContent: map(() => {
+          $content: map(() => {
 
             const maxBalance = multicast(join(constant(map(amount => tokenAmount(config.routeDescription.indexToken, amount), nativeBalance), clickMaxDeposit)))
             return $column(layoutSheet.spacing)(

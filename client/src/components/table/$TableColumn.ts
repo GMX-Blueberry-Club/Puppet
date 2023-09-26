@@ -27,7 +27,7 @@ const $tableHeader = (primaryLabel: string, secondaryLabel: string) => $column(s
 export const slotSizeColumn = <T extends IPositionMirrorSlot>(processData: Stream<IGmxProcessState>, shareTarget?: viem.Address): TableColumn<T> => ({
   $head: $tableHeader('Size', 'Leverage'),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
-  $$body: map(mp => {
+  $bodyCallback: map(mp => {
     const positionMarkPrice = latestTokenPrice(processData, mp.indexToken)
     return $sizeAndLiquidation(mp, positionMarkPrice, shareTarget)
   })
@@ -36,7 +36,7 @@ export const slotSizeColumn = <T extends IPositionMirrorSlot>(processData: Strea
 export const settledSizeColumn = (shareTarget?: viem.Address): TableColumn<IPositionMirrorSettled> => ({
   $head: $tableHeader('Size', 'Leverage'),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
-  $$body: map(mp => {
+  $bodyCallback: map(mp => {
     const size = getParticiapntMpPortion(mp, mp.maxSizeUsd, shareTarget)
     const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, shareTarget)
 
@@ -49,14 +49,14 @@ export const settledSizeColumn = (shareTarget?: viem.Address): TableColumn<IPosi
 
 export const entryColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSlot> = {
   $head: $text('Entry'),
-  $$body: map((pos) => {
+  $bodyCallback: map((pos) => {
     return $entry(pos.isLong, pos.indexToken, pos.averagePrice)
   })
 }
 
 export const puppetsColumn = <T extends {puppets: readonly `0x${string}`[]}>(click: Tether<INode, string>): TableColumn<T> => ({
   $head: $text('Puppets'),
-  $$body: map((pos) => {
+  $bodyCallback: map((pos) => {
     return $puppets(pos.puppets, click)
   })
 })
@@ -64,7 +64,7 @@ export const puppetsColumn = <T extends {puppets: readonly `0x${string}`[]}>(cli
 export const pnlSlotColumn = <T extends IPositionMirrorSlot>(processData: Stream<IGmxProcessState>, shareTarget?: viem.Address): TableColumn<T> => ({
   $head: $tableHeader('PnL', 'ROI'),
   columnOp: style({ placeContent: 'flex-end' }),
-  $$body: map(pos => {
+  $bodyCallback: map(pos => {
     return $openPnl(processData, pos, shareTarget)
   })
 })
@@ -73,7 +73,7 @@ export const traderColumn = <T extends IMirrorPositionListSummary & { trader: vi
   $head: $text('Trader'),
   // gridTemplate: 'minmax(110px, 120px)',
   columnOp: style({ alignItems: 'center' }),
-  $$body: map(pos => {
+  $bodyCallback: map(pos => {
 
     return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
       // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
@@ -92,7 +92,7 @@ export const traderColumn = <T extends IMirrorPositionListSummary & { trader: vi
 export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IPositionMirrorSettled> => ({
   $head: $tableHeader('PnL', 'ROI'),
   columnOp: style({ placeContent: 'flex-end' }),
-  $$body: map(mp => {
+  $bodyCallback: map(mp => {
     const pnl = getParticiapntMpPortion(mp, mp.realisedPnl, puppet)
     const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, puppet)
       
@@ -109,7 +109,7 @@ export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IPositionMi
 export const positionTimeColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSlot>  = {
   $head: $text('Timestamp'),
   gridTemplate: 'minmax(110px, 120px)',
-  $$body: map((pos) => {
+  $bodyCallback: map((pos) => {
 
     const timestamp = 'settlement' in pos ? pos.blockTimestamp : pos.blockTimestamp
 

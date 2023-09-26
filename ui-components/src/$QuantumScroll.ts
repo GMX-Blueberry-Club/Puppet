@@ -49,12 +49,12 @@ export const $QuantumScroll = ({
   const $itemLoader = map(nextResponse => {
     const itemCount = Array.isArray(nextResponse) ? nextResponse.length : nextResponse.$items.length
 
-    if (Array.isArray(nextResponse)) {
-      return mergeArray(nextResponse)
-    }
-
     if (itemCount === 0) {
       return $emptyMessage
+    }
+
+    if (Array.isArray(nextResponse)) {
+      return mergeArray(nextResponse)
     }
 
     const hasMoreItems = nextResponse.pageSize === itemCount
