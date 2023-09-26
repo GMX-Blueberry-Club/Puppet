@@ -354,6 +354,7 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
 
 
         return $Popover({
+          open: popRouteSubscriptionEditor,
           dismiss: modifySubscribeList,
           $target: $row(layoutSheet.spacing)(
             $trader,
@@ -364,13 +365,11 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
               click: popRouteSubscriptionEditorTether()
             }),
           ),
-          $content: map(() => {
-            return $RouteSubscriptionEditor({ routeSubscription })({
-              changeRouteSubscription: modifySubscribeListTether(map(partialSubsc => {
-                return { ...{ trader: config.trader, puppet: w3p.account.address, routeTypeKey: routeTypeKey }, ...partialSubsc }
-              }))
-            })
-          }, popRouteSubscriptionEditor)
+          $content: $RouteSubscriptionEditor({ routeSubscription })({
+            changeRouteSubscription: modifySubscribeListTether(map(partialSubsc => {
+              return { ...{ trader: config.trader, puppet: w3p.account.address, routeTypeKey: routeTypeKey }, ...partialSubsc }
+            }))
+          })
         })({})
       }, combineObject({ subscriptionList: config.subscriptionList, wallet }))
     ),
