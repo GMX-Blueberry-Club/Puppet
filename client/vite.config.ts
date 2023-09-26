@@ -6,11 +6,11 @@ import { dark } from './src/common/theme.js'
 
 
 const SITE_CONFIG = {
-  WEBSITE:  'https://puppet.house',
+  WEBSITE:  'https://gmx.house',
   TWITTER_HASH:  'PuppetFinance',
-  APP_NAME:  'Puppet',
-  APP_DESC_SHORT:  'Copy Trading',
-  APP_DESC_LONG:  'Copy Trading Protocol - Matching the best traders with investors',
+  APP_NAME:  'GMX.house',
+  APP_DESC_SHORT:  'GMX Leaderboard',
+  APP_DESC_LONG:  'Showcases top traders trading on GMX',
   THEME_PRIMARY:  dark.pallete.primary,
   THEME_BACKGROUND:  dark.pallete.background,
 }
