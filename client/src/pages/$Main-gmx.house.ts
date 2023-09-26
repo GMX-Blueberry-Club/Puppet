@@ -78,6 +78,11 @@ export const $MainGmxHouse = ({ baseRoute = '' }: Website) => component((
     const relativeUrl = location.href.replace(trailingSlash, '').split(document.baseURI.replace(trailingSlash, ''))[1]
     const frags = relativeUrl.split('/')
     frags.splice(0, 1, baseRoute)
+
+    if (frags.length === 1 && frags[0] === '') {
+      return ['', 'settled']
+    }
+
     return frags
   }, changes)
 
