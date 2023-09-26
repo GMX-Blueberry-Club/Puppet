@@ -51,7 +51,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
 
   const exploreStore = storage.createStoreScope(rootStoreScope, 'topSettled' as const)
-  const sortBy = storage.replayWrite(exploreStore, { direction: 'desc', selector: 'pnl' } as ISortBy<IPositionListSummary>, sortByChange, 'sortBy')
+  const sortBy = storage.replayWrite(exploreStore, { direction: 'desc', selector: 'size' } as ISortBy<IPositionListSummary>, sortByChange, 'sortBy')
   const routeList = map(list => list.map(rt => {
     const matchedMemType = ROUTE_DESCRIPTION.find(rtd => getRouteTypeKey(rt.collateralToken, rt.indexToken, rt.isLong) === getRouteTypeKey(rtd.collateralToken, rtd.indexToken, rtd.isLong))
 
