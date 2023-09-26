@@ -216,7 +216,26 @@ export const $MainGmxHouse = ({ baseRoute = '' }: Website) => component((
               )
             )
           ))
-        }, combineObject({ process, syncBlock: take(1, block) }))
+        }, combineObject({ process, syncBlock: take(1, block) })),
+        switchMap((cb) => {
+          return fadeIn(
+            $row(style({ position: 'absolute', zIndex: 100, right: '10px', bottom: '10px' }))(
+              $alertContainer(style({ backgroundColor: pallete.horizon }))(
+                filterNull(constant(null, clickUpdateVersion)) as any,
+
+                $text('New version Available'),
+                $ButtonSecondary({
+                  $container: $defaultMiniButtonSecondary,
+                  $content: $text('Update'),
+                })({
+                  click: clickUpdateVersionTether(
+                    tap(cb)
+                  )
+                })
+              )
+            )
+          )
+        }, newUpdateInvoke),  
 
 
       ])
