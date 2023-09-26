@@ -143,7 +143,7 @@ export const $TopOpen = (config: ITopOpen) => component((
                 })
               },
               entryColumn,
-              puppetsColumn<IPositionOpen>(routeChangeTether),
+              // puppetsColumn<IPositionOpen>(routeChangeTether),
               {
                 ...slotSizeColumn(config.processData),
                 sortBy: 'maxSizeUsd'

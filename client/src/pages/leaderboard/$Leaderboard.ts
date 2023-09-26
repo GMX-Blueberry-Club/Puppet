@@ -46,11 +46,11 @@ export const $Leaderboard = (config: ILeaderboard) => component((
   const options: IRouteOption[] = [
     {
       label: 'Aggregated',
-      url: '/app/leaderboard/settled'
+      url: '/settled'
     },
     {
       label: 'Open',
-      url: '/app/leaderboard/open'
+      url: '/open'
     }
   ]
 

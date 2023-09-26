@@ -121,7 +121,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
               }),
               $text(style({ color: pallete.message }))(`Leaderboard`)
             ),
-            url: `/app/leaderboard/settled`,
+            url: `/settled`,
             route: config.route,
           })({
             click: changeRouteTether()

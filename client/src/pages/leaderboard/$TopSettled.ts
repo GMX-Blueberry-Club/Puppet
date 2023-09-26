@@ -199,7 +199,7 @@ export const $TopSettled = (config: ITopSettled) => component((
                     )
                   })
                 },
-                puppetsColumn(routeChangeTether),
+                // puppetsColumn(routeChangeTether),
               ]
               : [],
             {

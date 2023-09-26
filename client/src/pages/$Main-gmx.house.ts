@@ -145,35 +145,49 @@ export const $MainGmxHouse = ({ baseRoute = '' }: Website) => component((
   
 
   return [
-    mergeArray([
-      router.contains(rootRoute)(
-        $rootContainer(style({ overflowY: 'auto', height: '100vh' }))(
+
+    $rootContainer(style({ overflowY: 'auto', height: '100vh' }))(
+      mergeArray([
+
+      
+        router.contains(rootRoute)(
           $midContainer(
             fadeIn($Leaderboard({
               subscriptionList,
               route: rootRoute,
               processData
             })({
-              routeChange: linkClickTether(
-                tap(console.log)
-              ),
+              routeChange: linkClickTether(),
               modifySubscriber: modifySubscriberTether(),
             }))
           )
-        )
-      ),
+        ),
 
-
-      router.match(adminRoute)(
-        $rootContainer(style({ overflowY: 'auto', height: '100vh' }))(
+        router.contains(profileRoute)(
           $midContainer(
-            $Admin({})
+            fadeIn($Profile({
+              route: profileRoute,
+              processData,
+              subscriptionList
+            })({
+              modifySubscriber: modifySubscriberTether(),
+              changeRoute: linkClickTether(),
+            }))
           )
         ),
-      ),
 
 
-    ])
+        router.match(adminRoute)(
+          $rootContainer(style({ overflowY: 'auto', height: '100vh' }))(
+            $midContainer(
+              $Admin({})
+            )
+          ),
+        ),
+
+
+      ])
+    )
 
   ]
 })
