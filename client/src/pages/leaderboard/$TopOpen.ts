@@ -1,12 +1,12 @@
 import { Behavior, O, combineObject } from "@aelea/core"
-import { $element, $text, component, style } from "@aelea/dom"
+import { $element, $text, attr, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { map, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
-import { $Table, ISortBy, ScrollRequest } from "gmx-middleware-ui-components"
+import { $Table, $icon, $infoLabel, ISortBy, ScrollRequest } from "gmx-middleware-ui-components"
 import { IAbstractPositionParams, pagingQuery, switchMap } from "gmx-middleware-utils"
 import { ROUTE_DESCRIPTION } from "puppet-middleware-const"
 import { IPositionMirrorSlot, IPuppetRouteSubscritpion, getMpSlotPnL, getRouteTypeKey } from "puppet-middleware-utils"
@@ -18,6 +18,7 @@ import { IGmxProcessState } from "../../data/process/process.js"
 import { rootStoreScope } from "../../data/store/store.js"
 import { $card } from "../../common/elements/$common.js"
 import * as storage from "../../utils/storage/storeScope.js"
+import { $puppetLogo } from "../../common/$icons"
 
 
 
@@ -97,26 +98,16 @@ export const $TopOpen = (config: ITopOpen) => component((
       $card(layoutSheet.spacingBig, style({ flex: 1 }))(
 
         $row(style({ placeContent: 'space-between' }))(
-          $row(
-            $DropMultiSelect({
-              $label: $labelDisplay(style({ color: pallete.foreground }))('Markets'),
-              $input: $element('input')(style({ maxWidth: '80px' })),
-              placeholder: 'All / Select',
-              $$chip: map(rt => {
-                return $route(rt)
-              }),
-              selector: {
-                list: ROUTE_DESCRIPTION,
-                $$option: map(route => {
-                  return style({
-                    padding: '8px'
-                  }, $route(route))
-                })
-              },
-              value: routeList
-            })({
-              select: routeTypeChangeTether()
-            }),
+          $element('a')(
+            layoutSheet.spacingSmall,
+            attr({ href: 'https://x.com/PuppetCopy' }),
+            style({ display: 'flex', alignItems: 'center', color: pallete.message, textDecoration: 'none' })
+          )(
+            $infoLabel('Powered by '),
+            $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+              $icon({ $content: $puppetLogo, width: '25px', viewBox: '0 0 32 32' }),
+              $text('Puppet')
+            ),
           ),
           
         ),
