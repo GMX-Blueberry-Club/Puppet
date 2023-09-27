@@ -22,10 +22,10 @@
         "@most/prelude": "^1.8.0",
         "@most/scheduler": "^1.3.0",
         "@most/types": "^1.1.0",
-        "@wagmi/core": "^1.4.0",
-        "@walletconnect/auth-client": "^2.1.1",
-        "@walletconnect/sign-client": "^2.9.2",
-        "@walletconnect/core": "^2.9.2",
+        "@wagmi/core": "^1.4.2",
+        "@walletconnect/auth-client": "^2.1.2",
+        "@walletconnect/sign-client": "^2.10.1",
+        "@walletconnect/core": "^2.10.1",
         "@walletconnect/push-client": "^0.10.8",
         "@web3modal/ethereum": "^2.7.1",
         "@web3modal/html": "^2.7.1",
@@ -35,14 +35,14 @@
         "gmx-middleware-const": "workspace:*",
         "gmx-middleware-ui-components": "workspace:*",
         "gmx-middleware-utils": "workspace:*",
-        "graphql": "^16.7.1",
+        "graphql": "^16.8.1",
         "mersenne-twister": "^1.1.0",
         "color": "^4.2.3",
         "graphql-request": "^6.1.0",
         "lightweight-charts": "^4.1.0-rc2",
         "puppet-middleware-const": "workspace:*",
         "puppet-middleware-utils": "workspace:*",
-        "viem": "^1.10.4",
+        "viem": "^1.12.2",
         "workbox-window": "^7.0.0",
         "workbox-core": "^7.0.0",
         "workbox-build": "^7.0.0",
@@ -51,11 +51,11 @@
         "workbox-precaching": "^7.0.0"
     },
     "devDependencies": {
-        "rimraf": "^5.0.1",
+        "rimraf": "^5.0.4",
         "@rollup/plugin-replace": "^5.0.2",
-        "@wagmi/cli": "^1.5.0",
+        "@wagmi/cli": "^1.5.1",
         "dotenv": "^16.3.1",
         "vite": "^4.4.9",
-        "vite-plugin-pwa": "^0.16.4"
+        "vite-plugin-pwa": "^0.16.5"
     }
 }
