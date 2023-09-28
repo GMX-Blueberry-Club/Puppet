@@ -57,12 +57,13 @@ import { IGmxProcessState, latestTokenPrice } from "../../data/process/process.j
 import { $caretDown } from "../../common/elements/$icons.js"
 import { connectContract, getMappedValue2 } from "../../logic/common.js"
 import * as trade from "../../logic/trade.js"
-import { account } from "../../wallet/walletLink.js"
+import { account, ISupportedChain } from "../../wallet/walletLink.js"
 import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown.js"
 import { $Popover } from "../$Popover"
 import { $MarketInfoList } from "../$MarketList"
 import { $iconCircular } from "../../common/elements/$common"
+import { $gmxLogo } from "../../common/$icons"
 
 
 
@@ -140,7 +141,7 @@ export interface IPositionEditorAbstractParams {
   tokenIndexMap: Partial<Record<number, viem.Address[]>>
   tokenStableMap: Partial<Record<number, viem.Address[]>>
   parentRoute: Route
-  chain: typeof arbitrum
+  chain: ISupportedChain
   processData: Stream<IGmxProcessState>
 }
 
@@ -343,6 +344,8 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
           select: switchIsLongTether()
         }),
 
+
+
         // $ButtonToggle({
         //   $container: $row(layoutSheet.spacingSmall),
         //   selected: config.tradeConfig.isIncrease,
@@ -350,13 +353,22 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
         //     true,
         //     false,
         //   ],
-        //   $$option: map(option => {
+        //   $$option: map(option => { 
         //     return $text(style({}))(option ? 'Increase' : 'Decrease')
         //   })
         // })({ select: switchisIncreaseTether() }),
 
         $node(style({ flex: 1 }))(),
 
+        $ButtonSecondary({
+          disabled: now(true),
+          $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
+            $icon({ $content: $gmxLogo, width: '18px', viewBox: '0 0 32 32' }),
+            $text('GMX V2'),
+            $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' }),
+          ),
+          $container: $defaultMiniButtonSecondary(style({ borderColor: pallete.foreground, backgroundColor: 'transparent' })),
+        })({}),
 
         $Popover({
           open: clickSettingsPopover,
@@ -409,7 +421,6 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
           ),
           $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
 
-
             $field(
               O(
                 map(node =>
@@ -459,7 +470,6 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
               ),
             )(),
 
-
             $ButtonSecondary({
               $content: switchMap(params => params.isIncrease ? $text('Max') : $text('Close'), combineObject({ isIncrease })),
               disabled: map(params => {
@@ -485,10 +495,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
             switchLatest(map(params => {
               const walletAddress = params.account.address
-              if (!config.chain.id || !walletAddress) {
-                return empty()
-              }
-
+              if (!config.chain.id || !walletAddress) return empty()
 
               return $Dropdown({
                 $container: $row(style({ position: 'relative', alignSelf: 'center' })),
@@ -548,10 +555,6 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 select: changeInputTokenTether()
               })
             }, combineObject({ account }))),
-
-            
-
-
           ),
         ),
 

@@ -1,10 +1,12 @@
 import { Behavior, O, Op } from '@aelea/core'
 import { $Node, $node, INode, NodeComposeFn, component, nodeEvent, style, styleBehavior } from '@aelea/dom'
-import { observer } from '@aelea/ui-components'
+import { $column, observer } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { constant, empty, filter, map, merge, multicast, switchLatest, until, zip } from "@most/core"
 import { Stream } from "@most/types"
 
+
+export const $defaultPopoverContainer = $column(style({ backgroundColor: pallete.middleground, padding: '36px', borderRadius: '24px', border: '1px solid ' + pallete.background, boxShadow: '0 0 10px 0 ' + colorAlpha(pallete.background, .5) }))
 
 interface IPocus {
   open: Stream<any>
@@ -14,20 +16,18 @@ interface IPocus {
   $content: $Node
 
   $container?: NodeComposeFn<$Node>
+  $wrapper?: NodeComposeFn<$Node>
   margin?: number
   padding?: number
 }
 
-export const $Popover = ({ open, dismiss = empty(), $content, margin = 30, padding = 76, $container = $node, $target }: IPocus) => component((
+export const $Popover = ({ open, dismiss = empty(), $content, margin = 10, padding = 76, $container = $defaultPopoverContainer, $wrapper = $node, $target }: IPocus) => component((
   [overlayClick, overlayClickTether]: Behavior<INode, false>,
   [targetIntersection, targetIntersectionTether]: Behavior<INode, IntersectionObserverEntry[]>,
   [popoverContentDimension, popoverContentDimensionTether]: Behavior<INode, ResizeObserverEntry[]>,
 ) => {
 
-
-  const $$popContentMulticast = multicast($content)
-
-  const contentOps = O(
+  const contentOps = $container(
     popoverContentDimensionTether(
       observer.resize({})
     ),
@@ -50,12 +50,12 @@ export const $Popover = ({ open, dismiss = empty(), $content, margin = 30, paddi
         return {
           top, left,
           
-          transition: 'opacity .2s ease-in-out',
+          transition: 'opacity .2s ease-in-out', visibility: 'visible',
           transform: `translate(0, ${goDown ? '0' : '-100%'})`
         }
       }, popoverContentDimension, targetIntersection)
     ),
-    style({ position: 'absolute' }),
+    style({ position: 'absolute', visibility: 'hidden' }),
   )
 
 
@@ -63,8 +63,8 @@ export const $Popover = ({ open, dismiss = empty(), $content, margin = 30, paddi
 
   const $overlay = $node(
     style({
-      position: 'fixed', zIndex: 99999,
-      top: 0, left: 0, right: 0, bottom: 0, visibility: 'hidden',
+      position: 'fixed', zIndex: 99999, backgroundColor: colorAlpha(pallete.message, .1),
+      top: 0, left: 0, right: 0, bottom: 0, // visibility: 'hidden',
     }),
     overlayClickTether(
       nodeEvent('click'),
@@ -80,32 +80,32 @@ export const $Popover = ({ open, dismiss = empty(), $content, margin = 30, paddi
       }),
       constant(false)
     ),
-    styleBehavior(
-      zip(([contentResizeRect], [targetIntersectionRect]) => {
-        const { y, x, bottom } = targetIntersectionRect.intersectionRect
-        const rootWidth = targetIntersectionRect.rootBounds?.width || 0
+    // styleBehavior(
+    //   zip(([contentResizeRect], [targetIntersectionRect]) => {
+    //     const { y, x, bottom } = targetIntersectionRect.intersectionRect
+    //     const rootWidth = targetIntersectionRect.rootBounds?.width || 0
 
-        const width = Math.max(contentResizeRect.contentRect.width, targetIntersectionRect.intersectionRect.width) + (padding * 2) + margin
-        const targetHeight = targetIntersectionRect.intersectionRect.height
-        const contentHeight = contentResizeRect.contentRect.height
-        const height = contentHeight + targetHeight + margin
+    //     const width = Math.max(contentResizeRect.contentRect.width, targetIntersectionRect.intersectionRect.width) + (padding * 2) + margin
+    //     const targetHeight = targetIntersectionRect.intersectionRect.height
+    //     const contentHeight = contentResizeRect.contentRect.height
+    //     const height = contentHeight + targetHeight + margin
 
-        const placedWidth = x + contentResizeRect.contentRect.width
+    //     const placedWidth = x + contentResizeRect.contentRect.width
 
-        const leftOffset = placedWidth > rootWidth ? rootWidth - placedWidth - 20 : 0
+    //     const leftOffset = placedWidth > rootWidth ? rootWidth - placedWidth - 20 : 0
 
-        const left = x + (targetIntersectionRect.intersectionRect.width / 2) + leftOffset + 'px'
+    //     const left = x + (targetIntersectionRect.intersectionRect.width / 2) + leftOffset + 'px'
 
-        const bottomSpace = window.innerHeight - bottom
-        const popDown = bottomSpace > bottom
-        const top = (popDown ? y + (height / 2) : y - ((height - padding) / 2)) + 'px'
+    //     const bottomSpace = window.innerHeight - bottom
+    //     const popDown = bottomSpace > bottom
+    //     const top = (popDown ? y + (height / 2) : y - ((height - padding) / 2)) + 'px'
 
-        const backgroundImage = `radial-gradient(${width}px ${height + padding * 2}px at top ${top} left ${left}, ${pallete.horizon} ${width / 2}px, ${colorAlpha(pallete.background, .45)})`
+    //     const backgroundImage = `radial-gradient(${width}px ${height + padding * 2}px at top ${top} left ${left}, ${pallete.horizon} ${width / 2}px, ${colorAlpha(pallete.background, .45)})`
 
 
-        return { backgroundImage, visibility: 'visible' }
-      }, popoverContentDimension, targetIntersection)
-    )
+    //     return { backgroundImage, visibility: 'visible' }
+    //   }, popoverContentDimension, targetIntersection)
+    // )
   )
 
 
@@ -113,8 +113,8 @@ export const $Popover = ({ open, dismiss = empty(), $content, margin = 30, paddi
 
 
   const $popover = switchLatest(
-    map($nn => {
-      return until(dismissEvent, $overlay(contentOps($nn)))
+    map(content => {
+      return until(dismissEvent, $overlay(contentOps(content)))
     }, $popContent)
   )
 
@@ -137,7 +137,7 @@ export const $Popover = ({ open, dismiss = empty(), $content, margin = 30, paddi
   )
 
   return [
-    $container(
+    $wrapper(
       targetOp($target),
       $popover,
     ),

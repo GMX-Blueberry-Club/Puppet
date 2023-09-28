@@ -453,7 +453,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
             $ButtonSecondary({ 
               $content: $text('Reset'),
               disabled: map(params => {
-                return params.sizeDelta === 0n || params.collateralDelta === 0n
+                return params.sizeDelta === 0n && params.collateralDelta === 0n
               }, combineObject({ sizeDelta, collateralDelta }))
             })({
               click: clickResetPositionTether(constant(null))
@@ -463,7 +463,6 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
             request: map(req => req.request, requestTrade),
             disabled: map(params => {
               const newLocal = params.disableButtonValidation || params.sizeDelta === 0n || params.collateralDelta === 0n
-              console.log(newLocal)
               return newLocal
             }, combineObject({ disableButtonValidation, sizeDelta, collateralDelta })),
             $content: $text(map(_params => {

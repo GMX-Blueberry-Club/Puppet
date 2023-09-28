@@ -1,6 +1,6 @@
 import { Behavior, combineArray, combineObject, replayLatest } from "@aelea/core"
 import { $node, $text, component, style, styleBehavior } from "@aelea/dom"
-import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
+import { $column, $icon, $row, layoutSheet, observer, screenUtils } from "@aelea/ui-components"
 import {
   IMarket,
   IMarketInfo,
@@ -237,11 +237,13 @@ export const $Trade = (config: ITradeComponent) => component((
     return params.market.indexToken
   }, combineObject({ market }))
 
-  const latestPriceSocketSource = multicast(switchMap(token => exchangesWebsocketPriceSource(token), indexToken))
+  const latestPriceSocketSource = multicast(switchMap(token => {
+    return observer.duringWindowActivity(exchangesWebsocketPriceSource(token))
+  }, indexToken))
 
 
   const indexPrice = mergeArray([
-    latestPriceSocketSource,
+    // latestPriceSocketSource,
     map(params => {
       return params.processData.latestPrice[params.indexToken].min
     }, combineObject({ processData, indexToken }))
@@ -253,32 +255,32 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ processData, primaryToken }))
 
 
-  const marketPoolUsage = replayLatest(multicast(switchMap(params => {
-    const poolInfo = fromPromise(getMarketPoolUsage(config.chain, params.market))
+  // const marketPoolUsage = replayLatest(multicast(switchMap(params => {
+  //   const poolInfo = fromPromise(getMarketPoolUsage(config.chain, params.market))
 
-    return poolInfo
-  }, combineObject({ market, marketPrice }))))
+  //   return poolInfo
+  // }, combineObject({ market, marketPrice }))))
 
-  const marketConfig = replayLatest(multicast(switchMap(params => {
-    const poolInfo = fromPromise(getMarketConfig(config.chain, params.market))
+  // const marketConfig = replayLatest(multicast(switchMap(params => {
+  //   const poolInfo = fromPromise(getMarketConfig(config.chain, params.market))
 
-    return poolInfo
-  }, combineObject({ market, marketPrice }))))
+  //   return poolInfo
+  // }, combineObject({ market, marketPrice }))))
 
-  const marketPool: Stream<IMarketPool> = replayLatest(multicast(switchMap(params => {
-    const data = v2Reader(
-      'getMarketTokenPrice',
-      gmxContractMap.Datastore.address,
-      params.market,
-      params.marketPrice.indexTokenPrice,
-      params.marketPrice.longTokenPrice,
-      params.marketPrice.shortTokenPrice,
-      hashKey("MAX_PNL_FACTOR_FOR_TRADERS"),
-      true
-    )
+  // const marketPool: Stream<IMarketPool> = replayLatest(multicast(switchMap(params => {
+  //   const data = v2Reader(
+  //     'getMarketTokenPrice',
+  //     gmxContractMap.Datastore.address,
+  //     params.market,
+  //     params.marketPrice.indexTokenPrice,
+  //     params.marketPrice.longTokenPrice,
+  //     params.marketPrice.shortTokenPrice,
+  //     hashKey("MAX_PNL_FACTOR_FOR_TRADERS"),
+  //     true
+  //   )
 
-    return map(res => res[1], data)
-  }, combineObject({ market, marketPrice }))))
+  //   return map(res => res[1], data)
+  // }, combineObject({ market, marketPrice }))))
 
   const marketInfo: Stream<IMarketInfo> = replayLatest(multicast(switchMap(params => {
     const query = getFullMarketInfo(config.chain, params.market, params.marketPrice)
@@ -453,7 +455,6 @@ export const $Trade = (config: ITradeComponent) => component((
     )
   }, combineObject({ position, marketInfo, marketPrice, sizeDeltaUsd, isLong }))
 
-
   const marginFeeUsd = map(params => {
     return getMarginFee(
       params.marketInfo,
@@ -462,12 +463,10 @@ export const $Trade = (config: ITradeComponent) => component((
     )
   }, combineObject({ marketInfo, sizeDeltaUsd, isLong, priceImpactUsd }))
 
-
   const adjustmentFeeUsd = map(params => {
+    return params.marginFeeUsd + params.swapFee // + params.priceImpactUsd
     return params.marginFeeUsd + params.swapFee + params.priceImpactUsd
   }, combineObject({ swapFee, marginFeeUsd, priceImpactUsd }))
-
-
 
   const collateralDelta = map(params => {
     return getTokenAmount(params.primaryPrice, params.collateralDeltaUsd)
@@ -525,14 +524,6 @@ export const $Trade = (config: ITradeComponent) => component((
     collateralDelta,
     collateralDeltaUsd,
   }
-
-  // everything in done in a single Position Editor box, here's example of adjusting existing position
-
-  // in GMX's there are different ui boxes for different things with limited flexibility
-
-  // for example, it's not possible right now to only adjust size which is possible through the contract
-
-  // adjusting is size is common trading behaviour, i use it very often to increase leverage increase of an upside
 
   const positionList = map(params => {
     const walletAddress = params.wallet?.account.address
@@ -652,11 +643,6 @@ export const $Trade = (config: ITradeComponent) => component((
       return posList //.filter(t => t.key !== pos.key)
     }, position, positionList)
   ])
-
-  const activePosition = zip((tradeList, pos) => {
-    const trade = tradeList.find(t => t.key === pos.key) || null
-    return { trade, positionId: pos }
-  }, openPositionList, positionKeyArgs)
 
 
   const pricefeed = map(params => {

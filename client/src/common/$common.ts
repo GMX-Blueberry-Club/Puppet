@@ -12,12 +12,13 @@ import {
   factor, getBasisPoints, getFundingFee,
   getMarginFees,
   getRoughLiquidationPrice,
-  getTokenDescription, getTokenUsd, IAbstractPositionParams, IOraclePrice, IPosition, IPositionSettled,
+  getTokenDescription, getTokenUsd, IAbstractPositionParams, IMarketInfo, IOraclePrice, IPosition, IPositionSettled,
   IPositionSlot,
   isPositionSettled, liquidationWeight,
   readableFixedUSD30,
   readableLeverage,
   readablePercentage,
+  readableTokenUsd,
   streamOf, switchMap
 } from "gmx-middleware-utils"
 import { getMpSlotPnL, getParticiapntMpPortion, getPuppetSubscriptionKey, getRouteTypeKey, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
@@ -32,6 +33,7 @@ import { wallet } from "../wallet/walletLink.js"
 import { $puppetLogo } from "./$icons.js"
 import { IGmxProcessState, latestTokenPrice } from "../data/process/process"
 import { contractReader } from "../logic/common"
+import { $labeledDivider } from "./elements/$common"
 
 
 export const $midContainer = $column(
@@ -162,15 +164,13 @@ export const $puppets = (puppets: readonly viem.Address[], click: Tether<INode, 
   )
 }
 
-export const $openPnl = (processData: Stream<IGmxProcessState>, pos: IPositionSlot, shareTarget?: viem.Address) => {
+export const $openPnl = (processData: Stream<IGmxProcessState>, pos: IPositionMirrorSlot, shareTarget?: viem.Address) => {
   const positionMarkPrice = latestTokenPrice(processData, pos.indexToken)
-  const cumulativeTokenFundingRates = contractReader(GMX.CONTRACT['42161'].Vault)('cumulativeFundingRates', pos.collateralToken)
-
 
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
     style({ flexDirection: 'row-reverse' })(
       $infoTooltipLabel(
-        switchMap(ff => $openPositionPnlBreakdown(pos, ff), cumulativeTokenFundingRates),
+        // $openPositionPnlBreakdown(pos, marketInfo),
         $positionSlotPnl(pos, positionMarkPrice, shareTarget)
       )
     ),
@@ -179,7 +179,7 @@ export const $openPnl = (processData: Stream<IGmxProcessState>, pos: IPositionSl
   )
 }
 
-export const $stake = (processData: Stream<IGmxProcessState>, pos: IPositionSlot, shareTarget?: viem.Address) => {
+export const $stake = (processData: Stream<IGmxProcessState>, pos: IPositionMirrorSlot, shareTarget?: viem.Address) => {
   const positionMarkPrice = latestTokenPrice(processData, pos.indexToken)
   const cumulativeTokenFundingRates = contractReader(GMX.CONTRACT['42161'].Vault)('cumulativeFundingRates', pos.collateralToken)
 
@@ -187,7 +187,7 @@ export const $stake = (processData: Stream<IGmxProcessState>, pos: IPositionSlot
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
     style({ flexDirection: 'row-reverse' })(
       $infoTooltipLabel(
-        switchMap(ff => $openPositionPnlBreakdown(pos, ff), cumulativeTokenFundingRates),
+        $openPositionPnlBreakdown(pos, ff),
         $positionSlotPnl(pos, positionMarkPrice, shareTarget)
       )
     ),
@@ -262,9 +262,9 @@ export function $liquidationSeparator(isLong: boolean, sizeUsd: bigint, sizeInTo
   )
 }
 
-export const $openPositionPnlBreakdown = (pos: IPositionSlot, cumulativeTokenFundingRates: bigint) => {
-  const nextFundingFee = getFundingFee(pos.entryFundingRate, cumulativeTokenFundingRates, pos.size)
-  const totalMarginFee = getMarginFees(pos.cumulativeSize)
+export const $openPositionPnlBreakdown = (pos: IPositionMirrorSlot, marketInfo: IMarketInfo) => {
+  // const pendingFundingFee = getFundingFee(pos.entryFundingRate, cumulativeTokenFundingRates, pos.size)
+  // const totalMarginFee = getMarginFees(pos.cumulativeSize)
 
   
   return $column(layoutSheet.spacing, style({ minWidth: '250px' }))(
@@ -273,22 +273,22 @@ export const $openPositionPnlBreakdown = (pos: IPositionSlot, cumulativeTokenFun
 
       $row(layoutSheet.spacingTiny)(
         $text(style({ color: pallete.foreground, flex: 1 }))('Collateral'),
-        $text(readableFixedUSD30(nextFundingFee))
+        $text(readableTokenUsd(pos.latestUpdate["collateralTokenPrice.max"], pos.latestUpdate.collateralAmount))
       ),
     ),
     $column(layoutSheet.spacingSmall)(
       
-      $row(style({ placeContent: 'space-between' }))(
-        $text(style({ color: pallete.foreground }))('Margin Fee'),
-        $pnlValue(-totalMarginFee)
-      ),
-      $row(style({ placeContent: 'space-between' }))(
-        $text(style({ color: pallete.foreground }))('Borrow Fee'),
-        $pnlValue(
-          -(nextFundingFee + pos.cumulativeFee - totalMarginFee)
-        )
-      ),
-      $seperator2,
+      // $row(style({ placeContent: 'space-between' }))(
+      //   $text(style({ color: pallete.foreground }))('Margin Fee'),
+      //   $pnlValue(-totalMarginFee)
+      // ),
+      // $row(style({ placeContent: 'space-between' }))(
+      //   $text(style({ color: pallete.foreground }))('Borrow Fee'),
+      //   $pnlValue(
+      //     -(pendingFundingFee + pos.cumulativeFee - totalMarginFee)
+      //   )
+      // ),
+      $labeledDivider('Realised'),
       // $row(layoutSheet.spacingTiny)(
       //   $text(style({ color: pallete.foreground, flex: 1 }))('Total Fees'),
       //   $pnlValue(
@@ -303,7 +303,7 @@ export const $openPositionPnlBreakdown = (pos: IPositionSlot, cumulativeTokenFun
       //   )
       // ),
       $row(style({ placeContent: 'space-between' }))(
-        $text(style({ color: pallete.foreground }))('Realised Pnl'),
+        $text(style({ color: pallete.foreground }))('PnL'),
         $pnlValue(now(pos.realisedPnl))
       ),
 
@@ -354,6 +354,7 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
 
 
         return $Popover({
+          open: popRouteSubscriptionEditor,
           dismiss: modifySubscribeList,
           $target: $row(layoutSheet.spacing)(
             $trader,
@@ -364,13 +365,11 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
               click: popRouteSubscriptionEditorTether()
             }),
           ),
-          $content: map(() => {
-            return $RouteSubscriptionEditor({ routeSubscription })({
-              changeRouteSubscription: modifySubscribeListTether(map(partialSubsc => {
-                return { ...{ trader: config.trader, puppet: w3p.account.address, routeTypeKey: routeTypeKey }, ...partialSubsc }
-              }))
-            })
-          }, popRouteSubscriptionEditor)
+          $content: $RouteSubscriptionEditor({ routeSubscription })({
+            changeRouteSubscription: modifySubscribeListTether(map(partialSubsc => {
+              return { ...{ trader: config.trader, puppet: w3p.account.address, routeTypeKey: routeTypeKey }, ...partialSubsc }
+            }))
+          })
         })({})
       }, combineObject({ subscriptionList: config.subscriptionList, wallet }))
     ),

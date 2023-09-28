@@ -229,8 +229,8 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
       scrollConfig: {
         insertAscending: true,
         $emptyMessage: switchMap(params => {
-          return $column(layoutSheet.spacingSmall, style({ placeContent: 'center' }))(
-            $route(params),
+          return $row(layoutSheet.spacingSmall, style({ placeContent: 'center' }))(
+            // $route(params),
             $infoLabel(`No active position`),
           )
         }, combineObject({ isIncrease, isLong, collateralToken, indexToken }))

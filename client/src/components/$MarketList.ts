@@ -6,14 +6,14 @@ import { pallete } from "@aelea/ui-components-theme"
 import { constant, empty, filter, fromPromise, map, merge, multicast, now, switchLatest, take, tap, until, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { colorAlpha } from "@aelea/ui-components-theme"
-import { $column, observer } from '@aelea/ui-components'
+import { $column, $row, observer } from '@aelea/ui-components'
 import { IMarketFees, IMarketInfo, IMarketPool, IMarketUsageInfo, applyFactor, factor, getAvailableReservedUsd, getBorrowingFactorPerInterval, getFundingFactorPerInterval, getTokenDescription, getTokenUsd, readableFactorPercentage, readableFixedUSD30, switchMap } from 'gmx-middleware-utils'
 import { fadeIn } from '../transitions/enter.js'
 import * as GMX from "gmx-middleware-const"
 import { contractReader } from '../logic/common'
 import { IGmxProcessState } from '../data/process/process'
 import { ISupportedChain } from '../wallet/walletLink'
-import { $Table, $marketSmallLabel, $tokenLabelFromSummary } from 'gmx-middleware-ui-components'
+import { $Table, $defaultTableRowContainer, $marketSmallLabel, $tokenLabelFromSummary } from 'gmx-middleware-ui-components'
 import { getMarketPoolUsage, hashKey } from '../logic/tradeV2'
 
 
@@ -56,8 +56,9 @@ export const $MarketInfoList = ({
     $container(
       $Table({
         dataSource: marketParamList,
+        $rowContainer: $defaultTableRowContainer(style({ borderTop: `1px solid ${colorAlpha(pallete.foreground, .2)}` })),
         $rowCallback: map(params => {
-          return $column(clickMarketTether(nodeEvent('click'), constant(params.market)))
+          return $column(style({ borderTop: `1px solid ${pallete.foreground}` }))(clickMarketTether(nodeEvent('click'), constant(params.market)))
         }),
         scrollConfig: {
           $container: $column

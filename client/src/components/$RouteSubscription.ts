@@ -125,11 +125,12 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
                                 }),
 
                                 $row(style({ flex: 1 }))(),
-                                $infoLabeledValue('Copy Until', readableDate(Number(modSubsc.expiry))),
                                 $infoLabeledValue(
                                   'Allow',
                                   $text(`${readablePercentage(modSubsc.allowance)}`)
                                 ),
+                                $infoLabeledValue('Until', readableDate(Number(modSubsc.expiry))),
+                                
                                 
                               )
                             })

@@ -93,7 +93,7 @@ export const fetchTradesRecur = <
     }
 
     retryAmount++
-    const reducedRange = params.rangeBlockQuery / 3n
+    const reducedRange = params.rangeBlockQuery / 2n
 
     return chain(() => fetchTradesRecur({ ...params, rangeBlockQuery: reducedRange }, getList), delayEvent)
   }, nextBatchResponse)

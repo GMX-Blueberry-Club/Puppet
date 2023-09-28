@@ -4,7 +4,7 @@ import { awaitPromises, map, mergeArray, now, skip } from "@most/core"
 import { Stream } from "@most/types"
 import {
   Address, GetAccountResult, GetNetworkResult,
-  WalletClient, configureChains, createConfig, createStorage, fetchBlockNumber, getAccount,
+  WalletClient, WebSocketPublicClient, configureChains, createConfig, createStorage, fetchBlockNumber, getAccount,
   getNetwork, getPublicClient, getWalletClient, getWebSocketPublicClient, watchAccount, watchBlockNumber, watchNetwork
 } from '@wagmi/core'
 import { WalletConnectConnector } from '@wagmi/core/connectors/walletConnect'
@@ -111,7 +111,7 @@ export const account = mergeArray([
   accountChange
 ])
 
-export const publicClient: Stream<PublicClient<Transport, ISupportedChain>> = map(params => {
+export const publicClient: Stream<PublicClient | WebSocketPublicClient> = map(params => {
   const chainId = params.chain?.id || arbitrum.id
   const wsc = getWebSocketPublicClient({ chainId }) || getWebSocketPublicClient({ chainId })
   const clientAvaialble = wsc || getPublicClient({ chainId }) || getPublicClient({ chainId })
