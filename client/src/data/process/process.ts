@@ -1,6 +1,6 @@
 import { map } from "@most/core"
 import { Stream } from "@most/types"
-import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, IntervalTime, TIME_INTERVAL_MAP, TOKEN_ADDRESS_DESCRIPTION_MAP } from "gmx-middleware-const"
+import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, IntervalTime, TIME_INTERVAL_MAP, TOKEN_ADDRESS_DESCRIPTION_MAP, USDC_PRECISION, USDG_DECIMALS } from "gmx-middleware-const"
 import {
   IEventLog1Args,
   ILogTxType,
@@ -16,6 +16,7 @@ import {
   getDenominator,
   getIntervalIdentifier,
   getMappedValue,
+  getTokenUsd,
   importGlobal,
   unixTimestampNow
 } from "gmx-middleware-utils"
@@ -43,6 +44,8 @@ export const PRICEFEED_INTERVAL = [
   TIME_INTERVAL_MAP.MIN60,
   TIME_INTERVAL_MAP.HR4,
   TIME_INTERVAL_MAP.HR24,
+  TIME_INTERVAL_MAP.DAY7,
+  TIME_INTERVAL_MAP.MONTH,
 ] as const
 
 export interface IGmxProcessState {
@@ -98,7 +101,7 @@ const config: IProcessedStoreConfig = {
 
 
 export const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
-  const req = await (await fetch('/db/sha256-MD2OP6Um5b4UDPKherhXWkGVWFKHe7EPHcBeOthpG_k=.json')).json()
+  const req = await (await fetch('/db/sha256-zGNBtENs16NPGun+JDvTVnqK+1cMmxn2C5QMnaRXUjo=.json')).json()
   const storedSeed: IProcessedStore<IGmxProcessState> = transformBigints(req)
 
   const seedFileValidationError = validateSeed(config, storedSeed.config)
@@ -119,7 +122,7 @@ export const gmxProcess = defineProcess(
   },
   {
     source: gmxLog.requestIncreasePosition,
-    queryBlockRange: 100000n,
+    queryBlockRange: 20590n,
     step(seed, value) {
     
       if (seed.blockMetrics.height > 0n)  {
@@ -171,7 +174,7 @@ export const gmxProcess = defineProcess(
   // },
   {
     source: gmxLog.oraclePrice,
-    queryBlockRange: 100000n,
+    queryBlockRange: 24002n,
     step(seed, value) {
       const entity = getEventdata<IOraclePriceUpdateEvent>(value)
 
@@ -198,9 +201,15 @@ export const gmxProcess = defineProcess(
   },
   {
     source: gmxLog.positionIncrease,
-    queryBlockRange: 100000n,
+    queryBlockRange: 10000n,
     step(seed, value) {
       const update = getEventType<IPositionIncrease>('PositionIncrease', value, seed.approximatedTimestamp)
+
+      const collateralUsd = getTokenUsd(update.collateralAmount, update["collateralTokenPrice.min"])
+      const minCollateralThreshold = USDC_PRECISION * 10n // $10 USD to prevent spam
+      if (!seed.mirrorPositionSlot[update.positionKey] && collateralUsd < minCollateralThreshold) {
+        return seed
+      }
 
       const market = seed.markets[update.market]
 
@@ -246,11 +255,6 @@ export const gmxProcess = defineProcess(
         slot.maxCollateralToken = update.collateralAmount
       }
 
-      // const collateralTokenDescription = getMappedValue(TOKEN_ADDRESS_DESCRIPTION_MAP, adjustment.collateralToken)
-      // const collateralUsd = getTokenUsd(adjustment.collateralAmount, adjustment["collateralTokenPrice.min"], collateralTokenDescription.decimals)
-
-      const collateralUsd = update.collateralAmount * update["collateralTokenPrice.min"]
-
       if (collateralUsd > slot.maxCollateralUsd) {
         slot.maxCollateralUsd = collateralUsd
       }
@@ -260,7 +264,7 @@ export const gmxProcess = defineProcess(
   },
   {
     source: gmxLog.positionDecrease,
-    queryBlockRange: 100000n,
+    queryBlockRange: 10000n,
     step(seed, value) {
       const update = getEventType<IPositionDecrease>('PositionDecrease', value, seed.approximatedTimestamp)
       const slot = seed.mirrorPositionSlot[update.positionKey]
