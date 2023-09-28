@@ -1,6 +1,6 @@
 import { map } from "@most/core"
 import { Stream } from "@most/types"
-import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, IntervalTime, TIME_INTERVAL_MAP, TOKEN_ADDRESS_DESCRIPTION_MAP, USDC_PRECISION, USDG_DECIMALS } from "gmx-middleware-const"
+import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, IntervalTime, TIME_INTERVAL_MAP, TOKEN_ADDRESS_DESCRIPTION_MAP } from "gmx-middleware-const"
 import {
   IEventLog1Args,
   ILogTxType,
@@ -206,7 +206,7 @@ export const gmxProcess = defineProcess(
       const update = getEventType<IPositionIncrease>('PositionIncrease', value, seed.approximatedTimestamp)
 
       const collateralUsd = getTokenUsd(update.collateralAmount, update["collateralTokenPrice.min"])
-      const minCollateralThreshold = USDC_PRECISION * 10n // $10 USD to prevent spam
+      const minCollateralThreshold = 10n ** 30n * 10n // $10 USD to prevent spam
       if (!seed.mirrorPositionSlot[update.positionKey] && collateralUsd < minCollateralThreshold) {
         return seed
       }
