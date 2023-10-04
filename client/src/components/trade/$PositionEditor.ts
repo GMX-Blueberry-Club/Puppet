@@ -62,7 +62,7 @@ import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown.js"
 import { $Popover } from "../$Popover"
 import { $MarketInfoList } from "../$MarketList"
-import { $iconCircular } from "../../common/elements/$common"
+import { $iconCircular, boxShadow } from "../../common/elements/$common"
 import { $gmxLogo } from "../../common/$icons"
 
 
@@ -179,7 +179,6 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   [switchIsIncrease, switchisIncreaseTether]: Behavior<boolean, boolean>,
   [slideLeverage, slideLeverageTether]: Behavior<number, bigint>,
   [changeSlippage, changeSlippageTether]: Behavior<string, string>,
-
 
   [clickPrimary, clickPrimaryTether]: Behavior<any>,
 
@@ -309,7 +308,9 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
 
   return [
-    config.$container(
+    config.$container(style({
+      boxShadow: boxShadow
+    }))(
       $row(
         layoutSheet.spacing,
         // styleInline(map(isIncrease => isIncrease ? { borderColor: 'none' } : {}, config.tradeConfig.isIncrease)),
@@ -746,7 +747,13 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 $content: $MarketInfoList({
                   chain: config.chain,
                   processData: config.processData,
-                })({}),
+                })({
+                  changeMarket: changeMarketTether(
+                    tap(() => {
+                      debugger
+                    })
+                  ),
+                }),
               })({
                 // overlayClick: clickPopoverClaimTether()
               })

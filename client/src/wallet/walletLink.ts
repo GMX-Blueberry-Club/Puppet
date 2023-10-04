@@ -62,7 +62,7 @@ const configChain = configureChains(
     //   }
     // })
   ],
-  { batch: { multicall: { wait: 20 } } },
+  { batch: { multicall: { wait: 20 } }, retryCount: 0 },
 )
 
 

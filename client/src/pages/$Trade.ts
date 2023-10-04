@@ -4,7 +4,6 @@ import { $column, $icon, $row, layoutSheet, observer, screenUtils } from "@aelea
 import {
   IMarket,
   IMarketInfo,
-  IMarketPool,
   IMarketPrice,
   IPositionSlot,
   PositionInfo,
@@ -56,7 +55,7 @@ import { rootStoreScope } from "../data/store/store.js"
 import { connectContract, contractReader } from "../logic/common.js"
 import * as trade from "../logic/trade.js"
 import { exchangesWebsocketPriceSource } from "../logic/trade.js"
-import { getExecuteGasFee, getExecutionFee, getFullMarketInfo, getMarketConfig, getMarketPoolUsage, hashKey } from "../logic/tradeV2.js"
+import { getExecuteGasFee, getExecutionFee, getFullMarketInfo } from "../logic/tradeV2.js"
 import * as indexDB from "../utils/storage/indexDB.js"
 import * as storage from "../utils/storage/storeScope.js"
 import { walletLink } from "../wallet/index.js"
@@ -92,9 +91,9 @@ export const $Trade = (config: ITradeComponent) => component((
   [changeRoute, changeRouteTether]: Behavior<string>,
 
   [changePrimaryToken, changePrimaryTokenTether]: Behavior<viem.Address>,
+
   [changeMarket, changeMarketTether]: Behavior<IMarket>,
   [changeIsUsdCollateralToken, changeIsUsdCollateralTokenTether]: Behavior<boolean>,
-
   [switchFocusMode, switchFocusModeTether]: Behavior<ITradeFocusMode>,
   [switchIsLong, switchIsLongTether]: Behavior<boolean>,
   [switchIsIncrease, switchIsIncreaseTether]: Behavior<boolean>,
@@ -110,7 +109,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
   [enableTrading, enableTradingTether]: Behavior<boolean>,
 
-  [switchTrade, switchTradeTether]: Behavior<IPositionSlot>,
+  [switchPosition, switchPositionTether]: Behavior<IPositionSlot>,
   [requestTrade, requestTradeTether]: Behavior<IRequestTrade>,
 
   // [focusPriceAxisPoint, focusPriceAxisPointTether]: Behavior<Coordinate | null>,
@@ -198,7 +197,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
       return params.markets.find(m => m.marketToken === stored.marketToken) || params.markets[0]
     }, combineObject({ stored: indexDB.get(tradingStore, 'market') as Stream<IMarket | undefined>, markets })),
-    multicast(storage.write(tradingStore, changeMarket, 'market')),
+    storage.write(tradingStore, changeMarket, 'market'),
   ])
 
   const collateralDeltaUsd = replayLatest(changeCollateralDeltaUsd, 0n)
@@ -207,7 +206,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const collateralToken: Stream<viem.Address> = map(params => {
     return params.isUsdCollateralToken ? params.market.shortToken : params.market.longToken
-  }, combineObject({ isLong, market, isUsdCollateralToken, switchTrade: startWith(null, switchTrade) }))
+  }, combineObject({ isLong, market, isUsdCollateralToken }))
 
 
   const walletBalance = replayLatest(multicast(switchMap(params => {
@@ -335,22 +334,22 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const positionKeyArgs = skipRepeatsWith((prev, next) => prev.key === next.key, _positionKeyArgs)
 
-  const position: Stream<IPositionMirrorSlot | null> = map((params) => {
-    const existingSlot = params.processData.mirrorPositionSlot[params.positionKeyArgs.key]
+  const position: Stream<IPositionMirrorSlot | null> = mergeArray([
+    map((params) => {
+      const existingSlot = params.processData.mirrorPositionSlot[params.positionKeyArgs.key]
 
-    if (!existingSlot) return null
+      if (!existingSlot) return null
 
-    return existingSlot
+      return existingSlot
     // return { ...initPartialPositionSlot, ...params.positionKeyArgs, blockTimestamp: unixTimestampNow(), orderKey: GMX.BYTES32_ZERO, market: GMX.ADDRESS_ZERO, transactionHash: GMX.BYTES32_ZERO }
-  }, combineObject({ processData: config.processData, positionKeyArgs }))
+    }, combineObject({ processData: config.processData, positionKeyArgs })),
+    switchPosition
+  ])
 
 
   const positionFees: Stream<PositionInfo | null> = switchMap(params => {
-    if (params.position === null) {
-      return now(null)
-    }
+    if (params.position === null) return now(null)
 
-    // const positionFeeInfo = v2Reader('getNextBorrowingFees', gmxContractMap.Datastore.address, gmxContractMap.ReferralStorage.address, params.position.key, params.marketPrice, params.position.maxSizeUsd, GMX.ADDRESS_ZERO, false)
     const positionFeeInfo = v2Reader('getPositionInfo', gmxContractMap.Datastore.address, gmxContractMap.ReferralStorage.address, params.position.key, params.marketPrice, params.position.maxSizeUsd, GMX.ADDRESS_ZERO, false)
 
     return positionFeeInfo
@@ -709,7 +708,7 @@ export const $Trade = (config: ITradeComponent) => component((
     changeSizeDeltaUsd: changeSizeDeltaUsdTether(),
     changeInputToken: changePrimaryTokenTether(),
     isUsdCollateralToken: changeIsUsdCollateralTokenTether(),
-    changeMarket: changeMarketTether(tap(xxx => console.log('changeIndexToken', xxx))),
+    changeMarket: changeMarketTether(),
     switchIsLong: switchIsLongTether(),
     changeSlippage: changeSlippageTether(),
     switchFocusMode: switchFocusModeTether(),
@@ -1025,88 +1024,71 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
       $tradeMidContainer(layoutSheet.spacingSmall, style({ padding: screenUtils.isMobileScreen ? '0 12px' : '' }))(
-        switchMap(params => {
-          return $column(style({ flex: 1 }))(
-            $IntermediateConnectButton({
-              $$display: map(w3p => {
+        $node(layoutSheet.spacing, style({ flex: 1, display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column' }))(
 
-                return $node(layoutSheet.spacing, style({ flex: 1, display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column' }))(
+          $column(layoutSheet.spacing, style({ padding: '20px 0', flex: 1, maxWidth: '500px' }))(
+            $PositionAdjustmentDetails({
+              processData: config.processData,
+              chain: config.chain,
+              openPositionList,
+              pricefeed,
+              tradeConfig,
+              tradeState,
+              wallet,
+              $container: $column
+            })({
+              clickResetPosition: clickResetPositionTether(),
+              approvePrimaryToken: changeInputTokenApprovedTether(),
+              enableTrading: enableTradingTether(),
+              requestTrade: requestTradeTether(),
+              leverage: changeLeverageTether(),
+            }),
 
-                  $column(layoutSheet.spacing, style({ padding: '20px 0', flex: 1, maxWidth: '500px' }))(
-                    $PositionAdjustmentDetails({
-                      ...config,
-                      chain: config.chain,
-                      parentRoute: config.parentRoute,
-                      position: params.position,
-                      openPositionList,
-                      pricefeed,
-                      tradeConfig,
-                      tradeState,
-                      wallet: w3p,
-                      $container: $column
-                    })({
-                      clickResetPosition: clickResetPositionTether(),
-                      approvePrimaryToken: changeInputTokenApprovedTether(),
-                      enableTrading: enableTradingTether(),
-                      requestTrade: requestTradeTether(),
-                      leverage: changeLeverageTether(),
-                    }),
-
-                    $PositionListDetails({
-                      ...config,
-                      position: params.position,
-                      chain: config.chain,
-                      parentRoute: config.parentRoute,
-                      openPositionList,
-                      pricefeed,
-                      tradeConfig,
-                      tradeState,
-                      wallet: w3p,
-                      $container: $column
-                    })({
-                      switchTrade: switchTradeTether(),
-                    // changeCollateralDeltaUsd: changeCollateralDeltaUsdTether(),
-                    // changeSizeDeltaUsd: changeSizeDeltaUsdTether(),
-                    }),
+            $PositionListDetails({
+              processData: config.processData,
+              chain: config.chain,
+              openPositionList,
+              pricefeed,
+              tradeConfig,
+              tradeState,
+              wallet,
+              $container: $column
+            })({
+              switchPosition: switchPositionTether(),
+              changeMarket: changeMarketTether(),
+              switchIsLong: switchIsLongTether(),
+              switchIsIncrease: switchIsIncreaseTether(),
+              changeIsUsdCollateralToken: changeIsUsdCollateralTokenTether(),
+            }),
                     
-                  ),
+          ),
 
-                  $seperator2,
+          $seperator2,
 
-                  switchMap(tradeParams => {
-                    if (params.position === null) {
-                      const intent = tradeParams.isLong ? `Long-${tradeParams.indexDescription.symbol}` : `Short-${tradeParams.indexDescription.symbol}/${tradeParams.indexDescription.symbol}`
-
-                      $column(layoutSheet.spacingSmall, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
-                        $text(style({ fontSize: '1.5rem' }))('Trade History'),
-                        $text(style({ color: pallete.foreground }))(
-                          `No active ${intent} position`
-                        )
-                      )
-                    }
-
-                    return $PositionDetails({
-                      ...config,
-                      chain: config.chain,
-                      parentRoute: config.parentRoute,
-                      position: params.position,
-                      openPositionList,
-                      pricefeed,
-                      tradeConfig,
-                      tradeState,
-                      wallet: w3p,
-                      $container: $column(style({ padding: '20px 0', flex: 1 }))
-                    })({
-                 
-                    })
-                  }, combineObject({ indexDescription, isLong })),
+          $PositionDetails({
+            chain: config.chain,
+            openPositionList,
+            pricefeed,
+            tradeConfig,
+            tradeState,
+            wallet,
+            $container: $column(style({ padding: '20px 0', flex: 1 }))
+          })({
+          })
                   
                   
-                )
-              })
-            })({})
-          ) 
-        }, combineObject({ position })),
+        )
+
+        // switchMap(params => {
+        //   return $column(style({ flex: 1 }))(
+        //     $IntermediateConnectButton({
+        //       $$display: map(w3p => {
+
+        //         return 
+        //       })
+        //     })({})
+        //   ) 
+        // }, combineObject({ position })),
       ),
         
     ),

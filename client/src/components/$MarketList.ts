@@ -7,7 +7,7 @@ import { constant, empty, filter, fromPromise, map, merge, multicast, now, switc
 import { Stream } from "@most/types"
 import { colorAlpha } from "@aelea/ui-components-theme"
 import { $column, $row, observer } from '@aelea/ui-components'
-import { IMarketFees, IMarketInfo, IMarketPool, IMarketUsageInfo, applyFactor, factor, getAvailableReservedUsd, getBorrowingFactorPerInterval, getFundingFactorPerInterval, getTokenDescription, getTokenUsd, readableFactorPercentage, readableFixedUSD30, switchMap } from 'gmx-middleware-utils'
+import { IMarket, IMarketFees, IMarketInfo, IMarketPool, IMarketUsageInfo, applyFactor, factor, getAvailableReservedUsd, getBorrowingFactorPerInterval, getFundingFactorPerInterval, getTokenDescription, getTokenUsd, readableFactorPercentage, readableFixedUSD30, switchMap } from 'gmx-middleware-utils'
 import { fadeIn } from '../transitions/enter.js'
 import * as GMX from "gmx-middleware-const"
 import { contractReader } from '../logic/common'
@@ -28,7 +28,7 @@ export const $MarketInfoList = ({
   processData,
   chain,
 }: IMarketList) => component((
-  [clickMarket, clickMarketTether]: Behavior<INode, any>,
+  [changeMarket, changeMarketTether]: Behavior<INode, IMarket>,
 ) => {
   const gmxContractMap = GMX.CONTRACT[chain.id]
   const v2Reader = contractReader(gmxContractMap.ReaderV2)
@@ -58,7 +58,15 @@ export const $MarketInfoList = ({
         dataSource: marketParamList,
         $rowContainer: $defaultTableRowContainer(style({ borderTop: `1px solid ${colorAlpha(pallete.foreground, .2)}` })),
         $rowCallback: map(params => {
-          return $column(style({ borderTop: `1px solid ${pallete.foreground}` }))(clickMarketTether(nodeEvent('click'), constant(params.market)))
+          return $column(style({ borderTop: `1px solid ${pallete.foreground}` }))(
+            changeMarketTether(
+              nodeEvent('click'),
+              constant(params.market),
+              tap((aaa) => {
+                debugger
+              })
+            )
+          )
         }),
         scrollConfig: {
           $container: $column
@@ -140,7 +148,7 @@ export const $MarketInfoList = ({
       })({})
     ),
 
-    { clickMarket }
+    { changeMarket }
   ]
 })
 

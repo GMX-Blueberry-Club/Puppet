@@ -49,7 +49,7 @@ export type IFilterLogsParams<
   TEventName extends string,
   TParentScopeName extends string = string,
 > = IIndexEventLogScopeParams<TLog, TAbi, TEventName, TParentScopeName> & {
-  rangeBlockQuery: bigint,
+  rangeBlockQuery?: bigint,
   fromBlock: bigint
   toBlock: bigint
   publicClient: viem.PublicClient
@@ -62,25 +62,29 @@ export const fetchTradesRecur = <
   TParentScopeName extends string,
 >(
   params: IFilterLogsParams<TReturn, TAbi, TEventName, TParentScopeName>,
-  getList: (req: IFilterLogsParams<TReturn, TAbi, TEventName, TParentScopeName>) => Stream<TReturn[]>
+  getList: (req: viem.GetLogsParameters) => Stream<TReturn[]>
 ): Stream<TReturn[]> => {
 
   let retryAmount = 0
   let delayTime = 0
+  const rangeBlockQuery = params.rangeBlockQuery
 
-  const nextBatchResponse = chain(res => {
-    const nextToBlock = params.fromBlock + params.rangeBlockQuery
 
-    if (nextToBlock >= params.toBlock) {
-      return now(res)
-    }
+  const nextBatchResponse = rangeBlockQuery
+    ? chain(res => {
+      const nextfromBlock = params.fromBlock + rangeBlockQuery
 
-    const newPage = fetchTradesRecur({ ...params, fromBlock: nextToBlock }, getList)
+      if (nextfromBlock >= params.toBlock) {
+        return now(res)
+      }
 
-    return map(nextPage => {
-      return [...res, ...nextPage]
-    }, newPage)
-  }, getList(params))
+      const newPage = fetchTradesRecur({ ...params, fromBlock: nextfromBlock }, getList)
+
+      return map(nextPage => {
+        return [...res, ...nextPage]
+      }, newPage)
+    }, getList({ ...params }))
+    : getList({ ...params, toBlock: undefined })
 
 
 
@@ -88,12 +92,21 @@ export const fetchTradesRecur = <
     delayTime += 1000
     const delayEvent = delay(delayTime, now(null))
 
-    if (err.code !== -32602 || retryAmount > 3) {
-      throw err
+    if (retryAmount > 3) throw err
+    
+    let reducedRange = params.rangeBlockQuery
+    
+    if (err.code === -32005) {
+      // @ts-ignore
+      const causeArgs = err?.cause?.cause?.cause?.data
+      if (causeArgs.from && causeArgs.to) {
+        reducedRange = BigInt(causeArgs.to) - BigInt(causeArgs.from)
+      }
+    } else {
+      reducedRange = (params.rangeBlockQuery || 100000n) / 2n
     }
 
     retryAmount++
-    const reducedRange = params.rangeBlockQuery / 2n
 
     return chain(() => fetchTradesRecur({ ...params, rangeBlockQuery: reducedRange }, getList), delayEvent)
   }, nextBatchResponse)

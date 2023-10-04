@@ -50,13 +50,14 @@ import {
 import * as viem from "viem"
 import { $heading2 } from "../../common/$text.js"
 import { connectContract, wagmiWriteContract } from "../../logic/common.js"
-import { IWalletClient } from "../../wallet/walletLink.js"
+import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
 import { IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 import { pallete } from "@aelea/ui-components-theme"
 import { $ButtonSecondary, $ButtonPrimary, $ButtonPrimaryCtx } from "../form/$Button.js"
 import { MouseEventParams } from "lightweight-charts"
 import { erc20Abi } from "abitype/test"
 import { $Popover } from "../$Popover.js"
+import { IGmxProcessState } from "../../data/process/process"
 
 
 export enum ITradeFocusMode {
@@ -67,9 +68,10 @@ export enum ITradeFocusMode {
 
 
 
-interface IPositionAdjustmentHistory extends IPositionEditorAbstractParams {
-  wallet: IWalletClient
-  position: IPositionSlot | null
+interface IPositionAdjustmentHistory {
+  processData: Stream<IGmxProcessState>
+  chain: ISupportedChain
+  wallet: Stream<IWalletClient>
   openPositionList: Stream<IPositionSlot[]>
 
   pricefeed: Stream<IPriceInterval[]>
@@ -94,8 +96,6 @@ export type IRequestTrade = IRequestTradeParams & {
 export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) => component((
   [openEnableTradingPopover, openEnableTradingPopoverTether]: Behavior<any, any>,
   [dismissEnableTradingOverlay, dismissEnableTradingOverlayTether]: Behavior<any, false>,
-
-  [crosshairMove]: Behavior<MouseEventParams>,
 
   [approveTrading, approveTradingTether]: Behavior<PointerEvent, true>,
   [clickApproveprimaryToken, clickApproveprimaryTokenTether]: Behavior<PointerEvent, { route: viem.Address, primaryToken: viem.Address }>,

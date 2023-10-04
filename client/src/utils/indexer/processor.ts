@@ -1,12 +1,14 @@
 import { combineObject } from "@aelea/core"
 import { fromPromise, map, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, getblockOrderIdentifier, max, min, switchMap } from "gmx-middleware-utils"
+import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, getblockOrderIdentifier, importGlobal, max, min, switchMap } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { zipArray } from "../../logic/utils.js"
 import * as indexDB from "../storage/indexDB.js"
 import * as store from "../storage/storeScope.js"
 import { IIndexEventLogScopeParams, fetchTradesRecur } from "./rpc.js"
+import { transformBigints } from "../storage/storeScope.js"
+import { IGmxProcessState } from "../../data/process/process"
 
 
 export enum IProcessEnvironmentMode {
@@ -25,6 +27,7 @@ export interface IProcessedStore<T> {
   config: IProcessedStoreConfig
   orderId: number
   blockNumber: bigint
+  sourceUrl: string
 }
 
 
@@ -36,7 +39,7 @@ export interface IProcessSourceConfig<TLog extends ILogOrdered, TState> {
 
 
 export interface IProcessorConfig<TState, TParentName extends string> {
-  seed: Stream<IProcessedStore<TState>>,
+  // seed: Stream<IProcessedStore<TState>>,
   parentScope: store.IStoreconfig<TParentName>,
   mode: IProcessEnvironmentMode
   blueprint: Omit<IProcessedStore<TState>, 'orderId' | 'blockNumber'>,
@@ -50,6 +53,7 @@ export interface IProcessParams<TState, TProcessConfigList extends ILogOrdered[]
   processList: { [P in keyof TProcessConfigList]: IProcessSourceConfig<TProcessConfigList[P], TState> }
   state: Stream<TState>
   seed: Stream<IProcessedStore<TState>>,
+  seedFile: Stream<IProcessedStore<TState>>
 }
 
 export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], TParentName extends string >(
@@ -59,57 +63,36 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
 
   const scope = store.createStoreScope(config.parentScope, 'processor')
   const scopeKey = getProcessorKey(processList, config.blueprint.config)
-
   const storedIdbSeed: Stream<IProcessedStore<TSeed>> = indexDB.get(scope, scopeKey)
 
+  const seedFile: Stream<IProcessedStore<TSeed>> = importGlobal(async () => {
+    const req = await (await fetch(config.blueprint.sourceUrl)).json()
+    const storedSeed: IProcessedStore<TSeed> = transformBigints(req)
 
-  const loadSeedFile = map(seedFile => {
-    const invalidSeedFileError = validateSeed(config.blueprint.config, seedFile.config)
+    const seedFileValidationError = validateSeed(storedSeed.config, storedSeed.config)
 
-    if (invalidSeedFileError) {
-      throw new Error(`Seed file validation error: ${invalidSeedFileError}`)
+    if (seedFileValidationError) {
+      throw new Error(`Seed file validation error: ${seedFileValidationError}`)
     }
 
-    return seedFile
-  }, config.seed)
+    return storedSeed
+  })
 
-    
-  const seed = config.mode === IProcessEnvironmentMode.PROD
-    ? switchMap(idbSeed => {
-      if (idbSeed) {
-        const invalidIndexDBSeedError = validateSeed(config.blueprint.config, idbSeed.config)
+  const seed = switchMap(idbSeed => {
+    if (idbSeed?.sourceUrl === config.blueprint.sourceUrl) {
+      return now(idbSeed)
+    }
 
-        if (invalidIndexDBSeedError) return loadSeedFile
-
-        const blockNumber = idbSeed.blockNumber || config.blueprint.config.startBlock
-        const orderId = idbSeed.orderId || getblockOrderIdentifier(blockNumber)
-
-        return now({ ...idbSeed, blockNumber, orderId })
-      }
-
-      return map(db => {
-        return { ...db, blockNumber: db.blockNumber || config.blueprint.config.startBlock, orderId: db.orderId || getblockOrderIdentifier(config.blueprint.config.startBlock) }
-      }, loadSeedFile)
-
-    }, storedIdbSeed)
-    : map(idbSeed => {
-      if (idbSeed) {
-        const invalidIndexDBSeedError = validateSeed(config.blueprint.config, idbSeed.config)
-
-        if (invalidIndexDBSeedError) {
-          throw new Error(`IndexDB seed validation error: ${invalidIndexDBSeedError}`)
-        }
- 
-        return idbSeed
-      }
-
-      return { ...config.blueprint, orderId: getblockOrderIdentifier(config.blueprint.config.startBlock), blockNumber: config.blueprint.config.startBlock }
-    }, storedIdbSeed)
-
+    return map(sf => {
+      const blockNumber = sf.blockNumber || config.blueprint.config.startBlock
+      const orderId = sf.orderId || getblockOrderIdentifier(config.blueprint.config.startBlock)
+      return { ...sf, blockNumber, orderId }
+    }, seedFile)
+  }, storedIdbSeed)
 
   const state = map(s => s.state, seed)
   
-  return { ...config, processList, scope, state, seed, scopeKey  }
+  return { ...config, processList, scope, state, seed, scopeKey, seedFile  }
 }
 
 
@@ -141,40 +124,6 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
         const event = processConfig.source.abi.find((ev: any) => ev.type === 'event' && ev.name === processConfig.source.eventName)
 
 
-        if (!processConfig.queryBlockRange) {
-          const fromBlock = max(startblock, max(processState.blockNumber, lstEvent ? lstEvent.blockNumber : 0n))
-
-          const allEventsFromStart = fromPromise(
-            config.publicClient.getLogs({
-              fromBlock,
-              event,
-              address: processConfig.source.address,
-              args: processConfig.source.args,
-              strict: true,
-            })
-          ) as Stream<ILogEvent[]>
-
-          return switchMap(logs => {
-            const filtered = logs
-              .map(ev => {
-                const storeObj = { ...ev, orderId: getEventOrderIdentifier(ev) } as ILogOrderedEvent
-                return storeObj
-              })
-              .filter(ev => {
-                if (!lstEvent) {
-                  return true
-                }
-
-                return ev.orderId > Math.max(processState.orderId || 0, lstEvent.orderId)
-              })
-
-            if (config.mode === IProcessEnvironmentMode.DEV) {
-              return map(nextStored => [...stored, ...nextStored], indexDB.add(processConfig.source.scope, filtered))
-            }
-
-            return now([...stored, ...filtered])
-          }, allEventsFromStart)
-        }
 
         const prev = startGapBlockRange > 0n
           ? fetchTradesRecur(
@@ -192,7 +141,7 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
                   args: reqParams.args,
                   address: reqParams.address,
                   fromBlock: reqParams.fromBlock,
-                  toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeBlockQuery),
+                  toBlock: reqParams.toBlock,
                   strict: true,
                 })
               ) as Stream<ILogEvent[]>
@@ -240,7 +189,8 @@ export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TPa
                   address: reqParams.address,
                   fromBlock: reqParams.fromBlock,
                   strict: true,
-                  toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeBlockQuery),
+                  toBlock: reqParams.toBlock,
+                  // toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeBlockQuery),
                 })
               ) as Stream<ILogEvent[]>
 

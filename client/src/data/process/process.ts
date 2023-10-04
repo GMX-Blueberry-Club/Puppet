@@ -96,30 +96,16 @@ const config: IProcessedStoreConfig = {
 
 
 
-
-export const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
-  const req = await (await fetch('/db/sha256-tqv0Z0PzWW1wksRqlKI7qhyBnHA51spJ6UlyKf4VwN0=.json')).json()
-  const storedSeed: IProcessedStore<IGmxProcessState> = transformBigints(req)
-
-  const seedFileValidationError = validateSeed(config, storedSeed.config)
-
-  if (seedFileValidationError) {
-    throw new Error(`Seed file validation error: ${seedFileValidationError}`)
-  }
-      
-  return storedSeed
-})
-
 export const gmxProcess = defineProcess(
   {
     mode: SW_DEV ? IProcessEnvironmentMode.DEV : IProcessEnvironmentMode.PROD,
-    seed: seedFile,
-    blueprint: { config, state, },
+    // seed: seedFile,
+    blueprint: { config, state, sourceUrl: '/db/sha256-Ure_tOb6HYu1rfXksoGeWX9GFU1ZSuTlYqOMW2n+b44=.json' },
     parentScope: rootStoreScope,
   },
   {
     source: gmxLog.requestIncreasePosition,
-    queryBlockRange: 100000n,
+    // queryBlockRange: 100000n,
     step(seed, value) {
     
       if (seed.blockMetrics.height > 0n)  {
@@ -171,7 +157,7 @@ export const gmxProcess = defineProcess(
   // },
   {
     source: gmxLog.oraclePrice,
-    queryBlockRange: 100000n,
+    // queryBlockRange: 100000n,
     step(seed, value) {
       const entity = getEventdata<IOraclePriceUpdateEvent>(value)
 
@@ -198,7 +184,7 @@ export const gmxProcess = defineProcess(
   },
   {
     source: gmxLog.positionIncrease,
-    queryBlockRange: 100000n,
+    // queryBlockRange: 100000n,
     step(seed, value) {
       const update = getEventType<IPositionIncrease>('PositionIncrease', value, seed.approximatedTimestamp)
 
@@ -260,7 +246,7 @@ export const gmxProcess = defineProcess(
   },
   {
     source: gmxLog.positionDecrease,
-    queryBlockRange: 100000n,
+    // queryBlockRange: 100000n,
     step(seed, value) {
       const update = getEventType<IPositionDecrease>('PositionDecrease', value, seed.approximatedTimestamp)
       const slot = seed.mirrorPositionSlot[update.positionKey]

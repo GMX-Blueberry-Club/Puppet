@@ -1,57 +1,30 @@
 import { Behavior, combineObject } from "@aelea/core"
-import { $Node, $node, $text, NodeComposeFn, attr, component, style } from "@aelea/dom"
+import { $Node, $text, NodeComposeFn, component, style, styleBehavior } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
+import { pallete } from "@aelea/ui-components-theme"
 import {
-  awaitPromises, constant,
-  empty, map,
-  mergeArray,
-  multicast,
-  skipRepeats,
+  combine,
+  constant,
+  map,
   snapshot,
-  switchLatest
+  switchLatest,
+  tap
 } from "@most/core"
 import { Stream } from "@most/types"
-import { erc20Abi } from "abitype/test"
-import * as GMX from "gmx-middleware-const"
 import {
-  $alert,
-  $alertTooltip,
-  $anchor,
-  $infoLabeledValue,
-  $infoTooltipLabel
-} from "gmx-middleware-ui-components"
-import {
-  DecreasePositionSwapType,
+  IMarket,
   IPositionSlot, IPriceInterval,
-  OrderType,
   StateStream,
-  abs,
-  div,
-  filterNull,
-  getBasisPoints,
-  getDenominator,
-  getTokenDescription,
-  readableFixedUSD30,
-  readablePercentage,
-  readableUnitAmount,
-  resolveAddress,
   switchMap
 } from "gmx-middleware-utils"
-import { MouseEventParams } from "lightweight-charts"
 import { IPositionMirrorSlot } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { $Popover } from "../$Popover.js"
 import { $entry, $openPnl, $sizeAndLiquidation } from "../../common/$common.js"
-import { $heading2 } from "../../common/$text.js"
-import { latestTokenPrice } from "../../data/process/process.js"
-import { $card2 } from "../../common/elements/$common.js"
-import { wagmiWriteContract } from "../../logic/common.js"
-import { IWalletClient } from "../../wallet/walletLink.js"
-import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
-import { IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "./$PositionEditor.js"
+import { IGmxProcessState, latestTokenPrice } from "../../data/process/process.js"
 import { $seperator2 } from "../../pages/common"
+import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
+import { $ButtonPrimary, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
+import { IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 
 
 export enum ITradeFocusMode {
@@ -62,9 +35,10 @@ export enum ITradeFocusMode {
 
 
 
-interface IPositionDetailsPanel extends IPositionEditorAbstractParams {
-  wallet: IWalletClient
-  position: IPositionMirrorSlot | null
+interface IPositionDetailsPanel {
+  processData: Stream<IGmxProcessState>
+  chain: ISupportedChain
+  wallet: Stream<IWalletClient>
   openPositionList: Stream<IPositionMirrorSlot[]>
 
   pricefeed: Stream<IPriceInterval[]>
@@ -92,7 +66,12 @@ export type IRequestTrade = IRequestTradeParams & {
 // 
 
 export const $PositionListDetails = (config: IPositionDetailsPanel) => component((
-  [switchTrade, switchTradeTether]: Behavior<any, IPositionSlot>,
+  [switchPosition, switchPositionTether]: Behavior<any, IPositionSlot>,
+
+  [changeMarket, changeMarketTether]: Behavior<IMarket>,
+  [switchIsLong, switchIsLongTether]: Behavior<boolean>,
+  [switchIsIncrease, switchIsIncreaseTether]: Behavior<boolean>,
+
 ) => {
 
   const { 
@@ -132,44 +111,43 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
             // }, combineObject({ positionMarkPrice, cumulativeFee }))
 
 
-            return switchLatest(map(activePositionSlot => {
-              const isActive = activePositionSlot?.key === pos.key
 
-
-              return $column(layoutSheet.spacing)(
-                style({ marginRight: screenUtils.isDesktopScreen ? '-16px' : '' })($seperator2),
+            return $column(layoutSheet.spacing)(
+              style({ marginRight: screenUtils.isDesktopScreen ? '-16px' : '' })($seperator2),
                 
-                $row(style({ placeContent: 'space-between', alignItems: 'center' }))(
-                  $ButtonPrimary({
-                    $content: $entry(pos.isLong, pos.indexToken, pos.averagePrice),
-                    $container: $defaultMiniButtonSecondary(style({ borderRadius: '20px', borderColor: 'transparent', backgroundColor: isActive ? pallete.primary : pallete.middleground }))
-                  })({
-                    click: switchTradeTether(
-                      constant(pos)
-                    )
-                  }),
-                  $sizeAndLiquidation(pos, positionMarkPrice),
-                  $openPnl(config.processData, pos),
+              $row(style({ placeContent: 'space-between', alignItems: 'center' }))(
+                $ButtonPrimary({
+                  $content: $entry(pos.isLong, pos.indexToken, pos.averagePrice),
+                  $container: $defaultMiniButtonSecondary(
+                    styleBehavior(map(activePositionSlot => ({ backgroundColor: activePositionSlot?.key === pos.key ? pallete.primary : pallete.middleground }), position)),
+                    style({ borderRadius: '20px', borderColor: 'transparent',  })
+                  )
+                })({
+                  click: switchPositionTether(
+                    constant(pos),
+                  )
+                }),
+                $sizeAndLiquidation(pos, positionMarkPrice),
+                $openPnl(config.processData, pos),
 
-                  $ButtonSecondary({
-                    $content: $text('Close'),
-                    $container: $defaultMiniButtonSecondary
-                  })({})
-                ),
+                $ButtonSecondary({
+                  $content: $text('Close'),
+                  $container: $defaultMiniButtonSecondary
+                })({})
+              ),
  
-                // isActive
-                //   ? $column(layoutSheet.spacing, styleInline(map(mode => ({ display: mode ? 'flex' : 'none' }), inTradeMode)))(
-                //     $seperator2,
-                //     $adjustmentDetails,
-                //   )
-                //   : empty(),
+              // isActive
+              //   ? $column(layoutSheet.spacing, styleInline(map(mode => ({ display: mode ? 'flex' : 'none' }), inTradeMode)))(
+              //     $seperator2,
+              //     $adjustmentDetails,
+              //   )
+              //   : empty(),
 
-                // $infoTooltipLabel(
-                //   $openPositionPnlBreakdown(pos, cumulativeFee),
-                //   $pnlValue(pnl)
-                // ),
-              )
-            }, position))
+              // $infoTooltipLabel(
+              //   $openPositionPnlBreakdown(pos, cumulativeFee),
+              //   $pnlValue(pnl)
+              // ),
+            )
           })
         )
 
@@ -177,7 +155,19 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
     ),
 
     {
-      switchTrade
+      switchPosition,
+      changeMarket: snapshot((params, posSlot) => {
+        const market = params.markets.find(m => m.marketToken === posSlot.latestUpdate.market)
+        if (!market) throw new Error(`Market not found for ${posSlot.latestUpdate.market}`)
+
+        return market
+      }, combineObject({ markets }), switchPosition),
+      switchIsLong: map(params => params.switchPosition.latestUpdate.isLong, combineObject({ switchPosition })),
+      switchIsIncrease: constant(true, switchPosition),
+      changeIsUsdCollateralToken: snapshot((params, posSlot) => {
+        debugger
+        return params.market.shortToken === posSlot.latestUpdate.collateralToken
+      }, combineObject({ market }), switchPosition),
     }
   ]
 })

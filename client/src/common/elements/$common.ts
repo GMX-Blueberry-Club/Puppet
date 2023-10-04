@@ -10,15 +10,12 @@ import { $trash } from "./$icons.js"
 
 export const $TrashBtn = $ButtonIcon($trash)
 
+export const boxShadow = theme.name === 'dark'
+  ? 'rgb(0 0 0 / 25%) 0px 0px 1px, rgb(0 0 0 / 15%) 0px 15px 20px, rgb(0 0 0 / 8%) 0px 1px 12px'
+  : 'rgb(0 0 0 / 25%) 0px 0px 1px, rgb(59 60 74 / 15%) 0px 15px 20px, rgb(0 0 0 / 8%) 0px 1px 12px'
+
 export const $card = $column(layoutSheet.spacing,
-  style({ borderRadius: '20px', padding: screenUtils.isDesktopScreen ? '36px': '12px', backgroundColor: pallete.background }),
-  theme.name === 'dark'
-    ? style({
-      boxShadow: 'rgb(0 0 0 / 25%) 0px 0px 1px, rgb(0 0 0 / 15%) 0px 15px 20px, rgb(0 0 0 / 8%) 0px 1px 12px',
-    })
-    : style({
-      boxShadow: 'rgb(0 0 0 / 25%) 0px 0px 1px, rgb(59 60 74 / 15%) 0px 15px 20px, rgb(0 0 0 / 8%) 0px 1px 12px',
-    })
+  style({ borderRadius: '20px', boxShadow: boxShadow, padding: screenUtils.isDesktopScreen ? '36px': '12px', backgroundColor: pallete.background })
 )
 
 

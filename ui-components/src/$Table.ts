@@ -74,11 +74,12 @@ export const $Table = <T>({
   dataSource, columns, scrollConfig,
 
   $container = $defaultTableContainer,
-  $rowContainer = $defaultTableRowContainer,
-  $headerContainer = $rowContainer,
+  $headerContainer = $defaultTableRowContainer,
   $cell = $defaultTableCell,
   $bodyCell = $cell,
   $headerCell = $defaultTableHeaderCell,
+
+  $rowCallback = constant($defaultTableRowContainer),
 
   sortBy,
   $between = empty(),
@@ -132,15 +133,19 @@ export const $Table = <T>({
     dataSource: map((res) => {
       const $items = (Array.isArray(res) ? res : res.page).map(rowData => {
 
-        return $rowContainer(
-          style({ gridTemplateColumns, })
-        )(
-          ...columns.map(col => {
-            return $bodyCell(col.columnOp || O())(
-              switchLatest(col.$bodyCallback(now(rowData)))
-            )
-          })
-        )
+        const newLocal = $rowCallback(now(rowData))
+        return switchLatest(map($rowContainer => {
+
+          return $rowContainer(
+            style({ gridTemplateColumns, })
+          )(
+            ...columns.map(col => {
+              return $bodyCell(col.columnOp || O())(
+                switchLatest(col.$bodyCallback(now(rowData)))
+              )
+            })
+          )
+        }, newLocal))
       })
 
       if (Array.isArray(res)) {

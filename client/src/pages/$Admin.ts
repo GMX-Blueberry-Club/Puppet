@@ -7,7 +7,7 @@ import { $Table, $alertContainer, $caretDown, $infoLabeledValue } from "gmx-midd
 import { readableFileSize, readableNumber, readableUnitAmount, switchMap } from "gmx-middleware-utils"
 import { $heading1, $heading3 } from "../common/$text.js"
 import { $ButtonPrimary, $buttonAnchor, defaultMiniButtonStyle } from "../components/form/$Button.js"
-import { gmxProcess, seedFile } from "../data/process/process.js"
+import { gmxProcess } from "../data/process/process.js"
 import { gmxLog } from "../data/scope/index.js"
 import { $card, $iconCircular } from "../common/elements/$common.js"
 import { IProcessedStore, getBlobHash, syncProcess } from "../utils/indexer/processor.js"
@@ -49,7 +49,7 @@ export const $Admin = component((
           $node(),
 
 
-          $ProcessDetails({ seed: seedFile, title: 'Processed File' })({}),
+          $ProcessDetails({ seed: gmxProcess.seedFile, title: 'Processed File' })({}),
 
           
           $node(),

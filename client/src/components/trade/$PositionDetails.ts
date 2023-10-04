@@ -35,9 +35,10 @@ import {
 import * as viem from "viem"
 import { $heading2 } from "../../common/$text.js"
 import { connectContract, wagmiWriteContract } from "../../logic/common.js"
-import { IWalletClient } from "../../wallet/walletLink.js"
+import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
 import { IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 import { $route } from "../../common/$common"
+import { IPositionMirrorSlot } from "puppet-middleware-utils"
 
 
 export enum ITradeFocusMode {
@@ -48,10 +49,10 @@ export enum ITradeFocusMode {
 
 
 
-interface IPositionAdjustmentHistory extends IPositionEditorAbstractParams {
-  wallet: IWalletClient
-  position: IPositionSlot | null
-  openPositionList: Stream<IPositionSlot[]>
+interface IPositionAdjustmentHistory {
+  chain: ISupportedChain
+  wallet: Stream<IWalletClient>
+  openPositionList: Stream<IPositionMirrorSlot[]>
 
   pricefeed: Stream<IPriceInterval[]>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
@@ -340,6 +341,21 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
         },
       ]
     })({}),
+
+    // switchMap(tradeParams => {
+    //   if (params.position === null) {
+    //     const intent = tradeParams.isLong ? `Long-${tradeParams.indexDescription.symbol}` : `Short-${tradeParams.indexDescription.symbol}/${tradeParams.indexDescription.symbol}`
+
+    //     $column(layoutSheet.spacingSmall, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
+    //       $text(style({ fontSize: '1.5rem' }))('Trade History'),
+    //       $text(style({ color: pallete.foreground }))(
+    //         `No active ${intent} position`
+    //       )
+    //     )
+    //   }
+
+    //   return 
+    // }, combineObject({ indexDescription, isLong })),
 
     {
 
