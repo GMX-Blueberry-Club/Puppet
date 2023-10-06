@@ -1,7 +1,7 @@
 [submodule "contracts-submodule"]
 	path = contracts-submodule
 	branch = main
-	url = https://github.com/GMX-Blueberry-Club/puppet-contracts.git
+	url = git@github.com:GMX-Blueberry-Club/puppet-contracts.git
 [submodule "gmx-middleware"]
 	path = gmx-middleware
 	branch = master
