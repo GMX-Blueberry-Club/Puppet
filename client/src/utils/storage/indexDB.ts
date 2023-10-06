@@ -52,7 +52,7 @@ export function add<TResult, TName extends string, TOptions extends IDbStoreConf
 }
 
 
-export function getAll<TResult, TName extends string, TOptions extends IDbStoreConfig>(
+export function getRange<TResult, TName extends string, TOptions extends IDbStoreConfig>(
   params: IDbParams<TName, TOptions>,
   key?: IDBValidKey | IDBKeyRange
 ): Stream<TResult[]> {
@@ -107,6 +107,14 @@ export function read<TResult, TName extends string, TOptions extends IDbStoreCon
   return switchMap(db => {
     const store = db.transaction(params.name, 'readonly').objectStore(params.name)
     const req = actionCb(store)
+    return request<TResult>(req)
+  }, params.db)
+}
+export function clear<TResult, TName extends string, TOptions extends IDbStoreConfig>(
+  params: IDbParams<TName, TOptions>
+): Stream<TResult> {
+  return switchMap(db => {
+    const req = db.transaction(params.name, 'readwrite').objectStore(params.name).clear()
     return request<TResult>(req)
   }, params.db)
 }

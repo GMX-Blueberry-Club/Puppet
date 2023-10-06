@@ -1,39 +1,34 @@
 import { Behavior, combineObject, replayLatest } from "@aelea/core"
-import { $element, $node, $text, component, eventElementTarget, nodeEvent, style, styleBehavior } from "@aelea/dom"
+import { $element, $node, $text, component, eventElementTarget, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
-import { constant, empty, fromPromise, join, map, merge, mergeArray, multicast, now, skipRepeats, snapshot, startWith, switchLatest, take, tap } from '@most/core'
-import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN, IntervalTime, TIME_INTERVAL_MAP } from "gmx-middleware-const"
-import { ETH_ADDRESS_REGEXP, filterNull, switchMap, timeSince, unixTimestampNow } from "gmx-middleware-utils"
+import { constant, empty, map, merge, mergeArray, multicast, now, skipRepeats, startWith, switchLatest, tap } from '@most/core'
+import { Stream } from "@most/types"
+import * as GMX from "gmx-middleware-const"
+import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN } from "gmx-middleware-const"
+import { $Tooltip, $alertContainer, $infoTooltip, $infoTooltipLabel, $spinner } from "gmx-middleware-ui-components"
+import { filterNull, readableNumber, readableTokenAmount, readableUnitAmount, switchMap, timeSince, zipState } from "gmx-middleware-utils"
+import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
+import { $midContainer } from "../common/$common.js"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount.js"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu.js'
+import { $RouteSubscriptionDrawer } from "../components/$RouteSubscription.js"
+import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button.js"
+import { gmxProcess } from "../data/process/process.js"
+import { contractReader } from "../logic/common.js"
+import { newUpdateInvoke } from "../sw/swUtils.js"
 import { fadeIn } from "../transitions/enter.js"
+import { queryLogs,  syncProcess, processLogs } from "../utils/indexer/processor.js"
+import { block, blockChange, chain, publicClient, wallet } from "../wallet/walletLink.js"
 import { $Admin } from "./$Admin.js"
 import { $Home } from "./$Home.js"
+import { $Profile } from "./$Profile.js"
 import { $Trade } from "./$Trade.js"
 import { $Wallet } from "./$Wallet.js"
 import { $Leaderboard } from "./leaderboard/$Leaderboard.js"
-import { gmxProcess } from "../data/process/process.js"
-import { syncProcess } from "../utils/indexer/processor.js"
-import { publicClient, block, blockCache, chain, IWalletClient, blockChange, wallet } from "../wallet/walletLink.js"
-import { getBlockNumberCache } from "viem/public"
-import * as wagmi from "@wagmi/core"
-import { $Profile } from "./$Profile.js"
 import * as viem from 'viem'
-import { $RouteSubscriptionDrawer } from "../components/$RouteSubscription.js"
-import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
-import { rootStoreScope } from "../data/store/store.js"
-import * as store from "../utils/storage/storeScope.js"
-import { $midContainer } from "../common/$common.js"
-import { $heading2, $heading3 } from "../common/$text.js"
-import { $alert, $alertContainer, $anchor, $defaultVScrollLoader, $spinner } from "gmx-middleware-ui-components"
-import * as GMX from "gmx-middleware-const"
-import { Stream } from "@most/types"
-import { newUpdateInvoke } from "../sw/swUtils.js"
-import { $ButtonPrimary, $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button.js"
-import { contractReader, helloRpc } from "../logic/common.js"
 
 const popStateEvent = eventElementTarget('popstate', window)
 const initialLocation = now(document.location)
@@ -48,28 +43,56 @@ interface Website {
 
 
 
-
-
 export const $Main = ({ baseRoute = '' }: Website) => component((
   [routeChanges, linkClickTether]: Behavior<any, string>,
   [modifySubscriptionList, modifySubscriptionListTether]: Behavior<IPuppetRouteSubscritpion[]>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
-  [syncProcessData, syncProcessDataTether]: Behavior<any, bigint>,
+  [syncProcessData, syncProcessDataTether]: Behavior<bigint>,
   [clickUpdateVersion, clickUpdateVersionTether]: Behavior<any, bigint>,
 
 ) => {
 
+
+  // const initialSync = filterNull(map(params => {
+  //   const refreshThreshold = SW_DEV ? 150 : 50
+  //   const blockDelta = params.block  - params.process.blockNumber
+
+  //   if (blockDelta < refreshThreshold) {
+  //     return null
+  //   }
+
+  //   return params.block
+  // }, zipState({ process: gmxProcess.store, block: block })))
+
+  const syncBlock = mergeArray([
+    block,
+    syncProcessData,
+  ])
+
   const syncProcessEvent = multicast(switchMap(params => {
-    if (params.syncProcessData > params.seed.config.endBlock) {
-      return syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncProcessData })
+    const refreshThreshold = SW_DEV ? 150 : 50
+    const blockDelta = params.syncBlock - params.store.blockNumber
+
+    if (refreshThreshold < blockDelta) {
+      const syncParams = { ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlock }
+      const storedBatch = queryLogs(syncParams, params.store)
+      
+      return processLogs(syncParams, params.store, storedBatch)
     }
 
-    return now(params.seed)
-  }, combineObject({ publicClient, seed: gmxProcess.seed, syncProcessData })))
+    return now(params.store)
+  }, combineObject({ publicClient, store: gmxProcess.store, syncBlock })))
 
-  const process = replayLatest(multicast(mergeArray([gmxProcess.seed, syncProcessEvent])))
+
+
+  const process = replayLatest(multicast(syncProcessEvent))
   const processData = map(p => p.state, process)
 
+
+  const isBlockSyncing = skipRepeats(mergeArray([
+    map(() => true, syncBlock),
+    map(() => false, process)
+  ]))
 
   const changes = merge(locationChange, multicast(routeChanges))
   const fragmentsChange = map(() => {
@@ -132,7 +155,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   const isDesktopScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
 
   
-
   const subscriptionList: Stream<IPuppetRouteSubscritpion[]> = replayLatest(multicast(switchLatest(map(w3p => {
     if (!w3p) {
       return now([])
@@ -285,46 +307,66 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                   })
                 ),
 
-                switchMap(params => {
-                  const refreshThreshold = SW_DEV ? 150 : 50
-                  const blockDelta = params.syncBlock  - params.process.blockNumber
-
-                  if (blockDelta < refreshThreshold) {
-                    return empty()
-                  }
-
-                  return fadeIn($row(
-                    style({ position: 'absolute', bottom: '18px', left: `50%` }),
-                    syncProcessDataTether(
-                      constant(params.syncBlock)
-                    )
-                  )(
-                    style({  transform: 'translateX(-50%)' })(
-                      $column(layoutSheet.spacingTiny, style({
-                        backgroundColor: pallete.horizon,
-                        border: `1px solid`,
-                        padding: '20px',
-                        animation: `borderRotate var(--d) linear infinite forwards`,
-                        borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
-                      }))(
-                        $text(`Syncing Blockchain Data....`),
-                        $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(
-                          params.process.state.approximatedTimestamp === 0
-                            ? `Indexing for the first time, this may take a minute or two.`
-                            : `${timeSince(params.process.state.approximatedTimestamp)} old data is displayed`
-                        ),
-                      )
-                    )
-                  ))
-                }, combineObject({ process, syncBlock: take(1, block) })),
                 
               )
             }, chain)
           ),
 
-          switchMap((cb) => {
-            return fadeIn(
-              $row(style({ position: 'absolute', zIndex: 100, right: '10px', bottom: '10px' }))(
+          $row(layoutSheet.spacing, style({ position: 'absolute', zIndex: 100, right: '10px', bottom: '10px' }))(
+
+            $row(
+
+              switchMap(isSyncing => {
+                if (isSyncing) {
+                  return $spinner
+                }
+
+
+                return $Tooltip({
+                // $dropContainer: $defaultDropContainer,
+                  $content: $text(map(params => {
+                    const deltaBlock = params.blockChange - params.process.blockNumber
+                    return `${readableUnitAmount(Number(deltaBlock))} blocks behind`
+                  }, combineObject({ process, blockChange }) )),
+                  $anchor: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+                    $node(style({ width: '5px', height: '5px', borderRadius: '50px', backgroundColor: 'red' }))(),
+                    $text(map(process => readableUnitAmount(Number(process.blockNumber)), process )),
+                  ),
+                })({})
+              }, isBlockSyncing)
+            ),
+            
+            // switchMap(params => {
+            //   const refreshThreshold = SW_DEV ? 150 : 50
+            //   const blockDelta = params.syncBlock  - params.process.blockNumber
+
+            //   if (blockDelta < refreshThreshold) {
+            //     return empty()
+            //   }
+
+
+            //   return fadeIn($row(style({ position: 'absolute', bottom: '18px', left: `50%` }))(
+            //     style({ transform: 'translateX(-50%)' })(
+            //       $column(layoutSheet.spacingTiny, style({
+            //         backgroundColor: pallete.horizon,
+            //         border: `1px solid`,
+            //         padding: '20px',
+            //         animation: `borderRotate var(--d) linear infinite forwards`,
+            //         borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
+            //       }))(
+            //         $text(`Syncing Blockchain Data....`),
+            //         $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(
+            //           params.process.state.approximatedTimestamp === 0
+            //             ? `Indexing for the first time, this may take a minute or two.`
+            //             : `${timeSince(params.process.state.approximatedTimestamp)} old data is displayed`
+            //         ),
+            //       )
+            //     )
+            //   ))
+            // }, syncBlock),
+            switchMap((cb) => {
+              return fadeIn(
+              
                 $alertContainer(style({ backgroundColor: pallete.horizon }))(
                   filterNull(constant(null, clickUpdateVersion)) as any,
 
@@ -338,10 +380,12 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                     )
                   })
                 )
-              )
-            )
-          }, newUpdateInvoke),
               
+              )
+            }, newUpdateInvoke),    
+          ),
+
+                        
           $column(style({ maxWidth: '850px', margin: '0 auto', width: '100%', zIndex: 10 }))(
             $RouteSubscriptionDrawer({
               modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetRouteSubscritpion[]),

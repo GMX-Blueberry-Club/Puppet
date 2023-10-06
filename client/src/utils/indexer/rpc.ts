@@ -68,22 +68,19 @@ export const fetchTradesRecur = <
   let retryAmount = 0
   let delayTime = 0
   const rangeBlockQuery = params.rangeBlockQuery
-
+  const nextfromBlock = params.fromBlock + (rangeBlockQuery || 1000000n)
 
   const nextBatchResponse = rangeBlockQuery
     ? chain(res => {
-      const nextfromBlock = params.fromBlock + rangeBlockQuery
-
-      if (nextfromBlock >= params.toBlock) {
-        return now(res)
-      }
+      if (nextfromBlock >= params.toBlock) return now(res)
 
       const newPage = fetchTradesRecur({ ...params, fromBlock: nextfromBlock }, getList)
 
-      return map(nextPage => {
-        return [...res, ...nextPage]
-      }, newPage)
-    }, getList({ ...params }))
+      return map(
+        nextPage => [...res, ...nextPage],
+        newPage
+      )
+    }, getList({ ...params, toBlock: nextfromBlock }))
     : getList({ ...params, toBlock: undefined })
 
 
@@ -108,7 +105,10 @@ export const fetchTradesRecur = <
 
     retryAmount++
 
-    return chain(() => fetchTradesRecur({ ...params, rangeBlockQuery: reducedRange }, getList), delayEvent)
+    return chain(() => {
+
+      return fetchTradesRecur({ ...params, rangeBlockQuery: reducedRange }, getList)
+    }, delayEvent)
   }, nextBatchResponse)
 }
 

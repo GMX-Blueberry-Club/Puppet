@@ -24,7 +24,7 @@ const pwaOptions: Partial<VitePWAOptions> = {
   workbox: {
     cleanupOutdatedCaches: false
   },
-  registerType: 'prompt',
+  registerType: 'autoUpdate',
   strategies: 'injectManifest',
   injectManifest: {
     maximumFileSizeToCacheInBytes: 3000000,

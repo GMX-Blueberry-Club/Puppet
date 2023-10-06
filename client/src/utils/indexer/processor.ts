@@ -1,14 +1,12 @@
-import { combineObject } from "@aelea/core"
-import { fromPromise, map, now, switchLatest } from "@most/core"
+import { chain, constant, fromPromise, map, mergeArray, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, getblockOrderIdentifier, importGlobal, max, min, switchMap } from "gmx-middleware-utils"
+import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, getblockOrderIdentifier, importGlobal, max, switchMap } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { zipArray } from "../../logic/utils.js"
 import * as indexDB from "../storage/indexDB.js"
-import * as store from "../storage/storeScope.js"
-import { IIndexEventLogScopeParams, fetchTradesRecur } from "./rpc.js"
+import * as storeUtils from "../storage/storeScope.js"
 import { transformBigints } from "../storage/storeScope.js"
-import { IGmxProcessState } from "../../data/process/process"
+import { IIndexEventLogScopeParams, fetchTradesRecur } from "./rpc.js"
 
 
 export enum IProcessEnvironmentMode {
@@ -27,7 +25,7 @@ export interface IProcessedStore<T> {
   config: IProcessedStoreConfig
   orderId: number
   blockNumber: bigint
-  sourceUrl: string
+  // sourceUrl: string
 }
 
 
@@ -39,8 +37,8 @@ export interface IProcessSourceConfig<TLog extends ILogOrdered, TState> {
 
 
 export interface IProcessorConfig<TState, TParentName extends string> {
-  // seed: Stream<IProcessedStore<TState>>,
-  parentScope: store.IStoreconfig<TParentName>,
+  seedFile: Stream<IProcessedStore<TState>>,
+  parentScope: storeUtils.IStoreconfig<TParentName>,
   mode: IProcessEnvironmentMode
   blueprint: Omit<IProcessedStore<TState>, 'orderId' | 'blockNumber'>,
 }
@@ -49,10 +47,9 @@ export interface IProcessorConfig<TState, TParentName extends string> {
 
 export interface IProcessParams<TState, TProcessConfigList extends ILogOrdered[], TParentName extends string> extends IProcessorConfig<TState, TParentName> {
   scopeKey: string
-  scope: store.IStoreScope<`${TParentName}.${string}`, any>
+  scope: storeUtils.IStoreScope<`${TParentName}.${string}`, any>
   processList: { [P in keyof TProcessConfigList]: IProcessSourceConfig<TProcessConfigList[P], TState> }
-  state: Stream<TState>
-  seed: Stream<IProcessedStore<TState>>,
+  store: Stream<IProcessedStore<TState>>,
   seedFile: Stream<IProcessedStore<TState>>
 }
 
@@ -61,217 +58,204 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
   ...processList: { [P in keyof TProcessConfigList]: IProcessSourceConfig<TProcessConfigList[P], TSeed>; }
 ): IProcessParams<TSeed, TProcessConfigList, TParentName> {
 
-  const scope = store.createStoreScope(config.parentScope, 'processor')
+  const scope = storeUtils.createStoreScope(config.parentScope, 'processor')
   const scopeKey = getProcessorKey(processList, config.blueprint.config)
   const storedIdbSeed: Stream<IProcessedStore<TSeed>> = indexDB.get(scope, scopeKey)
 
-  const seedFile: Stream<IProcessedStore<TSeed>> = importGlobal(async () => {
-    const req = await (await fetch(config.blueprint.sourceUrl)).json()
-    const storedSeed: IProcessedStore<TSeed> = transformBigints(req)
 
-    const seedFileValidationError = validateSeed(storedSeed.config, storedSeed.config)
 
-    if (seedFileValidationError) {
-      throw new Error(`Seed file validation error: ${seedFileValidationError}`)
+  const store = switchMap(storedState => {
+    // if store is empty, fetch seed file
+    // if seed file is invalid, bootstrap using blueprint
+    if (!storedState) {
+      return map(loadedSeedfile => {
+        if (loadedSeedfile) {
+          const seedFileValidationError = validateConfig(loadedSeedfile.config, config.blueprint.config)
+
+          if (seedFileValidationError) {
+            throw new Error(`Config file validation error: ${seedFileValidationError}. delete seed file to bootstrap from blueprint`)
+          }
+          return loadedSeedfile
+        }
+
+        const blockNumber = config.blueprint.config.startBlock
+        const orderId = getblockOrderIdentifier(config.blueprint.config.startBlock)
+        return { ...config.blueprint, blockNumber, orderId }
+      }, config.seedFile)
     }
 
-    return storedSeed
-  })
 
-  const seed = switchMap(idbSeed => {
-    if (idbSeed?.sourceUrl === config.blueprint.sourceUrl) {
-      return now(idbSeed)
-    }
-
-    return map(sf => {
-      const blockNumber = sf.blockNumber || config.blueprint.config.startBlock
-      const orderId = sf.orderId || getblockOrderIdentifier(config.blueprint.config.startBlock)
-      return { ...sf, blockNumber, orderId }
-    }, seedFile)
+    return now(storedState)
   }, storedIdbSeed)
 
-  const state = map(s => s.state, seed)
   
-  return { ...config, processList, scope, state, seed, scopeKey, seedFile  }
+  return { ...config, processList, scope, store, scopeKey  }
 }
 
 
-export interface IProcessorSeedConfig<TSeed, TProcessConfigList extends ILogOrdered[], TParentName extends string> extends IProcessParams<TSeed, TProcessConfigList, TParentName> {
-  publicClient: viem.PublicClient<viem.Transport, viem.Chain>
+export interface ISyncProcessParams<TSeed, TProcessConfigList extends ILogOrdered[], TParentName extends string> extends IProcessParams<TSeed, TProcessConfigList, TParentName> {
+  publicClient: viem.PublicClient
   syncBlock: bigint
 }
 
 
-export function syncProcess<TSeed, TProcessConfigList extends ILogOrdered[], TParentName extends string>(
-  config: IProcessorSeedConfig<TSeed, TProcessConfigList, TParentName>,
-): Stream<IProcessedStore<TSeed>> {
+export function queryLogs<TSeed, TProcessConfigList extends ILogOrdered[], TParentName extends string>(
+  config: ISyncProcessParams<TSeed, TProcessConfigList, TParentName>,
+  processState: IProcessedStore<TSeed>
+): Stream<ILogOrderedEvent[][]> {
 
-  const scopeKey = getProcessorKey(config.processList, config.blueprint.config)
+  const nextLogBatch = config.processList.map(processConfig => {
+    const rangeKey = IDBKeyRange.bound(
+      processConfig.source.startBlock ? getblockOrderIdentifier(processConfig.source.startBlock) : processState.orderId,
+      getblockOrderIdentifier(config.syncBlock), true
+    )
+    const nextStoredLog: Stream<ILogOrderedEvent[]> = indexDB.getRange(processConfig.source.scope, rangeKey)
 
-  const nextLogs = map(processState => {
-    const processNextLog = config.processList.map(processConfig => {
-      const rangeKey = IDBKeyRange.bound(processState.orderId, getblockOrderIdentifier(config.syncBlock + 1n), true)
-      const nextStoredLog: Stream<ILogOrderedEvent[]> = indexDB.getAll(processConfig.source.scope, rangeKey)
+    return switchMap(stored => {
+      const lstEvent = stored[stored.length - 1] as ILogOrderedEvent | undefined
+      const fromBlock = max(processState.blockNumber, lstEvent?.blockNumber || processConfig.source.startBlock || 0n)
 
-      return switchMap(stored => {
-        const sourceStartBlock = processConfig.source.startBlock
-        const startblock = sourceStartBlock && sourceStartBlock > processState.config.startBlock ? sourceStartBlock : processState.config.startBlock
-
-        const fstEvent = stored[0] as ILogOrderedEvent | undefined
-        const lstEvent = stored[stored.length - 1] as ILogOrderedEvent | undefined
-
-        const startGapBlockRange = fstEvent ? startblock - fstEvent.blockNumber : 0n
-        const event = processConfig.source.abi.find((ev: any) => ev.type === 'event' && ev.name === processConfig.source.eventName)
-
+      if (fromBlock > config.syncBlock) {
+        throw new Error('fromBlock is greater than syncBlock')
+      }
 
 
-        const prev = startGapBlockRange > 0n
-          ? fetchTradesRecur(
-            {
-              ...processConfig.source,
-              fromBlock: startblock,
-              toBlock: startblock + startGapBlockRange,
-              publicClient: config.publicClient,
-              rangeBlockQuery: processConfig.queryBlockRange,
-            },
-            reqParams => {
-              const queryLogs = fromPromise(
-                config.publicClient.getLogs({
-                  event,
-                  args: reqParams.args,
-                  address: reqParams.address,
-                  fromBlock: reqParams.fromBlock,
-                  toBlock: reqParams.toBlock,
-                  strict: true,
+      const event = processConfig.source.abi.find((ev: any) => ev.type === 'event' && ev.name === processConfig.source.eventName)
+
+
+      const next = fromBlock < config.syncBlock
+        ? fetchTradesRecur(
+          {
+            ...processConfig.source,
+            fromBlock: fromBlock,
+            toBlock: config.syncBlock,
+            publicClient: config.publicClient,
+            rangeBlockQuery: processConfig.queryBlockRange,
+          },
+          reqParams => {
+            const res = fromPromise(
+              config.publicClient.getLogs({
+                event,
+                args: reqParams.args,
+                address: reqParams.address,
+                fromBlock: reqParams.fromBlock,
+                strict: true,
+                toBlock: reqParams.toBlock,
+                // toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeBlockQuery),
+              })
+            ) as Stream<ILogEvent[]>
+
+
+            const storeMappedLogs = switchMap(logs => {
+              const filtered = logs
+                .map(ev => {
+                  const storeObj = { ...ev, orderId: getEventOrderIdentifier(ev) } as ILogOrderedEvent
+                  return storeObj
                 })
-              ) as Stream<ILogEvent[]>
+                .filter(ev => {
 
-              const storeLogs = (headEvent: ILogOrderedEvent | undefined, logs: ILogEvent[]): ILogOrderedEvent[] => {
-                const filtered = logs
-                  .map(ev => {
-                    const storeObj = { ...ev, orderId: getEventOrderIdentifier(ev) } as ILogOrderedEvent
-                    return storeObj
-                  })
-                  .filter(ev => ev.orderId < headEvent!.orderId)
-
-                return filtered
-              }
-
-              const storeMappedLogs = config.mode === IProcessEnvironmentMode.DEV
-                ? switchMap(logs => {
-                  const filtered = storeLogs(fstEvent, logs)
-                  return indexDB.add(processConfig.source.scope, filtered)
-                }, queryLogs)
-                : map(logs => storeLogs(fstEvent, logs), queryLogs)
-
-              return storeMappedLogs
-            }
-          )
-          : now([])
-
-        const fromBlock = max(startblock, max(processState.blockNumber, lstEvent ? lstEvent.blockNumber : 0n))
-
-
-        const next = fromBlock < config.syncBlock
-          ? fetchTradesRecur(
-            {
-              ...processConfig.source,
-              fromBlock: fromBlock,
-              toBlock: config.syncBlock,
-              publicClient: config.publicClient,
-              rangeBlockQuery: processConfig.queryBlockRange,
-            },
-            reqParams => {
-              const queryLogs = fromPromise(
-                config.publicClient.getLogs({
-                  event,
-                  args: reqParams.args,
-                  address: reqParams.address,
-                  fromBlock: reqParams.fromBlock,
-                  strict: true,
-                  toBlock: reqParams.toBlock,
-                  // toBlock: min(reqParams.toBlock, reqParams.fromBlock + reqParams.rangeBlockQuery),
+                  return ev.orderId > Math.max(processState.orderId || 0, lstEvent ? lstEvent.orderId : 0)
                 })
-              ) as Stream<ILogEvent[]>
 
+              return indexDB.add(processConfig.source.scope, filtered)
+            }, res)
 
-              const storeLogs = (headEvent: ILogOrderedEvent | undefined, logs: ILogEvent[]): ILogOrderedEvent[] => {
-                const filtered = logs
-                  .map(ev => {
-                    const storeObj = { ...ev, orderId: getEventOrderIdentifier(ev) } as ILogOrderedEvent
-                    return storeObj
-                  })
-                  .filter(ev => {
-
-                    return ev.orderId > Math.max(processState.orderId || 0, headEvent ? headEvent.orderId : 0)
-                  })
-
-                return filtered
-              }
-
-              const storeMappedLogs = config.mode === IProcessEnvironmentMode.DEV
-                ? switchMap(logs => {
-                  const filtered = storeLogs(lstEvent, logs)
-                  return indexDB.add(processConfig.source.scope, filtered)
-                }, queryLogs)
-                : map(logs => storeLogs(lstEvent, logs), queryLogs)
-
-              return storeMappedLogs
-            }
-          )
-          : now([])
-
-        return map(log => {
-
-          return [...log.prev, ...stored, ...log.next]
-        }, combineObject({ prev, next }))
-      }, nextStoredLog)
-    })
-
-    return { processNextLog, processState }
-  }, config.seed)
- 
-  const sync = switchMap(params => {
-    return switchLatest(zipArray((...nextLogEvents) => {
-      const orderedNextEvents = nextLogEvents.flat().sort((a, b) => a.orderId - b.orderId)
-
-      const nextState = orderedNextEvents.reduce((acc, next) => {
-        const eventProcessor = config.processList.find((processConfig, idx) => {
-          if ('eventName' in next) {
-            return nextLogEvents[idx].indexOf(next) > -1
+            return storeMappedLogs
           }
+        )
+        : now([])
 
-          throw new Error('Event is not an ILogOrderedEvent')
-        })
+      return map(nextLog => {
+        return [...stored, ...nextLog]
+      }, next)
+    }, nextStoredLog)
+  })
+ 
+  
+  return zipArray(
+    (...nextLogEvents) => nextLogEvents,
+    ...nextLogBatch
+  )
+}
 
-        if (!eventProcessor) {
-          throw new Error('Event processor not found')
+
+export function processLogs<
+  TSeed,
+  TProcessConfigList extends ILogOrdered[],
+  TParentName extends string
+>(
+  config: ISyncProcessParams<TSeed, TProcessConfigList, TParentName>,
+  processState: IProcessedStore<TSeed>,
+  nextLogBatch: Stream<ILogOrderedEvent[][]>
+): Stream<IProcessedStore<TSeed>> {
+ 
+  const sync = switchLatest(map(logBatchList => {
+    const orderedNextEvents = logBatchList.flat().sort((a, b) => a.orderId - b.orderId)
+
+    const nextState = orderedNextEvents.reduce((acc, next) => {
+      const eventProcessor = config.processList.find((processConfig, idx) => {
+        if ('eventName' in next) {
+          return logBatchList[idx].indexOf(next) > -1
         }
 
+        throw new Error('Event is not an ILogOrderedEvent')
+      })
 
-        acc.orderId = next.orderId
-        acc.blockNumber = next.blockNumber
-        acc.state = eventProcessor.step(acc.state, next)
+      if (!eventProcessor) {
+        throw new Error('Event processor not found')
+      }
 
-        return acc
-      }, params.processState)
 
-      nextState.blockNumber = config.syncBlock
+      acc.orderId = next.orderId
+      acc.blockNumber = next.blockNumber
+      acc.state = eventProcessor.step(acc.state, next)
 
-      return indexDB.set(config.scope, nextState, scopeKey)
-    }, ...params.processNextLog))
+      return acc
+    }, processState)
 
-  }, nextLogs)
+    nextState.blockNumber = config.syncBlock
+
+    const setProcess = indexDB.set(config.scope, nextState, config.scopeKey)
+
+    if (config.mode === IProcessEnvironmentMode.DEV) {
+      return setProcess
+    }
+
+    const cleanProcessScopeList = config.processList.map(cfg => indexDB.clear(cfg.source.scope))
+    
+    
+    return chain(state => {
+      return constant(state, mergeArray(cleanProcessScopeList))
+    }, setProcess)
+  }, nextLogBatch))
 
   return sync
 }
 
-
-function getProcessorKey(processConfigList: IProcessSourceConfig<any, any>[], blueprint: IProcessedStoreConfig) {
-  return processConfigList.reduce((acc, next) => `${acc}:${next.source.eventName}`, `${blueprint.chainId}:${blueprint.startBlock}:${blueprint.endBlock}`)
+export function syncProcess<
+  TSeed,
+  TProcessConfigList extends ILogOrdered[],
+  TParentName extends string
+>(
+  config: ISyncProcessParams<TSeed, TProcessConfigList, TParentName>,
+  processState: IProcessedStore<TSeed>,
+): Stream<IProcessedStore<TSeed>> {
+  const nextLogBatch = queryLogs(config, processState)
+  const sync = processLogs(config, processState, nextLogBatch)
+  return sync
 }
 
-export function validateSeed(blueprintConfig: IProcessedStoreConfig, seedConfig: IProcessedStoreConfig): null | string {
+
+
+function getProcessorKey(processConfigList: IProcessSourceConfig<any, any>[], blueprint: IProcessedStoreConfig) {
+  return processConfigList.reduce((acc, next) => {
+    const shash = shortHash({ eventName: next.source.eventName, startBlock: String(next.source.startBlock), address: next.source.address, args: next.source.args })
+
+    return `${acc}:${shash}`
+  }, `${blueprint.chainId}:${blueprint.startBlock}:${blueprint.endBlock}`)
+}
+
+export function validateConfig(blueprintConfig: IProcessedStoreConfig, seedConfig: IProcessedStoreConfig): null | string {
 
   if (seedConfig.startBlock !== blueprintConfig.startBlock) {
     return `seed startBlock ${seedConfig.startBlock} does not match blueprint startBlock ${blueprintConfig.startBlock}`
@@ -288,20 +272,12 @@ export function validateSeed(blueprintConfig: IProcessedStoreConfig, seedConfig:
   return null
 }
 
-// throw new Error('stored database does not match config blueprint, cleaning storage is required')
+function shortHash(obj: object) {
+  const str = JSON.stringify(obj)
+        
+  let h = 0
+  for(let i = 0; i < str.length; i++)
+    h = Math.imul(31, h) + str.charCodeAt(i) | 0
 
-
-export async function getBlobHash(blob: Blob) {
-  const data = await blob.arrayBuffer()
-  const hash = await window.crypto.subtle.digest('SHA-256', data)
-
-  let binary = ''
-  const bytes = new Uint8Array(hash)
-  const len = bytes.byteLength
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i])
-  }
-
-  const hashBase64 = window.btoa(binary)
-  return 'sha256-' + hashBase64
+  return h.toString(16)
 }

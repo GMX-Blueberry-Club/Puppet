@@ -10,7 +10,7 @@ import { $ButtonPrimary, $buttonAnchor, defaultMiniButtonStyle } from "../compon
 import { gmxProcess } from "../data/process/process.js"
 import { gmxLog } from "../data/scope/index.js"
 import { $card, $iconCircular } from "../common/elements/$common.js"
-import { IProcessedStore, getBlobHash, syncProcess } from "../utils/indexer/processor.js"
+import { IProcessedStore, syncProcess } from "../utils/indexer/processor.js"
 import * as indexDb from "../utils/storage/indexDB.js"
 import { jsonStringify } from "../utils/storage/storeScope.js"
 import { blockChange, publicClient } from "../wallet/walletLink.js"
@@ -26,11 +26,11 @@ export const $Admin = component((
 
 
   const syncRuntimeSeed = switchMap(params => {
-    return syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlockNumber })
-  }, combineObject({ publicClient, seed: gmxProcess.seed, syncBlockNumber }))
+    return syncProcess({ ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlockNumber }, params.store)
+  }, combineObject({ publicClient, store: gmxProcess.store, syncBlockNumber }))
 
   const processState = mergeArray([
-    gmxProcess.seed,
+    gmxProcess.store,
     syncRuntimeSeed
   ])
 
@@ -138,7 +138,7 @@ export const $Admin = component((
                 const hoverB = hoverDownloadBtnTether(
                   nodeEvent('pointerover'),
                   switchMap(() => {
-                    return map(blob => URL.createObjectURL(blob), jsonBlob(gmxProcess.seed))
+                    return map(blob => URL.createObjectURL(blob), jsonBlob(gmxProcess.store))
                   }),
                   map(href => {
                     return { href, download: `DB-${log.eventName}.json` }
@@ -249,4 +249,21 @@ function getJsonBlob<TData>(data: TData): Blob {
 function jsonBlob<TData>(data: Stream<TData>): Stream<Blob> {
   return map(getJsonBlob, data)
 }
+
+
+async function getBlobHash(blob: Blob) {
+  const data = await blob.arrayBuffer()
+  const hash = await window.crypto.subtle.digest('SHA-256', data)
+
+  let binary = ''
+  const bytes = new Uint8Array(hash)
+  const len = bytes.byteLength
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+
+  const hashBase64 = window.btoa(binary)
+  return 'sha256-' + hashBase64
+}
+
 

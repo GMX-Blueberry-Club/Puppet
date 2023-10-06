@@ -22,10 +22,11 @@ import {
 import { IPositionMirrorSettled, IPositionMirrorSlot, IPuppetRouteSubscritpion, getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
-import { IProcessEnvironmentMode, IProcessedStore, IProcessedStoreConfig, defineProcess, validateSeed } from "../../utils/indexer/processor.js"
+import { IProcessEnvironmentMode, IProcessedStore, IProcessedStoreConfig, defineProcess, validateConfig } from "../../utils/indexer/processor.js"
 import { transformBigints } from "../../utils/storage/storeScope.js"
 import * as gmxLog from "../scope/gmx.js"
 import { rootStoreScope } from "../store/store.js"
+import * as GMX from "gmx-middleware-const"
 
 
 export interface IProcessMetrics {
@@ -94,20 +95,57 @@ const config: IProcessedStoreConfig = {
   chainId: arbitrum.id,
 }
 
+const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
+  const req = await (await fetch('/db/sha256-WLg0jaGcTYAdXutwJ1uY+KOxOwjaxGUk7ZTtHNV6FzU=.json')).json().catch(() => null)
 
+  if (req === null) {
+    return null
+  }
+
+  const storedSeed: IProcessedStore<IGmxProcessState> = transformBigints(req)
+
+  const seedFileValidationError = validateConfig(storedSeed.config, storedSeed.config)
+
+  if (seedFileValidationError) {
+    console.error(new Error(`Seed file validation error: ${seedFileValidationError}`))
+    return null
+  }
+
+  return storedSeed
+})
+
+const www = {
+  ...GMX.CONTRACT[42161].PositionRouter,
+  startBlock: 137100000n,
+  eventName: 'CreateIncreasePosition',
+} as const
 
 export const gmxProcess = defineProcess(
   {
+    seedFile,
     mode: SW_DEV ? IProcessEnvironmentMode.DEV : IProcessEnvironmentMode.PROD,
-    // seed: seedFile,
-    blueprint: { config, state, sourceUrl: '/db/sha256-Ure_tOb6HYu1rfXksoGeWX9GFU1ZSuTlYqOMW2n+b44=.json' },
+    blueprint: { config, state },
     parentScope: rootStoreScope,
   },
   {
-    source: gmxLog.requestIncreasePosition,
-    // queryBlockRange: 100000n,
+    source: gmxLog.marketCreated,
     step(seed, value) {
-    
+      const entity = getEventType<IMarketCreatedEvent>('Market', value, seed.approximatedTimestamp)
+      seed.markets[entity.marketToken] = {
+        // salt: entity.salt,
+        indexToken: entity.indexToken,
+        longToken: entity.longToken,
+        marketToken: entity.marketToken,
+        shortToken: entity.shortToken,
+      }
+      return seed
+    },
+  },
+
+  {
+    queryBlockRange: 100000n,
+    source: gmxLog.requestIncreasePosition,
+    step(seed, value) {
       if (seed.blockMetrics.height > 0n)  {
         const heightDelta = value.blockNumber - seed.blockMetrics.height
         const timeDelta = value.args.blockTime - seed.blockMetrics.timestamp
@@ -128,36 +166,10 @@ export const gmxProcess = defineProcess(
       return seed
     },
   },
-  {
-    source: gmxLog.marketCreated,
-    step(seed, value) {
-      const entity = getEventType<IMarketCreatedEvent>('Market', value, seed.approximatedTimestamp)
-      seed.markets[entity.marketToken] = {
-        // salt: entity.salt,
-        indexToken: entity.indexToken,
-        longToken: entity.longToken,
-        marketToken: entity.marketToken,
-        shortToken: entity.shortToken,
-      }
-      return seed
-    },
-  },
-  // {
-  //   source: gmxLog.positionFeeInfo,
-  //   queryBlockRange: 100000n,
-  //   step(seed, value) {
-  //     const entity = getEventdata<PositionFeesInfo>(value)
-  //     const slot = seed.mirrorPositionSlot[entity.positionKey]
-  //     if (slot) {
-  //       slot.feeUpdates = [...slot.feeUpdates, entity]
-  //     }
 
-  //     return seed
-  //   },
-  // },
   {
     source: gmxLog.oraclePrice,
-    // queryBlockRange: 100000n,
+    queryBlockRange: 100000n,
     step(seed, value) {
       const entity = getEventdata<IOraclePriceUpdateEvent>(value)
 
@@ -184,7 +196,7 @@ export const gmxProcess = defineProcess(
   },
   {
     source: gmxLog.positionIncrease,
-    // queryBlockRange: 100000n,
+    queryBlockRange: 100000n,
     step(seed, value) {
       const update = getEventType<IPositionIncrease>('PositionIncrease', value, seed.approximatedTimestamp)
 
@@ -246,7 +258,7 @@ export const gmxProcess = defineProcess(
   },
   {
     source: gmxLog.positionDecrease,
-    // queryBlockRange: 100000n,
+    queryBlockRange: 100000n,
     step(seed, value) {
       const update = getEventType<IPositionDecrease>('PositionDecrease', value, seed.approximatedTimestamp)
       const slot = seed.mirrorPositionSlot[update.positionKey]
@@ -292,6 +304,21 @@ export const gmxProcess = defineProcess(
       return seed
     },
   },
+
+
+  // {
+  //   source: gmxLog.positionFeeInfo,
+  //   queryBlockRange: 100000n,
+  //   step(seed, value) {
+  //     const entity = getEventdata<PositionFeesInfo>(value)
+  //     const slot = seed.mirrorPositionSlot[entity.positionKey]
+  //     if (slot) {
+  //       slot.feeUpdates = [...slot.feeUpdates, entity]
+  //     }
+
+  //     return seed
+  //   },
+  // },
 )
 
 

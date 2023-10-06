@@ -11,9 +11,8 @@ import { WalletConnectConnector } from '@wagmi/core/connectors/walletConnect'
 import { EthereumClient, w3mConnectors, w3mProvider } from '@web3modal/ethereum'
 import { Web3Modal } from '@web3modal/html'
 import { switchMap } from "gmx-middleware-utils"
-import { PublicClient, Transport } from "viem"
 import { arbitrum } from "viem/chains"
-
+import * as viem from 'viem'
 
 const chains = [
   arbitrum,
@@ -28,7 +27,7 @@ export interface IWalletConnected {
   network: ISupportedChain
 }
 
-export type IWalletClient = WalletClient<Transport, ISupportedChain>
+export type IWalletClient = WalletClient<viem.Transport, ISupportedChain>
 
 const storage = createStorage({ storage: window.localStorage })
 const projectId = import.meta.env.VITE_WC_PROJECT_ID || 'fdc797f2e6a68e01b9e17843c939673e'
@@ -111,7 +110,7 @@ export const account = mergeArray([
   accountChange
 ])
 
-export const publicClient: Stream<PublicClient | WebSocketPublicClient> = map(params => {
+export const publicClient: Stream<viem.PublicClient> = map(params => {
   const chainId = params.chain?.id || arbitrum.id
   const wsc = getWebSocketPublicClient({ chainId }) || getWebSocketPublicClient({ chainId })
   const clientAvaialble = wsc || getPublicClient({ chainId }) || getPublicClient({ chainId })
