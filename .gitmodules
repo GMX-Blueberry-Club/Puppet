@@ -1,6 +1,6 @@
 [submodule "contracts-submodule"]
 	path = contracts-submodule
-	url = git@github.com:GMX-Blueberry-Club/puppet-contracts.git
+	url = https://github.com/GMX-Blueberry-Club/puppet-contracts.git
 [submodule "gmx-middleware"]
 	path = gmx-middleware
 	url = https://github.com/nissoh/gmx-middleware.git
