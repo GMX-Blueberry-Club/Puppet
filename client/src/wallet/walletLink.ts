@@ -13,6 +13,7 @@ import { Web3Modal } from '@web3modal/html'
 import { switchMap } from "gmx-middleware-utils"
 import { arbitrum } from "viem/chains"
 import * as viem from 'viem'
+import { jsonRpcProvider } from '@wagmi/core/providers/jsonRpc'
 
 const chains = [
   arbitrum,
@@ -31,6 +32,7 @@ export type IWalletClient = WalletClient<viem.Transport, ISupportedChain>
 
 const storage = createStorage({ storage: window.localStorage })
 const projectId = import.meta.env.VITE_WC_PROJECT_ID || 'fdc797f2e6a68e01b9e17843c939673e'
+const llamaRpc = import.meta.env.VITE_LLAMANODES_PROJECT_ID || '01HCB0CBBH06TE3XSM6ZE4YYAD'
 
 
 const configChain = configureChains(
@@ -39,6 +41,12 @@ const configChain = configureChains(
     // alchemyProvider({ apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low' }),
     // infuraProvider({ apiKey: '6d7e461ad6644743b92327579860b662' }),
     // publicProvider(),
+    jsonRpcProvider({ 
+      rpc: (chain) => ({
+        http: `https://arbitrum.llamarpc.com/rpc/${llamaRpc}`,
+        webSocket: `wss://arbitrum.llamarpc.com/rpc/${llamaRpc}`,
+      }),
+    }),
     w3mProvider({ projectId }),
     // jsonRpcProvider({
     //   rpc: chain => {

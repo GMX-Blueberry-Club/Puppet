@@ -1,34 +1,33 @@
-
-
-import { $node, $Node, component, nodeEvent, INode, style, styleBehavior, NodeComposeFn, $text } from '@aelea/dom'
-import { O, Behavior, combineObject, combineArray, replayLatest } from '@aelea/core'
-import { pallete } from "@aelea/ui-components-theme"
-import { constant, empty, filter, fromPromise, map, merge, multicast, now, switchLatest, take, tap, until, zip } from "@most/core"
+import { Op, combineObject } from '@aelea/core'
+import { $Node, $text, NodeComposeFn, component, style } from '@aelea/dom'
+import { $column } from '@aelea/ui-components'
+import { colorAlpha, pallete } from "@aelea/ui-components-theme"
+import { fromPromise, map } from "@most/core"
 import { Stream } from "@most/types"
-import { colorAlpha } from "@aelea/ui-components-theme"
-import { $column, $row, observer } from '@aelea/ui-components'
-import { IMarket, IMarketFees, IMarketInfo, IMarketPool, IMarketUsageInfo, applyFactor, factor, getAvailableReservedUsd, getBorrowingFactorPerInterval, getFundingFactorPerInterval, getTokenDescription, getTokenUsd, readableFactorPercentage, readableFixedUSD30, switchMap } from 'gmx-middleware-utils'
-import { fadeIn } from '../transitions/enter.js'
 import * as GMX from "gmx-middleware-const"
-import { contractReader } from '../logic/common'
+import { $Table, $defaultTableRowContainer, $marketSmallLabel } from 'gmx-middleware-ui-components'
+import { IMarket, IMarketFees, IMarketPrice, IMarketUsageInfo, getBorrowingFactorPerInterval, getFundingFactorPerInterval, readableFactorPercentage } from 'gmx-middleware-utils'
 import { IGmxProcessState } from '../data/process/process'
+import { contractReader } from '../logic/common'
+import { getMarketPoolUsage } from '../logic/tradeV2'
 import { ISupportedChain } from '../wallet/walletLink'
-import { $Table, $defaultTableRowContainer, $marketSmallLabel, $tokenLabelFromSummary } from 'gmx-middleware-ui-components'
-import { getMarketPoolUsage, hashKey } from '../logic/tradeV2'
 
 
 interface IMarketList {
   $container?: NodeComposeFn<$Node>
   processData: Stream<IGmxProcessState>
   chain: ISupportedChain
+
+  $rowCallback?: Op<{ market: IMarket, price: IMarketPrice }, NodeComposeFn<$Node>>
 }
 
 export const $MarketInfoList = ({ 
   $container = $column,
   processData,
   chain,
+  $rowCallback
 }: IMarketList) => component((
-  [changeMarket, changeMarketTether]: Behavior<INode, IMarket>,
+  // [changeMarket, changeMarketTether]: Behavior<INode, IMarket>,
 ) => {
   const gmxContractMap = GMX.CONTRACT[chain.id]
   const v2Reader = contractReader(gmxContractMap.ReaderV2)
@@ -57,17 +56,7 @@ export const $MarketInfoList = ({
       $Table({
         dataSource: marketParamList,
         $rowContainer: $defaultTableRowContainer(style({ borderTop: `1px solid ${colorAlpha(pallete.foreground, .2)}` })),
-        $rowCallback: map(params => {
-          return $column(style({ borderTop: `1px solid ${pallete.foreground}` }))(
-            changeMarketTether(
-              nodeEvent('click'),
-              constant(params.market),
-              tap((aaa) => {
-                debugger
-              })
-            )
-          )
-        }),
+        $rowCallback,
         scrollConfig: {
           $container: $column
         },
@@ -148,7 +137,7 @@ export const $MarketInfoList = ({
       })({})
     ),
 
-    { changeMarket }
+    {  }
   ]
 })
 

@@ -1,33 +1,9 @@
 import { Behavior, combineArray, combineObject, replayLatest } from "@aelea/core"
 import { $node, $text, component, style, styleBehavior } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, observer, screenUtils } from "@aelea/ui-components"
-import {
-  IMarket,
-  IMarketInfo,
-  IMarketPrice,
-  IPositionSlot,
-  PositionInfo,
-  StateStream,
-  formatFixed,
-  getAvailableReservedUsd, getBorrowingFactorPerInterval, getCappedPositionPnlUsd, getDenominator,
-  getFundingFactorPerInterval, getFundingFactorPerInterval2,
-  getIntervalIdentifier,
-  getLiquidationPrice,
-  getMappedValue,
-  getMarginFee,
-  getNativeTokenAddress,
-  getNativeTokenDescription,
-  getPositionKey,
-  getPriceImpactForPosition,
-  getTokenAmount,
-  getTokenDenominator,
-  getTokenDescription,
-  getTokenUsd,
-  readableFactorPercentage,
-  readableFixedUSD30,
-  readableUnitAmount, resolveAddress,
-  switchMap,
-  unixTimestampNow
+import { 
+  IMarket, IMarketInfo, IMarketPrice, IPositionSlot, PositionInfo, StateStream, formatFixed, getAvailableReservedUsd, getBorrowingFactorPerInterval, getCappedPositionPnlUsd, getDenominator,
+  getFundingFactorPerInterval, getFundingFactorPerInterval2, getIntervalIdentifier, getLiquidationPrice, getMappedValue, getMarginFee, getNativeTokenAddress, getNativeTokenDescription, getPositionKey, getPriceImpactForPosition, getTokenAmount, getTokenDenominator, getTokenDescription, getTokenUsd, readableFactorPercentage, readableFixedUSD30, readableUnitAmount, resolveAddress, switchMap, unixTimestampNow
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"

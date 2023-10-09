@@ -15,6 +15,7 @@ import * as GMX from "gmx-middleware-const"
 import {
   $bear, $bull,
   $ButtonToggle,
+  $defaultTableRowContainer,
   $hintNumChange, $infoLabel,
   $infoTooltipLabel,
   $moreDots,
@@ -172,7 +173,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   [inputSizeDeltaUsd, inputSizeDeltaTetherUsd]: Behavior<INode, bigint>,
 
   [changeInputToken, changeInputTokenTether]: Behavior<viem.Address, viem.Address>,
-  [changeMarket, changeMarketTether]: Behavior<IMarket>,
+  [changeMarket, changeMarketTether]: Behavior<any, IMarket>,
   [clickChooseMarketPopover, clickChooseMarketPopoverTether]: Behavior<any>,
   [changeIsUsdCollateralToken, changeIsUsdCollateralTokenTether]: Behavior<boolean>,
 
@@ -747,12 +748,16 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 $content: $MarketInfoList({
                   chain: config.chain,
                   processData: config.processData,
+                  $rowCallback: map(params => {
+                    return $defaultTableRowContainer(style({ borderTop: `1px solid ${pallete.foreground}` }))(
+                      changeMarketTether(
+                        nodeEvent('click'),
+                        constant(params.market),
+                      )
+                    )
+                  })
                 })({
-                  changeMarket: changeMarketTether(
-                    tap(() => {
-                      debugger
-                    })
-                  ),
+                  // changeMarket: changeMarketTether(),
                 }),
               })({
                 // overlayClick: clickPopoverClaimTether()
