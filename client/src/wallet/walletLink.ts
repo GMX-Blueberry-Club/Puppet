@@ -1,18 +1,19 @@
 import { combineObject, fromCallback } from "@aelea/core"
-import { pallete } from "@aelea/ui-components-theme"
+import { pallete, theme } from "@aelea/ui-components-theme"
 import { awaitPromises, map, mergeArray, now, skip } from "@most/core"
 import { Stream } from "@most/types"
 import {
   Address, GetAccountResult, GetNetworkResult,
   WalletClient, WebSocketPublicClient, configureChains, createConfig, createStorage, fetchBlockNumber, getAccount,
-  getNetwork, getPublicClient, getWalletClient, getWebSocketPublicClient, watchAccount, watchBlockNumber, watchNetwork
+  getNetwork, InjectedConnector, getPublicClient, getWalletClient, getWebSocketPublicClient, watchAccount, watchBlockNumber, watchNetwork
 } from '@wagmi/core'
 import { WalletConnectConnector } from '@wagmi/core/connectors/walletConnect'
-import { EthereumClient, w3mConnectors, w3mProvider } from '@web3modal/ethereum'
-import { Web3Modal } from '@web3modal/html'
 import { switchMap } from "gmx-middleware-utils"
 import { arbitrum } from "viem/chains"
 import * as viem from 'viem'
+import { alchemyProvider } from '@wagmi/core/providers/alchemy'
+import { publicProvider } from '@wagmi/core/providers/public'
+import { createWeb3Modal, walletConnectProvider } from '@web3modal/wagmi'
 import { jsonRpcProvider } from '@wagmi/core/providers/jsonRpc'
 
 const chains = [
@@ -35,42 +36,6 @@ const projectId = import.meta.env.VITE_WC_PROJECT_ID || 'fdc797f2e6a68e01b9e1784
 const llamaRpc = import.meta.env.VITE_LLAMANODES_PROJECT_ID || '01HCB0CBBH06TE3XSM6ZE4YYAD'
 
 
-const configChain = configureChains(
-  chains,
-  [
-    // alchemyProvider({ apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low' }),
-    // infuraProvider({ apiKey: '6d7e461ad6644743b92327579860b662' }),
-    // publicProvider(),
-    jsonRpcProvider({ 
-      rpc: (chain) => ({
-        http: `https://arbitrum.llamarpc.com/rpc/${llamaRpc}`,
-        webSocket: `wss://arbitrum.llamarpc.com/rpc/${llamaRpc}`,
-      }),
-    }),
-    w3mProvider({ projectId }),
-    // jsonRpcProvider({
-    //   rpc: chain => {
-    //     const supportedChains = [
-    //       1, 3, 4, 5, 10, 42, 56, 69, 97, 100, 137, 280, 324, 420, 42161, 42220, 43114, 80001, 421611,
-    //       421613, 1313161554, 1313161555
-    //     ]
-    //     const NAMESPACE = 'eip155'
-
-    //     if (supportedChains.includes(chain.id)) {
-    //       return {
-    //         http: `https://rpc.walletconnect.com/v1/?chainId=${NAMESPACE}:${chain.id}&projectId=${projectId}`
-    //       }
-    //     }
-
-    //     return {
-    //       http: chain.rpcUrls.default.http[0],
-    //       webSocket: chain.rpcUrls.default.webSocket?.[0]
-    //     }
-    //   }
-    // })
-  ],
-  { batch: { multicall: { wait: 20 } }, retryCount: 0 },
-)
 
 
 export const wcConnector = new WalletConnectConnector({
@@ -83,19 +48,6 @@ export const wcConnector = new WalletConnectConnector({
     }
   }
 })
-
-
-export const walletConfig = createConfig({
-  autoConnect: true,
-  connectors: w3mConnectors({ projectId, chains,  }),
-  publicClient: configChain.publicClient,
-  // webSocketPublicClient: configChain.webSocketPublicClient,
-  storage,
-})
-
-
-const ethereumClient = new EthereumClient(walletConfig, chains)
-
 
 
 export const networkChange = fromCallback<GetNetworkResult>(watchNetwork)
@@ -152,54 +104,86 @@ export const block = awaitPromises(map(n => fetchBlockNumber(), now(null)))
 export const blockChange = switchMap(c => fromCallback<bigint>(cb => watchBlockNumber({ listen: true, chainId: c.id }, bn => cb(bn))), chain)
 
 
-export const web3Modal = new Web3Modal({
-  defaultChain: arbitrum,
-  // privacyPolicyUrl: 'https://www.walletconnect.com/privacy-policy.html',
-  // explorerRecommendedWalletIds: ['fbc8d86ad914ebd733fec4812b4b7af5ca709fdd9e75a930115e5baa02c4ef4c'],
-  projectId,
-  themeVariables: {
-    '--w3m-accent-color': '#FF8700',
-    '--w3m-accent-fill-color': '#000000',
-    '--w3m-background-color': pallete.foreground,
-    // '--w3m-background-image-url': '/images/customisation/background.png',
-    // '--w3m-logo-image-url': '/images/customisation/logo.png',
-    '--w3m-background-border-radius': '0px',
-    '--w3m-container-border-radius': '0px',
-    '--w3m-wallet-icon-border-radius': '0px',
-    '--w3m-wallet-icon-large-border-radius': '0px',
-    '--w3m-input-border-radius': '0px',
-    '--w3m-button-border-radius': '0px',
-    '--w3m-secondary-button-border-radius': '0px',
-    '--w3m-notification-border-radius': '0px',
-    '--w3m-icon-button-border-radius': '0px',
-    '--w3m-button-hover-highlight-border-radius': '0px',
-    '--w3m-font-family': `'Moderat', sans-serif`
+// const configChain = configureChains(
+//   chains,
+//   [
+//     // alchemyProvider({ apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low' }),
+//     // infuraProvider({ apiKey: '6d7e461ad6644743b92327579860b662' }),
+//     // publicProvider(),
+
+//     // w3mProvider({ projectId }),
+//     // jsonRpcProvider({
+//     //   rpc: chain => {
+//     //     const supportedChains = [
+//     //       1, 3, 4, 5, 10, 42, 56, 69, 97, 100, 137, 280, 324, 420, 42161, 42220, 43114, 80001, 421611,
+//     //       421613, 1313161554, 1313161555
+//     //     ]
+//     //     const NAMESPACE = 'eip155'
+
+//     //     if (supportedChains.includes(chain.id)) {
+//     //       return {
+//     //         http: `https://rpc.walletconnect.com/v1/?chainId=${NAMESPACE}:${chain.id}&projectId=${projectId}`
+//     //       }
+//     //     }
+
+//     //     return {
+//     //       http: chain.rpcUrls.default.http[0],
+//     //       webSocket: chain.rpcUrls.default.webSocket?.[0]
+//     //     }
+//     //   }
+//     // })
+//   ],
+//   { batch: { multicall: { wait: 20 } }, retryCount: 0 },
+// )
+
+
+const configChain = configureChains(
+  chains, [
+    // publicProvider(),
+    alchemyProvider({
+      apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low',
+    }),
+    // jsonRpcProvider({ 
+    //   rpc: (chain) => {
+    //     return {
+    //       http: `https://arbitrum.llamarpc.com/rpc/${llamaRpc}`,
+    //       webSocket: `wss://arbitrum.llamarpc.com/rpc/${llamaRpc}`,
+    //     }
+    //   },
+    // }),
+    walletConnectProvider({ projectId }),
+  ],
+  { 
+    batch: { multicall: { wait: 10 } }, retryCount: 0,
   }
-}, ethereumClient)
+)
 
 
+const metadata = {
+  name: import.meta.env.VITE_APP_NAME,
+  description: import.meta.env.VITE_APP_DESC_LONG,
+  url: import.meta.env.VITE_WEBSITE,
+  icons: ['https://imagedelivery.net/_aTEfDRm7z3tKgu9JhfeKA/5a7df101-00dc-4856-60a9-921b2879e200/lg']
+}
+
+const wagmiConfig = createConfig({
+  autoConnect: true,
+  connectors: [
+    new WalletConnectConnector({ chains, options: { projectId, showQrModal: false, metadata } }),
+    new InjectedConnector({ chains, options: { shimDisconnect: true } }),
+  ],
+  publicClient: configChain.publicClient,
+  // webSocketPublicClient: configChain.webSocketPublicClient,
+  storage,
+})
 
 
-// const core = new Core({ projectId })
-
-// // e.g. for SignClient. See the "Shared Core" guide linked above for details.
-// const signClient = await SignClient.init({
-//   core,
-//   metadata: {
-//     url: 'https://localhost',
-//     name: 'My Sign-Enabled Dapp',
-//     icons: ['https://my-dapp.com/icons/logo.png'],
-//     description: 'ff'
-//   }
-// })
-
-// const pushDappClient = await PushDappClient.init({
-//   core,
-//   metadata: {
-//     name: 'My Push-Enabled Dapp',
-//     description: 'A dapp using WalletConnect PushClient',
-//     url: 'https://my-dapp.com',
-//     icons: ['https://my-dapp.com/icons/logo.png']
-//   }
-// })
+export const modal = createWeb3Modal({ 
+  wagmiConfig, projectId, chains, customWallets: [],
+  themeMode: theme.name === 'dark' ? 'dark' : 'light',
+  themeVariables: {
+    '--w3m-font-family': 'var(--font)',
+    '--w3m-accent': pallete.primary,
+  },
+})
 

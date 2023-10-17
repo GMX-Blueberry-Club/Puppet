@@ -255,7 +255,6 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
         {
           $head: $text('Action'),
           columnOp: O(style({ flex: 1 })),
-
           $bodyCallback: map((pos) => {
             const $requestRow = $row(style({ alignItems: 'center' }))
 

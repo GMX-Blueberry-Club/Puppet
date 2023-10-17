@@ -1,6 +1,6 @@
 import * as viem from "viem"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot } from "./types.js"
-import { IOraclePrice, factor, getPositionPnlUsd, hashData } from "gmx-middleware-utils"
+import { IOraclePrice, factor, getPositionPnlUsd, hashData, lst } from "gmx-middleware-utils"
 
 
 export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[], shareTarget?: viem.Address): IMirrorPositionListSummary {
@@ -81,7 +81,8 @@ export function getParticiapntMpPortion(mp: IPositionMirrorSettled | IPositionMi
 
 
 export function getMpSlotPnL(mp: IPositionMirrorSlot, markPrice: IOraclePrice, shareTarget?: viem.Address): bigint {
-  const delta = getPositionPnlUsd(mp.isLong,  mp.latestUpdate.sizeInUsd, mp.latestUpdate.sizeInTokens, markPrice.min)
+  const update = lst(mp.updates)
+  const delta = getPositionPnlUsd(mp.isLong,  update.sizeInUsd, update.sizeInTokens, markPrice.min)
   const openPnl = getParticiapntMpPortion(mp, delta, shareTarget)
 
   return openPnl

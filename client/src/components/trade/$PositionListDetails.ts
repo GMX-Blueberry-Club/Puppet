@@ -6,6 +6,7 @@ import {
   combine,
   constant,
   map,
+  mergeArray,
   snapshot,
   switchLatest,
   tap
@@ -15,6 +16,7 @@ import {
   IMarket,
   IPositionSlot, IPriceInterval,
   StateStream,
+  lst,
   switchMap
 } from "gmx-middleware-utils"
 import { IPositionMirrorSlot } from "puppet-middleware-utils"
@@ -67,6 +69,7 @@ export type IRequestTrade = IRequestTradeParams & {
 
 export const $PositionListDetails = (config: IPositionDetailsPanel) => component((
   [switchPosition, switchPositionTether]: Behavior<any, IPositionSlot>,
+  [clickClose, clickCloseTeter]: Behavior<any>,
 
   [changeMarket, changeMarketTether]: Behavior<IMarket>,
   [switchIsLong, switchIsLongTether]: Behavior<boolean>,
@@ -133,7 +136,11 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
                 $ButtonSecondary({
                   $content: $text('Close'),
                   $container: $defaultMiniButtonSecondary
-                })({})
+                })({
+                  click: clickCloseTeter(
+                    constant(pos),
+                  )
+                })
               ),
  
               // isActive
@@ -157,16 +164,22 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
     {
       switchPosition,
       changeMarket: snapshot((params, posSlot) => {
-        const market = params.markets.find(m => m.marketToken === posSlot.latestUpdate.market)
-        if (!market) throw new Error(`Market not found for ${posSlot.latestUpdate.market}`)
+        const update = lst(posSlot.updates)
+        const market = params.markets.find(m => m.marketToken === update.market)
+        if (!market) throw new Error(`Market not found for ${update.market}`)
 
         return market
       }, combineObject({ markets }), switchPosition),
-      switchIsLong: map(params => params.switchPosition.latestUpdate.isLong, combineObject({ switchPosition })),
-      switchIsIncrease: constant(true, switchPosition),
+      switchIsLong: map(params => lst(params.switchPosition.updates).isLong, combineObject({ switchPosition })),
+      switchIsIncrease: mergeArray([
+        constant(true, switchPosition),
+        constant(false, clickClose)
+      ]),
+      changeLeverage: map(params => 0n, combineObject({ clickClose })),
       changeIsUsdCollateralToken: snapshot((params, posSlot) => {
-        debugger
-        return params.market.shortToken === posSlot.latestUpdate.collateralToken
+        const update = lst(posSlot.updates)
+
+        return params.market.shortToken === update.collateralToken
       }, combineObject({ market }), switchPosition),
     }
   ]

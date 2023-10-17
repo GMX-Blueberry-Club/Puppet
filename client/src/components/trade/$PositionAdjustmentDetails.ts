@@ -1,6 +1,7 @@
-import { Behavior, O, combineArray, combineObject } from "@aelea/core"
+import { Behavior, combineObject } from "@aelea/core"
 import { $Node, $node, $text, NodeComposeFn, attr, component, style } from "@aelea/dom"
-import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
+import { $column, $row, layoutSheet } from "@aelea/ui-components"
+import { pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
 import {
   awaitPromises,
@@ -8,56 +9,45 @@ import {
   empty,
   map,
   mergeArray,
-  multicast, now,
+  multicast,
   skipRepeats,
   snapshot,
   switchLatest
 } from "@most/core"
 import { Stream } from "@most/types"
+import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
 import {
-  $Table,
   $alert,
   $alertTooltip,
   $anchor,
   $infoLabeledValue,
-  $infoTooltipLabel,
-  $txHashRef
+  $infoTooltipLabel
 } from "gmx-middleware-ui-components"
 import {
   DecreasePositionSwapType,
-  IPositionDecrease,
-  IPositionIncrease,
   IPositionSlot, IPriceInterval,
   OrderType,
   StateStream,
   abs,
-  div,
   filterNull,
   getBasisPoints,
   getDenominator,
   getTokenDescription,
-  getTokenUsd,
-  readableDate,
+  lst,
   readableFixedUSD30,
   readablePercentage,
   readableUnitAmount,
-  resolveAddress,
-  switchMap,
-  timeSince,
-  unixTimestampNow
+  resolveAddress
 } from "gmx-middleware-utils"
 import * as viem from "viem"
+import { $Popover } from "../$Popover.js"
 import { $heading2 } from "../../common/$text.js"
+import { IGmxProcessState } from "../../data/process/process"
 import { connectContract, wagmiWriteContract } from "../../logic/common.js"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
-import { IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "./$PositionEditor.js"
-import { pallete } from "@aelea/ui-components-theme"
-import { $ButtonSecondary, $ButtonPrimary, $ButtonPrimaryCtx } from "../form/$Button.js"
-import { MouseEventParams } from "lightweight-charts"
-import { erc20Abi } from "abitype/test"
-import { $Popover } from "../$Popover.js"
-import { IGmxProcessState } from "../../data/process/process"
+import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary } from "../form/$Button.js"
+import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 
 
 export enum ITradeFocusMode {
@@ -238,7 +228,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
     return [res]
   }, requestTrade)
   
-  const resetLeverage = switchMap(() => position, clickResetPosition)
+  
 
   const requestApproveSpend = multicast(map(params => {
     const recpt = wagmiWriteContract({
@@ -436,7 +426,6 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
           })
         }
 
-
         return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', flex: 1 }))(
           $row(style({ flex: 1, minWidth: 0 }))(
             switchLatest(map(error => {
@@ -453,8 +442,8 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
             $ButtonSecondary({ 
               $content: $text('Reset'),
               disabled: map(params => {
-                return params.sizeDelta === 0n && params.collateralDelta === 0n
-              }, combineObject({ sizeDelta, collateralDelta }))
+                return params.sizeDelta === 0n && params.collateralDelta === 0n && params.isIncrease
+              }, combineObject({ sizeDelta, collateralDelta, isIncrease }))
             })({
               click: clickResetPositionTether(constant(null))
             })
@@ -465,23 +454,25 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
               const newLocal = params.disableButtonValidation || params.sizeDelta === 0n || params.collateralDelta === 0n
               return newLocal
             }, combineObject({ disableButtonValidation, sizeDelta, collateralDelta })),
-            $content: $text(map(_params => {
-              let modLabel: string
+            $content: $text(
+              map(_params => {
+                let modLabel: string
 
-              if (_params.position) {
-                if (_params.isIncrease) {
-                  modLabel = 'Increase'
+                if (_params.position) {
+                  if (_params.isIncrease) {
+                    modLabel = 'Increase'
+                  } else {
+                    modLabel = (_params.sizeDeltaUsd + lst(_params.position.updates).sizeInUsd === 0n) ? 'Close' : 'Reduce'
+                  }
                 } else {
-                  modLabel = (_params.sizeDeltaUsd + _params.position.latestUpdate.sizeInUsd === 0n) ? 'Close' : 'Reduce'
+                  modLabel = 'Open'
                 }
-              } else {
-                modLabel = 'Open'
-              }
 
-              const focusPriceLabel = _params.focusPrice ? ` @ ${readableUnitAmount(_params.focusPrice)}` : ''
+                const focusPriceLabel = _params.focusPrice ? ` @ ${readableUnitAmount(_params.focusPrice)}` : ''
 
-              return modLabel + focusPriceLabel
-            }, combineObject({ position, sizeDeltaUsd, isIncrease, focusPrice })))
+                return modLabel + focusPriceLabel
+              }, combineObject({ position, sizeDeltaUsd, isIncrease, focusPrice }))
+            )
           })({
             click: clickProposeTradeTether(
               constant(config.wallet)
@@ -514,10 +505,15 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
         }
       }, requestApproveSpend))),
 
-      leverage: filterNull(snapshot((params, positionSlot) => {
-        if (positionSlot === null) return null
-        return div(positionSlot.latestUpdate.sizeInUsd, params.netPositionValueUsd)
-      }, combineObject({ netPositionValueUsd }), resetLeverage)),
+      // collateralDeltaUsd: constant(0n, clickResetPosition),
+      // collateralSizeUsd: constant(0n, clickResetPosition),
+
+      // isIncrease: constant(true, clickResetPosition),
+
+      // leverage: filterNull(snapshot((params) => {
+      //   if (params.position === null) return null
+      //   return div(params.position.latestUpdate.sizeInUsd, params.netPositionValueUsd)
+      // }, combineObject({ netPositionValueUsd, position }), clickResetPosition)),
 
     }
   ]

@@ -1,4 +1,4 @@
-import { chain, delay, map, now, recoverWith } from "@most/core"
+import { chain, constant, delay, join, map, now, recoverWith } from "@most/core"
 import { Stream } from "@most/types"
 import { ILogOrdered, ILogOrderedEvent } from "gmx-middleware-utils"
 import * as viem from "viem"
@@ -53,6 +53,7 @@ export type IFilterLogsParams<
   fromBlock: bigint
   toBlock: bigint
   publicClient: viem.PublicClient
+  // iteration: number
 }
 
 export const fetchTradesRecur = <
@@ -66,50 +67,51 @@ export const fetchTradesRecur = <
 ): Stream<TReturn[]> => {
 
   let retryAmount = 0
-  let delayTime = 0
-  const rangeBlockQuery = params.rangeBlockQuery
-  const nextfromBlock = params.fromBlock + (rangeBlockQuery || 1000000n)
+  let newRangeBlockQuery = 0n
 
-  const nextBatchResponse = rangeBlockQuery
-    ? chain(res => {
-      if (nextfromBlock >= params.toBlock) return now(res)
+  // const getParams = { ...params, toBlock: retryAmount === 0 ? undefined : nextfromBlock }
 
-      const newPage = fetchTradesRecur({ ...params, fromBlock: nextfromBlock }, getList)
-
-      return map(
-        nextPage => [...res, ...nextPage],
-        newPage
-      )
-    }, getList({ ...params, toBlock: nextfromBlock }))
-    : getList({ ...params, toBlock: undefined })
-
-
-
-  return recoverWith<TReturn[], Error & { code: number }, TReturn[]>((err): Stream<TReturn[]> => {
-    delayTime += 1000
-    const delayEvent = delay(delayTime, now(null))
+  const parseResp = recoverWith<TReturn[], Error & { code: number }>(err => {
+    console.warn(`fetchTradesRecur error: ${err.message} ${err.code} retrying in ${retryAmount} seconds`)
 
     if (retryAmount > 3) throw err
+
+    retryAmount = retryAmount + 1
     
-    let reducedRange = params.rangeBlockQuery
-    
+    if (err.code === -32602) {
+      newRangeBlockQuery = (params.rangeBlockQuery || 100000n) / BigInt(retryAmount)
+    }
+
     if (err.code === -32005) {
       // @ts-ignore
       const causeArgs = err?.cause?.cause?.cause?.data
       if (causeArgs.from && causeArgs.to) {
-        reducedRange = BigInt(causeArgs.to) - BigInt(causeArgs.from)
+        newRangeBlockQuery = BigInt(causeArgs.to) - BigInt(causeArgs.from)
       }
     } else {
-      reducedRange = (params.rangeBlockQuery || 100000n) / 2n
+      newRangeBlockQuery = (params.rangeBlockQuery || 100000n) / 2n
     }
 
-    retryAmount++
+    const req = getList({ ...params, toBlock: params.fromBlock + newRangeBlockQuery })
 
-    return chain(() => {
+    return delayEvent(retryAmount * 2000, req)
+  }, getList(params))
 
-      return fetchTradesRecur({ ...params, rangeBlockQuery: reducedRange }, getList)
-    }, delayEvent)
-  }, nextBatchResponse)
+  return chain(res => {
+    const nextfromBlock = params.rangeBlockQuery ? params.fromBlock + newRangeBlockQuery : params.toBlock
+
+    if (nextfromBlock >= params.toBlock) return now(res)
+
+    const rangeBlockQuery = newRangeBlockQuery
+    const fromBlock = nextfromBlock + rangeBlockQuery
+
+    const newPage = fetchTradesRecur({ ...params, rangeBlockQuery, fromBlock }, getList)
+
+    return map(
+      nextPage => [...res, ...nextPage],
+      newPage
+    )
+  }, delayEvent(1000, parseResp))
 }
 
 
@@ -126,3 +128,8 @@ function getShortHash(name: string, obj: any) {
 }
 
 
+function delayEvent <T>(time: number, src: Stream<T>) {
+  const delayTime = delay(time, now(null))
+
+  return join(constant(src, delayTime))
+}

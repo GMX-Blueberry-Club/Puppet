@@ -37,7 +37,8 @@ export interface IProcessSourceConfig<TLog extends ILogOrdered, TState> {
 
 
 export interface IProcessorConfig<TState, TParentName extends string> {
-  seedFile: Stream<IProcessedStore<TState>>,
+  queryBlockRange?: bigint
+  seedFile?: Stream<IProcessedStore<TState>>,
   parentScope: storeUtils.IStoreconfig<TParentName>,
   mode: IProcessEnvironmentMode
   blueprint: Omit<IProcessedStore<TState>, 'orderId' | 'blockNumber'>,
@@ -50,7 +51,6 @@ export interface IProcessParams<TState, TProcessConfigList extends ILogOrdered[]
   scope: storeUtils.IStoreScope<`${TParentName}.${string}`, any>
   processList: { [P in keyof TProcessConfigList]: IProcessSourceConfig<TProcessConfigList[P], TState> }
   store: Stream<IProcessedStore<TState>>,
-  seedFile: Stream<IProcessedStore<TState>>
 }
 
 export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], TParentName extends string >(
@@ -61,8 +61,6 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
   const scope = storeUtils.createStoreScope(config.parentScope, 'processor')
   const scopeKey = getProcessorKey(processList, config.blueprint.config)
   const storedIdbSeed: Stream<IProcessedStore<TSeed>> = indexDB.get(scope, scopeKey)
-
-
 
   const store = switchMap(storedState => {
     // if store is empty, fetch seed file
@@ -81,9 +79,8 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
         const blockNumber = config.blueprint.config.startBlock
         const orderId = getblockOrderIdentifier(config.blueprint.config.startBlock)
         return { ...config.blueprint, blockNumber, orderId }
-      }, config.seedFile)
+      }, config.seedFile || now(null))
     }
-
 
     return now(storedState)
   }, storedIdbSeed)

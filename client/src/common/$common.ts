@@ -9,12 +9,12 @@ import * as GMX from 'gmx-middleware-const'
 import { TOKEN_SYMBOL } from "gmx-middleware-const"
 import { $bear, $bull, $infoTooltipLabel, $Link, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
 import {
-  factor, getBasisPoints, getFundingFee,
-  getMarginFees,
+  getBasisPoints,
   getRoughLiquidationPrice,
-  getTokenDescription, getTokenUsd, IAbstractPositionParams, IMarketInfo, IOraclePrice, IPosition, IPositionSettled,
-  IPositionSlot,
+  getTokenDescription, getTokenUsd, IAbstractPositionParams, IMarketInfo, IOraclePrice,
+  IPositionSettled,
   isPositionSettled, liquidationWeight,
+  lst,
   readableFixedUSD30,
   readableLeverage,
   readablePercentage,
@@ -27,12 +27,12 @@ import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile.j
 import { $Popover } from "../components/$Popover.js"
 import { $RouteSubscriptionEditor } from "../components/$RouteSubscription.js"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button.js"
+import { IGmxProcessState, latestTokenPrice } from "../data/process/process"
+import { contractReader } from "../logic/common"
 import { IProfileActiveTab } from "../pages/$Profile.js"
 import { $seperator2 } from "../pages/common.js"
 import { wallet } from "../wallet/walletLink.js"
 import { $puppetLogo } from "./$icons.js"
-import { IGmxProcessState, latestTokenPrice } from "../data/process/process"
-import { contractReader } from "../logic/common"
 import { $labeledDivider } from "./elements/$common"
 
 
@@ -131,10 +131,11 @@ export const $tokenIcon = (indexToken: viem.Address, IIcon?: { width?: string })
 export const $sizeAndLiquidation = (mp: IPositionMirrorSlot, markPrice: Stream<IOraclePrice>, shareTarget?: viem.Address) => {
   const size = getParticiapntMpPortion(mp, mp.maxSizeUsd, shareTarget)
   const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, shareTarget)
+  const update = lst(mp.updates)
 
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
     $text(readableFixedUSD30(size)),
-    $liquidationSeparator(mp.isLong, mp.latestUpdate.sizeInUsd, mp.latestUpdate.sizeInTokens, mp.latestUpdate.collateralAmount, markPrice),
+    $liquidationSeparator(mp.isLong, update.sizeInUsd, update.sizeInTokens, update.collateralAmount, markPrice),
     $leverage(size, collateral),
   )
 }
@@ -266,6 +267,7 @@ export const $openPositionPnlBreakdown = (pos: IPositionMirrorSlot, marketInfo: 
   // const pendingFundingFee = getFundingFee(pos.entryFundingRate, cumulativeTokenFundingRates, pos.size)
   // const totalMarginFee = getMarginFees(pos.cumulativeSize)
 
+  const update = lst(pos.updates)
   
   return $column(layoutSheet.spacing, style({ minWidth: '250px' }))(
     $row(style({ placeContent: 'space-between' }))(
@@ -273,7 +275,7 @@ export const $openPositionPnlBreakdown = (pos: IPositionMirrorSlot, marketInfo: 
 
       $row(layoutSheet.spacingTiny)(
         $text(style({ color: pallete.foreground, flex: 1 }))('Collateral'),
-        $text(readableTokenUsd(pos.latestUpdate["collateralTokenPrice.max"], pos.latestUpdate.collateralAmount))
+        $text(readableTokenUsd(update["collateralTokenPrice.max"], update.collateralAmount))
       ),
     ),
     $column(layoutSheet.spacingSmall)(

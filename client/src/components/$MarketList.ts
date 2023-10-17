@@ -21,7 +21,7 @@ interface IMarketList {
   $rowCallback?: Op<{ market: IMarket, price: IMarketPrice }, NodeComposeFn<$Node>>
 }
 
-export const $MarketInfoList = ({ 
+export const $MarketInfoList = ({
   $container = $column,
   processData,
   chain,

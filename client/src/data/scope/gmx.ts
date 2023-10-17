@@ -52,7 +52,7 @@ const vaultConfig = {
 export const requestIncreasePosition = store.createRpcLogEventScope({
   ...config,
   ...GMX.CONTRACT[42161].PositionRouter,
-  startBlock: 137000000n,
+  startBlock: 140000000n,
   eventName: 'CreateIncreasePosition',
 })
 
@@ -96,7 +96,7 @@ export const positionFeeInfo = store.createRpcLogEventScope({
   ...config,
   ...GMX.CONTRACT[42161].EventEmitter,
   eventName: 'EventLog1',
-  startBlock: 137000000n,
+  startBlock: 140000000n,
   args: {
     eventNameHash: GMX.PositionEvent.PositionFeesCollected
   }
@@ -107,7 +107,7 @@ export const oraclePrice = store.createRpcLogEventScope({
   ...config,
   ...GMX.CONTRACT[42161].EventEmitter,
   eventName: 'EventLog1',
-  startBlock: 137000000n,
+  startBlock: 140000000n,
   args: {
     eventNameHash: GMX.OracleEvent.OraclePriceUpdate
   }
@@ -117,7 +117,7 @@ export const positionIncrease = store.createRpcLogEventScope({
   ...config,
   ...GMX.CONTRACT[42161].EventEmitter,
   eventName: 'EventLog1',
-  startBlock: 137000000n,
+  startBlock: 140000000n,
   args: {
     eventNameHash: GMX.PositionEvent.PositionIncrease
   }
@@ -127,7 +127,7 @@ export const positionDecrease = store.createRpcLogEventScope({
   ...config,
   ...GMX.CONTRACT[42161].EventEmitter,
   eventName: 'EventLog1',
-  startBlock: 137000000n,
+  startBlock: 140000000n,
   args: {
     eventNameHash: GMX.PositionEvent.PositionDecrease
   }

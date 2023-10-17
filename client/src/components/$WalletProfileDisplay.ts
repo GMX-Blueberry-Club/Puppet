@@ -5,7 +5,7 @@ import { $column, $row } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, map, mergeArray, now, snapshot, switchLatest } from "@most/core"
 import { $Link } from "gmx-middleware-ui-components"
-import { account, web3Modal } from "../wallet/walletLink.js"
+import { account, modal } from "../wallet/walletLink.js"
 import { $disconnectedWalletDisplay, $profileDisplay } from "./$AccountProfile.js"
 import * as router from '@aelea/router'
 
@@ -45,7 +45,9 @@ export const $WalletProfileDisplay = ({ $container = $row, parentRoute }: IWalle
           : walletChangeTether(
             nodeEvent('click'),
             map(async () => {
-              await web3Modal.openModal()
+              await modal.open({
+                view: "Connect",
+              })
               return `walletConnect`
             }),
             awaitPromises

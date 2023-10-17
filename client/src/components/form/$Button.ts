@@ -83,6 +83,9 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
 
 
   const multicastRequest = multicast(config.request)
+  const gradient = 'conic-gradient(from 180deg at 50% 70%, hsla(0,0%,98%,1) 0deg, #eec32d 72.0000010728836deg, #ec4b4b 144.0000021457672deg,#709ab9 216.00000858306885deg, #4dffbf 288.0000042915344deg, hsla(0,0%,98%,1) 1turn)'
+  const bg = 'hsl(0 0% 0%)'
+
 
 
   const duringRequest = multicast(mergeArray([
@@ -106,7 +109,8 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
       $container: config.$container || $defaultButtonPrimary(
         style({ alignItems: 'center' }),
         style({
-          border: `1px solid`,
+          // background: `linear-gradient(${bg}, ${bg}) padding-box, ${gradient} border-box;`,
+          // border: `4px solid transparent`,
           padding: '14px 18px',
           animation: `borderRotate var(--d) linear infinite forwards`,
           borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`

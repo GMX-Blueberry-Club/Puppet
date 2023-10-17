@@ -96,7 +96,7 @@ const config: IProcessedStoreConfig = {
 }
 
 const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
-  const req = await (await fetch('/db/sha256-WLg0jaGcTYAdXutwJ1uY+KOxOwjaxGUk7ZTtHNV6FzU=.json')).json().catch(() => null)
+  const req = await (await fetch('/db/sha256-tqv0Z0PzWW1wksRqlKI7qhyBnHA51spJ6UlyKf4VwN0=.json')).json().catch(() => null)
 
   if (req === null) {
     return null
@@ -122,10 +122,11 @@ const www = {
 
 export const gmxProcess = defineProcess(
   {
-    seedFile,
+    // seedFile,
     mode: SW_DEV ? IProcessEnvironmentMode.DEV : IProcessEnvironmentMode.PROD,
     blueprint: { config, state },
     parentScope: rootStoreScope,
+    queryBlockRange: 100000n,
   },
   {
     source: gmxLog.marketCreated,
@@ -143,7 +144,7 @@ export const gmxProcess = defineProcess(
   },
 
   {
-    queryBlockRange: 100000n,
+    // queryBlockRange: 100000n,
     source: gmxLog.requestIncreasePosition,
     step(seed, value) {
       if (seed.blockMetrics.height > 0n)  {
@@ -169,7 +170,7 @@ export const gmxProcess = defineProcess(
 
   {
     source: gmxLog.oraclePrice,
-    queryBlockRange: 100000n,
+    // queryBlockRange: 100000n,
     step(seed, value) {
       const entity = getEventdata<IOraclePriceUpdateEvent>(value)
 
@@ -196,7 +197,7 @@ export const gmxProcess = defineProcess(
   },
   {
     source: gmxLog.positionIncrease,
-    queryBlockRange: 100000n,
+    // queryBlockRange: 100000n,
     step(seed, value) {
       const update = getEventType<IPositionIncrease>('PositionIncrease', value, seed.approximatedTimestamp)
 
@@ -209,7 +210,7 @@ export const gmxProcess = defineProcess(
         collateralToken: update.collateralToken,
         isLong: update.isLong,
         indexToken: market.indexToken,
-        latestUpdate: update,
+        // latestUpdate: update,
         puppets: [],
         // feeUpdates: [],
         orderKey: update.orderKey,
@@ -225,7 +226,7 @@ export const gmxProcess = defineProcess(
 
       const tokenDescription = getMappedValue(TOKEN_ADDRESS_DESCRIPTION_MAP, market.indexToken)
 
-      slot.latestUpdate = update
+      // slot.latestUpdate = update
       slot.updates = [...slot.updates, update]
       slot.averagePrice = update.sizeInUsd / update.sizeInTokens * getDenominator(tokenDescription.decimals)
       slot.cumulativeFee += update.fundingFeeAmountPerSize
@@ -258,14 +259,14 @@ export const gmxProcess = defineProcess(
   },
   {
     source: gmxLog.positionDecrease,
-    queryBlockRange: 100000n,
+    // queryBlockRange: 100000n,
     step(seed, value) {
       const update = getEventType<IPositionDecrease>('PositionDecrease', value, seed.approximatedTimestamp)
       const slot = seed.mirrorPositionSlot[update.positionKey]
 
       if (!slot) return seed
 
-      slot.latestUpdate = update
+      // slot.latestUpdate = update
       slot.realisedPnl += update.basePnlUsd
                 
       slot.updates = [...slot.updates, update]
