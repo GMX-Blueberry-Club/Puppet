@@ -4,7 +4,7 @@ import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
-import { constant, empty, map, merge, mergeArray, multicast, now, skipRepeats, startWith, switchLatest, tap } from '@most/core'
+import { constant, empty, map, merge, mergeArray, multicast, now, recoverWith, skipRepeats, startWith, switchLatest, tap } from '@most/core'
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
 import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN } from "gmx-middleware-const"
@@ -64,12 +64,16 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   //   return params.block
   // }, zipState({ process: gmxProcess.store, block: block })))
 
-  const syncBlock = mergeArray([
-    block,
+  const syncBlock: Stream<bigint | null> = mergeArray([
+    recoverWith(() => now(null), block),
     syncProcessData,
   ])
 
   const syncProcessEvent = multicast(switchMap(params => {
+    if (params.syncBlock === null) {
+      return now(params.store)
+    }
+
     const refreshThreshold = SW_DEV ? 150 : 50
     const blockDelta = params.syncBlock - params.store.blockNumber
 
@@ -77,7 +81,10 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       const syncParams = { ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlock }
       const storedBatch = queryLogs(syncParams, params.store)
       
-      return processLogs(syncParams, params.store, storedBatch)
+      return mergeArray([
+        processLogs(syncParams, params.store, storedBatch),
+        now(params.store)
+      ])
     }
 
     return now(params.store)
@@ -315,12 +322,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
           $row(layoutSheet.spacing, style({ position: 'absolute', zIndex: 100, right: '10px', bottom: '10px' }))(
 
             $row(
-
               switchMap(isSyncing => {
-                if (isSyncing) {
-                  return $spinner
-                }
-
+                if (isSyncing) return $spinner
 
                 return $Tooltip({
                 // $dropContainer: $defaultDropContainer,
@@ -336,34 +339,33 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               }, isBlockSyncing)
             ),
             
-            // switchMap(params => {
-            //   const refreshThreshold = SW_DEV ? 150 : 50
-            //   const blockDelta = params.syncBlock  - params.process.blockNumber
-
-            //   if (blockDelta < refreshThreshold) {
-            //     return empty()
-            //   }
+            switchMap(params => {
+              const refreshThreshold = SW_DEV ? 150 : 50
+              const blockDelta = params.syncBlock ? params.syncBlock - params.process.blockNumber : null
 
 
-            //   return fadeIn($row(style({ position: 'absolute', bottom: '18px', left: `50%` }))(
-            //     style({ transform: 'translateX(-50%)' })(
-            //       $column(layoutSheet.spacingTiny, style({
-            //         backgroundColor: pallete.horizon,
-            //         border: `1px solid`,
-            //         padding: '20px',
-            //         animation: `borderRotate var(--d) linear infinite forwards`,
-            //         borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
-            //       }))(
-            //         $text(`Syncing Blockchain Data....`),
-            //         $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(
-            //           params.process.state.approximatedTimestamp === 0
-            //             ? `Indexing for the first time, this may take a minute or two.`
-            //             : `${timeSince(params.process.state.approximatedTimestamp)} old data is displayed`
-            //         ),
-            //       )
-            //     )
-            //   ))
-            // }, syncBlock),
+              if (blockDelta < refreshThreshold) return empty()
+
+
+              return fadeIn($row(style({ position: 'fixed', bottom: '18px', left: `50%` }))(
+                style({ transform: 'translateX(-50%)' })(
+                  $column(layoutSheet.spacingTiny, style({
+                    backgroundColor: pallete.horizon,
+                    border: `1px solid`,
+                    padding: '20px',
+                    animation: `borderRotate var(--d) linear infinite forwards`,
+                    borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
+                  }))(
+                    $text(`Syncing blocks of data: ${readableUnitAmount(Number(blockDelta))}`),
+                    $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(
+                      params.process.state.approximatedTimestamp === 0
+                        ? `Indexing for the first time, this may take a minute or two.`
+                        : `${timeSince(params.process.state.approximatedTimestamp)} old data is displayed`
+                    ),
+                  )
+                )
+              ))
+            }, combineObject({ syncBlock, process })),
             switchMap((cb) => {
               return fadeIn(
               

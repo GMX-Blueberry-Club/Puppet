@@ -114,11 +114,6 @@ const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async (
   return storedSeed
 })
 
-const www = {
-  ...GMX.CONTRACT[42161].PositionRouter,
-  startBlock: 137100000n,
-  eventName: 'CreateIncreasePosition',
-} as const
 
 export const gmxProcess = defineProcess(
   {

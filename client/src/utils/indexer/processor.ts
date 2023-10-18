@@ -103,7 +103,7 @@ export function queryLogs<TSeed, TProcessConfigList extends ILogOrdered[], TPare
 
   const nextLogBatch = config.processList.map(processConfig => {
     const rangeKey = IDBKeyRange.bound(
-      processConfig.source.startBlock ? getblockOrderIdentifier(processConfig.source.startBlock) : processState.orderId,
+      Math.max(getblockOrderIdentifier(processConfig.source.startBlock || 0n), processState.orderId),
       getblockOrderIdentifier(config.syncBlock), true
     )
     const nextStoredLog: Stream<ILogOrderedEvent[]> = indexDB.getRange(processConfig.source.scope, rangeKey)

@@ -361,9 +361,9 @@ export function getUpdateTickList(list: (IPositionMirrorSettled | IPositionMirro
     .flatMap(mp => {
       const tickList = mp.updates.map(update => ({ update, source: mp }))
 
-      if ('settlement' in mp) {
-        return [...tickList, { update: mp.settlement, source: mp }]
-      }
+      // if (mp.__typename === 'PositionSettled') {
+      //   return [...tickList, { update: mp.settlement, source: mp }]
+      // }
 
       return tickList
     })
