@@ -64,6 +64,25 @@ export interface IGmxProcessState {
 }
 
 
+const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
+  const req = await (await fetch('/db/sha256-C+Or72XxnxKUek8DkrZAa2a0hiAmT_7dJiumPMtO49c=.json')).json().catch(() => null)
+
+  if (req === null) {
+    return null
+  }
+
+  const storedSeed: IProcessedStore<IGmxProcessState> = transformBigints(req)
+  const seedFileValidationError = validateConfig(storedSeed.config, storedSeed.config)
+
+  if (seedFileValidationError) {
+    console.error(new Error(`Seed file validation error: ${seedFileValidationError}`))
+    return null
+  }
+
+  return storedSeed
+})
+
+
 
 const state: IGmxProcessState = {
   blockMetrics: {
@@ -91,33 +110,15 @@ const state: IGmxProcessState = {
 
 const config: IProcessedStoreConfig = {
   startBlock: 107745255n,
-  endBlock: 125227192n,
+  endBlock: 141982108n,
   chainId: arbitrum.id,
 }
 
-const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
-  const req = await (await fetch('/db/sha256-tqv0Z0PzWW1wksRqlKI7qhyBnHA51spJ6UlyKf4VwN0=.json')).json().catch(() => null)
-
-  if (req === null) {
-    return null
-  }
-
-  const storedSeed: IProcessedStore<IGmxProcessState> = transformBigints(req)
-
-  const seedFileValidationError = validateConfig(storedSeed.config, storedSeed.config)
-
-  if (seedFileValidationError) {
-    console.error(new Error(`Seed file validation error: ${seedFileValidationError}`))
-    return null
-  }
-
-  return storedSeed
-})
 
 
 export const gmxProcess = defineProcess(
   {
-    // seedFile,
+    seedFile,
     mode: SW_DEV ? IProcessEnvironmentMode.DEV : IProcessEnvironmentMode.PROD,
     blueprint: { config, state },
     parentScope: rootStoreScope,

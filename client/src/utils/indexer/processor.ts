@@ -1,11 +1,10 @@
-import { chain, constant, fromPromise, map, mergeArray, now, switchLatest } from "@most/core"
+import { chain, constant, fromPromise, map, mergeArray, now, switchLatest, throwError } from "@most/core"
 import { Stream } from "@most/types"
 import { ILogEvent, ILogOrdered, ILogOrderedEvent, getEventOrderIdentifier, getblockOrderIdentifier, importGlobal, max, switchMap } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { zipArray } from "../../logic/utils.js"
 import * as indexDB from "../storage/indexDB.js"
 import * as storeUtils from "../storage/storeScope.js"
-import { transformBigints } from "../storage/storeScope.js"
 import { IIndexEventLogScopeParams, fetchTradesRecur } from "./rpc.js"
 
 
@@ -40,8 +39,8 @@ export interface IProcessorConfig<TState, TParentName extends string> {
   queryBlockRange?: bigint
   seedFile?: Stream<IProcessedStore<TState>>,
   parentScope: storeUtils.IStoreconfig<TParentName>,
-  mode: IProcessEnvironmentMode
   blueprint: Omit<IProcessedStore<TState>, 'orderId' | 'blockNumber'>,
+  mode: IProcessEnvironmentMode
 }
 
 
@@ -51,6 +50,7 @@ export interface IProcessParams<TState, TProcessConfigList extends ILogOrdered[]
   scope: storeUtils.IStoreScope<`${TParentName}.${string}`, any>
   processList: { [P in keyof TProcessConfigList]: IProcessSourceConfig<TProcessConfigList[P], TState> }
   store: Stream<IProcessedStore<TState>>,
+  seedFile: Stream<IProcessedStore<TState>>,
 }
 
 export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], TParentName extends string >(
@@ -60,33 +60,51 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
 
   const scope = storeUtils.createStoreScope(config.parentScope, 'processor')
   const scopeKey = getProcessorKey(processList, config.blueprint.config)
-  const storedIdbSeed: Stream<IProcessedStore<TSeed>> = indexDB.get(scope, scopeKey)
+  const storedIdbSeed: Stream<IProcessedStore<TSeed> | undefined> = indexDB.get(scope, scopeKey)
+
 
   const store = switchMap(storedState => {
-    // if store is empty, fetch seed file
+    const storedStateValidationError = validateConfig(config.blueprint.config, storedState?.config)
+
+    // if store is invalid, bootstrap using seed file
     // if seed file is invalid, bootstrap using blueprint
-    if (!storedState) {
-      return map(loadedSeedfile => {
-        if (loadedSeedfile) {
-          const seedFileValidationError = validateConfig(loadedSeedfile.config, config.blueprint.config)
+    if (storedStateValidationError) {
+      console.warn(
+        new Error(`Invalid stored state: ${storedStateValidationError}`),
+        'bootstrapping using seed file'
+      )
+      // clean previously stored processed state
+      const clearPreviousScope = indexDB.clear(scope)
 
-          if (seedFileValidationError) {
-            throw new Error(`Config file validation error: ${seedFileValidationError}. delete seed file to bootstrap from blueprint`)
+      return mergeArray([
+        clearPreviousScope,
+        map(loadedSeedfile => {
+          const seedFileValidationError = validateConfig(config.blueprint.config, loadedSeedfile?.config)
+
+          if (!seedFileValidationError) {
+            const blockNumber = loadedSeedfile!.blockNumber || config.blueprint.config.startBlock
+            const orderId = loadedSeedfile!.orderId || getblockOrderIdentifier(config.blueprint.config.startBlock)
+            return { ...loadedSeedfile, blockNumber, orderId }
           }
-          return loadedSeedfile
-        }
 
-        const blockNumber = config.blueprint.config.startBlock
-        const orderId = getblockOrderIdentifier(config.blueprint.config.startBlock)
-        return { ...config.blueprint, blockNumber, orderId }
-      }, config.seedFile || now(null))
+          console.warn(
+            new Error(`Invalid seed file: ${seedFileValidationError}`),
+            'bootstrapping using blueprint'
+          )
+
+          const blockNumber = config.blueprint.config.startBlock
+          const orderId = getblockOrderIdentifier(config.blueprint.config.startBlock)
+          return { ...config.blueprint, blockNumber, orderId }
+        }, config.seedFile || now(null))
+      ])
     }
 
     return now(storedState)
   }, storedIdbSeed)
 
+  const seedFile = config.seedFile || throwError(new Error('no seed file provided'))
   
-  return { ...config, processList, scope, store, scopeKey  }
+  return { ...config, processList, scope, store, scopeKey, seedFile  }
 }
 
 
@@ -117,7 +135,9 @@ export function queryLogs<TSeed, TProcessConfigList extends ILogOrdered[], TPare
       }
 
 
-      const event = processConfig.source.abi.find((ev: any) => ev.type === 'event' && ev.name === processConfig.source.eventName)
+      const event = processConfig.source.abi.find((ev: any) =>
+        ev.type === 'event' && ev.name === processConfig.source.eventName
+      )
 
 
       const next = fromBlock < config.syncBlock
@@ -142,7 +162,6 @@ export function queryLogs<TSeed, TProcessConfigList extends ILogOrdered[], TPare
               })
             ) as Stream<ILogEvent[]>
 
-
             const storeMappedLogs = switchMap(logs => {
               const filtered = logs
                 .map(ev => {
@@ -150,7 +169,6 @@ export function queryLogs<TSeed, TProcessConfigList extends ILogOrdered[], TPare
                   return storeObj
                 })
                 .filter(ev => {
-
                   return ev.orderId > Math.max(processState.orderId || 0, lstEvent ? lstEvent.orderId : 0)
                 })
 
@@ -214,6 +232,7 @@ export function processLogs<
 
     const setProcess = indexDB.set(config.scope, nextState, config.scopeKey)
 
+    // avoid clearing stored logs in dev mode
     if (config.mode === IProcessEnvironmentMode.DEV) {
       return setProcess
     }
@@ -252,18 +271,21 @@ function getProcessorKey(processConfigList: IProcessSourceConfig<any, any>[], bl
   }, `${blueprint.chainId}:${blueprint.startBlock}:${blueprint.endBlock}`)
 }
 
-export function validateConfig(blueprintConfig: IProcessedStoreConfig, seedConfig: IProcessedStoreConfig): null | string {
-
-  if (seedConfig.startBlock !== blueprintConfig.startBlock) {
-    return `seed startBlock ${seedConfig.startBlock} does not match blueprint startBlock ${blueprintConfig.startBlock}`
+export function validateConfig(blueprintConfig: IProcessedStoreConfig, config?: IProcessedStoreConfig): null | string {
+  if (!config) {
+    return 'no config provided'
   }
 
-  if (seedConfig.endBlock !== blueprintConfig.endBlock) {
-    return `seed endBlock ${seedConfig.endBlock} does not match blueprint endBlock ${blueprintConfig.endBlock}`
+  if (blueprintConfig.startBlock !== config.startBlock) {
+    return `seed startBlock ${config.startBlock} does not match blueprint startBlock ${blueprintConfig.startBlock}`
   }
 
-  if (seedConfig.chainId !== blueprintConfig.chainId) {
-    return `seed chainId ${seedConfig.chainId} does not match blueprint chainId ${blueprintConfig.chainId}`
+  if (blueprintConfig.endBlock !== config.endBlock) {
+    return `seed endBlock ${config.endBlock} does not match blueprint endBlock ${blueprintConfig.endBlock}`
+  }
+
+  if (blueprintConfig.chainId !== config.chainId) {
+    return `seed chainId ${config.chainId} does not match blueprint chainId ${blueprintConfig.chainId}`
   }
 
   return null

@@ -248,35 +248,35 @@ export const $Home = (config: ITreasury) => component((
         ),
         $text(style({ color: pallete.foreground, position: 'absolute', bottom: '50px', left: '50%', transform: 'translateX(-50%)' }))('Learn More'),
 
-        $wheelWrapper(style({
-          right: 'calc(100% + 3vw)',
-        }))(
-          $wheel(style({ animation: `${wheelClockwise} 55s linear infinite` }))(
-            $cabin(style({ left: '50%', top: '-35px', animation: `${wheelCounterClockwise} 55s linear infinite` }))(
-            ),
-            $cabin(style({ left: '50%', bottom: '-35px', animation: `${wheelCounterClockwise} 55s linear infinite` }))(
-            ),
-            $cabin(style({ top: '50%', left: '-35px', animation: `${wheelCounterClockwise} 55s linear infinite` }))(
-            ),
-            $cabin(style({ top: '50%', right: '-35px', animation: `${wheelCounterClockwise} 55s linear infinite` }))(
-            ),
-          )
-        ),
-        $wheelWrapper(style({
-          left: 'calc(100% + 3vw)',
-        }))(
-          $wheel(style({ animation: `${wheelClockwise} 35s linear infinite` }))(
-            $cabin(style({ left: '50%', top: '-35px', animation: `${wheelCounterClockwise} 35s linear infinite` }))(
-            ),
-            $cabin(style({ left: '50%', bottom: '-35px', animation: `${wheelCounterClockwise} 35s linear infinite` }))(
-            ),
-            $cabin(style({ top: '50%', left: '-35px', animation: `${wheelCounterClockwise} 35s linear infinite` }))(
-            ),
-            $cabin(style({ top: '50%', right: '-35px', animation: `${wheelClockwise} 35s linear infinite` }))(
-            ),
+        // $wheelWrapper(style({
+        //   right: 'calc(100% + 3vw)',
+        // }))(
+        //   $wheel(style({ animation: `${wheelClockwise} 55s linear infinite` }))(
+        //     $cabin(style({ left: '50%', top: '-35px', animation: `${wheelCounterClockwise} 55s linear infinite` }))(
+        //     ),
+        //     $cabin(style({ left: '50%', bottom: '-35px', animation: `${wheelCounterClockwise} 55s linear infinite` }))(
+        //     ),
+        //     $cabin(style({ top: '50%', left: '-35px', animation: `${wheelCounterClockwise} 55s linear infinite` }))(
+        //     ),
+        //     $cabin(style({ top: '50%', right: '-35px', animation: `${wheelCounterClockwise} 55s linear infinite` }))(
+        //     ),
+        //   )
+        // ),
+        // $wheelWrapper(style({
+        //   left: 'calc(100% + 3vw)',
+        // }))(
+        //   $wheel(style({ animation: `${wheelClockwise} 35s linear infinite` }))(
+        //     $cabin(style({ left: '50%', top: '-35px', animation: `${wheelCounterClockwise} 35s linear infinite` }))(
+        //     ),
+        //     $cabin(style({ left: '50%', bottom: '-35px', animation: `${wheelCounterClockwise} 35s linear infinite` }))(
+        //     ),
+        //     $cabin(style({ top: '50%', left: '-35px', animation: `${wheelCounterClockwise} 35s linear infinite` }))(
+        //     ),
+        //     $cabin(style({ top: '50%', right: '-35px', animation: `${wheelClockwise} 35s linear infinite` }))(
+        //     ),
 
-          )
-        ),
+        //   )
+        // ),
 
       ),
 

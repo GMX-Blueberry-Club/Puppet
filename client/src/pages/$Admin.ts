@@ -1,16 +1,16 @@
 import { Behavior, combineObject } from "@aelea/core"
 import { $node, $text, INode, attrBehavior, component, nodeEvent, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { awaitPromises, fromPromise, map, mergeArray, now, recoverWith, sample, snapshot } from "@most/core"
+import { awaitPromises, empty, fromPromise, map, mergeArray, now, recoverWith, sample, snapshot } from "@most/core"
 import { Stream } from "@most/types"
 import { $Table, $alertContainer, $caretDown, $infoLabeledValue } from "gmx-middleware-ui-components"
 import { readableFileSize, readableNumber, readableUnitAmount, switchMap } from "gmx-middleware-utils"
-import { $heading1, $heading3 } from "../common/$text.js"
+import { $heading1, $heading2, $heading3 } from "../common/$text.js"
 import { $ButtonPrimary, $buttonAnchor, defaultMiniButtonStyle } from "../components/form/$Button.js"
 import { gmxProcess } from "../data/process/process.js"
 import { gmxLog } from "../data/scope/index.js"
-import { $card, $iconCircular } from "../common/elements/$common.js"
-import { IProcessedStore, syncProcess } from "../utils/indexer/processor.js"
+import { $card, $iconCircular, $labeledDivider } from "../common/elements/$common.js"
+import { IProcessedStore, syncProcess, validateConfig } from "../utils/indexer/processor.js"
 import * as indexDb from "../utils/storage/indexDB.js"
 import { jsonStringify } from "../utils/storage/storeScope.js"
 import { blockChange, publicClient } from "../wallet/walletLink.js"
@@ -43,14 +43,6 @@ export const $Admin = component((
       $card(
         $column(layoutSheet.spacing)(
           $ProcessDetails({ seed: now(gmxProcess.blueprint), title: 'Blueprint' })({}),
-
-          $node(),
-          $seperator2,
-          $node(),
-
-
-          $ProcessDetails({ seed: gmxProcess.seedFile, title: 'Processed File' })({}),
-
           
           $node(),
           $seperator2,
@@ -64,7 +56,6 @@ export const $Admin = component((
           $row(style({ placeContent:'space-between' }))(
             $infoLabeledValue('Latest Block', $text(map(s => String(s), blockChange))),
 
-
             $row(layoutSheet.spacing)(
 
               $ButtonPrimary({
@@ -73,8 +64,30 @@ export const $Admin = component((
                 click: syncBlockNumberTether(sample(blockChange))
               })
             )
-          )
-            
+          ),
+
+          $node(),
+          $labeledDivider('Dev Processed File'),
+          $node(),
+
+          switchMap(sf => {
+            const processedFileValidation = validateConfig(gmxProcess.blueprint.config, sf.config)
+
+            if (processedFileValidation) {
+              return $row(
+                $alertContainer(
+                  $column(
+                    $text(style({ fontWeight: 'bold' }))(processedFileValidation),
+                    $text('Processed File, use runtime or blueprint to generate a new valid seed processed file'),
+                  )
+                )
+              )
+            }
+
+            return empty()
+          }, gmxProcess.seedFile),
+
+          $ProcessDetails({ seed: gmxProcess.seedFile, title: 'Processed File' })({}),
         )
       ),
 
