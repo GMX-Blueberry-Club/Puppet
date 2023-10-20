@@ -174,7 +174,25 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   
 
   return [
-    mergeArray([
+    $column(
+      switchMap((cb) => {
+        return fadeIn(
+          $alertContainer(style({ backgroundColor: pallete.horizon }))(
+            filterNull(constant(null, clickUpdateVersion)) as any,
+
+            $text('New version Available'),
+            $ButtonSecondary({
+              $container: $defaultMiniButtonSecondary,
+              $content: $text('Update'),
+            })({
+              click: clickUpdateVersionTether(
+                tap(cb)
+              )
+            })
+          )
+              
+        )
+      }, newUpdateInvoke),
       router.contains(appRoute)(
         $rootContainer(
           $column(style({ flex: 1, position: 'relative' }))(
@@ -366,25 +384,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 )
               ))
             }, combineObject({ syncBlock, process })),
-            switchMap((cb) => {
-              return fadeIn(
-              
-                $alertContainer(style({ backgroundColor: pallete.horizon }))(
-                  filterNull(constant(null, clickUpdateVersion)) as any,
-
-                  $text('New version Available'),
-                  $ButtonSecondary({
-                    $container: $defaultMiniButtonSecondary,
-                    $content: $text('Update'),
-                  })({
-                    click: clickUpdateVersionTether(
-                      tap(cb)
-                    )
-                  })
-                )
-              
-              )
-            }, newUpdateInvoke),    
+   
           ),
 
                         
@@ -427,8 +427,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
         ),
       ),
 
-
-    ])
+    )
 
   ]
 })
