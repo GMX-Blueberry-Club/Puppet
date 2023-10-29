@@ -66,52 +66,56 @@ export const fetchTradesRecur = <
   getList: (req: viem.GetLogsParameters) => Stream<TReturn[]>
 ): Stream<TReturn[]> => {
 
-  let retryAmount = 0
-  let newRangeBlockQuery = 0n
+  let retryAmount = 1
+  let nextRangeBlockQuery = params.rangeBlockQuery || 0n
 
-  // const getParams = { ...params, toBlock: retryAmount === 0 ? undefined : nextfromBlock }
 
-  const parseResp = recoverWith<TReturn[], Error & { code: number }>(err => {
+  const tryGetLog = recoverWith<TReturn[], Error & { code: number }>((err): Stream<TReturn[]> => {
     console.warn(`fetchTradesRecur error: ${err.message} ${err.code} retrying in ${retryAmount} seconds`)
 
     if (retryAmount > 3) throw err
 
     retryAmount = retryAmount + 1
-    
-    if (err.code === -32602) {
-      newRangeBlockQuery = (params.rangeBlockQuery || 100000n) / BigInt(retryAmount)
-    }
 
-    if (err.code === -32005) {
-      // @ts-ignore
-      const causeArgs = err?.cause?.cause?.cause?.data
+    // @ts-ignore
+    const causeArgs = err?.cause?.cause?.cause?.data
+    if (err.code === -32005 && causeArgs) {
       if (causeArgs.from && causeArgs.to) {
-        newRangeBlockQuery = BigInt(causeArgs.to) - BigInt(causeArgs.from)
+        nextRangeBlockQuery = BigInt(causeArgs.to) - BigInt(causeArgs.from)
       }
     } else {
-      newRangeBlockQuery = (params.rangeBlockQuery || 100000n) / 2n
+      nextRangeBlockQuery = (params.rangeBlockQuery || 200000n) / BigInt(retryAmount)
     }
 
-    const req = getList({ ...params, toBlock: params.fromBlock + newRangeBlockQuery })
+    const nextToBlock = params.fromBlock + nextRangeBlockQuery
+    const req = tryGetLog(getList({ ...params, toBlock: nextToBlock }))
 
     return delayEvent(retryAmount * 2000, req)
-  }, getList(params))
+  })
+
+  const nextToBlock = params.rangeBlockQuery ? params.fromBlock + params.rangeBlockQuery : undefined
+
+  const nextLog = tryGetLog(getList({ ...params, toBlock: nextToBlock }))
 
   return chain(res => {
-    const nextfromBlock = params.rangeBlockQuery ? params.fromBlock + newRangeBlockQuery : params.toBlock
+    console.log('fetchTradesRecur', params.fromBlock, nextToBlock, params.rangeBlockQuery)
+    const nextfromBlock = params.fromBlock + nextRangeBlockQuery
 
-    if (nextfromBlock >= params.toBlock) return now(res)
+    if (!params.rangeBlockQuery && !nextRangeBlockQuery || nextfromBlock >= params.toBlock) {
+      return now(res)
+    }
 
-    const rangeBlockQuery = newRangeBlockQuery
-    const fromBlock = nextfromBlock + rangeBlockQuery
-
-    const newPage = fetchTradesRecur({ ...params, rangeBlockQuery, fromBlock }, getList)
+    const newPage = fetchTradesRecur({ 
+      ...params,
+      rangeBlockQuery: nextRangeBlockQuery,
+      fromBlock: nextfromBlock,
+    }, getList)
 
     return map(
       nextPage => [...res, ...nextPage],
       newPage
     )
-  }, delayEvent(1000, parseResp))
+  }, nextLog)
 }
 
 

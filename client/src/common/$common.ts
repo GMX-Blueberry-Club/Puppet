@@ -171,8 +171,8 @@ export const $openPnl = (processData: Stream<IGmxProcessState>, pos: IPositionMi
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
     style({ flexDirection: 'row-reverse' })(
       $infoTooltipLabel(
-        // $openPositionPnlBreakdown(pos, marketInfo),
-        $positionSlotPnl(pos, positionMarkPrice, shareTarget)
+        $positionSlotPnl(pos, positionMarkPrice, shareTarget),
+        $positionSlotPnl(pos, positionMarkPrice, shareTarget),
       )
     ),
     $seperator2,
@@ -203,11 +203,13 @@ export const $leverage = (size: bigint, collateral: bigint) => {
 
 export const $pnlValue = (pnl: Stream<bigint> | bigint, colorful = true) => {
   const pnls = isStream(pnl) ? pnl : now(pnl)
-
-  const display = map(value => readableFixedUSD30(value), pnls)
-
+  const display = map(value => {
+    return readableFixedUSD30(value)
+  }, pnls)
   const displayColor = skipRepeats(map(value => {
-    return value > 0n ? pallete.positive : value === 0n ? pallete.foreground : pallete.negative
+    return value > 0n
+      ? pallete.positive : value === 0n
+        ? '' : pallete.negative
   }, pnls))
 
   const colorStyle = colorful

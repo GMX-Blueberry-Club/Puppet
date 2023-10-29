@@ -50,7 +50,7 @@ export interface IProcessParams<TState, TProcessConfigList extends ILogOrdered[]
   scope: storeUtils.IStoreScope<`${TParentName}.${string}`, any>
   processList: { [P in keyof TProcessConfigList]: IProcessSourceConfig<TProcessConfigList[P], TState> }
   store: Stream<IProcessedStore<TState>>,
-  seedFile: Stream<IProcessedStore<TState>>,
+  seedFile: Stream<IProcessedStore<TState> | null>,
 }
 
 export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], TParentName extends string >(
@@ -67,26 +67,17 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
     const storedStateValidationError = validateConfig(config.blueprint.config, storedState?.config)
 
     // if store is invalid, bootstrap using seed file
-    // if seed file is invalid, bootstrap using blueprint
     if (storedStateValidationError) {
       console.warn(
         new Error(`Invalid stored state: ${storedStateValidationError}`),
         'bootstrapping using seed file'
       )
-      // clean previously stored processed state
-      const clearPreviousScope = indexDB.clear(scope)
 
-      return mergeArray([
-        clearPreviousScope,
-        map(loadedSeedfile => {
-          const seedFileValidationError = validateConfig(config.blueprint.config, loadedSeedfile?.config)
+      return map(loadedSeedfile => {
+        const seedFileValidationError = validateConfig(config.blueprint.config, loadedSeedfile?.config)
 
-          if (!seedFileValidationError) {
-            const blockNumber = loadedSeedfile!.blockNumber || config.blueprint.config.startBlock
-            const orderId = loadedSeedfile!.orderId || getblockOrderIdentifier(config.blueprint.config.startBlock)
-            return { ...loadedSeedfile, blockNumber, orderId }
-          }
-
+        // if seed file is invalid, bootstrap using blueprint
+        if (seedFileValidationError) {
           console.warn(
             new Error(`Invalid seed file: ${seedFileValidationError}`),
             'bootstrapping using blueprint'
@@ -95,8 +86,14 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
           const blockNumber = config.blueprint.config.startBlock
           const orderId = getblockOrderIdentifier(config.blueprint.config.startBlock)
           return { ...config.blueprint, blockNumber, orderId }
-        }, config.seedFile || now(null))
-      ])
+        }
+
+        // bootstrap using blueprint
+        // const blockNumber = loadedSeedfile!.blockNumber || config.blueprint.config.startBlock
+        // const orderId = loadedSeedfile!.orderId || getblockOrderIdentifier(config.blueprint.config.startBlock)
+        // return { ...loadedSeedfile, blockNumber, orderId }
+        return loadedSeedfile
+      }, config.seedFile || now(null))
     }
 
     return now(storedState)
@@ -122,7 +119,8 @@ export function queryLogs<TSeed, TProcessConfigList extends ILogOrdered[], TPare
   const nextLogBatch = config.processList.map(processConfig => {
     const rangeKey = IDBKeyRange.bound(
       Math.max(getblockOrderIdentifier(processConfig.source.startBlock || 0n), processState.orderId),
-      getblockOrderIdentifier(config.syncBlock), true
+      getblockOrderIdentifier(config.syncBlock),
+      true
     )
     const nextStoredLog: Stream<ILogOrderedEvent[]> = indexDB.getRange(processConfig.source.scope, rangeKey)
 
@@ -170,6 +168,7 @@ export function queryLogs<TSeed, TProcessConfigList extends ILogOrdered[], TPare
                 })
                 .filter(ev => {
                   return ev.orderId > Math.max(processState.orderId || 0, lstEvent ? lstEvent.orderId : 0)
+                  // return ev.orderId > processState.orderId
                 })
 
               return indexDB.add(processConfig.source.scope, filtered)

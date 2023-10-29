@@ -139,25 +139,24 @@ export const blockChange = switchMap(c => fromCallback<bigint>(cb => watchBlockN
 
 const configChain = configureChains(
   chains, [
-    // publicProvider(),
+    jsonRpcProvider({
+      rpc: (chain) => {
+        return {
+          http: `https://arbitrum.llamarpc.com/rpc/${llamaRpc}`,
+          webSocket: `wss://arbitrum.llamarpc.com/rpc/${llamaRpc}`,
+        }
+      },
+    }),
+    walletConnectProvider({ projectId }),
     alchemyProvider({
       apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low',
     }),
-    // jsonRpcProvider({ 
-    //   rpc: (chain) => {
-    //     return {
-    //       http: `https://arbitrum.llamarpc.com/rpc/${llamaRpc}`,
-    //       webSocket: `wss://arbitrum.llamarpc.com/rpc/${llamaRpc}`,
-    //     }
-    //   },
-    // }),
-    walletConnectProvider({ projectId }),
+    publicProvider(),
   ],
   { 
     batch: { multicall: { wait: 10 } }, retryCount: 0,
   }
 )
-
 
 const metadata = {
   name: import.meta.env.VITE_APP_NAME,
@@ -173,7 +172,7 @@ const wagmiConfig = createConfig({
     new InjectedConnector({ chains, options: { shimDisconnect: true } }),
   ],
   publicClient: configChain.publicClient,
-  // webSocketPublicClient: configChain.webSocketPublicClient,
+  webSocketPublicClient: configChain.webSocketPublicClient,
   storage,
 })
 

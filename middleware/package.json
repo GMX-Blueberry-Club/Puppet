@@ -25,6 +25,6 @@
         "@types/isomorphic-fetch": "^0.0.37",
         "abitype": "^0.10.1",
         "graphql": "^16.8.1",
-        "viem": "^1.16.5"
+        "viem": "^1.18.0"
     }
 }

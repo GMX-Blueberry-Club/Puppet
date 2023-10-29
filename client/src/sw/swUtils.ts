@@ -26,6 +26,8 @@ export const newUpdateInvoke: Stream<() => void> = fromCallback(cb => {
     // }
     }
   })
+
+  return reloadCb
 })
 
 // const worker = new Wroker()

@@ -19,7 +19,6 @@ const prefixedParentEnv = Object.fromEntries(
   Object.entries(SITE_CONFIG).map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)])
 )
 
-
 const pwaOptions: Partial<VitePWAOptions> = {
   workbox: {
     cleanupOutdatedCaches: false
@@ -32,7 +31,7 @@ const pwaOptions: Partial<VitePWAOptions> = {
   },
   srcDir: 'src',
   filename: 'sw.ts',
-  includeAssets: ['font/*.ttf', './*.png', './*.svg'],
+  includeAssets: ['video/*.mp4', 'font/*.ttf', './*.png', './*.svg'],
   manifest: {
     name: SITE_CONFIG.APP_NAME,
     short_name: SITE_CONFIG.APP_NAME,
@@ -40,6 +39,22 @@ const pwaOptions: Partial<VitePWAOptions> = {
     theme_color: SITE_CONFIG.THEME_BACKGROUND,
     background_color: SITE_CONFIG.THEME_BACKGROUND,
     start_url: '/app/leaderboard/settled',
+    // screenshots: [
+    //   {
+    //     src: "video/trade-adjust.mp4",
+    //     sizes: "640x320",
+    //     type: "video/mp4",
+    //     form_factor: "wide",
+    //     label: "Wonder Widgets"
+    //   },
+    //   {
+    //     src: "video/trade-adjust.mp4",
+    //     sizes: "750x1334",
+    //     type: "video/mp4",
+    //     form_factor: "narrow",
+    //     label: "Wonder Widgets"
+    //   }
+    // ],
     icons: [
       {
         src: 'pwa-192x192.png',

@@ -1,14 +1,15 @@
 import { Behavior, combineArray, combineObject, replayLatest } from "@aelea/core"
 import { $node, $text, component, style, styleBehavior } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, observer, screenUtils } from "@aelea/ui-components"
-import { 
+import {
   IMarket, IMarketInfo, IMarketPrice, IPositionSlot, PositionInfo, StateStream, div, filterNull, formatFixed, getAvailableReservedUsd, getBorrowingFactorPerInterval, getCappedPositionPnlUsd, getDenominator,
-  getFundingFactorPerInterval, getFundingFactorPerInterval2, getIntervalIdentifier, getLiquidationPrice, getMappedValue, getMarginFee, getNativeTokenAddress, getNativeTokenDescription,
+  getFundingFactorPerInterval,
+  getIntervalIdentifier, getLiquidationPrice, getMappedValue, getMarginFee, getNativeTokenAddress, getNativeTokenDescription,
   getPositionKey, getPriceImpactForPosition, getTokenAmount, getTokenDenominator, getTokenDescription, getTokenUsd, lst, readableFactorPercentage, readableFixedUSD30, readableUnitAmount, resolveAddress, switchMap, unixTimestampNow
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, constant, debounce, empty, fromPromise, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, startWith, switchLatest, tap, zip } from "@most/core"
+import { awaitPromises, constant, debounce, empty, fromPromise, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, switchLatest, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/abis"
@@ -16,11 +17,10 @@ import * as GMX from "gmx-middleware-const"
 import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $target } from "gmx-middleware-ui-components"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
-import { IPositionMirrorSlot } from "puppet-middleware-utils"
+import { IPositionMirrorSlot, getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $midContainer } from "../common/$common.js"
 import { $caretDown } from "../common/elements/$icons.js"
-import { $IntermediateConnectButton } from "../components/$ConnectAccount.js"
 import { $ButtonSecondary } from "../components/form/$Button.js"
 import { $Dropdown } from "../components/form/$Dropdown.js"
 import { $PositionAdjustmentDetails } from "../components/trade/$PositionAdjustmentDetails"
@@ -39,9 +39,7 @@ import { walletLink } from "../wallet/index.js"
 import { gasPrice, wallet } from "../wallet/walletLink.js"
 import { $seperator2 } from "./common.js"
 
-
 export type ITradeComponent = IPositionEditorAbstractParams
-
 
 
 const TIME_INTERVAL_LABEL_MAP = {
@@ -60,7 +58,6 @@ const TIME_INTERVAL_LABEL_MAP = {
   [GMX.TIME_INTERVAL_MAP.MONTH2]: '2mo',
   [GMX.TIME_INTERVAL_MAP.YEAR]: '2yr',
 } as const
-
 
 
 export const $Trade = (config: ITradeComponent) => component((
@@ -131,8 +128,6 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
 
-  
-
   const tradingStore = storage.createStoreScope(rootStoreScope, 'tradeBox' as const)
 
 
@@ -146,10 +141,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const borrowRateIntervalDisplay = storage.replayWrite(tradingStore, GMX.TIME_INTERVAL_MAP.MIN60, changeBorrowRateIntervalDisplay, 'borrowRateIntervalDisplay')
   const fundingRateIntervalDisplay = storage.replayWrite(tradingStore, GMX.TIME_INTERVAL_MAP.MIN60, changeFundingRateIntervalDisplay, 'fundingRateIntervalDisplay')
 
-  const isIncrease = mergeArray([
-    replayLatest(switchIsIncrease, true),
-    constant(true, clickResetPosition)
-  ])  
+  const isIncrease = replayLatest(switchIsIncrease, true)  
 
   
   // storage.replayWrite(tradingStore, GMX.ADDRESS_ZERO, changeInputToken, 'inputToken')
@@ -217,7 +209,6 @@ export const $Trade = (config: ITradeComponent) => component((
     return params.processData.latestPrice[token].min
   }, combineObject({ processData, primaryToken }))
 
-
   // const marketPoolUsage = replayLatest(multicast(switchMap(params => {
   //   const poolInfo = fromPromise(getMarketPoolUsage(config.chain, params.market))
 
@@ -244,6 +235,11 @@ export const $Trade = (config: ITradeComponent) => component((
 
   //   return map(res => res[1], data)
   // }, combineObject({ market, marketPrice }))))
+
+  const routeTypeKey = replayLatest(multicast(map(params => {
+    const key = getRouteTypeKey(params.collateralToken, params.indexToken, params.isLong)
+    return key
+  }, combineObject({ collateralToken, indexToken, isLong }))))
 
   const marketInfo: Stream<IMarketInfo> = replayLatest(multicast(switchMap(params => {
     const query = getFullMarketInfo(config.chain, params.market, params.marketPrice)
@@ -295,7 +291,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const positionKeyArgs = skipRepeatsWith((prev, next) => prev.key === next.key, _positionKeyArgs)
 
-  const position: Stream<IPositionMirrorSlot | null> = mergeArray([
+  const position: Stream<IPositionMirrorSlot | null> = replayLatest(multicast(mergeArray([
     map((params) => {
       const existingSlot = params.processData.mirrorPositionSlot[params.positionKeyArgs.key]
 
@@ -305,7 +301,7 @@ export const $Trade = (config: ITradeComponent) => component((
     // return { ...initPartialPositionSlot, ...params.positionKeyArgs, blockTimestamp: unixTimestampNow(), orderKey: GMX.BYTES32_ZERO, market: GMX.ADDRESS_ZERO, transactionHash: GMX.BYTES32_ZERO }
     }, combineObject({ processData: config.processData, positionKeyArgs })),
     switchPosition
-  ])
+  ])))
 
 
   const positionFees: Stream<PositionInfo | null> = switchMap(params => {
@@ -341,13 +337,11 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   const swapFee = replayLatest(multicast(skipRepeats(map((params) => {
-
-    const inputAndIndexStable = params.inputTokenDescription.isUsd && params.indexTokenDescription.isUsd
+    const inputAndIndexStable = params.primaryDescription.isUsd && params.indexDescription.isUsd
     const swapFeeBasisPoints = inputAndIndexStable ? GMX.STABLE_SWAP_FEE_BASIS_POINTS : GMX.SWAP_FEE_BASIS_POINTS
     const taxBasisPoints = inputAndIndexStable ? GMX.STABLE_TAX_BASIS_POINTS : GMX.TAX_BASIS_POINTS
 
     return 0n
-
     // const rsolvedInputAddress = resolveAddress(config.chain, params.primaryToken)
     // if (rsolvedInputAddress === params.collateralToken) {
     //   return 0n
@@ -394,9 +388,9 @@ export const $Trade = (config: ITradeComponent) => component((
 
     // return addedSwapFee
   }, combineObject({
-    collateralToken, primaryToken, isIncrease, sizeDeltaUsd, isLong,
-    collateralTokenPoolInfo, usdgSupply: usdg.read('totalSupply'), totalTokenWeight: vault.read('totalTokenWeights'),
-    position, inputTokenDescription: primaryDescription, inputTokenWeight, inputTokenDebtUsd, indexTokenDescription: indexDescription, marketPrice
+    usdgSupply: usdg.read('totalSupply'), totalTokenWeight: vault.read('totalTokenWeights'),
+    collateralToken, primaryToken, isIncrease, sizeDeltaUsd, isLong, collateralTokenPoolInfo,
+    position, primaryDescription, inputTokenWeight, inputTokenDebtUsd, indexDescription, marketPrice
   })))))
 
 
@@ -624,14 +618,15 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ executeGasLimit, isIncrease, gasPrice }))
 
 
-  const executionFeeUsd = map(params => {   
+  const executionFeeUsd = map(params => {
     return getTokenUsd(params.processData.latestPrice[nativeToken].min, params.executionFee)
   }, combineObject({ executionFee, processData }))
 
-
+viem.ContractFunctionRevertedError
   const tradeState: StateStream<ITradeParams> = {
     markets,
     route,
+    routeTypeKey,
 
     position,
     netPositionValueUsd,
@@ -832,7 +827,6 @@ export const $Trade = (config: ITradeComponent) => component((
                 borderRadius: '30px',
               })
             )(
-
               switchMap(state => {
                 if (!state) {
                   return empty()
@@ -844,7 +838,6 @@ export const $Trade = (config: ITradeComponent) => component((
                 )
               }, isFocused),
               $icon({ $content: $target, width: '16px', svgOps: style({ margin: '0 6px' }), viewBox: '0 0 32 32' }),
-
               $text(map(ev => {
                 return ev ? readableUnitAmount(ev) : ''
               }, focusPrice))
@@ -946,7 +939,7 @@ export const $Trade = (config: ITradeComponent) => component((
                 entireTextOnly: true,
                 borderVisible: false,
                 scaleMargins: {
-                  top: 0.1,
+                  top: 0.15,
                   bottom: 0.05
                 }
               },

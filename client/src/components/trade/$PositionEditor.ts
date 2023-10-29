@@ -77,6 +77,7 @@ export enum ITradeFocusMode {
 export interface ITradeParams {
   markets: IMarket[]
   route: viem.Address | null
+  routeTypeKey: viem.Hex
 
   position: IPositionSlot | null
   netPositionValueUsd: bigint
@@ -228,7 +229,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
   const primaryEffects = mergeArray([
     inputSizeDeltaUsd,
-    switchLatest(map((focus) => {
+    switchLatest(map(focus => {
       if (focus === ITradeFocusMode.collateral) return empty()
 
       const effects = mergeArray([config.tradeConfig.leverage, config.tradeState.primaryPrice])

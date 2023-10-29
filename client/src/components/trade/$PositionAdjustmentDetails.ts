@@ -7,13 +7,8 @@ import { awaitPromises, constant, empty, map, mergeArray, multicast, skipRepeats
 import { Stream } from "@most/types"
 import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
-import {
-  $alert,
-  $alertTooltip,
-  $anchor,
-  $infoLabeledValue,
-  $infoTooltipLabel
-} from "gmx-middleware-ui-components"
+import * as PUPPET from "puppet-middleware-const"
+import { $alert, $alertTooltip, $anchor, $infoLabeledValue, $infoTooltipLabel } from "gmx-middleware-ui-components"
 import {
   DecreasePositionSwapType,
   IPositionSlot, IPriceInterval,
@@ -94,16 +89,15 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
 
   const { 
     collateralDeltaUsd, collateralToken, collateralDelta, marketInfo, market, isUsdCollateralToken, sizeDelta, focusMode,
-    primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, focusPrice
+    primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, focusPrice, indexToken
   } = config.tradeConfig
   const {
     availableIndexLiquidityUsd, averagePrice, collateralDescription,
     collateralTokenPoolInfo, collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee, executionFeeUsd,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
     isTradingEnabled, liquidationPrice, marginFeeUsd, route, netPositionValueUsd,
-    position, swapFee, walletBalance, markets, priceImpactUsd, adjustmentFeeUsd
+    position, swapFee, walletBalance, markets, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
   } = config.tradeState
-
 
 
 
@@ -111,8 +105,12 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
     return { ...config, wallet }
   }, combineObject(config.tradeConfig), clickProposeTrade)
 
-
   const requestTrade: Stream<IRequestTrade> = multicast(snapshot((params, req) => {
+
+    if (!params.route) {
+      throw new Error('Route is not defined')
+    }
+
     const resolvedPrimaryAddress = resolveAddress(config.chain, req.primaryToken)
     const from = req.isIncrease ? resolvedPrimaryAddress : req.isLong ? req.market.indexToken : req.collateralToken
     const to = req.isIncrease ? req.isLong ? req.market.indexToken : req.collateralToken : resolvedPrimaryAddress
@@ -150,69 +148,91 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
     const wntCollateralAmount = isNative ? req.collateralDelta : 0n
     const totalWntAmount = wntCollateralAmount + params.executionFee
 
-    const sendWnt = viem.encodeFunctionData({
-      abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-      functionName: 'sendWnt',
-      args: [orderVaultAddress, totalWntAmount]
-    })
-
-
-    const orderType = req.isIncrease
-      ? req.focusPrice ? OrderType.LimitIncrease : OrderType.MarketIncrease
-      : req.focusPrice ? OrderType.LimitDecrease : OrderType.MarketDecrease
-
-    const createOrderCalldata = viem.encodeFunctionData({
-      abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-      functionName: 'createOrder',
+    const request = wagmiWriteContract({
+      ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
+      value: totalWntAmount,
+      functionName: 'requestPosition',
       args: [
         {
-          addresses: {
-            receiver: config.wallet.account.address,
-            callbackContract: GMX.ADDRESS_ZERO,
-            uiFeeReceiver: GMX.ADDRESS_ZERO,
-            market: req.market.marketToken,
-            initialCollateralToken: req.collateralToken,
-            swapPath: [req.market.marketToken]
-          },
-          numbers: {
-            sizeDeltaUsd: abs(req.sizeDeltaUsd),
-            initialCollateralDeltaAmount: abs(req.collateralDelta),
-            acceptablePrice: acceptablePrice,
-            triggerPrice: acceptablePrice,
-            executionFee: params.executionFee,
-            callbackGasLimit: 0n,
-            minOutputAmount: 0n,
-          },
-          orderType,
-          decreasePositionSwapType: DecreasePositionSwapType.NoSwap,
-          isLong: req.isLong,
-          shouldUnwrapNativeToken: isNative,
-          referralCode: BLUEBERRY_REFFERAL_CODE,
-        }
+          acceptablePrice,
+          collateralDelta: abs(req.collateralDelta),
+          sizeDelta: abs(req.sizeDeltaUsd),
+        },
+        {
+          amount: wntCollateralAmount,
+          path: swapRoute,
+          minOut: 0n,
+        },
+        params.routeTypeKey,
+        params.executionFee,
+        req.isIncrease
       ]
     })
+    // GMX V2 ExchangeRouter
+
+    // const sendWnt = viem.encodeFunctionData({
+    //   abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
+    //   functionName: 'sendWnt',
+    //   args: [orderVaultAddress, totalWntAmount]
+    // })
+
+
+    // const orderType = req.isIncrease
+    //   ? req.focusPrice ? OrderType.LimitIncrease : OrderType.MarketIncrease
+    //   : req.focusPrice ? OrderType.LimitDecrease : OrderType.MarketDecrease
+
+    // const createOrderCalldata = viem.encodeFunctionData({
+    //   abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
+    //   functionName: 'createOrder',
+    //   args: [
+    //     {
+    //       addresses: {
+    //         receiver: params.route,
+    //         callbackContract: GMX.ADDRESS_ZERO,
+    //         uiFeeReceiver: GMX.ADDRESS_ZERO,
+    //         market: req.market.marketToken,
+    //         initialCollateralToken: req.collateralToken,
+    //         swapPath: [req.market.marketToken]
+    //       },
+    //       numbers: {
+    //         sizeDeltaUsd: abs(req.sizeDeltaUsd),
+    //         initialCollateralDeltaAmount: abs(req.collateralDelta),
+    //         acceptablePrice: acceptablePrice,
+    //         triggerPrice: acceptablePrice,
+    //         executionFee: params.executionFee,
+    //         callbackGasLimit: 0n,
+    //         minOutputAmount: 0n,
+    //       },
+    //       orderType,
+    //       decreasePositionSwapType: DecreasePositionSwapType.NoSwap,
+    //       isLong: req.isLong,
+    //       shouldUnwrapNativeToken: isNative,
+    //       referralCode: BLUEBERRY_REFFERAL_CODE,
+    //     }
+    //   ]
+    // })
     
 
-    const request = wagmiWriteContract({
-      ...GMX.CONTRACT[config.chain.id].ExchangeRouter,
-      value: totalWntAmount,
-      functionName: 'multicall',
-      args: [[
-        sendWnt,
-        ...!isNative && req.isIncrease ? [
-          viem.encodeFunctionData({
-            abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-            functionName: 'sendTokens',
-            args: [resolvedPrimaryAddress, orderVaultAddress, req.collateralDelta]
-          })
-        ] : [],
-        createOrderCalldata,
-      ]]
-    })
+    // const request = wagmiWriteContract({
+    //   ...GMX.CONTRACT[config.chain.id].ExchangeRouter,
+    //   value: totalWntAmount,
+    //   functionName: 'multicall',
+    //   args: [[
+    //     sendWnt,
+    //     ...!isNative && req.isIncrease ? [
+    //       viem.encodeFunctionData({
+    //         abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
+    //         functionName: 'sendTokens',
+    //         args: [resolvedPrimaryAddress, orderVaultAddress, req.collateralDelta]
+    //       })
+    //     ] : [],
+    //     createOrderCalldata,
+    //   ]]
+    // })
 
 
     return { ...params, ...req, acceptablePrice, request, swapRoute }
-  }, combineObject({ executionFee, indexPrice, route }), requestTradeParams))
+  }, combineObject({ executionFee, indexPrice, route, routeTypeKey }), requestTradeParams))
 
   const requestTradeRow = map(res => {
     return [res]
@@ -237,7 +257,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
     } catch (err) {
 
       if (err instanceof viem.ContractFunctionExecutionError && err.cause instanceof viem.ContractFunctionRevertedError) {
-        return String(err.cause.reason)
+        return String(err.cause.reason || err.cause.message)
       }
 
       return null
@@ -301,9 +321,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
   }, combineObject({ ...config.tradeState, ...config.tradeConfig })))
 
   const disableButtonValidation = map((error) => {
-    if (error) {
-      return true
-    }
+    if (error) return true
 
     return false
   }, validationError)
@@ -329,7 +347,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
       // })({
       //   change: changeSlippageTether()
       // }),
-      $column(
+      $column(layoutSheet.spacingTiny)(
         // switchLatest(map(params => {
         //   const totalSizeUsd = params.position ? params.position.latestUpdate.sizeInUsd + params.sizeDeltaUsd : params.sizeDeltaUsd
         //   const rateFactor = params.fundingRateFactor

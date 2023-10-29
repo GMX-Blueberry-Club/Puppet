@@ -65,7 +65,7 @@ export interface IGmxProcessState {
 
 
 const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
-  const req = await (await fetch('/db/sha256-C+Or72XxnxKUek8DkrZAa2a0hiAmT_7dJiumPMtO49c=.json')).json().catch(() => null)
+  const req = await (await fetch('/db/sha256-JD8nWKUZjKgC9SK6pJgBUPUCEZGX2kh7WWGxZh5+zew=.json')).json().catch(() => null)
 
   if (req === null) {
     return null
@@ -110,7 +110,7 @@ const state: IGmxProcessState = {
 
 const config: IProcessedStoreConfig = {
   startBlock: 107745255n,
-  endBlock: 141982108n,
+  endBlock: 144000000n,
   chainId: arbitrum.id,
 }
 
@@ -170,7 +170,6 @@ export const gmxProcess = defineProcess(
     step(seed, value) {
       const entity = getEventdata<IOraclePriceUpdateEvent>(value)
 
-
       seed.latestPrice[entity.token] = {
         isPriceFeed: entity.isPriceFeed,
         max: entity.maxPrice,
@@ -191,14 +190,13 @@ export const gmxProcess = defineProcess(
       return seed
     },
   },
+
   {
     source: gmxLog.positionIncrease,
     // queryBlockRange: 100000n,
     step(seed, value) {
       const update = getEventType<IPositionIncrease>('PositionIncrease', value, seed.approximatedTimestamp)
-
       const market = seed.markets[update.market]
-
       const slot = seed.mirrorPositionSlot[update.positionKey] ??= {
         ...initPartialPositionSlot,
         key: update.positionKey,

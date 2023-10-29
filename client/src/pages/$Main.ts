@@ -8,19 +8,17 @@ import { constant, empty, map, merge, mergeArray, multicast, now, recoverWith, s
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
 import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN } from "gmx-middleware-const"
-import { $Tooltip, $alertContainer, $infoTooltip, $infoTooltipLabel, $spinner } from "gmx-middleware-ui-components"
-import { filterNull, readableNumber, readableTokenAmount, readableUnitAmount, switchMap, timeSince, zipState } from "gmx-middleware-utils"
+import { $Tooltip, $alertContainer, $spinner } from "gmx-middleware-ui-components"
+import { filterNull, readableUnitAmount, switchMap, timeSince } from "gmx-middleware-utils"
 import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import { $midContainer } from "../common/$common.js"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount.js"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu.js'
 import { $RouteSubscriptionDrawer } from "../components/$RouteSubscription.js"
-import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button.js"
 import { gmxProcess } from "../data/process/process.js"
 import { contractReader } from "../logic/common.js"
-import { newUpdateInvoke } from "../sw/swUtils.js"
 import { fadeIn } from "../transitions/enter.js"
-import { queryLogs,  syncProcess, processLogs } from "../utils/indexer/processor.js"
+import { processLogs, queryLogs } from "../utils/indexer/processor.js"
 import { block, blockChange, chain, publicClient, wallet } from "../wallet/walletLink.js"
 import { $Admin } from "./$Admin.js"
 import { $Home } from "./$Home.js"
@@ -28,7 +26,8 @@ import { $Profile } from "./$Profile.js"
 import { $Trade } from "./$Trade.js"
 import { $Wallet } from "./$Wallet.js"
 import { $Leaderboard } from "./leaderboard/$Leaderboard.js"
-import * as viem from 'viem'
+import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
+import { newUpdateInvoke } from "../sw/swUtils"
 
 const popStateEvent = eventElementTarget('popstate', window)
 const initialLocation = now(document.location)
@@ -74,7 +73,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       return now(params.store)
     }
 
-    const refreshThreshold = SW_DEV ? 150 : 50
+    const refreshThreshold = SW_DEV ? 50 : 50
     const blockDelta = params.syncBlock - params.store.blockNumber
 
     if (refreshThreshold < blockDelta) {
@@ -175,24 +174,24 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
   return [
     $column(
-      switchMap((cb) => {
-        return fadeIn(
-          $alertContainer(style({ backgroundColor: pallete.horizon }))(
-            filterNull(constant(null, clickUpdateVersion)) as any,
+      // switchMap((cb) => {
+      //   return fadeIn(
+      //     $alertContainer(style({ backgroundColor: pallete.horizon }))(
+      //       filterNull(constant(null, clickUpdateVersion)) as any,
 
-            $text('New version Available'),
-            $ButtonSecondary({
-              $container: $defaultMiniButtonSecondary,
-              $content: $text('Update'),
-            })({
-              click: clickUpdateVersionTether(
-                tap(cb)
-              )
-            })
-          )
+      //       $text('New version Available'),
+      //       $ButtonSecondary({
+      //         $container: $defaultMiniButtonSecondary,
+      //         $content: $text('Update'),
+      //       })({
+      //         click: clickUpdateVersionTether(
+      //           tap(cb)
+      //         )
+      //       })
+      //     )
               
-        )
-      }, newUpdateInvoke),
+      //   )
+      // }, newUpdateInvoke),
       router.contains(appRoute)(
         $rootContainer(
           $column(style({ flex: 1, position: 'relative' }))(

@@ -45,7 +45,7 @@ export const adjustTargetLeverage = store.createRpcLogEventScope({
 })
 
 export const createRoute = store.createRpcLogEventScope({
-  eventName: 'CreateRoute',
+  eventName: 'AdjustPosition',
   ...orchestratorConfig
 })
 
