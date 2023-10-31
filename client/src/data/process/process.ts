@@ -208,7 +208,7 @@ export const gmxProcess = defineProcess(
         puppets: [],
         // feeUpdates: [],
         orderKey: update.orderKey,
-        routeTypeKey: getRouteTypeKey(update.collateralToken, update.market, update.isLong),
+        routeTypeKey: getRouteTypeKey(update.collateralToken, update.market, update.isLong, '0x'),
         route: ADDRESS_ZERO,
         trader: update.account,
         shares: [],

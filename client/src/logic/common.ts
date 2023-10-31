@@ -162,13 +162,11 @@ export const wagmiWriteContract = async <
   TChainId extends number, 
   TWalletClient extends WalletClient = WalletClient
 >(simParams: wagmi.PrepareWriteContractConfig<TAbi, TFunctionName, TChainId, TWalletClient>): Promise<viem.TransactionReceipt> => {
-
   const client = wagmi.getPublicClient()
-  const simReq = await wagmi.prepareWriteContract(simParams)
-  const writeResults = await wagmi.writeContract(simReq.request as any)
-  const recpt = await client.waitForTransactionReceipt(writeResults)
-
-  return recpt
+  // const simReq = await wagmi.prepareWriteContract(simParams)
+  const writeResults = await wagmi.writeContract(simParams as any)
+  // const recpt = await client.waitForTransactionReceipt(writeResults)
+  // return recpt
 
 }
 

@@ -182,7 +182,6 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   [changeSlippage, changeSlippageTether]: Behavior<string, string>,
 
   [clickPrimary, clickPrimaryTether]: Behavior<any>,
-
 ) => {
 
   const tradeReader = trade.connectTrade(config.chain)
@@ -201,7 +200,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
     primaryDescription, primaryPrice, indexPrice,
 
     isPrimaryApproved, isTradingEnabled, liquidationPrice, marginFeeUsd, route,
-    position, swapFee, walletBalance, markets, netPositionValueUsd
+    position, swapFee, walletBalance, markets, netPositionValueUsd, fundingRateFactor, priceImpactUsd, routeTypeKey, stableFundingRateFactor
   } = config.tradeState
 
 
@@ -484,11 +483,18 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                   return true
                 }
 
+                const primaryCollateralThreshold = getBasisPoints(params.collateralDelta, params.walletBalance)
+
+                if (primaryCollateralThreshold > 9000n && primaryCollateralThreshold < 10000n) {
+                  return true
+                }
+                
+
                 // const bps = getBasisPoints(params.collateralDelta, params.walletBalance)
                 // if (bps > 9000n && ) {}
 
                 return false
-              }, combineObject({ isIncrease, collateralDelta, sizeDelta, walletBalance, position })),
+              }, combineObject({ isIncrease, collateralDelta, sizeDelta, walletBalance, position, executionFee })),
               $container: $defaultMiniButtonSecondary
             })({
               click: clickPrimaryTether(delay(10))
@@ -687,11 +693,11 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                       if (value === 0n) {
                         node.element.value = ''
                       } else {
-                        node.element.value = readableTokenAmount(params.primaryDescription.decimals, params.primaryPrice, value)
+                        node.element.value = readableTokenAmount(params.indexDescription.decimals, params.indexPrice, value)
                       }
 
                       return null
-                    }, combineObject({ primaryDescription, primaryPrice, }), autoFillSecondary))
+                    }, combineObject({ indexDescription, indexPrice, }), autoFillSecondary))
                   )
                 ),
                 switchLatest

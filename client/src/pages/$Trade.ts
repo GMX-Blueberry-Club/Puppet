@@ -2,7 +2,7 @@ import { Behavior, combineArray, combineObject, replayLatest } from "@aelea/core
 import { $node, $text, component, style, styleBehavior } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, observer, screenUtils } from "@aelea/ui-components"
 import {
-  IMarket, IMarketInfo, IMarketPrice, IPositionSlot, PositionInfo, StateStream, div, filterNull, formatFixed, getAvailableReservedUsd, getBorrowingFactorPerInterval, getCappedPositionPnlUsd, getDenominator,
+  IMarket, IMarketInfo, IMarketPrice, IPositionSlot, PositionInfo, StateStream, applyFactor, div, factor, filterNull, formatFixed, getAvailableReservedUsd, getBorrowingFactorPerInterval, getCappedPositionPnlUsd, getDenominator,
   getFundingFactorPerInterval,
   getIntervalIdentifier, getLiquidationPrice, getMappedValue, getMarginFee, getNativeTokenAddress, getNativeTokenDescription,
   getPositionKey, getPriceImpactForPosition, getTokenAmount, getTokenDenominator, getTokenDescription, getTokenUsd, lst, readableFactorPercentage, readableFixedUSD30, readableUnitAmount, resolveAddress, switchMap, unixTimestampNow
@@ -17,7 +17,7 @@ import * as GMX from "gmx-middleware-const"
 import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $target } from "gmx-middleware-ui-components"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
-import { IPositionMirrorSlot, getRouteTypeKey } from "puppet-middleware-utils"
+import { IPositionMirrorSlot, getRouteKey, getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $midContainer } from "../common/$common.js"
 import { $caretDown } from "../common/elements/$icons.js"
@@ -120,6 +120,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const usdg = connectContract(gmxContractMap.USDG)
 
   const v2Reader = contractReader(gmxContractMap.ReaderV2)
+  const orchestratorReader = contractReader(puppetContractMap.OrchestratorReader) 
   const datastoreReader = contractReader(gmxContractMap.Datastore) 
   const referralStorage = connectContract(gmxContractMap.ReferralStorage)
   const positionRouter = connectContract(gmxContractMap.PositionRouter)
@@ -141,12 +142,15 @@ export const $Trade = (config: ITradeComponent) => component((
   const borrowRateIntervalDisplay = storage.replayWrite(tradingStore, GMX.TIME_INTERVAL_MAP.MIN60, changeBorrowRateIntervalDisplay, 'borrowRateIntervalDisplay')
   const fundingRateIntervalDisplay = storage.replayWrite(tradingStore, GMX.TIME_INTERVAL_MAP.MIN60, changeFundingRateIntervalDisplay, 'fundingRateIntervalDisplay')
 
-  const isIncrease = replayLatest(switchIsIncrease, true)  
+  const isIncrease = mergeArray([
+    constant(true, clickResetPosition),
+    replayLatest(switchIsIncrease, true),
+  ])
 
   
   // storage.replayWrite(tradingStore, GMX.ADDRESS_ZERO, changeInputToken, 'inputToken')
 
-  const market = mergeArray([
+  const market = replayLatest(multicast(mergeArray([
     map(params => {
       const stored = params.stored
       if (stored === undefined) {
@@ -155,8 +159,15 @@ export const $Trade = (config: ITradeComponent) => component((
 
       return params.markets.find(m => m.marketToken === stored.marketToken) || params.markets[0]
     }, combineObject({ stored: indexDB.get(tradingStore, 'market') as Stream<IMarket | undefined>, markets })),
+    // snapshot((params, posSlot) => {
+    //   const update = lst(posSlot.updates)
+    //   const market = params.markets.find(m => m.marketToken === update.market)
+    //   if (!market) throw new Error(`Market not found for ${update.market}`)
+
+    //   return market
+    // }, combineObject({ markets }), switchPosition),
     storage.write(tradingStore, changeMarket, 'market'),
-  ])
+  ])))
 
   const collateralDeltaUsd = replayLatest(changeCollateralDeltaUsd, 0n)
   const sizeDeltaUsd = replayLatest(changeSizeDeltaUsd, 0n)
@@ -237,7 +248,8 @@ export const $Trade = (config: ITradeComponent) => component((
   // }, combineObject({ market, marketPrice }))))
 
   const routeTypeKey = replayLatest(multicast(map(params => {
-    const key = getRouteTypeKey(params.collateralToken, params.indexToken, params.isLong)
+    // abi.encode(_longToken, _shortToken, _weth, _weth, true, _marketType)
+    const key = getRouteTypeKey(params.collateralToken, params.indexToken, params.isLong, '0x')
     return key
   }, combineObject({ collateralToken, indexToken, isLong }))))
 
@@ -249,36 +261,36 @@ export const $Trade = (config: ITradeComponent) => component((
     }, query)
   }, combineObject({ market, marketPrice }))))
 
-  const route = map(params => {
-    const w3p = params.wallet
-    if (w3p === null) {
-      return GMX.ADDRESS_ZERO
-    }
-
-    return w3p.account.address
-  }, combineObject({ wallet }))
-
-  // const route = replayLatest(multicast(switchMap(params => {
+  // const route = map(params => {
   //   const w3p = params.wallet
   //   if (w3p === null) {
-  //     return now(GMX.ADDRESS_ZERO)
+  //     return GMX.ADDRESS_ZERO
   //   }
 
-  //   const key = getRouteKey(w3p.account.address, params.collateralToken, params.indexToken, params.isLong)
-  //   const storedRouteKey = storage.get(tradingStore, GMX.ADDRESS_ZERO as viem.Address, key)
-  //   const fallbackGetRoute = switchMap(address => {
+  //   return w3p.account.address
+  // }, combineObject({ wallet }))
 
-  //     if (address === GMX.ADDRESS_ZERO) {
-  //       return switchMap(res => {
-  //         return address === GMX.ADDRESS_ZERO ? now(res) : indexDB.set(tradingStore, res, key)
-  //       }, orchestrator.read('getRoute', key))
-  //     }
+  const route = replayLatest(multicast(switchMap(params => {
+    const w3p = params.wallet
+    if (w3p === null) {
+      return now(GMX.ADDRESS_ZERO)
+    }
 
-  //     return now(address)
-  //   }, storedRouteKey)
+    const key = getRouteKey(w3p.account.address, params.collateralToken, params.indexToken, params.isLong)
+    const storedRouteKey = storage.get(tradingStore, GMX.ADDRESS_ZERO as viem.Address, key)
+    const fallbackGetRoute = switchMap(address => {
 
-  //   return fallbackGetRoute
-  // }, combineObject({ wallet, collateralToken, indexToken, isLong }))))
+      if (address === GMX.ADDRESS_ZERO) {
+        return switchMap(res => {
+          return address === GMX.ADDRESS_ZERO ? now(res) : indexDB.set(tradingStore, res, key)
+        }, orchestratorReader('routeAddress', address, params.collateralToken, params.indexToken, params.isLong, '0x'))
+      }
+
+      return now(address)
+    }, storedRouteKey)
+
+    return fallbackGetRoute
+  }, combineObject({ wallet, collateralToken, indexToken, isLong }))))
 
 
 
@@ -430,8 +442,9 @@ export const $Trade = (config: ITradeComponent) => component((
     return getTokenAmount(params.marketPrice.indexTokenPrice.min, params.sizeDeltaUsd)
   }, combineObject({ indexDescription, marketPrice, sizeDeltaUsd }))
 
-  const netPositionValueUsd = zip((params, positionSlot) => {
-    if (positionSlot === null) {
+  const netPositionValueUsd = replayLatest(multicast(zip((params, positionSlot) => {
+    console.log('netPositionValueUsd', params, positionSlot)
+    if (!params.positionFees || positionSlot === null) {
       return 0n
     }
 
@@ -449,7 +462,7 @@ export const $Trade = (config: ITradeComponent) => component((
     const netValue = collateralUsd - fees.borrowing.borrowingFeeUsd - pendingFundingFeesUsd
 
     return netValue
-  }, combineObject({ marketPrice, marketInfo, positionFees, indexPrice, collateralPrice, collateralDescription }), position)
+  }, combineObject({ marketPrice, marketInfo, positionFees, indexPrice, collateralPrice, collateralDescription }), position)))
 
   const focusPrice = replayLatest(multicast(changefocusPrice), null)
   const yAxisCoords = replayLatest(multicast(changeYAxisCoords), null)
@@ -611,10 +624,16 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ chartInterval, indexToken, processData: config.processData }))
 
   const executeGasLimit = fromPromise(getExecuteGasFee(config.chain))
+
   const executionFee = map(params => {
     const estGasLimit = params.isIncrease ? params.executeGasLimit.increaseGasLimit : params.executeGasLimit.decreaseGasLimit
+
+    const adjustedGasLimit = params.executeGasLimit.estimatedFeeBaseGasLimit + applyFactor(estGasLimit, params.executeGasLimit.estimatedFeeMultiplierFactor)
+    const feeTokenAmount = adjustedGasLimit * params.gasPrice
+
+    return feeTokenAmount
     
-    return getExecutionFee(params.executeGasLimit.estimatedFeeBaseGasLimit, params.executeGasLimit.estimatedFeeMultiplierFactor, estGasLimit, params.gasPrice)
+    // return getExecutionFee(params.executeGasLimit.estimatedFeeBaseGasLimit, params.executeGasLimit.estimatedFeeMultiplierFactor, estGasLimit, params.gasPrice)
   }, combineObject({ executeGasLimit, isIncrease, gasPrice }))
 
 
@@ -622,7 +641,6 @@ export const $Trade = (config: ITradeComponent) => component((
     return getTokenUsd(params.processData.latestPrice[nativeToken].min, params.executionFee)
   }, combineObject({ executionFee, processData }))
 
-viem.ContractFunctionRevertedError
   const tradeState: StateStream<ITradeParams> = {
     markets,
     route,

@@ -174,24 +174,24 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
   return [
     $column(
-      // switchMap((cb) => {
-      //   return fadeIn(
-      //     $alertContainer(style({ backgroundColor: pallete.horizon }))(
-      //       filterNull(constant(null, clickUpdateVersion)) as any,
+      switchMap((cb) => {
+        return fadeIn(
+          $alertContainer(style({ backgroundColor: pallete.horizon }))(
+            filterNull(constant(null, clickUpdateVersion)) as any,
 
-      //       $text('New version Available'),
-      //       $ButtonSecondary({
-      //         $container: $defaultMiniButtonSecondary,
-      //         $content: $text('Update'),
-      //       })({
-      //         click: clickUpdateVersionTether(
-      //           tap(cb)
-      //         )
-      //       })
-      //     )
+            $text('New version Available'),
+            $ButtonSecondary({
+              $container: $defaultMiniButtonSecondary,
+              $content: $text('Update'),
+            })({
+              click: clickUpdateVersionTether(
+                tap(cb)
+              )
+            })
+          )
               
-      //   )
-      // }, newUpdateInvoke),
+        )
+      }, newUpdateInvoke),
       router.contains(appRoute)(
         $rootContainer(
           $column(style({ flex: 1, position: 'relative' }))(

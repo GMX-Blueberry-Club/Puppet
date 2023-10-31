@@ -69,7 +69,7 @@ export type IRequestTrade = IRequestTradeParams & {
 
 export const $PositionListDetails = (config: IPositionDetailsPanel) => component((
   [switchPosition, switchPositionTether]: Behavior<any, IPositionSlot>,
-  [clickClose, clickCloseTeter]: Behavior<any>,
+  [clickClose, clickCloseTeter]: Behavior<any, IPositionSlot>,
 
   [changeMarket, changeMarketTether]: Behavior<IMarket>,
   [switchIsLong, switchIsLongTether]: Behavior<boolean>,
@@ -162,7 +162,10 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
     ),
 
     {
-      switchPosition,
+      switchPosition: mergeArray([
+        switchPosition,
+        clickClose
+      ]),
       changeMarket: snapshot((params, posSlot) => {
         const update = lst(posSlot.updates)
         const market = params.markets.find(m => m.marketToken === update.market)

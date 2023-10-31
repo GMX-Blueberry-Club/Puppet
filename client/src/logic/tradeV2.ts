@@ -3,7 +3,7 @@ import { fromPromise, map } from "@most/core"
 import { Stream } from "@most/types"
 import * as wagmi from "@wagmi/core"
 import * as GMX from "gmx-middleware-const"
-import { IMarket, IMarketConfig, IMarketFees, IMarketInfo, IMarketPool, IMarketPrice, IMarketUsageInfo, factor, hashData } from "gmx-middleware-utils"
+import { IMarket, IMarketConfig, IMarketFees, IMarketInfo, IMarketPool, IMarketPrice, IMarketUsageInfo, applyFactor, factor, hashData } from "gmx-middleware-utils"
 import { ISupportedChain } from "../wallet/walletLink.js"
 import { contractReader } from "./common"
 
@@ -533,24 +533,25 @@ export async function getExecuteGasFee(chain: ISupportedChain) {
   const estimatedFeeBaseGasLimit =  wagmi.readContract({
     ...datastoreContract,
     functionName: 'getUint',
-    args: [hashKey(ESTIMATED_GAS_FEE_BASE_AMOUNT)],
+    args: [hashKey('ESTIMATED_GAS_FEE_BASE_AMOUNT')],
   })
   const estimatedFeeMultiplierFactor =  wagmi.readContract({
     ...datastoreContract,
     functionName: 'getUint',
-    args: [hashKey(ESTIMATED_GAS_FEE_MULTIPLIER_FACTOR)],
+    args: [hashKey('ESTIMATED_GAS_FEE_MULTIPLIER_FACTOR')],
   })
 
   const increaseGasLimit =  wagmi.readContract({
     ...datastoreContract,
     functionName: 'getUint',
-    args: [hashKey(INCREASE_ORDER_GAS_LIMIT_KEY)],
+    args: [hashKey('INCREASE_ORDER_GAS_LIMIT')],
   })
   const decreaseGasLimit =  wagmi.readContract({
     ...datastoreContract,
     functionName: 'getUint',
-    args: [hashKey(INCREASE_ORDER_GAS_LIMIT_KEY)],
+    args: [hashKey('DECREASE_ORDER_GAS_LIMIT')],
   })
+
 
   return {
     increaseGasLimit: await increaseGasLimit,
@@ -559,6 +560,7 @@ export async function getExecuteGasFee(chain: ISupportedChain) {
     estimatedFeeBaseGasLimit: await estimatedFeeBaseGasLimit
   }
 }
+
 
 export function getExecutionFee(
   estimatedFeeBaseGasLimit: bigint,

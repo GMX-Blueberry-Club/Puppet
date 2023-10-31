@@ -1,6 +1,7 @@
 import * as viem from "viem"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot } from "./types.js"
 import { IOraclePrice, factor, getPositionPnlUsd, hashData, lst } from "gmx-middleware-utils"
+import { toBytes } from "viem"
 
 
 export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[], shareTarget?: viem.Address): IMirrorPositionListSummary {
@@ -100,10 +101,10 @@ export function getPortion(supply: bigint, share: bigint, amount: bigint): bigin
   }
 }
 
-export function getRouteTypeKey(collateralToken: viem.Address, indexToken: viem.Address, isLong: boolean): viem.Hex {
+export function getRouteTypeKey(collateralToken: viem.Address, indexToken: viem.Address, isLong: boolean, data: viem.Hex): viem.Hex {
   return hashData(
-    ["address", "address", "bool"],
-    [collateralToken, indexToken, isLong]
+    ["address", "address", "bool", "bytes"],
+    [collateralToken, indexToken, isLong, data ]
   )
 }
 

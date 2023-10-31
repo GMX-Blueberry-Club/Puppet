@@ -5,6 +5,7 @@ import auth from './abi/auth.js'
 import route from './abi/route.js'
 import puppet from './abi/puppet.js'
 import orchestrator from './abi/orchestrator.js'
+import orchestratorReader from './abi/orchestratorReader.js'
 import routeFactory from './abi/routeFactory.js'
 
 export const CONTRACT = {
@@ -22,8 +23,8 @@ export const CONTRACT = {
       abi: orchestrator,
     },
     OrchestratorReader: {
-      address: "0xc93272D4aB965F48D219A10f58602C5CC570F822",
-      abi: orchestrator,
+      address: "0x846Ad1Bd60C4377e310147C5f6293F92E8B00780",
+      abi: orchestratorReader,
     },
     Auth: {
       address: '0xA12a6281c1773F267C274c3BE1B71DB2BACE06Cb',

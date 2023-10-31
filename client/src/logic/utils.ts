@@ -13,4 +13,4 @@ export function zipArray<A extends any[], B>(cb: (...args: A) => B, ...streamLis
   return zipArrayMost(cb, streamList)
 }
 
-export const ROUTE_DESCRIPTIN_MAP = mapArrayBy(ROUTE_DESCRIPTION, r => getRouteTypeKey(r.collateralToken, r.indexToken, r.isLong), r => r)
+export const ROUTE_DESCRIPTIN_MAP = mapArrayBy(ROUTE_DESCRIPTION, r => getRouteTypeKey(r.collateralToken, r.indexToken, r.isLong, '0x'), r => r)

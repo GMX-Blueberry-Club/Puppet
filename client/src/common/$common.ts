@@ -352,7 +352,7 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
           return $trader
         }
 
-        const routeTypeKey = getRouteTypeKey(GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, true)
+        const routeTypeKey = getRouteTypeKey(GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, true, '0x')
         const puppetSubscriptionKey = getPuppetSubscriptionKey(w3p.account.address, config.trader, routeTypeKey)
         const routeSubscription = params.subscriptionList.find(x => x.puppetSubscriptionKey === puppetSubscriptionKey)
 
