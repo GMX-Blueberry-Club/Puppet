@@ -136,18 +136,18 @@ export const blockChange = switchMap(c => fromCallback<bigint>(cb => watchBlockN
 //   { batch: { multicall: { wait: 20 } }, retryCount: 0 },
 // )
 
-
+// https://arbitrum-one.gateway.pokt.network/v1/lb/9d70f26468263cb1d61de3c0
 const configChain = configureChains(
   chains, [
-    jsonRpcProvider({
-      rpc: (chain) => {
-        return {
-          http: `https://arbitrum.llamarpc.com/rpc/${llamaRpc}`,
-          webSocket: `wss://arbitrum.llamarpc.com/rpc/${llamaRpc}`,
-        }
-      },
-    }),
-    walletConnectProvider({ projectId }),
+    // jsonRpcProvider({
+    //   rpc: (chain) => {
+    //     return {
+    //       http: `https://arbitrum-one.gateway.pokt.network/v1/lb/9d70f26468263cb1d61de3c0`,
+    //       // webSocket: `wss://arbitrum-one.gateway.pokt.network/v1/lb/9d70f26468263cb1d61de3c0`,
+    //     }
+    //   },
+    // }),
+    // walletConnectProvider({ projectId }),
     alchemyProvider({
       apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low',
     }),
@@ -172,7 +172,7 @@ const wagmiConfig = createConfig({
     new InjectedConnector({ chains, options: { shimDisconnect: true } }),
   ],
   publicClient: configChain.publicClient,
-  webSocketPublicClient: configChain.webSocketPublicClient,
+  // webSocketPublicClient: configChain.webSocketPublicClient,
   storage,
 })
 

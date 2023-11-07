@@ -27,7 +27,7 @@
         "@walletconnect/sign-client": "^2.10.4",
         "@walletconnect/core": "^2.10.4",
         "@walletconnect/push-client": "^0.10.8",
-        "abitype": "^0.10.1",
+        "abitype": "^0.10.2",
         "construct-style-sheets-polyfill": "3.1.0",
         "eventemitter3": "^5.0.1",
         "gmx-middleware-const": "workspace:*",
@@ -40,20 +40,20 @@
         "lightweight-charts": "^4.1.1",
         "puppet-middleware-const": "workspace:*",
         "puppet-middleware-utils": "workspace:*",
-        "viem": "^1.18.0",
+        "viem": "^1.18.4",
         "workbox-window": "^7.0.0",
         "workbox-core": "^7.0.0",
         "workbox-build": "^7.0.0",
         "workbox-strategies": "^7.0.0",
         "workbox-routing": "^7.0.0",
         "workbox-precaching": "^7.0.0",
-        "@web3modal/wagmi": "^3.1.0"
+        "@web3modal/wagmi": "^3.2.0"
     },
     "devDependencies": {
         "rimraf": "^5.0.5",
-        "@rollup/plugin-replace": "^5.0.4",
+        "@rollup/plugin-replace": "^5.0.5",
         "dotenv": "^16.3.1",
-        "vite": "^4.5.0",
-        "vite-plugin-pwa": "^0.16.6"
+        "vite": "^5.0.0-beta.16",
+        "vite-plugin-pwa": "^0.16.7"
     }
 }

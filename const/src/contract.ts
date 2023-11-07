@@ -19,7 +19,7 @@ export const CONTRACT = {
       abi: puppet,
     },
     Orchestrator: {
-      address: "0x8AF2BcB9673580859Cdd9D85F89e246a9482Bc0d",
+      address: "0x093BE16F046CeD11F838D7d4d2574e4a0D2AADBd",
       abi: orchestrator,
     },
     OrchestratorReader: {

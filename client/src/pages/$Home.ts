@@ -98,6 +98,7 @@ export const $Home = (config: ITreasury) => component((
   return [
     $column(layoutSheet.spacingBig, style({ flex: 1 }))(
 
+      // translateY(-100px) translateZ(100px) rotateX(40deg)
       $snapSection(layoutSheet.spacingBig,
         style({
           placeSelf: 'center',
@@ -105,11 +106,26 @@ export const $Home = (config: ITreasury) => component((
           position: 'relative',
           top: 0,
           height: `100vh`,
-          alignItems: 'center',
-          placeContent: 'center'
+          paddingBottom: '30vh'
         })
       )(
-
+        $row(style({ flex: 1, perspective: '680px', position: 'absolute', bottom: 0 }))(
+          $element('video')(
+            attr({
+              playsinline: '',
+              width: '100%',
+              height: '100%',
+              loop: '',
+              autoplay: '',
+            }),
+            style({
+              willChange: 'transform, opacity',
+              transform: 'translateY(0px) translateZ(0) rotateX(40deg)',
+            })
+          )(
+            $element('source')(attr({ type: 'video/mp4', src: '/video/leaderboard-pick-traders.mp4' }))()
+          )
+        ),
 
         $column(style({ textAlign: 'center' }))(
           $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.85rem', whiteSpace: 'pre-wrap', letterSpacing: '2px' }))('Matching top Traders\nwith Investors'),
@@ -247,6 +263,8 @@ export const $Home = (config: ITreasury) => component((
             : empty(),
         ),
         $text(style({ color: pallete.foreground, position: 'absolute', bottom: '50px', left: '50%', transform: 'translateX(-50%)' }))('Learn More'),
+
+        
 
         // $wheelWrapper(style({
         //   right: 'calc(100% + 3vw)',

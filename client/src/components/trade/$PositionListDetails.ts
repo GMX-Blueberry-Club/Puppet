@@ -83,10 +83,10 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
   } = config.tradeConfig
   const {
     availableIndexLiquidityUsd, averagePrice, collateralDescription,
-    collateralTokenPoolInfo, collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee, executionFeeUsd,
+    collateralTokenPoolInfo, collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
     isTradingEnabled, liquidationPrice, marginFeeUsd, route, netPositionValueUsd,
-    position, swapFee, walletBalance, markets, priceImpactUsd, adjustmentFeeUsd
+    swapFee, walletBalance, markets, position, priceImpactUsd, adjustmentFeeUsd, 
   } = config.tradeState
 
 
@@ -178,7 +178,7 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
         constant(true, switchPosition),
         constant(false, clickClose)
       ]),
-      changeLeverage: map(params => 0n, combineObject({ clickClose })),
+      changeLeverage: constant(0n, clickClose),
       changeIsUsdCollateralToken: snapshot((params, posSlot) => {
         const update = lst(posSlot.updates)
 

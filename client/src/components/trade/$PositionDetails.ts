@@ -75,7 +75,6 @@ export type IRequestTrade = IRequestTradeParams & {
 
 
 export const $PositionDetails = (config: IPositionAdjustmentHistory) => component((
-  [clickProposeTrade, clickProposeTradeTether]: Behavior<PointerEvent, IWalletClient>,
 ) => {
 
   const gmxContractMap = GMX.CONTRACT[config.chain.id]
@@ -91,125 +90,12 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
   } = config.tradeConfig
   const {
     availableIndexLiquidityUsd, averagePrice, collateralDescription,
-    collateralTokenPoolInfo, collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee, executionFeeUsd,
+    collateralTokenPoolInfo, collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
     isTradingEnabled, liquidationPrice, marginFeeUsd, route, netPositionValueUsd,
     position, swapFee, walletBalance, markets, priceImpactUsd, adjustmentFeeUsd
   } = config.tradeState
 
-
-
-
-  const requestTradeParams = snapshot((config, wallet): IRequestTradeParams => {
-    return { ...config, wallet }
-  }, combineObject(config.tradeConfig), clickProposeTrade)
-
-
-  const requestTrade: Stream<IRequestTrade> = multicast(snapshot((params, req) => {
-    const resolvedPrimaryAddress = resolveAddress(config.chain, req.primaryToken)
-    const from = req.isIncrease ? resolvedPrimaryAddress : req.isLong ? req.market.indexToken : req.collateralToken
-    const to = req.isIncrease ? req.isLong ? req.market.indexToken : req.collateralToken : resolvedPrimaryAddress
-
-    const swapRoute = from === to ? [to] : [from, to]
-
-    const slippageN = BigInt(Number(req.slippage) * 100)
-    const allowedSlippage = req.isLong
-      ? req.isIncrease
-        ? slippageN : -slippageN
-      : req.isIncrease
-        ? -slippageN : slippageN
-
-    const priceBasisPoints = GMX.PRECISION + allowedSlippage
-    const acceptablePrice = params.indexPrice * priceBasisPoints / GMX.PRECISION
-    const isNative = req.primaryToken === GMX.ADDRESS_ZERO
-
-
-    // const swapParams = {
-    //   amount: req.collateralDelta,
-    //   minOut: 0n,
-    //   path: swapRoute
-    // }
-    // const tradeParams = {
-    //   acceptablePrice,
-    //   amountIn: 0n,
-    //   collateralDelta: req.collateralDelta,
-    //   minOut: 0n,
-    //   sizeDelta: abs(req.sizeDeltaUsd)
-    // }
-
-
-    const orderVaultAddress = GMX.CONTRACT[config.chain.id].OrderVault.address
-
-    const wntCollateralAmount = isNative ? req.collateralDelta : 0n
-    const totalWntAmount = wntCollateralAmount + params.executionFee
-
-    const sendWnt = viem.encodeFunctionData({
-      abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-      functionName: 'sendWnt',
-      args: [orderVaultAddress, totalWntAmount]
-    })
-
-
-    const orderType = req.isIncrease
-      ? req.focusPrice ? OrderType.LimitIncrease : OrderType.MarketIncrease
-      : req.focusPrice ? OrderType.LimitDecrease : OrderType.MarketDecrease
-
-    const createOrderCalldata = viem.encodeFunctionData({
-      abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-      functionName: 'createOrder',
-      args: [
-        {
-          addresses: {
-            receiver: config.wallet.account.address,
-            callbackContract: GMX.ADDRESS_ZERO,
-            uiFeeReceiver: GMX.ADDRESS_ZERO,
-            market: req.market.marketToken,
-            initialCollateralToken: req.collateralToken,
-            swapPath: [req.market.marketToken]
-          },
-          numbers: {
-            sizeDeltaUsd: abs(req.sizeDeltaUsd),
-            initialCollateralDeltaAmount: abs(req.collateralDelta),
-            acceptablePrice: acceptablePrice,
-            triggerPrice: acceptablePrice,
-            executionFee: params.executionFee,
-            callbackGasLimit: 0n,
-            minOutputAmount: 0n,
-          },
-          orderType,
-          decreasePositionSwapType: DecreasePositionSwapType.NoSwap,
-          isLong: req.isLong,
-          shouldUnwrapNativeToken: isNative,
-          referralCode: BLUEBERRY_REFFERAL_CODE,
-        }
-      ]
-    })
-    
-
-    const request = wagmiWriteContract({
-      ...GMX.CONTRACT[config.chain.id].ExchangeRouter,
-      value: totalWntAmount,
-      functionName: 'multicall',
-      args: [[
-        sendWnt,
-        ...!isNative && req.isIncrease ? [
-          viem.encodeFunctionData({
-            abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-            functionName: 'sendTokens',
-            args: [resolvedPrimaryAddress, orderVaultAddress, req.collateralDelta]
-          })
-        ] : [],
-        createOrderCalldata,
-      ]]
-    })
-
-
-    return { ...params, ...req, acceptablePrice, request, swapRoute }
-  }, combineObject({ executionFee, indexPrice, route }), requestTradeParams))
-
-  const requestTradeRow = map(res => {
-    return [res]
-  }, requestTrade)
 
   return [
     $Table({
@@ -224,7 +110,6 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
           ? now(config.position.updates) as Stream<(IRequestTrade | IPositionIncrease | IPositionDecrease)[]>
           : now([]),
         // constant(initalList, periodic(3000)),
-        requestTradeRow
       ]),
       // $container: $defaultTableContainer(screenUtils.isDesktopScreen ? style({ flex: '1 1 0', minHeight: '100px' }) : style({})),
       scrollConfig: {

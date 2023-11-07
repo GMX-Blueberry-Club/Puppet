@@ -18,7 +18,9 @@ import {
   filterNull,
   getBasisPoints,
   getDenominator,
+  getNativeTokenAddress,
   getTokenDescription,
+  getTokenUsd,
   lst,
   readableFixedUSD30,
   readablePercentage,
@@ -90,11 +92,11 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
 
   const { 
     collateralDeltaUsd, collateralToken, collateralDelta, marketInfo, market, isUsdCollateralToken, sizeDelta, focusMode,
-    primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, focusPrice, indexToken
+    primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, focusPrice, indexToken, executionFeeBuffer
   } = config.tradeConfig
   const {
     availableIndexLiquidityUsd, averagePrice, collateralDescription,
-    collateralTokenPoolInfo, collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee, executionFeeUsd,
+    collateralTokenPoolInfo, collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
     isTradingEnabled, liquidationPrice, marginFeeUsd, route, netPositionValueUsd,
     position, swapFee, walletBalance, markets, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
@@ -118,15 +120,14 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
 
     const swapRoute = from === to ? [to] : [from, to]
 
-    const slippageN = BigInt(Number(req.slippage) * 100)
     const allowedSlippage = req.isLong
       ? req.isIncrease
-        ? slippageN : -slippageN
+        ? req.slippage : -req.slippage
       : req.isIncrease
-        ? -slippageN : slippageN
+        ? -req.slippage : req.slippage
 
-    const priceBasisPoints = GMX.PRECISION + allowedSlippage
-    const acceptablePrice = params.indexPrice * priceBasisPoints / GMX.PRECISION
+    
+    const acceptablePrice = params.indexPrice * (allowedSlippage + GMX.BASIS_POINTS_DIVISOR) / GMX.BASIS_POINTS_DIVISOR
     const isNative = req.primaryToken === GMX.ADDRESS_ZERO
 
 
@@ -143,116 +144,110 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
     //   sizeDelta: abs(req.sizeDeltaUsd)
     // }
 
-
+    const executionFeeAfterBuffer = params.executionFee * (req.executionFeeBuffer + GMX.BASIS_POINTS_DIVISOR) / GMX.BASIS_POINTS_DIVISOR // params.executionFee
     const orderVaultAddress = GMX.CONTRACT[config.chain.id].OrderVault.address
     const wntCollateralAmount = isNative ? req.collateralDelta : 0n
-    const totalWntAmount = wntCollateralAmount + params.executionFee
+    const totalWntAmount = wntCollateralAmount + executionFeeAfterBuffer
     const orderType = req.isIncrease
       ? req.focusPrice ? OrderType.LimitIncrease : OrderType.MarketIncrease
       : req.focusPrice ? OrderType.LimitDecrease : OrderType.MarketDecrease
 
 
-    const request = params.route !== GMX.ADDRESS_ZERO
-      ? wagmiWriteContract({
-        ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
-        value: totalWntAmount,
-        functionName: 'requestPosition',
-        args: [
-          {
-            acceptablePrice,
-            collateralDelta: abs(req.collateralDelta),
-            sizeDelta: abs(req.sizeDeltaUsd),
-          },
-          {
-            amount: wntCollateralAmount,
-            path: swapRoute,
-            minOut: 0n,
-          },
-          '0x166ADAC0AD02595E646DCD39235B6DB5B974DBE905DBA5D909099F1091953A7B',
-          1118000000000000n, //params.executionFee,
-          req.isIncrease
-        ]
-      })
-      : wagmiWriteContract({
-        ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
-        value: totalWntAmount,
-        functionName: 'registerRouteAccountAndRequestPosition',
-        args: [
-          {
-            acceptablePrice,
-            collateralDelta: abs(req.collateralDelta),
-            sizeDelta: abs(req.sizeDeltaUsd),
-          },
-          {
-            amount: wntCollateralAmount,
-            path: swapRoute,
-            minOut: 0n,
-          },
-          1118000000000000n, //params.executionFee,
-          req.collateralToken,
-          req.indexToken,
-          req.isLong,
-          '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000014bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075',
-        ]
-      })
+    // const request = params.route === GMX.ADDRESS_ZERO
+    //   ? wagmiWriteContract({
+    //     ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
+    //     value: totalWntAmount,
+    //     functionName: 'registerRouteAccountAndRequestPosition',
+    //     args: [
+    //       {
+    //         acceptablePrice,
+    //         collateralDelta: abs(req.collateralDelta),
+    //         sizeDelta: abs(req.sizeDeltaUsd),
+    //       },
+    //       {
+    //         amount: wntCollateralAmount,
+    //         path: req.collateralDelta ? [req.market.marketToken] : [],
+    //         minOut: 0n,
+    //       },
+    //       1118000000000000n, //params.executionFee,
+    //       req.collateralToken,
+    //       req.indexToken,
+    //       req.isLong,
+    //       '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000014bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075',
+    //     ]
+    //   })
+    //   : wagmiWriteContract({
+    //     ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
+    //     value: totalWntAmount,
+    //     functionName: 'requestPosition',
+    //     args: [
+    //       {
+    //         acceptablePrice,
+    //         collateralDelta: abs(req.collateralDelta),
+    //         sizeDelta: abs(req.sizeDeltaUsd),
+    //       },
+    //       {
+    //         amount: wntCollateralAmount,
+    //         path: swapRoute,
+    //         minOut: 0n,
+    //       },
+    //       '0x166ADAC0AD02595E646DCD39235B6DB5B974DBE905DBA5D909099F1091953A7B',
+    //       1118000000000000n, //params.executionFee,
+    //       req.isIncrease
+    //     ]
+    //   })
 
 
     // GMX V2 ExchangeRouter
-    // const sendWnt = viem.encodeFunctionData({
-    //   abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-    //   functionName: 'sendWnt',
-    //   args: [orderVaultAddress, totalWntAmount]
-    // })
-
-
-    // const createOrderCalldata = viem.encodeFunctionData({
-    //   abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-    //   functionName: 'createOrder',
-    //   args: [
-    //     {
-    //       addresses: {
-    //         receiver: params.route,
-    //         callbackContract: GMX.ADDRESS_ZERO,
-    //         uiFeeReceiver: GMX.ADDRESS_ZERO,
-    //         market: req.market.marketToken,
-    //         initialCollateralToken: req.collateralToken,
-    //         swapPath: [req.market.marketToken]
-    //       },
-    //       numbers: {
-    //         sizeDeltaUsd: abs(req.sizeDeltaUsd),
-    //         initialCollateralDeltaAmount: abs(req.collateralDelta),
-    //         acceptablePrice: acceptablePrice,
-    //         triggerPrice: acceptablePrice,
-    //         executionFee: 1118000000000000n,
-    //         callbackGasLimit: 0n,
-    //         minOutputAmount: 0n,
-    //       },
-    //       orderType,
-    //       decreasePositionSwapType: DecreasePositionSwapType.NoSwap,
-    //       isLong: req.isLong,
-    //       shouldUnwrapNativeToken: isNative,
-    //       referralCode: BLUEBERRY_REFFERAL_CODE,
-    //     }
-    //   ]
-    // })
-    
-
-    // const request = wagmiWriteContract({
-    //   ...GMX.CONTRACT[config.chain.id].ExchangeRouter,
-    //   value: totalWntAmount,
-    //   functionName: 'multicall',
-    //   args: [[
-    //     sendWnt,
-    //     ...!isNative && req.isIncrease ? [
-    //       viem.encodeFunctionData({
-    //         abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-    //         functionName: 'sendTokens',
-    //         args: [resolvedPrimaryAddress, orderVaultAddress, req.collateralDelta]
-    //       })
-    //     ] : [],
-    //     createOrderCalldata,
-    //   ]]
-    // })
+    const request = wagmiWriteContract({
+      ...GMX.CONTRACT[config.chain.id].ExchangeRouter,
+      value: totalWntAmount,
+      functionName: 'multicall',
+      args: [[
+        viem.encodeFunctionData({
+          abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
+          functionName: 'sendWnt',
+          args: [orderVaultAddress, totalWntAmount]
+        }),
+        ...req.isIncrease && !isNative ? [
+          viem.encodeFunctionData({
+            abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
+            functionName: 'sendTokens',
+            args: [resolvedPrimaryAddress, orderVaultAddress, req.collateralDelta]
+          })
+        ] : [],
+        viem.encodeFunctionData({
+          abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
+          functionName: 'createOrder',
+          args: [
+            {
+              addresses: {
+                receiver: params.route,
+                callbackContract: GMX.ADDRESS_ZERO,
+                uiFeeReceiver: GMX.ADDRESS_ZERO,
+                market: req.market.marketToken,
+                initialCollateralToken: req.collateralToken,
+                swapPath: req.collateralDelta ? [req.market.marketToken] : []
+              },
+              numbers: {
+                sizeDeltaUsd: abs(req.sizeDeltaUsd),
+                initialCollateralDeltaAmount: 0n,
+                acceptablePrice: acceptablePrice,
+                triggerPrice: 0n,
+                executionFee: executionFeeAfterBuffer,
+                callbackGasLimit: 0n,
+                minOutputAmount: 0n,
+              },
+              orderType,
+              decreasePositionSwapType: DecreasePositionSwapType.NoSwap,
+              isLong: req.isLong,
+              shouldUnwrapNativeToken: isNative && req.collateralDelta > 0n,
+              referralCode: BLUEBERRY_REFFERAL_CODE,
+            }
+          ]
+        }),
+      ]]
+    })
 
 
     return { ...params, ...req, acceptablePrice, request, swapRoute }
@@ -350,27 +345,16 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
     return false
   }, validationError)
 
+  const executionFeeAfterBuffer = map(params => {
+    const nativeToken = getNativeTokenAddress(config.chain)
+    const executionFeeAfterBuffer = params.executionFee * (params.executionFeeBuffer + GMX.BASIS_POINTS_DIVISOR) / GMX.BASIS_POINTS_DIVISOR // params.executionFee
+    const feeUsd = getTokenUsd(params.processData.latestPrice[nativeToken].min, executionFeeAfterBuffer)
+
+    return feeUsd
+  }, combineObject({ executionFee, processData: config.processData, executionFeeBuffer }))
+
   return [
     config.$container(layoutSheet.spacing)(
-      // $TextField({
-      //   label: 'Slippage %',
-      //   labelStyle: { flex: 1 },
-      //   value: config.tradeConfig.slippage,
-      //   inputOp: style({ width: '60px', maxWidth: '60px', textAlign: 'right', fontWeight: 'normal' }),
-      //   validation: map(n => {
-      //     const val = Number(n)
-      //     const valid = val >= 0
-      //     if (!valid) {
-      //       return 'Invalid Basis point'
-      //     }
-      //     if (val > 5) {
-      //       return 'Slippage should be less than 5%'
-      //     }
-      //     return null
-      //   }),
-      // })({
-      //   change: changeSlippageTether()
-      // }),
       $column(layoutSheet.spacingTiny)(
         // switchLatest(map(params => {
         //   const totalSizeUsd = params.position ? params.position.latestUpdate.sizeInUsd + params.sizeDeltaUsd : params.sizeDeltaUsd
@@ -388,7 +372,9 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
         //   )
         // }, combineObject({ ...config.tradeState, sizeDeltaUsd }))),
         $infoLabeledValue('Swap', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, swapFee))),
-        $infoLabeledValue('Execution Fee', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(fee => `${readableFixedUSD30(fee)}`, executionFeeUsd))),
+        $infoLabeledValue('Execution Fee', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(feeUsd => {
+          return `${readableFixedUSD30(feeUsd)}`
+        }, executionFeeAfterBuffer))),
         $infoLabeledValue('Price Impact', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(params => `${readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))} ${readableFixedUSD30(params.priceImpactUsd)}`, combineObject({ priceImpactUsd, sizeDeltaUsd })))),
         $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, marginFeeUsd)))
       ),

@@ -16,6 +16,7 @@ import {
   getDenominator,
   getIntervalIdentifier,
   getMappedValue,
+  getPositionKey,
   importGlobal,
   unixTimestampNow
 } from "gmx-middleware-utils"
@@ -197,6 +198,7 @@ export const gmxProcess = defineProcess(
     step(seed, value) {
       const update = getEventType<IPositionIncrease>('PositionIncrease', value, seed.approximatedTimestamp)
       const market = seed.markets[update.market]
+
       const slot = seed.mirrorPositionSlot[update.positionKey] ??= {
         ...initPartialPositionSlot,
         key: update.positionKey,

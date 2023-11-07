@@ -13,7 +13,7 @@
         "build": "tsc -b"
     },
     "dependencies": {
-        "viem": "^1.18.0",
+        "viem": "^1.18.4",
         "gmx-middleware-const": "workspace:*"
     }
 }

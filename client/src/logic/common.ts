@@ -2,7 +2,7 @@ import { combineArray, fromCallback, isStream } from "@aelea/core"
 import { awaitPromises, map, now } from "@most/core"
 import { Stream } from "@most/types"
 import * as wagmi from "@wagmi/core"
-import { WalletClient } from "@wagmi/core"
+
 import type { AbiParametersToPrimitiveTypes, Address, ExtractAbiEvent, ExtractAbiFunction } from 'abitype'
 import { ContractClientParams, ContractParams, StreamInput, StreamInputArray, switchMap } from "gmx-middleware-utils"
 import * as viem from "viem"
@@ -11,6 +11,7 @@ import { O } from "@aelea/core"
 import { http } from "@aelea/ui-components"
 import { filter, mergeArray, multicast } from "@most/core"
 import { ICommunicationMessage } from "gmx-middleware-utils"
+import { arbitrum } from "viem/chains"
 
 
 
@@ -160,13 +161,22 @@ export const wagmiWriteContract = async <
   TAbi extends viem.Abi,
   TFunctionName extends string,
   TChainId extends number, 
-  TWalletClient extends WalletClient = WalletClient
+  TWalletClient extends wagmi.WalletClient = wagmi.WalletClient
 >(simParams: wagmi.PrepareWriteContractConfig<TAbi, TFunctionName, TChainId, TWalletClient>): Promise<viem.TransactionReceipt> => {
+
+  // const client = await wagmi.getWalletClient()
+
+  // if (client) {
+  //   await client.writeContract({ ...simParams, chain: arbitrum  })
+  // }
+  
+
   const client = wagmi.getPublicClient()
-  // const simReq = await wagmi.prepareWriteContract(simParams)
-  const writeResults = await wagmi.writeContract(simParams as any)
-  // const recpt = await client.waitForTransactionReceipt(writeResults)
-  // return recpt
+
+  const simReq = await wagmi.prepareWriteContract(simParams)
+  const writeResults = await wagmi.writeContract(simReq as any)
+  const recpt = await client.waitForTransactionReceipt(writeResults)
+  return recpt
 
 }
 
