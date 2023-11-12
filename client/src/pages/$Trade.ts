@@ -29,7 +29,7 @@ import { $PositionEditor, IPositionEditorAbstractParams, ITradeConfig, ITradeFoc
 import { $PositionListDetails, IRequestTrade } from "../components/trade/$PositionListDetails.js"
 import { getEventdata, latestTokenPrice } from "../data/process/process.js"
 import { rootStoreScope } from "../data/store/store.js"
-import { connectContract, contractReader, listenContract } from "../logic/common.js"
+import { combineState, connectContract, contractReader, listenContract } from "../logic/common.js"
 import * as trade from "../logic/trade.js"
 import { exchangesWebsocketPriceSource } from "../logic/trade.js"
 import { getExecuteGasFee, getExecutionFee, getFullMarketInfo } from "../logic/tradeV2.js"
@@ -106,7 +106,7 @@ export const $Trade = (config: ITradeComponent) => component((
   
   [chartVisibleLogicalRangeChange, chartVisibleLogicalRangeChangeTether]: Behavior<LogicalRange | null>,
 
-  [clickResetPosition, clickResetPositionTether]: Behavior<null>,
+  [clickResetPosition, clickResetPositionTether]: Behavior<IPositionSlot | null>,
 
 ) => {
 
@@ -195,7 +195,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const collateralToken: Stream<viem.Address> = map(params => {
     return params.isUsdCollateralToken ? params.market.shortToken : params.market.longToken
-  }, combineObject({ isLong, market, isUsdCollateralToken }))
+  }, combineObject({ market, isUsdCollateralToken }))
 
 
   const walletBalance = replayLatest(multicast(switchMap(params => {
@@ -269,7 +269,13 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const routeTypeKey = replayLatest(multicast(map(params => {
     // abi.encode(_longToken, _shortToken, _weth, _weth, true, _marketType)
-    const key = getRouteTypeKey(params.collateralToken, params.indexToken, params.isLong, '0x')
+
+    const getRouteTypeKeyArgs = [
+      params.collateralToken, params.indexToken, params.isLong,
+      '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000014bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075'
+    ] as const
+
+    const key = getRouteTypeKey(...getRouteTypeKeyArgs)
     return key
   }, combineObject({ collateralToken, indexToken, isLong }))))
 
@@ -290,13 +296,11 @@ export const $Trade = (config: ITradeComponent) => component((
     return w3p.account.address
   }, combineObject({ wallet }))
 
-
   // const value = viem.decodeErrorResult({
   //   abi: gmxContractMap.CustomError.abi,
   //   data: '0xe09ad0e90000000000000000000000000000000000000000000000000006bbb25d552d780000000000000000000000000000000000000000000000000006b9f80e1be100'
   // })
 
-  // debugger
 
   // const route = replayLatest(multicast(switchMap(params => {
   //   const w3p = params.wallet
@@ -304,21 +308,23 @@ export const $Trade = (config: ITradeComponent) => component((
   //     return now(GMX.ADDRESS_ZERO)
   //   }
 
-  //   const key = getRouteKey(w3p.account.address, params.collateralToken, params.indexToken, params.isLong)
-  //   const storedRouteKey = storage.get(tradingStore, GMX.ADDRESS_ZERO as viem.Address, key)
+  //   const routeKey = getRouteKey(w3p.account.address, params.routeTypeKey)
+  //   const storedRouteKey = storage.get(tradingStore, GMX.ADDRESS_ZERO as viem.Address, routeKey)
   //   const fallbackGetRoute = switchMap(address => {
+  //     const routeAddressArgs = [w3p.account.address, params.collateralToken, params.indexToken, params.isLong, '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000014bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075'] as const
 
   //     if (address === GMX.ADDRESS_ZERO) {
   //       return switchMap(res => {
-  //         return address === GMX.ADDRESS_ZERO ? now(res) : indexDB.set(tradingStore, res, key)
-  //       }, orchestratorReader('routeAddress', address, params.collateralToken, params.indexToken, params.isLong, '0x'))
+  //         return address === GMX.ADDRESS_ZERO ? now(res) : indexDB.set(tradingStore, res, routeKey)
+  //       }, orchestratorReader('routeAddress', ...routeAddressArgs))
+  //       // }, orchestratorReader('routeAddress', routeKey))
   //     }
 
   //     return now(address)
   //   }, storedRouteKey)
 
   //   return fallbackGetRoute
-  // }, combineObject({ wallet, collateralToken, indexToken, isLong }))))
+  // }, combineObject({ wallet, collateralToken, indexToken, isLong, routeTypeKey }))))
 
 
 
@@ -341,7 +347,8 @@ export const $Trade = (config: ITradeComponent) => component((
 
       return existingSlot
     }, combineObject({ processData: config.processData, positionKeyArgs })),
-    switchPosition
+    switchPosition,
+    clickResetPosition
   ])))
 
 
@@ -456,11 +463,13 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ position, marketInfo, marketPrice, sizeDeltaUsd, isLong }))
 
   const marginFeeUsd = map(params => {
-    return getMarginFee(
+    const newLocal = getMarginFee(
       params.marketInfo,
       params.priceImpactUsd > 0n,
-      params.sizeDeltaUsd,
+      params.sizeDeltaUsd
     )
+
+    return newLocal
   }, combineObject({ marketInfo, sizeDeltaUsd, isLong, priceImpactUsd }))
 
   const adjustmentFeeUsd = map(params => {
@@ -478,7 +487,6 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const netPositionValueUsd = replayLatest(multicast(zip((params, positionParams) => {
     if (positionParams.position === null) {
-      console.log('NO POSITION')
       return 0n
     }
 
@@ -498,7 +506,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
     console.log(netValue)
     return netValue
-  }, combineObject({ marketPrice, marketInfo, indexPrice, collateralPrice, collateralDescription }), zipState({ position, positionFees }))))
+  }, combineObject({ marketPrice, marketInfo, indexPrice, collateralPrice, collateralDescription }), combineState({ position, positionFees }))))
 
   const focusPrice = replayLatest(multicast(changefocusPrice), null)
   const yAxisCoords = replayLatest(multicast(changeYAxisCoords), null)
@@ -511,10 +519,10 @@ export const $Trade = (config: ITradeComponent) => component((
   const leverage = replayLatest(multicast(mergeArray([
     changeLeverage,
     storage.replayWrite(tradingStore, GMX.MAX_LEVERAGE_FACTOR / 4n, debounce(50, changeLeverage), 'leverage'),
-    filterNull(snapshot((params) => {
+    filterNull(map((params) => {
       if (params.position === null) return null
       return div(lst(params.position.updates).sizeInUsd, params.netPositionValueUsd)
-    }, zipState({ netPositionValueUsd, position }), clickResetPosition))
+    }, zipState({ netPositionValueUsd, position })))
   ])))
 
   // [config]
@@ -539,12 +547,11 @@ export const $Trade = (config: ITradeComponent) => component((
   }
 
   const positionList = map(params => {
-    const walletAddress = params.wallet?.account.address
-    if (!walletAddress) return []
+    if (!params.route) return []
 
-    const filtered = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.account === viem.getAddress(walletAddress))
+    const filtered = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.account === viem.getAddress(params.route))
     return filtered
-  }, combineObject({ processData: config.processData, wallet }))
+  }, combineObject({ processData: config.processData, route }))
 
 
   const averagePrice = map(params => {
@@ -558,7 +565,7 @@ export const $Trade = (config: ITradeComponent) => component((
     return avg
   }, combineObject({ collateralPrice, indexToken, indexPrice, position, sizeDeltaUsd, sizeDelta }))
 
-  const liquidationPrice = map(params => {
+  const liquidationPrice = multicast(map(params => {
     const update = params.position ? lst(params.position.updates) : null
 
     const positionSizeUsd = update?.sizeInUsd || 0n
@@ -576,7 +583,7 @@ export const $Trade = (config: ITradeComponent) => component((
     const lp = getLiquidationPrice(params.marketPrice, params.marketInfo, params.isLong, params.collateralToken, params.indexToken, size, sizeUsd, collateral, collateralUsd)
     
     return lp
-  }, combineObject({ position, positionFees, sizeDeltaUsd, sizeDelta, isLong, marketPrice, marketInfo, collateralDeltaUsd, collateralDelta, collateralToken, collateralPrice, indexToken, chartInterval }))
+  }, combineObject({ position, positionFees, sizeDeltaUsd, sizeDelta, isLong, marketPrice, marketInfo, collateralDeltaUsd, collateralDelta, collateralToken, collateralPrice, indexToken, chartInterval })))
 
 
 

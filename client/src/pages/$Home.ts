@@ -99,7 +99,7 @@ export const $Home = (config: ITreasury) => component((
     $column(layoutSheet.spacingBig, style({ flex: 1 }))(
 
       // translateY(-100px) translateZ(100px) rotateX(40deg)
-      $snapSection(layoutSheet.spacingBig,
+      $snapSection(
         style({
           placeSelf: 'center',
           maxWidth: '600px',
@@ -127,143 +127,145 @@ export const $Home = (config: ITreasury) => component((
           )
         ),
 
-        $column(style({ textAlign: 'center' }))(
-          $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.85rem', whiteSpace: 'pre-wrap', letterSpacing: '2px' }))('Matching top Traders\nwith Investors'),
-        ),
-        $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Copy Top Traders with a Single Deposit | Trade to Earn More`),
-
-        $node(),
-
-        $column(layoutSheet.spacing, style({ minWidth: '250px' }))(
-          screenUtils.isMobileScreen ? $text(style({ textAlign: 'center' }))('< which are you? >') : empty(),
-
-          $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
-            $Link({
-              $content: $anchor(
-                $ButtonSecondary({
-                  $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-                    $icon({ $content: $puppetLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
-                    $text('Investor'),
-                    $node(
-                      styleInline(map(move => {
-                        const shalf = document.body.clientWidth / 2
-                        const alpha = (shalf - move.clientX) / shalf
-
-                        return { opacity: alpha }
-                      }, bodyPointerMove)),
-                      style({
-                        pointerEvents: 'none',
-                        background: pallete.negative,
-                        filter: 'blur(1em)',
-                        width: '100%',
-                        height: '100%',
-                        left: '0px',
-                        top: '120%',
-                        position: 'absolute',
-                        content: '. ',
-                        transform: 'perspective(1em) rotateX(40deg) scale(1, 0.35)'
-                      })
-                    )()
-                  ),
-                  $container: $element('button')(
-                    designSheet.btn,
-                    style({ position: 'relative', borderRadius: '30px' })
-                  )
-                })({})
-              ),
-              url: '/app/leaderboard/settled', route: config.parentRoute.create({ fragment: 'fefe' })
-            })({
-              click: linkClickTether()
-            }),
-
-            screenUtils.isDesktopScreen ? $text('< which are you? >') : empty(),
-
-            $Link({
-              $content: $anchor(
-                $ButtonSecondary({
-                  $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-                    $icon({ $content: $gmxLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
-                    $text('Trader'),
-                    $node(
-                      styleInline(map(move => {
-                        const shalf = document.body.clientWidth / 2
-                        const alpha = (shalf - move.clientX) / shalf
-
-                        return { opacity: alpha > 0 ? 0 : Math.abs(alpha) }
-                      }, bodyPointerMove)),
-                      style({
-                        pointerEvents: 'none',
-                        background: pallete.positive,
-                        filter: 'blur(1em)',
-                        width: '100%',
-                        height: '100%',
-                        left: '0px',
-                        top: '120%',
-                        position: 'absolute',
-                        content: '. ',
-                        transform: 'perspective(1em) rotateX(40deg) scale(1, 0.35)'
-                      })
-                    )()
-                  ),
-
-                  $container: $element('button')(
-                    designSheet.btn,
-                    style({ position: 'relative', borderRadius: '30px' })
-                  )
-                })({})
-              ),
-              url: '/app/trade', route: config.parentRoute.create({ fragment: 'fefe' })
-            })({
-              click: linkClickTether()
-            }),
+        $column(layoutSheet.spacingBig, style({ alignItems: 'center' }))(
+          $column(style({ textAlign: 'center' }))(
+            $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.85rem', whiteSpace: 'pre-wrap', letterSpacing: '2px' }))('Matching top Traders\nwith Investors'),
           ),
+          $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Copy Top Traders with a Single Deposit | Trade to Earn More`),
 
+          $node(),
 
-          screenUtils.isMobileScreen
-            ? switchMap(deferredPrompt => {
-              return $column(layoutSheet.spacing)(
-                filterNull(map(req => {
-                  req.then(console.log)
+          $column(layoutSheet.spacing, style({ minWidth: '250px' }))(
+            screenUtils.isMobileScreen ? $text(style({ textAlign: 'center' }))('< which are you? >') : empty(),
 
-                  return null
-                }, clickDownloadBtn)) as any,
+            $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
+              $Link({
+                $content: $anchor(
+                  $ButtonSecondary({
+                    $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+                      $icon({ $content: $puppetLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
+                      $text('Investor'),
+                      $node(
+                        styleInline(map(move => {
+                          const shalf = document.body.clientWidth / 2
+                          const alpha = (shalf - move.clientX) / shalf
 
-                $node(),
-                $node(),
-
-                $column(
-                  $labeledDivider('Add to Home Screen'),
+                          return { opacity: alpha }
+                        }, bodyPointerMove)),
+                        style({
+                          pointerEvents: 'none',
+                          background: pallete.negative,
+                          filter: 'blur(1em)',
+                          width: '100%',
+                          height: '100%',
+                          left: '0px',
+                          top: '120%',
+                          position: 'absolute',
+                          content: '. ',
+                          transform: 'perspective(1em) rotateX(40deg) scale(1, 0.35)'
+                        })
+                      )()
+                    ),
+                    $container: $element('button')(
+                      designSheet.btn,
+                      style({ position: 'relative', borderRadius: '30px' })
+                    )
+                  })({})
                 ),
+                url: '/app/leaderboard/settled', route: config.parentRoute.create({ fragment: 'fefe' })
+              })({
+                click: linkClickTether()
+              }),
 
-                $node(),
+              screenUtils.isDesktopScreen ? $text('< which are you? >') : empty(),
 
-                $Link({
-                  anchorOp: style({ alignSelf: 'center' }),
-                  $content: $anchor(
-                    $ButtonSecondary({
-                      $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-                        $icon({ $content: $puppetLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
-                        $text('Download'),
-                        $icon({ $content: $gmxLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
-                      ),
-                      $container: $element('button')(
-                        designSheet.btn,
-                        style({ position: 'relative', borderRadius: '30px' })
-                      )
-                    })({})
+              $Link({
+                $content: $anchor(
+                  $ButtonSecondary({
+                    $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+                      $icon({ $content: $gmxLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
+                      $text('Trader'),
+                      $node(
+                        styleInline(map(move => {
+                          const shalf = document.body.clientWidth / 2
+                          const alpha = (shalf - move.clientX) / shalf
+
+                          return { opacity: alpha > 0 ? 0 : Math.abs(alpha) }
+                        }, bodyPointerMove)),
+                        style({
+                          pointerEvents: 'none',
+                          background: pallete.positive,
+                          filter: 'blur(1em)',
+                          width: '100%',
+                          height: '100%',
+                          left: '0px',
+                          top: '120%',
+                          position: 'absolute',
+                          content: '. ',
+                          transform: 'perspective(1em) rotateX(40deg) scale(1, 0.35)'
+                        })
+                      )()
+                    ),
+
+                    $container: $element('button')(
+                      designSheet.btn,
+                      style({ position: 'relative', borderRadius: '30px' })
+                    )
+                  })({})
+                ),
+                url: '/app/trade', route: config.parentRoute.create({ fragment: 'fefe' })
+              })({
+                click: linkClickTether()
+              }),
+            ),
+
+
+            screenUtils.isMobileScreen
+              ? switchMap(deferredPrompt => {
+                return $column(layoutSheet.spacing)(
+                  filterNull(map(req => {
+                    req.then(console.log)
+
+                    return null
+                  }, clickDownloadBtn)) as any,
+
+                  $node(),
+                  $node(),
+
+                  $column(
+                    $labeledDivider('Add to Home Screen'),
                   ),
-                  url: '/app/leaderboard/settled', route: config.parentRoute.create({ fragment: 'fefe' })
-                })({
-                  click: clickDownloadBtnTether(
-                    map(() => deferredPrompt.prompt())
-                  )
-                })
-              )
-            }, installUserChoice) 
-            : empty(),
-        ),
-        $text(style({ color: pallete.foreground, position: 'absolute', bottom: '50px', left: '50%', transform: 'translateX(-50%)' }))('Learn More'),
 
+                  $node(),
+
+                  $Link({
+                    anchorOp: style({ alignSelf: 'center' }),
+                    $content: $anchor(
+                      $ButtonSecondary({
+                        $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+                          $icon({ $content: $puppetLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
+                          $text('Download'),
+                          $icon({ $content: $gmxLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
+                        ),
+                        $container: $element('button')(
+                          designSheet.btn,
+                          style({ position: 'relative', borderRadius: '30px' })
+                        )
+                      })({})
+                    ),
+                    url: '/app/leaderboard/settled', route: config.parentRoute.create({ fragment: 'fefe' })
+                  })({
+                    click: clickDownloadBtnTether(
+                      map(() => deferredPrompt.prompt())
+                    )
+                  })
+                )
+              }, installUserChoice) 
+              : empty(),
+          ),
+          $text(style({ color: pallete.foreground, position: 'absolute', bottom: '50px', left: '50%', transform: 'translateX(-50%)' }))('Learn More'),
+
+        )
         
 
         // $wheelWrapper(style({

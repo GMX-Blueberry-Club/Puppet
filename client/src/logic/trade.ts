@@ -59,6 +59,7 @@ const derievedSymbolMapping: { [k: string]: ITokenSymbol } = {
   [GMX.TOKEN_SYMBOL.BTCB]: GMX.TOKEN_SYMBOL.BTC,
   [GMX.TOKEN_SYMBOL.WBTCE]: GMX.TOKEN_SYMBOL.BTC,
   [GMX.TOKEN_SYMBOL.WAVAX]: GMX.TOKEN_SYMBOL.AVAX,
+  [GMX.TOKEN_SYMBOL.SOL]: GMX.TOKEN_SYMBOL.SOL,
 }
 
 const gmxIoPricefeedIntervalLabel = {

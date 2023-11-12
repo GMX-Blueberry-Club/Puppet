@@ -141,8 +141,8 @@ export interface ITradeConfig {
 
 export interface IPositionEditorAbstractParams {
   referralCode: viem.Hex
-  tokenIndexMap: Partial<Record<number, viem.Address[]>>
-  tokenStableMap: Partial<Record<number, viem.Address[]>>
+  // tokenIndexMap: Partial<Record<number, viem.Address[]>>
+  // tokenStableMap: Partial<Record<number, viem.Address[]>>
   parentRoute: Route
   chain: ISupportedChain
   processData: Stream<IGmxProcessState>
@@ -278,7 +278,10 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
       }
 
       return mergeArray([
-        snapshot((delta, price) => getTokenUsd(price, delta), config.tradeConfig.collateralDelta, config.tradeState.indexPrice),
+        snapshot((delta, price) => {
+          const newLocal_2 = getTokenUsd(price, delta)
+          return newLocal_2
+        }, config.tradeConfig.collateralDelta, config.tradeState.primaryPrice),
         sample(config.tradeConfig.collateralDeltaUsd, config.tradeConfig.leverage)
       ])
       // const effects = mergeArray([config.tradeConfig.leverage, config.tradeState.indexPrice])
@@ -606,14 +609,15 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                   }),
                   list: [
                     GMX.ADDRESS_ZERO,
-                    ...config.tokenIndexMap[config.chain.id] || [],
-                    ...config.tokenStableMap[config.chain.id] || [],
+                    params.market.longToken,
+                    params.market.shortToken,
+                    // ...params.markets.map(m => m.indexToken)
                   ],
                 }
               })({
                 select: changeInputTokenTether()
               })
-            }, combineObject({ account }))),
+            }, combineObject({ account, market }))),
           ),
         ),
 

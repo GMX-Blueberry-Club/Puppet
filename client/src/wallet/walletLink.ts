@@ -37,7 +37,6 @@ const llamaRpc = import.meta.env.VITE_LLAMANODES_PROJECT_ID || '01HCB0CBBH06TE3X
 
 
 
-
 export const wcConnector = new WalletConnectConnector({
   chains,
   options: {

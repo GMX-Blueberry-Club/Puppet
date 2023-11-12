@@ -3,7 +3,7 @@ import { $Node, $node, $text, NodeComposeFn, attr, component, style } from "@ael
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
-import { awaitPromises, constant, empty, map, mergeArray, multicast, skipRepeats, snapshot, switchLatest } from "@most/core"
+import { awaitPromises, constant, empty, map, mergeArray, multicast, sample, skipRepeats, snapshot, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
@@ -77,7 +77,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
 
   [approveTrading, approveTradingTether]: Behavior<PointerEvent, true>,
   [clickApproveprimaryToken, clickApproveprimaryTokenTether]: Behavior<PointerEvent, { route: viem.Address, primaryToken: viem.Address }>,
-  [clickResetPosition, clickResetPositionTether]: Behavior<any, null>,
+  [clickResetPosition, clickResetPositionTether]: Behavior<any, IPositionSlot | null>,
 
   [clickProposeTrade, clickProposeTradeTether]: Behavior<PointerEvent, IWalletClient>,
 
@@ -153,101 +153,101 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
       : req.focusPrice ? OrderType.LimitDecrease : OrderType.MarketDecrease
 
 
-    // const request = params.route === GMX.ADDRESS_ZERO
-    //   ? wagmiWriteContract({
-    //     ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
-    //     value: totalWntAmount,
-    //     functionName: 'registerRouteAccountAndRequestPosition',
-    //     args: [
-    //       {
-    //         acceptablePrice,
-    //         collateralDelta: abs(req.collateralDelta),
-    //         sizeDelta: abs(req.sizeDeltaUsd),
-    //       },
-    //       {
-    //         amount: wntCollateralAmount,
-    //         path: req.collateralDelta ? [req.market.marketToken] : [],
-    //         minOut: 0n,
-    //       },
-    //       1118000000000000n, //params.executionFee,
-    //       req.collateralToken,
-    //       req.indexToken,
-    //       req.isLong,
-    //       '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000014bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075',
-    //     ]
-    //   })
-    //   : wagmiWriteContract({
-    //     ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
-    //     value: totalWntAmount,
-    //     functionName: 'requestPosition',
-    //     args: [
-    //       {
-    //         acceptablePrice,
-    //         collateralDelta: abs(req.collateralDelta),
-    //         sizeDelta: abs(req.sizeDeltaUsd),
-    //       },
-    //       {
-    //         amount: wntCollateralAmount,
-    //         path: swapRoute,
-    //         minOut: 0n,
-    //       },
-    //       '0x166ADAC0AD02595E646DCD39235B6DB5B974DBE905DBA5D909099F1091953A7B',
-    //       1118000000000000n, //params.executionFee,
-    //       req.isIncrease
-    //     ]
-    //   })
+    const request = params.route === GMX.ADDRESS_ZERO
+      ? wagmiWriteContract({
+        ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
+        value: totalWntAmount,
+        functionName: 'registerRouteAccountAndRequestPosition',
+        args: [
+          {
+            acceptablePrice,
+            collateralDelta: abs(req.collateralDelta),
+            sizeDelta: abs(req.sizeDeltaUsd),
+          },
+          {
+            amount: wntCollateralAmount,
+            path: req.collateralDelta ? [req.indexToken] : [],
+            minOut: 0n,
+          },
+          executionFeeAfterBuffer,
+          req.collateralToken,
+          req.indexToken,
+          req.isLong,
+          '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000014bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075',
+        ]
+      })
+      : wagmiWriteContract({
+        ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
+        value: totalWntAmount,
+        functionName: 'requestPosition',
+        args: [
+          {
+            acceptablePrice,
+            collateralDelta: abs(req.collateralDelta),
+            sizeDelta: abs(req.sizeDeltaUsd),
+          },
+          {
+            amount: wntCollateralAmount,
+            path: req.collateralDelta ? [req.indexToken] : [],
+            minOut: 0n,
+          },
+          '0x166ADAC0AD02595E646DCD39235B6DB5B974DBE905DBA5D909099F1091953A7B',
+          executionFeeAfterBuffer,
+          req.isIncrease
+        ]
+      })
 
 
     // GMX V2 ExchangeRouter
-    const request = wagmiWriteContract({
-      ...GMX.CONTRACT[config.chain.id].ExchangeRouter,
-      value: totalWntAmount,
-      functionName: 'multicall',
-      args: [[
-        viem.encodeFunctionData({
-          abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-          functionName: 'sendWnt',
-          args: [orderVaultAddress, totalWntAmount]
-        }),
-        ...req.isIncrease && !isNative ? [
-          viem.encodeFunctionData({
-            abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-            functionName: 'sendTokens',
-            args: [resolvedPrimaryAddress, orderVaultAddress, req.collateralDelta]
-          })
-        ] : [],
-        viem.encodeFunctionData({
-          abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-          functionName: 'createOrder',
-          args: [
-            {
-              addresses: {
-                receiver: params.route,
-                callbackContract: GMX.ADDRESS_ZERO,
-                uiFeeReceiver: GMX.ADDRESS_ZERO,
-                market: req.market.marketToken,
-                initialCollateralToken: req.collateralToken,
-                swapPath: req.collateralDelta ? [req.market.marketToken] : []
-              },
-              numbers: {
-                sizeDeltaUsd: abs(req.sizeDeltaUsd),
-                initialCollateralDeltaAmount: 0n,
-                acceptablePrice: acceptablePrice,
-                triggerPrice: 0n,
-                executionFee: executionFeeAfterBuffer,
-                callbackGasLimit: 0n,
-                minOutputAmount: 0n,
-              },
-              orderType,
-              decreasePositionSwapType: DecreasePositionSwapType.NoSwap,
-              isLong: req.isLong,
-              shouldUnwrapNativeToken: isNative && req.collateralDelta > 0n,
-              referralCode: BLUEBERRY_REFFERAL_CODE,
-            }
-          ]
-        }),
-      ]]
-    })
+    // const request = wagmiWriteContract({
+    //   ...GMX.CONTRACT[config.chain.id].ExchangeRouter,
+    //   value: totalWntAmount,
+    //   functionName: 'multicall',
+    //   args: [[
+    //     viem.encodeFunctionData({
+    //       abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
+    //       functionName: 'sendWnt',
+    //       args: [orderVaultAddress, totalWntAmount]
+    //     }),
+    //     ...req.isIncrease && !isNative ? [
+    //       viem.encodeFunctionData({
+    //         abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
+    //         functionName: 'sendTokens',
+    //         args: [resolvedPrimaryAddress, orderVaultAddress, req.collateralDelta]
+    //       })
+    //     ] : [],
+    //     viem.encodeFunctionData({
+    //       abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
+    //       functionName: 'createOrder',
+    //       args: [
+    //         {
+    //           addresses: {
+    //             receiver: params.route,
+    //             callbackContract: GMX.ADDRESS_ZERO,
+    //             uiFeeReceiver: GMX.ADDRESS_ZERO,
+    //             market: req.market.marketToken,
+    //             initialCollateralToken: req.collateralToken,
+    //             swapPath: req.collateralDelta ? [req.market.marketToken] : []
+    //           },
+    //           numbers: {
+    //             sizeDeltaUsd: abs(req.sizeDeltaUsd),
+    //             initialCollateralDeltaAmount: 0n,
+    //             acceptablePrice: acceptablePrice,
+    //             triggerPrice: 0n,
+    //             executionFee: executionFeeAfterBuffer,
+    //             callbackGasLimit: 0n,
+    //             minOutputAmount: 0n,
+    //           },
+    //           orderType,
+    //           decreasePositionSwapType: DecreasePositionSwapType.NoSwap,
+    //           isLong: req.isLong,
+    //           shouldUnwrapNativeToken: isNative && req.collateralDelta > 0n,
+    //           referralCode: BLUEBERRY_REFFERAL_CODE,
+    //         }
+    //       ]
+    //     }),
+    //   ]]
+    // })
 
 
     return { ...params, ...req, acceptablePrice, request, swapRoute }
@@ -390,114 +390,113 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
           map(total => readableFixedUSD30(total), adjustmentFeeUsd)
         )
       ),
-      switchLatest(map(params => {
-        if (!params.isTradingEnabled) {
-          return $Popover({
-            open: openEnableTradingPopover,
-            $target: $row(style({ placeContent: 'flex-end' }))(
-              $ButtonSecondary({
-                $content: $text('Enable Trading'),
-                disabled: mergeArray([
-                  dismissEnableTradingOverlay,
-                  openEnableTradingPopover
-                ])
-              })({
-                click: openEnableTradingPopoverTether()
-              })
-            ),
-            $content: $column(layoutSheet.spacing, style({ maxWidth: '400px' }))(
-              $heading2(`By using Puppet, I agree to the following Disclaimer`),
-              $text(style({}))(`By accessing, I agree that ${document.location.href} is an interface that interacts with external GMX smart contracts, and does not have access to my funds.`),
 
-              $alert(
-                $node(
-                  $text('This beta version may contain bugs. Feedback and issue reports are greatly appreciated.'),
-                  $anchor(attr({ href: 'https://discord.com/channels/941356283234250772/1068946527021695168' }))($text('discord'))
-                )
-              ),
 
-              $node(
-                $text(style({ whiteSpace: 'pre-wrap' }))(`By clicking Agree you accept the `),
-                $anchor(attr({ href: '/app/trading-terms-and-conditions' }))($text('Terms & Conditions'))
-              ),
+      $row(layoutSheet.spacingSmall, style({ alignItems: 'center', flex: 1 }))(
+        $row(style({ flex: 1, minWidth: 0 }))(
+          switchLatest(map(error => {
+            if (error === null) {
+              return empty()
+            }
 
-              $ButtonPrimary({
-                $content: $text('Approve T&C'),
-              })({
-                click: approveTradingTether(constant(true))
-              })
-            ),
-          })({
-            overlayClick: dismissEnableTradingOverlayTether(constant(false))
-          })
-        }
-
-        if (params.route && !params.isPrimaryApproved) {
-
-          return $ButtonPrimaryCtx({
-            request: requestApproveSpend,
-            $content: $text(`Approve ${params.primaryDescription.symbol}`)
-          })({
-            click: clickApproveprimaryTokenTether(
-              constant({ route: params.route, primaryToken: params.primaryToken })
+            return $alertTooltip(
+              $text(style({ whiteSpace: 'pre-wrap' }))(error)
             )
-          })
-        }
-
-        return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', flex: 1 }))(
-          $row(style({ flex: 1, minWidth: 0 }))(
-            switchLatest(map(error => {
-              if (error === null) {
-                return empty()
-              }
-
-              return $alertTooltip(
-                $text(style({ whiteSpace: 'pre-wrap' }))(error)
-              )
-            }, mergeArray([requestTradeError, validationError, clickResetPosition])))
-          ),
-          style({ padding: '8px', alignSelf: 'center' })(
-            $ButtonSecondary({ 
-              $content: $text('Reset'),
-              disabled: map(params => {
-                return params.sizeDelta === 0n && params.collateralDelta === 0n && params.isIncrease
-              }, combineObject({ sizeDelta, collateralDelta, isIncrease }))
-            })({
-              click: clickResetPositionTether(constant(null))
-            })
-          ),
-          $ButtonPrimaryCtx({
-            request: map(req => req.request, requestTrade),
+          }, mergeArray([requestTradeError, validationError, constant(null, clickResetPosition)])))
+        ),
+        style({ padding: '8px', alignSelf: 'center' })(
+          $ButtonSecondary({ 
+            $content: $text('Reset'),
             disabled: map(params => {
-              const newLocal = params.disableButtonValidation || params.sizeDelta === 0n && params.collateralDelta === 0n
-              return newLocal
-            }, combineObject({ disableButtonValidation, sizeDelta, collateralDelta })),
-            $content: $text(
-              map(_params => {
-                let modLabel: string
-
-                if (_params.position) {
-                  if (_params.isIncrease) {
-                    modLabel = 'Increase'
-                  } else {
-                    modLabel = (_params.sizeDeltaUsd + lst(_params.position.updates).sizeInUsd === 0n) ? 'Close' : 'Reduce'
-                  }
-                } else {
-                  modLabel = 'Open'
-                }
-
-                const focusPriceLabel = _params.focusPrice ? ` @ ${readableUnitAmount(_params.focusPrice)}` : ''
-
-                return modLabel + focusPriceLabel
-              }, combineObject({ position, sizeDeltaUsd, isIncrease, focusPrice }))
-            )
+              return params.sizeDelta === 0n && params.collateralDelta === 0n && params.isIncrease
+            }, combineObject({ sizeDelta, collateralDelta, isIncrease }))
           })({
-            click: clickProposeTradeTether(
-              constant(config.wallet)
+            click: clickResetPositionTether(
+              sample(position)
             )
           })
-        )
-      }, combineObject({ isPrimaryApproved, route, isTradingEnabled, primaryToken, primaryDescription })))
+        ),
+        switchLatest(map(params => {
+          const $primary = !params.isTradingEnabled
+            ? $Popover({
+              open: openEnableTradingPopover,
+              $target: $row(style({ placeContent: 'flex-end' }))(
+                $ButtonSecondary({
+                  $content: $text('Enable Trading'),
+                  disabled: mergeArray([
+                    dismissEnableTradingOverlay,
+                    openEnableTradingPopover
+                  ])
+                })({
+                  click: openEnableTradingPopoverTether()
+                })
+              ),
+              $content: $column(layoutSheet.spacing, style({ maxWidth: '400px' }))(
+                $heading2(`By using Puppet, I agree to the following Disclaimer`),
+                $text(style({}))(`By accessing, I agree that ${document.location.href} is an interface that interacts with external GMX smart contracts, and does not have access to my funds.`),
+                $alert(
+                  $node(
+                    $text('This beta version may contain bugs. Feedback and issue reports are greatly appreciated.'),
+                    $anchor(attr({ href: 'https://discord.com/channels/941356283234250772/1068946527021695168' }))($text('discord'))
+                  )
+                ),
+                $node(
+                  $text(style({ whiteSpace: 'pre-wrap' }))(`By clicking Agree you accept the `),
+                  $anchor(attr({ href: '/app/trading-terms-and-conditions' }))($text('Terms & Conditions'))
+                ),
+                $ButtonPrimary({
+                  $content: $text('Approve T&C'),
+                })({
+                  click: approveTradingTether(constant(true))
+                })
+              ),
+            })({
+              overlayClick: dismissEnableTradingOverlayTether(constant(false))
+            })
+            : params.route && !params.isPrimaryApproved
+              ? $ButtonPrimaryCtx({
+                request: requestApproveSpend,
+                $content: $text(`Approve ${params.primaryDescription.symbol}`)
+              })({
+                click: clickApproveprimaryTokenTether(
+                  constant({ route: params.route, primaryToken: params.primaryToken })
+                )
+              })
+              : $ButtonPrimaryCtx({
+                request: map(req => req.request, requestTrade),
+                disabled: map(params => {
+                  const newLocal = params.disableButtonValidation || params.sizeDelta === 0n && params.collateralDelta === 0n
+                  return newLocal
+                }, combineObject({ disableButtonValidation, sizeDelta, collateralDelta })),
+                $content: $text(
+                  map(_params => {
+                    let modLabel: string
+
+                    if (_params.position) {
+                      if (_params.isIncrease) {
+                        modLabel = 'Increase'
+                      } else {
+                        modLabel = (_params.sizeDeltaUsd + lst(_params.position.updates).sizeInUsd === 0n) ? 'Close' : 'Reduce'
+                      }
+                    } else {
+                      modLabel = 'Open'
+                    }
+
+                    const focusPriceLabel = _params.focusPrice ? ` @ ${readableUnitAmount(_params.focusPrice)}` : ''
+
+                    return modLabel + focusPriceLabel
+                  }, combineObject({ position, sizeDeltaUsd, isIncrease, focusPrice }))
+                )
+              })({
+                click: clickProposeTradeTether(
+                  constant(config.wallet)
+                )
+              })
+
+          return $primary
+        }, combineObject({ isPrimaryApproved, route, isTradingEnabled, primaryToken, primaryDescription })))
+      ),
+      
     ),
 
     {

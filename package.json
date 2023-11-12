@@ -2,7 +2,7 @@
   "name": "monorepo",
   "license": "AGPL-3.0",
   "private": true,
-  "packageManager": "pnpm@8.10.0",
+  "packageManager": "pnpm@8.10.2",
   "workspaces": [
     "*",
     "gmx-middleware/*"

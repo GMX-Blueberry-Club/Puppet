@@ -21,6 +21,7 @@ const routeConfig = {
 
 export const openPosition = store.createRpcLogEventScope({
   eventName: 'OpenPosition',
+  startBlock: 148143699n,
   ...orchestratorConfig
 })
 
@@ -68,6 +69,7 @@ export const withdraw = store.createRpcLogEventScope({
 
 export const shareIncrease = store.createRpcLogEventScope({
   eventName: 'SharesIncrease',
+  startBlock: 148143699n,
   ...orchestratorConfig
 })
 

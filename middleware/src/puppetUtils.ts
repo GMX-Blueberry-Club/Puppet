@@ -101,6 +101,15 @@ export function getPortion(supply: bigint, share: bigint, amount: bigint): bigin
   }
 }
 
+export function hashNamedValue(name: string, value: viem.Hex): viem.Hex {
+  return hashData(
+    ["string", "bytes"],
+    [name, value]
+  )
+}
+
+
+
 export function getRouteTypeKey(collateralToken: viem.Address, indexToken: viem.Address, isLong: boolean, data: viem.Hex): viem.Hex {
   return hashData(
     ["address", "address", "bool", "bytes"],
@@ -108,10 +117,17 @@ export function getRouteTypeKey(collateralToken: viem.Address, indexToken: viem.
   )
 }
 
-export function getRouteKey(trader: viem.Address, collateralToken: viem.Address, indexToken: viem.Address, isLong: boolean): viem.Hex {
+export function getRouteTypeKey2(collateralToken: viem.Address, indexToken: viem.Address, isLong: boolean, data: viem.Hex): viem.Hex {
   return hashData(
-    ["address", "address", "address", "bool"],
-    [trader, collateralToken, indexToken, isLong]
+    ["address", "address", "bool", "bytes"],
+    [hashNamedValue("COLLATERAL_TOKEN", collateralToken), hashNamedValue("INDEX_TOKEN", indexToken), hashNamedValue("IS_LONG", isLong), data ]
+  )
+}
+
+export function getRouteKey(trader: viem.Address, routeTypeKey: viem.Hex): viem.Hex {
+  return hashData(
+    ["address", "bytes"],
+    [trader, routeTypeKey]
   )
 }
 

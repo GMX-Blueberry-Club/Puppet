@@ -177,7 +177,6 @@ export const wagmiWriteContract = async <
   const writeResults = await wagmi.writeContract(simReq as any)
   const recpt = await client.waitForTransactionReceipt(writeResults)
   return recpt
-
 }
 
 

@@ -20,12 +20,13 @@ import {
   importGlobal,
   unixTimestampNow
 } from "gmx-middleware-utils"
-import { IPositionMirrorSettled, IPositionMirrorSlot, IPuppetRouteSubscritpion, getRouteTypeKey } from "puppet-middleware-utils"
+import { IMirrorPositionRequest, IPositionMirrorSettled, IPositionMirrorSlot, IPuppetRouteSubscritpion, getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { IProcessEnvironmentMode, IProcessedStore, IProcessedStoreConfig, defineProcess, validateConfig } from "../../utils/indexer/processor.js"
 import { transformBigints } from "../../utils/storage/storeScope.js"
 import * as gmxLog from "../scope/gmx.js"
+import * as puppetLog from "../scope/puppet"
 import { rootStoreScope } from "../store/store.js"
 import * as GMX from "gmx-middleware-const"
 
@@ -54,14 +55,14 @@ export interface IGmxProcessState {
   latestPrice: Record<viem.Address, IOraclePrice>
   approximatedTimestamp: number
 
-  // mirrorPositionRequest: Record<viem.Hex, IPositionRequest>
+  mirrorPositionRequest: Record<viem.Hex, IMirrorPositionRequest>
   mirrorPositionSlot: Record<viem.Hex, IPositionMirrorSlot>
   mirrorPositionSettled: IPositionMirrorSettled[]
   subscription: IPuppetRouteSubscritpion[]
 
   // mirrorPositionSlotV2: Record<viem.Hex, IPositionMirrorSlotV2>
   // mirrorPositionSettledV2: IAccountToRouteMap<IPositionMirrorSettled[]>
-  markets: Record<viem.Address, IMarket>
+  markets: Record<viem.Address, IMarketCreatedEvent>
 }
 
 
@@ -98,7 +99,7 @@ const state: IGmxProcessState = {
   pricefeed: {},
   latestPrice: {},
 
-  // mirrorPositionRequest: {},
+  mirrorPositionRequest: {},
   mirrorPositionSlot: {},
   mirrorPositionSettled: [],
   subscription: [],
@@ -111,7 +112,7 @@ const state: IGmxProcessState = {
 
 const config: IProcessedStoreConfig = {
   startBlock: 107745255n,
-  endBlock: 144000000n,
+  endBlock: 145000000n,
   chainId: arbitrum.id,
 }
 
@@ -130,11 +131,14 @@ export const gmxProcess = defineProcess(
     step(seed, value) {
       const entity = getEventType<IMarketCreatedEvent>('Market', value, seed.approximatedTimestamp)
       seed.markets[entity.marketToken] = {
-        // salt: entity.salt,
+        salt: entity.salt,
         indexToken: entity.indexToken,
         longToken: entity.longToken,
         marketToken: entity.marketToken,
         shortToken: entity.shortToken,
+        __typename: 'MarketCreated',
+        blockTimestamp: seed.approximatedTimestamp,
+        transactionHash: value.transactionHash,
       }
       return seed
     },
@@ -283,7 +287,7 @@ export const gmxProcess = defineProcess(
       }
 
 
-      if (update.collateralAmount === 0n) {
+      if (update.sizeInTokens === 0n) {
         seed.mirrorPositionSettled.push({
           ...slot,
           openBlockTimestamp: slot.blockTimestamp,
@@ -316,6 +320,75 @@ export const gmxProcess = defineProcess(
   //     return seed
   //   },
   // },
+
+
+  {
+    source: puppetLog.shareIncrease,
+    step(seed, value) {
+      const args = value.args
+      const positionSlot = seed.mirrorPositionSlot[args.positionKey]
+
+      if (!positionSlot) {
+        return seed
+        // throw new Error('position not found')
+      }
+
+      positionSlot.shares = args.puppetsShares
+      positionSlot.traderShare = args.traderShares
+      positionSlot.shareSupply = args.totalSupply
+
+      // positionSlot.position.cumulativeFee += args.fee
+      // positionSlot.position.link.decreaseList.push({ ...value.args, blockTimestamp: seed.approximatedTimestamp, transactionHash: value.transactionHash, __typename: 'DecreasePosition' })
+
+      return seed
+    },
+  },
+  // // puppet
+  {
+    source: puppetLog.openPosition,
+    step(seed, value) {
+      const args = value.args
+
+      seed.mirrorPositionRequest[args.positionKey] ??= {
+        ...args,
+
+        blockTimestamp: seed.approximatedTimestamp,
+        transactionHash: value.transactionHash,
+        __typename: 'PositionRequest',
+      }
+
+
+      return seed
+    },
+  },
+  {
+    source: puppetLog.subscribeRoute,
+    step(seed, value) {
+      const args = value.args
+      const subscKey = getPuppetSubscriptionKey(args.puppet, args.trader, args.routeTypeKey)
+      let subsc = seed.subscription.find(subsc => subsc.puppetSubscriptionKey === subscKey)
+
+      if (!subsc) {
+        subsc = {
+          allowance: 0n,
+          puppet: args.puppet,
+          trader: args.trader,
+          puppetSubscriptionKey: subscKey,
+          routeTypeKey: args.routeTypeKey,
+          subscribed: args.subscribe,
+          endDate: 0n,
+          settled: [],
+          open: []
+        }
+
+        seed.subscription.push(subsc)
+      }
+
+      subsc.subscribed = args.subscribe
+
+      return seed
+    },
+  },
 )
 
 

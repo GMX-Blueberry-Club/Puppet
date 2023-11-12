@@ -3,14 +3,20 @@ import * as viem from "viem"
 
 
 
-export interface IMirrorPositionInfo {
+export interface IMirrorPositionRequest {
   puppets: readonly viem.Address[]
+  trader: viem.Address
+  route: viem.Address
+  routeTypeKey: viem.Hex
+  positionKey: viem.Hex
+  isIncrease: boolean;
+  requestKey: viem.Hex
+}
+
+export interface IMirrorPositionInfo extends IMirrorPositionRequest {
   shares: readonly bigint[]
   traderShare: bigint
-  trader: viem.Address
   shareSupply: bigint
-  routeTypeKey: viem.Hex
-  route: viem.Address
 }
 
 
