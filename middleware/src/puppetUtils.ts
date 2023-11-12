@@ -117,12 +117,6 @@ export function getRouteTypeKey(collateralToken: viem.Address, indexToken: viem.
   )
 }
 
-export function getRouteTypeKey2(collateralToken: viem.Address, indexToken: viem.Address, isLong: boolean, data: viem.Hex): viem.Hex {
-  return hashData(
-    ["address", "address", "bool", "bytes"],
-    [hashNamedValue("COLLATERAL_TOKEN", collateralToken), hashNamedValue("INDEX_TOKEN", indexToken), hashNamedValue("IS_LONG", isLong), data ]
-  )
-}
 
 export function getRouteKey(trader: viem.Address, routeTypeKey: viem.Hex): viem.Hex {
   return hashData(
