@@ -131,7 +131,7 @@ export const $Home = (config: ITreasury) => component((
           $column(style({ textAlign: 'center' }))(
             $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.85rem', whiteSpace: 'pre-wrap', letterSpacing: '2px' }))('Matching top Traders\nwith Investors'),
           ),
-          $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Copy Top Traders with a Single Deposit | Trade to Earn More`),
+          $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Traders seamlessly trade to make profits, while Puppets use a leaderboard to pick which traders to copy based on past performance and trading style`),
 
           $node(),
 
@@ -144,7 +144,7 @@ export const $Home = (config: ITreasury) => component((
                   $ButtonSecondary({
                     $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
                       $icon({ $content: $puppetLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
-                      $text('Investor'),
+                      $text('Puppet'),
                       $node(
                         styleInline(map(move => {
                           const shalf = document.body.clientWidth / 2

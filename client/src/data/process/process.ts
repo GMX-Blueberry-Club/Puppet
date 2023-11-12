@@ -67,7 +67,7 @@ export interface IGmxProcessState {
 
 
 const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
-  const req = await (await fetch('/db/sha256-JD8nWKUZjKgC9SK6pJgBUPUCEZGX2kh7WWGxZh5+zew=.json')).json().catch(() => null)
+  const req = await (await fetch('/db/sha256-xl54_Pu162s93h5UPB5atIsXxCTsDSTbXfmKxheWYAw=.json')).json().catch(() => null)
 
   if (req === null) {
     return null
@@ -201,6 +201,13 @@ export const gmxProcess = defineProcess(
     // queryBlockRange: 100000n,
     step(seed, value) {
       const update = getEventType<IPositionIncrease>('PositionIncrease', value, seed.approximatedTimestamp)
+
+
+      const mirrorSlot = seed.mirrorPositionRequest[update.orderKey]
+      if (!mirrorSlot) {
+        return seed
+      }
+
       const market = seed.markets[update.market]
 
       const slot = seed.mirrorPositionSlot[update.positionKey] ??= {
@@ -216,7 +223,7 @@ export const gmxProcess = defineProcess(
         orderKey: update.orderKey,
         routeTypeKey: getRouteTypeKey(update.collateralToken, update.market, update.isLong, '0x'),
         route: ADDRESS_ZERO,
-        trader: update.account,
+        trader: mirrorSlot.trader,
         shares: [],
         shareSupply: 0n,
         traderShare: 0n,
@@ -300,6 +307,7 @@ export const gmxProcess = defineProcess(
       }
 
       delete seed.mirrorPositionSlot[update.positionKey]
+      delete seed.mirrorPositionRequest[update.orderKey]
 
 
       return seed
@@ -349,12 +357,8 @@ export const gmxProcess = defineProcess(
     step(seed, value) {
       const args = value.args
 
-      seed.mirrorPositionRequest[args.positionKey] ??= {
+      seed.mirrorPositionRequest[args.requestKey] ??= {
         ...args,
-
-        blockTimestamp: seed.approximatedTimestamp,
-        transactionHash: value.transactionHash,
-        __typename: 'PositionRequest',
       }
 
 
@@ -376,9 +380,9 @@ export const gmxProcess = defineProcess(
           puppetSubscriptionKey: subscKey,
           routeTypeKey: args.routeTypeKey,
           subscribed: args.subscribe,
-          endDate: 0n,
-          settled: [],
-          open: []
+          expiry: 0n,
+          // settled: [],
+          // open: []
         }
 
         seed.subscription.push(subsc)

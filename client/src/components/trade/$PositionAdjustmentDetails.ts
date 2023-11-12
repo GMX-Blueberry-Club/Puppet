@@ -264,7 +264,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
       address: params.primaryToken,
       abi: erc20Abi,
       functionName: 'approve',
-      args: [params.route, 2n ** 256n - 1n]
+      args: [PUPPET.CONTRACT[config.chain.id].Orchestrator.address, 2n ** 256n - 1n]
     })
     return recpt
   }, clickApproveprimaryToken))

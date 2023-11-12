@@ -156,7 +156,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const isLong = storage.replayWrite(tradingStore, true, switchIsLong, 'isLong')
   const focusMode = replayLatest(switchFocusMode, ITradeFocusMode.collateral) // storage.replayWrite(tradingStore, ITradeFocusMode.collateral, switchFocusMode, 'focusMode')
   const slippage = storage.replayWrite(tradingStore, 30n, changeSlippage, 'slippage')
-  const executionFeeBuffer = storage.replayWrite(tradingStore, 1000n, changeExecutionFeeBuffer, 'executionFeeBuffer')
+  const executionFeeBuffer = storage.replayWrite(tradingStore, 3000n, changeExecutionFeeBuffer, 'executionFeeBuffer')
   const primaryToken = storage.replayWrite(tradingStore, GMX.ADDRESS_ZERO, changePrimaryToken, 'inputToken')
   const isUsdCollateralToken = storage.replayWrite(tradingStore, false, changeIsUsdCollateralToken, 'shortCollateralToken')
   const borrowRateIntervalDisplay = storage.replayWrite(tradingStore, GMX.TIME_INTERVAL_MAP.MIN60, changeBorrowRateIntervalDisplay, 'borrowRateIntervalDisplay')
@@ -287,14 +287,14 @@ export const $Trade = (config: ITradeComponent) => component((
     }, query)
   }, combineObject({ market, marketPrice }))))
 
-  const route = map(params => {
-    const w3p = params.wallet
-    if (w3p === null) {
-      return GMX.ADDRESS_ZERO
-    }
+  // const route = map(params => {
+  //   const w3p = params.wallet
+  //   if (w3p === null) {
+  //     return GMX.ADDRESS_ZERO
+  //   }
 
-    return w3p.account.address
-  }, combineObject({ wallet }))
+  //   return w3p.account.address
+  // }, combineObject({ wallet }))
 
   // const value = viem.decodeErrorResult({
   //   abi: gmxContractMap.CustomError.abi,
@@ -302,29 +302,29 @@ export const $Trade = (config: ITradeComponent) => component((
   // })
 
 
-  // const route = replayLatest(multicast(switchMap(params => {
-  //   const w3p = params.wallet
-  //   if (w3p === null) {
-  //     return now(GMX.ADDRESS_ZERO)
-  //   }
+  const route = replayLatest(multicast(switchMap(params => {
+    const w3p = params.wallet
+    if (w3p === null) {
+      return now(GMX.ADDRESS_ZERO)
+    }
 
-  //   const routeKey = getRouteKey(w3p.account.address, params.routeTypeKey)
-  //   const storedRouteKey = storage.get(tradingStore, GMX.ADDRESS_ZERO as viem.Address, routeKey)
-  //   const fallbackGetRoute = switchMap(address => {
-  //     const routeAddressArgs = [w3p.account.address, params.collateralToken, params.indexToken, params.isLong, '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000014bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075'] as const
+    const routeKey = getRouteKey(w3p.account.address, params.routeTypeKey)
+    const storedRouteKey = storage.get(tradingStore, GMX.ADDRESS_ZERO as viem.Address, routeKey)
+    const fallbackGetRoute = switchMap(address => {
+      const routeAddressArgs = [w3p.account.address, params.collateralToken, params.indexToken, params.isLong, '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000014bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075'] as const
 
-  //     if (address === GMX.ADDRESS_ZERO) {
-  //       return switchMap(res => {
-  //         return address === GMX.ADDRESS_ZERO ? now(res) : indexDB.set(tradingStore, res, routeKey)
-  //       }, orchestratorReader('routeAddress', ...routeAddressArgs))
-  //       // }, orchestratorReader('routeAddress', routeKey))
-  //     }
+      if (address === GMX.ADDRESS_ZERO) {
+        return switchMap(res => {
+          return address === GMX.ADDRESS_ZERO ? now(res) : indexDB.set(tradingStore, res, routeKey)
+        }, orchestratorReader('routeAddress', ...routeAddressArgs))
+        // }, orchestratorReader('routeAddress', routeKey))
+      }
 
-  //     return now(address)
-  //   }, storedRouteKey)
+      return now(address)
+    }, storedRouteKey)
 
-  //   return fallbackGetRoute
-  // }, combineObject({ wallet, collateralToken, indexToken, isLong, routeTypeKey }))))
+    return fallbackGetRoute
+  }, combineObject({ wallet, collateralToken, indexToken, isLong, routeTypeKey }))))
 
 
 
@@ -506,7 +506,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
     console.log(netValue)
     return netValue
-  }, combineObject({ marketPrice, marketInfo, indexPrice, collateralPrice, collateralDescription }), combineState({ position, positionFees }))))
+  }, combineObject({ marketPrice, marketInfo, indexPrice, collateralPrice, collateralDescription }), zipState({ position, positionFees }))))
 
   const focusPrice = replayLatest(multicast(changefocusPrice), null)
   const yAxisCoords = replayLatest(multicast(changeYAxisCoords), null)
@@ -519,10 +519,10 @@ export const $Trade = (config: ITradeComponent) => component((
   const leverage = replayLatest(multicast(mergeArray([
     changeLeverage,
     storage.replayWrite(tradingStore, GMX.MAX_LEVERAGE_FACTOR / 4n, debounce(50, changeLeverage), 'leverage'),
-    filterNull(map((params) => {
-      if (params.position === null) return null
-      return div(lst(params.position.updates).sizeInUsd, params.netPositionValueUsd)
-    }, zipState({ netPositionValueUsd, position })))
+    filterNull(snapshot((netPosValue, posSlot) => {
+      if (posSlot === null) return null
+      return div(lst(posSlot.updates).sizeInUsd, netPosValue)
+    }, netPositionValueUsd, mergeArray([position, clickResetPosition])))
   ])))
 
   // [config]
@@ -611,7 +611,7 @@ export const $Trade = (config: ITradeComponent) => component((
           address: params.primaryToken,
           abi: erc20Abi,
           functionName: 'allowance',
-          args: [params.wallet.account.address, params.route]
+          args: [params.wallet.account.address, PUPPET.CONTRACT[config.chain.id].Orchestrator.address]
         })
 
         return allowedSpendAmount > collateralDeltaUsd
