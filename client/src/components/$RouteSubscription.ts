@@ -1,12 +1,12 @@
 import { Behavior, O, combineObject } from "@aelea/core"
-import { $element, $text, attr, component, nodeEvent, style, stylePseudo } from "@aelea/dom"
+import { $element, $node, $text, attr, component, nodeEvent, style, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { constant, empty, map, mergeArray, multicast, skipRepeats, snapshot, startWith, take } from "@most/core"
+import { constant, empty, map, mergeArray, multicast, now, skipRepeats, snapshot, startWith, take } from "@most/core"
 import { Stream } from "@most/types"
 import { BASIS_POINTS_DIVISOR, TIME_INTERVAL_MAP } from "gmx-middleware-const"
-import { $caretDown, $check, $icon, $infoLabeledValue, $target, $xCross } from "gmx-middleware-ui-components"
-import { formatFixed, getMappedValue, groupArrayMany, parseBps, readableDate, readablePercentage, readableUnitAmount, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { $ButtonToggle, $bear, $bull, $caretDown, $check, $defaulButtonToggleContainer, $icon, $infoLabel, $infoLabeledValue, $marketSmallLabel, $target, $xCross } from "gmx-middleware-ui-components"
+import { IMarket, IMarketCreatedEvent, formatFixed, getMappedValue, groupArrayMany, parseBps, readableDate, readablePercentage, readableUnitAmount, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -24,6 +24,7 @@ import { $IntermediateConnectButton } from "./$ConnectAccount.js"
 import { $RouteDepositInfo } from "./$common.js"
 import { $ButtonCircular, $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary } from "./form/$Button.js"
 import { $Dropdown } from "./form/$Dropdown.js"
+import { IGmxProcessState } from "../data/process/process"
 
 
 
@@ -31,6 +32,7 @@ interface IRouteSubscribeDrawer {
   subscriptionList: Stream<IPuppetRouteSubscritpion[]>
   modifySubscriber: Stream<IPuppetRouteSubscritpion>
   modifySubscriptionList: Stream<IPuppetRouteSubscritpion[]>
+  processData: Stream<IGmxProcessState>
 }
 
 export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => component((
@@ -60,6 +62,8 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
 
             const orchestrator = connectContract(PUPPET.CONTRACT[42161].Orchestrator)
 
+            const markets = map(data => Object.values(data.markets), config.processData)
+
               
             return $column(layoutSheet.spacing)(
               $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between', alignItems: 'center' }))(
@@ -79,14 +83,19 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
 
                 return $column(layoutSheet.spacing)(
                   ...routeMap.map(([routeKey, subscList]) => {
-                    const routeType = ROUTE_DESCRIPTIN_MAP[routeKey]
+                    debugger
+                    const market = params.markets.find(m => m.salt === routeKey)
 
+                    if (!market) {
+                      return empty()
+                    }
 
 
                     return $column(layoutSheet.spacing)(
                       $RouteDepositInfo({
                         routeDescription: routeType,
-                        wallet: w3p
+                        wallet: w3p,
+                        market
                       })({}),
 
                       $column(style({ paddingLeft: '16px' }))(
@@ -141,7 +150,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
                     )
                   })
                 )
-              }, combineObject({ subscriptionList: config.subscriptionList, modifySubscriptionList: config.modifySubscriptionList })),
+              }, combineObject({ markets, subscriptionList: config.subscriptionList, modifySubscriptionList: config.modifySubscriptionList })),
 
               $ButtonPrimaryCtx({
                 $content: $text('Subscribe'),
@@ -214,6 +223,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
 
 interface IRouteSubscriptionEditor {
   routeSubscription?: IPuppetRouteSubscritpion
+  markets: Stream<IMarketCreatedEvent[]>
 }
 
 export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => component((
@@ -221,14 +231,18 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
   [inputAllowance, inputAllowanceTether]: Behavior<any, bigint>,
   [clickUnsubscribe, clickUnsubscribeTether]: Behavior<any, false>,
   [clickSubmit, clickSubmitTether]: Behavior<any>,
-  [selectRouteType, selectRouteTypeTether]: Behavior<viem.Hex>,
+  [switchIsLong, switchIsLongTether]: Behavior<boolean>,
+  [selectRouteType, selectRouteTypeTether]: Behavior<IMarketCreatedEvent, viem.Hex>,
 ) => {
-  const routeTypeList = Object.keys(ROUTE_DESCRIPTIN_MAP) as viem.Hex[]
 
+  const { routeSubscription, markets } = config
 
   const subscribed = startWith(!!config.routeSubscription?.subscribed || false, clickUnsubscribe)
   const allowance = startWith(config.routeSubscription?.allowance || 500n, inputAllowance)
-  const routeTypeKey = startWith(routeTypeList.find(key => key === config.routeSubscription?.routeTypeKey) || routeTypeList[0], selectRouteType)
+  const routeTypeKey = mergeArray([
+    // selectRouteType,
+    map(list => list.find(market => market.salt === config.routeSubscription?.routeTypeKey) || list[0], markets)
+  ])
   const initEnddate = config.routeSubscription?.expiry ? config.routeSubscription?.expiry : BigInt(unixTimestampNow() + TIME_INTERVAL_MAP.YEAR)
   const expiry = startWith(initEnddate, inputEndDate)
   
@@ -240,28 +254,63 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
   })
 
 
+
+  const isLong = now(true)
   return [
     $column(layoutSheet.spacing, style({ maxWidth: '350px' }))(
 
       $text('The following rules will apply to this trader whenever he opens and maintain a position'),
 
-      $row(style({ placeContent: 'center' }))(
+      $row(
+        switchMap(params => {
+          return $infoLabeledValue(
+            $text(style({ width: '100px' }))('Market'),
+            $Dropdown({
+              $container: $row(style({ borderRadius: '30px', backgroundColor: pallete.background, padding: '4px 8px', position: 'relative', border: `1px solid ${colorAlpha(pallete.foreground, .2)}`, cursor: 'pointer' })),
+              selector: {
+                list: params.markets,
+                $$option: map(market => $marketSmallLabel(market)),
+                value: routeTypeKey,
+              },
+              $selection: switchMap(market => {
+                return $row(layoutSheet.spacingSmall)(
+                  $marketSmallLabel(market),
+                  $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
+                )
+              }, routeTypeKey),
+            })({
+              select: selectRouteTypeTether(map(m => m.salt))
+            })
+          )
+        }, combineObject({ markets })),
         $Dropdown({
           $container: $row(style({ borderRadius: '30px', backgroundColor: pallete.background, padding: '4px 8px', position: 'relative', border: `1px solid ${colorAlpha(pallete.foreground, .2)}`, cursor: 'pointer' })),
           selector: {
-            list: routeTypeList,
-            $$option: map(key => $route(getMappedValue(ROUTE_DESCRIPTIN_MAP, key))),
-            value: routeTypeKey,
+            list: [
+              true,
+              false,
+            ],
+            $$option: map(isLong => {
+              return $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+                $icon({ $content: isLong ? $bull : $bear, width: '18px', viewBox: '0 0 32 32' }),
+                $text(isLong ? 'Long' : 'Short'),
+              )
+            }),
+            value: isLong,
           },
-          $selection: switchMap(key => {
-            return $row(layoutSheet.spacingSmall)(
-              $route(getMappedValue(ROUTE_DESCRIPTIN_MAP, key)),
-              $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
+          $selection: map(isLong => {
+            return $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+              $icon({ $content: isLong ? $bull : $bear, width: '18px', viewBox: '0 0 32 32' }),
+              $text(isLong ? 'Long' : 'Short'),
             )
-          }, routeTypeKey),
+          }, isLong),
         })({
-          select: selectRouteTypeTether()
-        }),  
+          select: switchIsLongTether()
+        }),
+      ),
+
+      $row(
+        
       ),
 
       $TextField({
@@ -293,11 +342,11 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
       }),
 
 
-      $seperator2,
+      $node(),
 
       $row(style({ placeContent: 'flex-end', alignItems: 'center' }))(
         $ButtonPrimary({
-          $content: $text('Change'),
+          $content: $text('Subscribe'),
         })({
           click: clickSubmitTether()
         }),

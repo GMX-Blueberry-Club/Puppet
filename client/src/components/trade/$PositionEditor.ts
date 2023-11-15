@@ -167,7 +167,7 @@ const MIN_LEVERAGE_NORMAL = formatFixed(GMX.MIN_LEVERAGE_FACTOR, 4) / LIMIT_LEVE
 export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
   [clickSettingsPopover, clickSettingsPopoverTether]: Behavior<any, boolean>,
-  [switchIsLong, switchIsLongTether]: Behavior<boolean, boolean>,
+  [switchIsLong, switchIsLongTether]: Behavior<boolean>,
 
   [switchFocusMode, switchFocusModeTether]: Behavior<any, ITradeFocusMode>,
 
@@ -234,8 +234,11 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
     switchLatest(map(focus => {
       if (focus === ITradeFocusMode.collateral) return empty()
 
-      const effects = mergeArray([config.tradeConfig.leverage, config.tradeState.primaryPrice])
-      return sample(config.tradeConfig.sizeDeltaUsd, effects)
+      
+      return mergeArray([
+        config.tradeConfig.leverage,
+        config.tradeState.primaryPrice
+      ])
     }, config.tradeConfig.focusMode))
   ])
 
@@ -278,22 +281,17 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
       }
 
       return mergeArray([
-        snapshot((delta, price) => {
-          const newLocal_2 = getTokenUsd(price, delta)
-          return newLocal_2
-        }, config.tradeConfig.collateralDelta, config.tradeState.primaryPrice),
-        sample(config.tradeConfig.collateralDeltaUsd, config.tradeConfig.leverage)
+        config.tradeState.primaryPrice,
+        config.tradeConfig.leverage
       ])
-      // const effects = mergeArray([config.tradeConfig.leverage, config.tradeState.indexPrice])
-      // return sample(config.tradeConfig.collateralDeltaUsd, effects)
     }, config.tradeConfig.focusMode)),
   ])
 
   const autoChangeSize = multicast(mergeArray([
     constant(0n, config.resetAdjustments),
-    snapshot((params, nextCollateralDeltaUsd) => {
+    snapshot((params) => {
       const positionSizeUsd = params.position ? lst(params.position.updates).sizeInUsd : 0n
-      const totalCollateral = nextCollateralDeltaUsd + params.netPositionValueUsd - params.adjustmentFeeUsd
+      const totalCollateral = params.collateralDeltaUsd + params.netPositionValueUsd - params.adjustmentFeeUsd
      
       if (params.position) {
         const lstUpdate = lst(params.position.updates)
@@ -313,7 +311,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
       // console.log(nextSize)
 
       return nextSize - positionSizeUsd
-    }, combineObject({ leverage, position, adjustmentFeeUsd, isIncrease, netPositionValueUsd }), sizeEffects)
+    }, combineObject({ leverage, position, adjustmentFeeUsd, isIncrease, netPositionValueUsd, collateralDeltaUsd }), sizeEffects)
   ]))
 
 
@@ -827,42 +825,42 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 // overlayClick: clickPopoverClaimTether()
               })
 
-              return $Dropdown({
-                $container: $row(style({ position: 'relative', alignSelf: 'center' })),
-                $selection: switchLatest(map(option => {
-                  const tokenDesc = getTokenDescription(option.indexToken)
+              // return $Dropdown({
+              //   $container: $row(style({ position: 'relative', alignSelf: 'center' })),
+              //   $selection: switchLatest(map(option => {
+              //     const tokenDesc = getTokenDescription(option.indexToken)
 
-                  return $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
-                    $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '34px', svgOps: style({ paddingRight: '4px' }), viewBox: '0 0 32 32' }),
-                    $heading2(tokenDesc.symbol),
-                    $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' }),
-                  )
-                }, market)),
-                selector: {
-                  value: market,
-                  $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0 })),
-                  $$option: map(option => {
-                    const tokenDesc = getTokenDescription(option.indexToken)
-                    const liquidity = tradeReader.getAvailableLiquidityUsd(now(option.indexToken), config.tradeConfig.collateralToken)
-                    const poolInfo = tradeReader.getTokenPoolInfo(now(option.indexToken))
+              //     return $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
+              //       $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '34px', svgOps: style({ paddingRight: '4px' }), viewBox: '0 0 32 32' }),
+              //       $heading2(tokenDesc.symbol),
+              //       $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' }),
+              //     )
+              //   }, market)),
+              //   selector: {
+              //     value: market,
+              //     $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0 })),
+              //     $$option: map(option => {
+              //       const tokenDesc = getTokenDescription(option.indexToken)
+              //       const liquidity = tradeReader.getAvailableLiquidityUsd(now(option.indexToken), config.tradeConfig.collateralToken)
+              //       const poolInfo = tradeReader.getTokenPoolInfo(now(option.indexToken))
 
-                    return $row(style({ placeContent: 'space-between', flex: 1 }))(
-                      $tokenLabelFromSummary(tokenDesc),
+              //       return $row(style({ placeContent: 'space-between', flex: 1 }))(
+              //         $tokenLabelFromSummary(tokenDesc),
 
-                      $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end', placeContent: 'center' }))(
-                        $text(map(amountUsd => readableFixedUSD30(amountUsd), liquidity)),
-                        $row(style({ whiteSpace: 'pre' }))(
-                          // $text(map(info => readableFixedBsp(info.rate), poolInfo)),
-                          $text(style({ color: pallete.foreground }))(' / hr')
-                        ),
-                      )
-                    )
-                  }),
-                  list: list,
-                }
-              })({
-                select: changeMarketTether()
-              })
+              //         $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end', placeContent: 'center' }))(
+              //           $text(map(amountUsd => readableFixedUSD30(amountUsd), liquidity)),
+              //           $row(style({ whiteSpace: 'pre' }))(
+              //             // $text(map(info => readableFixedBsp(info.rate), poolInfo)),
+              //             $text(style({ color: pallete.foreground }))(' / hr')
+              //           ),
+              //         )
+              //       )
+              //     }),
+              //     list: list,
+              //   }
+              // })({
+              //   select: changeMarketTether()
+              // })
             }, markets),
 
 

@@ -51,6 +51,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
   const exploreStore = storage.createStoreScope(rootStoreScope, 'topSettled' as const)
   const sortBy = storage.replayWrite(exploreStore, { direction: 'desc', selector: 'pnl' } as ISortBy<IPositionListSummary>, sortByChange, 'sortBy')
+  const filterRouteList = storage.replayWrite(exploreStore, [] as IAbstractPositionParams[], routeTypeChange, 'filterRouteList')
   const routeList = map(list => list.map(rt => {
     const matchedMemType = ROUTE_DESCRIPTION.find(rtd => getRouteTypeKey(rt.collateralToken, rt.indexToken, rt.isLong) === getRouteTypeKey(rtd.collateralToken, rtd.indexToken, rtd.isLong))
 
@@ -59,10 +60,9 @@ export const $TopSettled = (config: ITopSettled) => component((
     }
 
     return matchedMemType
-  }), storage.replayWrite(exploreStore, [] as IAbstractPositionParams[], routeTypeChange, 'filterRouteList'))
-
+  }), filterRouteList)
+  const markets = map(data => Object.values(data.markets), config.processData)
   const activityTimeframe = storage.replayWrite(store.activityTimeframe, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
-
   const pageParms = map(params => {
     const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
     const paging = startWith(requestPage, scrollRequest)
@@ -178,6 +178,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
                 return $TraderDisplay({
                   route: config.route,
+                  markets,
                   // changeSubscriptionList: config.changeSubscriptionList,
                   subscriptionList: config.subscriptionList,
                   trader: pos.trader,

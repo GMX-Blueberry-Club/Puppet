@@ -5,8 +5,8 @@ import { pallete } from "@aelea/ui-components-theme"
 import { IAttributeBackground, IAttributeBadge, IAttributeMappings, IBerryDisplayTupleMap, IToken, getBerryFromItems, getLabItemTupleIndex, tokenIdAttributeTuple } from "@gambitdao/gbc-middleware"
 import { constant, join, map, mergeArray, multicast, snapshot, startWith } from "@most/core"
 import * as GMX from "gmx-middleware-const"
-import { $Table, $alertTooltip, $defaultVScrollContainer, $infoLabeledValue, $infoTooltipLabel, $spinner, TableOption } from "gmx-middleware-ui-components"
-import { IAbstractPositionParams, getMappedValue, parseFixed, switchMap, tokenAmount, tokenAmountLabel } from "gmx-middleware-utils"
+import { $Table, $alertTooltip, $defaultVScrollContainer, $infoLabeledValue, $infoTooltipLabel, $spinner, IMarker, TableOption } from "gmx-middleware-ui-components"
+import { IAbstractPositionParams, IMarket, getMappedValue, hashData, parseFixed, switchMap, tokenAmount, tokenAmountLabel } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
 import { $TextField } from "../common/$TextField.js"
@@ -78,6 +78,7 @@ export const $berryByLabItems = (
 export interface IRouteDepositInfoConfig {
   routeDescription: IAbstractPositionParams
   wallet: IWalletClient
+  market: IMarket
 }
 
 export const $RouteDepositInfo = (config: IRouteDepositInfoConfig) => component((
@@ -90,9 +91,10 @@ export const $RouteDepositInfo = (config: IRouteDepositInfoConfig) => component(
 
 ) => {
 
-  const orchestrator = connectContract(PUPPET.CONTRACT[42161].Orchestrator)
+  const datastore = connectContract(PUPPET.CONTRACT[42161].Datastore)
   const indexToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION_MAP, config.routeDescription.indexToken)
   const maxBalance = multicast(join(constant(map(amount => tokenAmount(config.routeDescription.indexToken, amount), nativeBalance), clickMaxDeposit)))
+  const readPuppetDeposit = datastore.read('getUint', hashData(['string', 'address', 'address'], ['PUPPET_DEPOSIT_ACCOUNT', config.wallet.account.address, config.routeDescription.indexToken]))
 
   return [
     $row(layoutSheet.spacingSmall)(
@@ -116,7 +118,7 @@ export const $RouteDepositInfo = (config: IRouteDepositInfoConfig) => component(
               $infoTooltipLabel($text('The amount utialised by traders you subscribe'), 'Balance'),
               switchMap(amount => {
                 return $text(tokenAmountLabel(config.routeDescription.indexToken, amount))
-              }, orchestrator.read('puppetAccountBalance', config.wallet.account.address, config.routeDescription.indexToken))
+              }, readPuppetDeposit)
             )
           ),
           $content: $column(layoutSheet.spacing)(

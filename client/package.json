@@ -40,7 +40,7 @@
         "lightweight-charts": "^4.1.1",
         "puppet-middleware-const": "workspace:*",
         "puppet-middleware-utils": "workspace:*",
-        "viem": "^1.19.0",
+        "viem": "^1.19.1",
         "workbox-window": "^7.0.0",
         "workbox-core": "^7.0.0",
         "workbox-build": "^7.0.0",

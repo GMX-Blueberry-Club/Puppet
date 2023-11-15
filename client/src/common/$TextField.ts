@@ -29,7 +29,7 @@ export const $label2 = $element('label')(
 )
 
 
-export const $labelDisplay = $text(style({ padding: '0 4px', alignSelf: 'flex-end', cursor: 'pointer', lineHeight: '36px', borderBottom: `2px solid ${colorAlpha(pallete.message, .1)}` }))
+export const $labelDisplay = $text(style({ paddingRight: '4px', alignSelf: 'flex-end', cursor: 'pointer', lineHeight: '36px', borderBottom: `2px solid ${colorAlpha(pallete.message, .1)}` }))
 
 
 const overideInputStyle = O(

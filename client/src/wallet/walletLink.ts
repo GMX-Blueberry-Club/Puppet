@@ -94,6 +94,7 @@ export const nativeBalance = awaitPromises(map(params => {
 }, combineObject({ publicClient, wallet })))
 
 export const gasPrice = awaitPromises(map(pc => pc.getGasPrice(), publicClient))
+export const estimatedGasPrice = awaitPromises(map(pc => pc.estimateFeesPerGas({ chain: arbitrum }), publicClient))
 
 export const blockCache = awaitPromises(map(async pc => {
   
@@ -146,14 +147,15 @@ const configChain = configureChains(
     //     }
     //   },
     // }),
-    // walletConnectProvider({ projectId }),
     alchemyProvider({
       apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low',
     }),
+    walletConnectProvider({ projectId }),
     publicProvider(),
   ],
-  { 
-    batch: { multicall: { wait: 10 } }, retryCount: 0,
+  {
+    batch: { multicall: { wait: 30 } },
+    retryCount: 0,
   }
 )
 
@@ -180,6 +182,9 @@ export const modal = createWeb3Modal({
   wagmiConfig, projectId, chains, customWallets: [],
   themeMode: theme.name === 'dark' ? 'dark' : 'light',
   themeVariables: {
+    "--w3m-color-mix": "red",
+    "--w3m-color-mix-strength": 0,
+    "--w3m-border-radius-master": "0px",
     '--w3m-font-family': 'var(--font)',
     '--w3m-accent': pallete.primary,
   },

@@ -80,10 +80,11 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       const syncParams = { ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlock }
       const storedBatch = queryLogs(syncParams, params.store)
       
-      return mergeArray([
-        processLogs(syncParams, params.store, storedBatch),
-        now(params.store)
-      ])
+      return processLogs(syncParams, params.store, storedBatch)
+      // return mergeArray([
+      //   processLogs(syncParams, params.store, storedBatch),
+      //   now(params.store)
+      // ])
     }
 
     return now(params.store)
@@ -297,34 +298,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                     chain: chainEvent,
                     processData,
                     referralCode: BLUEBERRY_REFFERAL_CODE,
-                    tokenIndexMap: {
-                      [CHAIN.ARBITRUM]: [
-                        ARBITRUM_ADDRESS.NATIVE_TOKEN,
-                        ARBITRUM_ADDRESS.WBTC,
-                        ARBITRUM_ADDRESS.LINK,
-                        ARBITRUM_ADDRESS.UNI,
-                      ],
-                      [CHAIN.AVALANCHE]: [
-                        AVALANCHE_ADDRESS.NATIVE_TOKEN,
-                        AVALANCHE_ADDRESS.WETHE,
-                        AVALANCHE_ADDRESS.WBTCE,
-                        AVALANCHE_ADDRESS.BTCB,
-                      ]
-                    },
-                    tokenStableMap: {
-                      [CHAIN.ARBITRUM]: [
-                        ARBITRUM_ADDRESS.USDC,
-                        ARBITRUM_ADDRESS.USDT,
-                        ARBITRUM_ADDRESS.DAI,
-                        ARBITRUM_ADDRESS.FRAX,
-                        // ARBITRUM_ADDRESS.MIM,
-                      ],
-                      [CHAIN.AVALANCHE]: [
-                        AVALANCHE_ADDRESS.USDC,
-                        AVALANCHE_ADDRESS.USDCE,
-                        // AVALANCHE_ADDRESS.MIM,
-                      ]
-                    },
                     parentRoute: tradeRoute
                   })({
                     changeRoute: linkClickTether()
@@ -391,7 +364,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
             $RouteSubscriptionDrawer({
               modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetRouteSubscritpion[]),
               modifySubscriber,
-              subscriptionList
+              subscriptionList,
+              processData
             })({
               modifySubscriptionList: modifySubscriptionListTether()
               // clickClose: clickCloseSubscPanelTether(),

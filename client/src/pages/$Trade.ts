@@ -9,7 +9,7 @@ import {
 } from "gmx-middleware-utils"
 
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, constant, debounce, empty, fromPromise, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, switchLatest, tap, zip } from "@most/core"
+import { awaitPromises, constant, debounce, empty, fromPromise, map, mergeArray, multicast, now, scan, skipRepeats, skipRepeatsWith, snapshot, switchLatest, tap, throttle, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/abis"
@@ -36,7 +36,7 @@ import { getExecuteGasFee, getExecutionFee, getFullMarketInfo } from "../logic/t
 import * as indexDB from "../utils/storage/indexDB.js"
 import * as storage from "../utils/storage/storeScope.js"
 import { walletLink } from "../wallet/index.js"
-import { gasPrice, wallet } from "../wallet/walletLink.js"
+import { estimatedGasPrice, gasPrice, wallet } from "../wallet/walletLink.js"
 import { $seperator2 } from "./common.js"
 import * as wagmi from "@wagmi/core"
 
@@ -340,6 +340,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const position: Stream<IPositionMirrorSlot | null> = replayLatest(multicast(mergeArray([
     map((params) => {
       const existingSlot = params.processData.mirrorPositionSlot[params.positionKeyArgs.key]
+      console.log(existingSlot)
 
       if (!existingSlot) {
         return null
@@ -669,16 +670,16 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const executeGasLimit = fromPromise(getExecuteGasFee(config.chain))
 
-  const executionFee = map(params => {
+  const executionFee = replayLatest(multicast(map(params => {
     const estGasLimit = params.isIncrease ? params.executeGasLimit.increaseGasLimit : params.executeGasLimit.decreaseGasLimit
 
     const adjustedGasLimit = params.executeGasLimit.estimatedFeeBaseGasLimit + applyFactor(estGasLimit, params.executeGasLimit.estimatedFeeMultiplierFactor)
-    const feeTokenAmount = adjustedGasLimit * params.gasPrice
+    const feeTokenAmount = adjustedGasLimit * params.estimatedGasPrice.maxFeePerGas!
 
     return feeTokenAmount
     
     // return getExecutionFee(params.executeGasLimit.estimatedFeeBaseGasLimit, params.executeGasLimit.estimatedFeeMultiplierFactor, estGasLimit, params.gasPrice)
-  }, combineObject({ executeGasLimit, isIncrease, gasPrice }))
+  }, combineObject({ executeGasLimit, isIncrease, estimatedGasPrice, gasPrice }))))
 
 
 

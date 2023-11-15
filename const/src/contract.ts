@@ -7,6 +7,7 @@ import puppet from './abi/puppet.js'
 import orchestrator from './abi/orchestrator.js'
 import orchestratorReader from './abi/orchestratorReader.js'
 import routeFactory from './abi/routeFactory.js'
+import datastore from './abi/datastore.js'
 
 export const CONTRACT = {
   [arbitrum.id]: {
@@ -16,7 +17,7 @@ export const CONTRACT = {
     },
     Datastore: {
       address: "0x7c543a3B2b463984bCf94847798be384a4022E16",
-      abi: puppet,
+      abi: datastore,
     },
     Orchestrator: {
       address: "0x8992D776Ad36a92f29c6B3AB8DAd2c0520075364",

@@ -11,7 +11,7 @@ import { $bear, $bull, $infoTooltipLabel, $Link, $skull, $tokenIconMap } from "g
 import {
   getBasisPoints,
   getRoughLiquidationPrice,
-  getTokenDescription, getTokenUsd, IAbstractPositionParams, IMarketInfo, IOraclePrice,
+  getTokenDescription, getTokenUsd, IAbstractPositionParams, IMarketCreatedEvent, IMarketInfo, IOraclePrice,
   IPositionSettled,
   isPositionSettled, liquidationWeight,
   lst,
@@ -317,7 +317,7 @@ export const $openPositionPnlBreakdown = (pos: IPositionMirrorSlot, marketInfo: 
 
 interface ITraderDisplay {
   trader: viem.Address
-  // changeSubscriptionList: Stream<IPuppetRouteTrades[]>
+  markets: Stream<IMarketCreatedEvent[]>
   subscriptionList: Stream<IPuppetRouteSubscritpion[]>
   route: router.Route
 }
@@ -330,6 +330,7 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
   [modifySubscribeList, modifySubscribeListTether]: Behavior<IPuppetRouteSubscritpion>,
 ) => {
 
+  const { markets } = config
 
   const $trader = $Link({
     $content: $profileDisplay({
@@ -369,7 +370,7 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
               click: popRouteSubscriptionEditorTether()
             }),
           ),
-          $content: $RouteSubscriptionEditor({ routeSubscription })({
+          $content: $RouteSubscriptionEditor({ routeSubscription, markets })({
             changeRouteSubscription: modifySubscribeListTether(map(partialSubsc => {
               return { ...{ trader: config.trader, puppet: w3p.account.address, routeTypeKey: routeTypeKey }, ...partialSubsc }
             }))
