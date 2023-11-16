@@ -140,9 +140,10 @@ export const $Home = (config: ITreasury) => component((
 
             $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
               $Link({
+                disabled: now(true),
                 $content: $anchor(
                   $ButtonSecondary({
-                    disabled: now(true),
+                    // disabled: now(true),
                     $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
                       $icon({ $content: $puppetLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
                       $text('Puppet'),
@@ -181,9 +182,9 @@ export const $Home = (config: ITreasury) => component((
               screenUtils.isDesktopScreen ? $text('< Comming Soon (tm) >') : empty(),
 
               $Link({
+                disabled: now(true),
                 $content: $anchor(
                   $ButtonSecondary({
-                    disabled: now(true),
                     $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
                       $icon({ $content: $gmxLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
                       $text('Trader'),
@@ -240,23 +241,17 @@ export const $Home = (config: ITreasury) => component((
 
                   $node(),
 
-                  $Link({
-                    anchorOp: style({ alignSelf: 'center' }),
-                    $content: $anchor(
-                      $ButtonSecondary({
-                        disabled: now(true),
-                        $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-                          $icon({ $content: $puppetLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
-                          $text('Download'),
-                          $icon({ $content: $gmxLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
-                        ),
-                        $container: $element('button')(
-                          designSheet.btn,
-                          style({ position: 'relative', borderRadius: '30px' })
-                        )
-                      })({})
+                  $ButtonSecondary({
+                    disabled: now(true),
+                    $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+                      $icon({ $content: $puppetLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
+                      $text('Download'),
+                      $icon({ $content: $gmxLogo, width: '24px', height: '24px', viewBox: '0 0 32 32' }),
                     ),
-                    url: '/app/leaderboard/settled', route: config.parentRoute.create({ fragment: 'fefe' })
+                    $container: $element('button')(
+                      designSheet.btn,
+                      style({ position: 'relative', alignSelf: 'center', borderRadius: '30px' })
+                    )
                   })({
                     click: clickDownloadBtnTether(
                       map(() => deferredPrompt.prompt())
