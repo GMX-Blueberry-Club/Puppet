@@ -1,30 +1,28 @@
-import { Behavior, O, combineObject } from "@aelea/core"
+import { Behavior, O, combineObject, replayLatest } from "@aelea/core"
 import { $element, $node, $text, attr, component, nodeEvent, style, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { constant, empty, map, mergeArray, multicast, now, skipRepeats, snapshot, startWith, take } from "@most/core"
+import { constant, empty, map, mergeArray, multicast, skipRepeats, snapshot, startWith, switchLatest, take } from "@most/core"
 import { Stream } from "@most/types"
-import { BASIS_POINTS_DIVISOR, TIME_INTERVAL_MAP } from "gmx-middleware-const"
-import { $ButtonToggle, $bear, $bull, $caretDown, $check, $defaulButtonToggleContainer, $icon, $infoLabel, $infoLabeledValue, $marketSmallLabel, $target, $xCross } from "gmx-middleware-ui-components"
-import { IMarket, IMarketCreatedEvent, formatFixed, getMappedValue, groupArrayMany, parseBps, readableDate, readablePercentage, readableUnitAmount, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { TIME_INTERVAL_MAP } from "gmx-middleware-const"
+import { $bear, $bull, $caretDown, $check, $icon, $infoLabeledValue, $marketSmallLabel, $target, $tokenIconMap, $tokenLabelFromSummary, $xCross } from "gmx-middleware-ui-components"
+import { IMarketCreatedEvent, formatFixed, getTokenDescription, groupArrayMany, hashData, parseBps, readableDate, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
-import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
+import { IPuppetRouteSubscritpion, getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { theme } from "../assignThemeSync.js"
 import { $TextField } from "../common/$TextField.js"
-import { $route } from "../common/$common.js"
 import { $heading3 } from "../common/$text.js"
-import { $card2, $iconCircular } from "../common/elements/$common.js"
+import { $card2, $iconCircular, $labeledDivider } from "../common/elements/$common.js"
+import { IGmxProcessState } from "../data/process/process"
 import { connectContract, wagmiWriteContract } from "../logic/common.js"
-import { ROUTE_DESCRIPTIN_MAP } from "../logic/utils.js"
 import { $seperator2 } from "../pages/common.js"
 import { fadeIn } from "../transitions/enter.js"
 import { $profileDisplay } from "./$AccountProfile.js"
 import { $IntermediateConnectButton } from "./$ConnectAccount.js"
 import { $RouteDepositInfo } from "./$common.js"
-import { $ButtonCircular, $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary } from "./form/$Button.js"
-import { $Dropdown } from "./form/$Dropdown.js"
-import { IGmxProcessState } from "../data/process/process"
+import { $ButtonCircular, $ButtonPrimary, $ButtonPrimaryCtx } from "./form/$Button.js"
+import { $Dropdown, $defaultSelectContainer } from "./form/$Dropdown.js"
 
 
 
@@ -62,7 +60,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
 
             const orchestrator = connectContract(PUPPET.CONTRACT[42161].Orchestrator)
 
-            const markets = map(data => Object.values(data.markets), config.processData)
+            const markets = map(data => Object.values(data.marketMap), config.processData)
 
               
             return $column(layoutSheet.spacing)(
@@ -83,7 +81,6 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
 
                 return $column(layoutSheet.spacing)(
                   ...routeMap.map(([routeKey, subscList]) => {
-                    debugger
                     const market = params.markets.find(m => m.salt === routeKey)
 
                     if (!market) {
@@ -223,7 +220,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
 
 interface IRouteSubscriptionEditor {
   routeSubscription?: IPuppetRouteSubscritpion
-  markets: Stream<IMarketCreatedEvent[]>
+  marketList: Stream<IMarketCreatedEvent[]>
 }
 
 export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => component((
@@ -231,18 +228,34 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
   [inputAllowance, inputAllowanceTether]: Behavior<any, bigint>,
   [clickUnsubscribe, clickUnsubscribeTether]: Behavior<any, false>,
   [clickSubmit, clickSubmitTether]: Behavior<any>,
-  [switchIsLong, switchIsLongTether]: Behavior<boolean>,
-  [selectRouteType, selectRouteTypeTether]: Behavior<IMarketCreatedEvent, viem.Hex>,
-) => {
 
-  const { routeSubscription, markets } = config
+  [switchIsLong, switchIsLongTether]: Behavior<boolean>,
+  [switchisMarketIndexToken, switchisMarketIndexTokenTether]: Behavior<boolean>,
+) => {
+  const { routeSubscription, marketList } = config
+
+
+  const collateralToken = replayLatest(switchIsLong, true)
+  const indexToken = replayLatest(switchIsLong, true)
+  const isLong = replayLatest(switchIsLong, true)
+  const isMarketIndexToken = replayLatest(switchisMarketIndexToken, true)
+
+  // const market = mergeArray([
+  //   selectMarket,
+  //   map(params => {
+  //     return params.marketList.find(mkt => mkt.routeTypeKey === config.routeSubscription?.routeTypeKey) || params.marketList[1]
+  //   }, combineObject({ marketList, isLong }))
+  // ])
 
   const subscribed = startWith(!!config.routeSubscription?.subscribed || false, clickUnsubscribe)
   const allowance = startWith(config.routeSubscription?.allowance || 500n, inputAllowance)
-  const routeTypeKey = mergeArray([
-    // selectRouteType,
-    map(list => list.find(market => market.salt === config.routeSubscription?.routeTypeKey) || list[0], markets)
-  ])
+  
+  const routeTypeKey = map(params => {
+    const collateralToken = params.isMarketIndexToken ? params.market.indexToken : params.market.shortToken
+    const routeTypeKeyData = hashData(['address'], [params.market.marketToken])
+    
+    return getRouteTypeKey(collateralToken, params.market.indexToken, params.isLong, routeTypeKeyData)
+  }, combineObject({ indexToken, isLong, collateralToken }))
   const initEnddate = config.routeSubscription?.expiry ? config.routeSubscription?.expiry : BigInt(unixTimestampNow() + TIME_INTERVAL_MAP.YEAR)
   const expiry = startWith(initEnddate, inputEndDate)
   
@@ -254,35 +267,34 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
   })
 
 
-
-  const isLong = now(true)
   return [
     $column(layoutSheet.spacing, style({ maxWidth: '350px' }))(
 
       $text('The following rules will apply to this trader whenever he opens and maintain a position'),
+      $labeledDivider('Matching Trigger'),
 
-      $row(
+      $row(layoutSheet.spacingSmall)(
         switchMap(params => {
           return $infoLabeledValue(
-            $text(style({ width: '100px' }))('Market'),
+            $text(style({ width: '100px' }))('Position'),
             $Dropdown({
               $container: $row(style({ borderRadius: '30px', backgroundColor: pallete.background, padding: '4px 8px', position: 'relative', border: `1px solid ${colorAlpha(pallete.foreground, .2)}`, cursor: 'pointer' })),
               selector: {
-                list: params.markets,
+                list: params.marketList,
                 $$option: map(market => $marketSmallLabel(market)),
-                value: routeTypeKey,
+                value: market,
               },
               $selection: switchMap(market => {
                 return $row(layoutSheet.spacingSmall)(
                   $marketSmallLabel(market),
                   $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
                 )
-              }, routeTypeKey),
+              }, market),
             })({
-              select: selectRouteTypeTether(map(m => m.salt))
+              select: selectMarketTether()
             })
           )
-        }, combineObject({ markets })),
+        }, combineObject({ marketList })),
         $Dropdown({
           $container: $row(style({ borderRadius: '30px', backgroundColor: pallete.background, padding: '4px 8px', position: 'relative', border: `1px solid ${colorAlpha(pallete.foreground, .2)}`, cursor: 'pointer' })),
           selector: {
@@ -290,28 +302,65 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
               true,
               false,
             ],
-            $$option: map(isLong => {
-              return $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
-                $icon({ $content: isLong ? $bull : $bear, width: '18px', viewBox: '0 0 32 32' }),
-                $text(isLong ? 'Long' : 'Short'),
+            $$option: map(il => {
+              return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+                $icon({ $content: il ? $bull : $bear, width: '24px', viewBox: '0 0 32 32' }),
+                $text(il ? 'Long' : 'Short'),
               )
             }),
             value: isLong,
           },
-          $selection: map(isLong => {
-            return $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
-              $icon({ $content: isLong ? $bull : $bear, width: '18px', viewBox: '0 0 32 32' }),
-              $text(isLong ? 'Long' : 'Short'),
+          $selection: switchLatest(map(il => {
+            return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+              $icon({ $content: il ? $bull : $bear, width: '24px', viewBox: '0 0 32 32' }),
+              $text(il ? 'Long' : 'Short'),
+              $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
             )
-          }, isLong),
+          }, isLong)),
         })({
           select: switchIsLongTether()
         }),
       ),
 
-      $row(
-        
+      $infoLabeledValue(
+        $text(style({ width: '100px' }))('Collateral Token'),
+        switchMap(params => {
+
+          return $Dropdown({
+            $container: $row(style({ borderRadius: '30px', backgroundColor: pallete.background, padding: '4px 8px', position: 'relative', border: `1px solid ${colorAlpha(pallete.foreground, .2)}`, cursor: 'pointer' })),
+            $selection: switchMap(isIndexToken => {
+              const token = isIndexToken ? params.market.shortToken : params.market.longToken
+              const tokenDesc = getTokenDescription(token)
+
+              return $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
+                $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+                  $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '24px', viewBox: '0 0 32 32' }),
+                  $text(tokenDesc.symbol)
+                ),
+                $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
+              )
+            }, isMarketIndexToken),
+            selector: {
+              value: isMarketIndexToken,
+              $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0 })),
+              $$option: map(option => {
+                const token = option ? params.market.longToken : params.market.shortToken
+                const desc = getTokenDescription(token)
+
+                return $tokenLabelFromSummary(desc)
+              }),
+              list: [
+                false,
+                true
+              ],
+            }
+          })({
+            select: switchisMarketIndexTokenTether()
+          })
+        }, combineObject({ market })),
       ),
+
+      $labeledDivider('Deposit rules'),
 
       $TextField({
         label: 'Allow %',

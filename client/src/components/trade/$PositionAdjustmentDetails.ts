@@ -96,10 +96,10 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
   } = config.tradeConfig
   const {
     availableIndexLiquidityUsd, averagePrice, collateralDescription,
-    collateralTokenPoolInfo, collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee,
+    collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
     isTradingEnabled, liquidationPrice, marginFeeUsd, route, netPositionValueUsd,
-    position, swapFee, walletBalance, markets, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
+    position, walletBalance, marketList, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
   } = config.tradeState
 
 
@@ -371,23 +371,30 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
         //     )
         //   )
         // }, combineObject({ ...config.tradeState, sizeDeltaUsd }))),
-        $infoLabeledValue('Swap', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, swapFee))),
-        $infoLabeledValue('Execution Fee', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(feeUsd => {
-          return `${readableFixedUSD30(feeUsd)}`
-        }, executionFeeAfterBuffer))),
-        $infoLabeledValue('Price Impact', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(params => `${readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))} ${readableFixedUSD30(params.priceImpactUsd)}`, combineObject({ priceImpactUsd, sizeDeltaUsd })))),
-        $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, marginFeeUsd)))
-      ),
-      $row(style({ placeContent: 'space-between' }))(
-
-        $infoTooltipLabel(
-          $column(layoutSheet.spacingSmall)(
-            $text('Collateral deducted upon your deposit including Borrow fee at the start of every hour. the rate changes based on utilization, it is calculated as (assets borrowed) / (total assets in pool) * 0.01%')
-          ),
-          'Total Fees'
+        // $infoLabeledValue('Swap', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, swapFee))),
+        style({ placeContent: 'space-between' })(
+          $infoLabeledValue('Execution Fee', $text(style({ color: pallete.indeterminate, alignSelf: 'flex-end' }))(map(feeUsd => {
+            return `${readableFixedUSD30(feeUsd)}`
+          }, executionFeeAfterBuffer)))
         ),
-        $text(style({ color: pallete.indeterminate }))(
-          map(total => readableFixedUSD30(total), adjustmentFeeUsd)
+        style({ placeContent: 'space-between' })(
+          $infoLabeledValue('Price Impact', $text(style({ color: pallete.indeterminate }))(map(params => `${readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))} ${readableFixedUSD30(params.priceImpactUsd)}`, combineObject({ priceImpactUsd, sizeDeltaUsd }))))
+        ),
+        style({ placeContent: 'space-between' })(
+          $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate }))(map(readableFixedUSD30, marginFeeUsd)))
+        )
+      ),
+      style({ placeContent: 'space-between' })(
+        $infoLabeledValue(
+          $infoTooltipLabel(
+            $column(layoutSheet.spacingSmall)(
+              $text('Collateral deducted upon your deposit including Borrow fee at the start of every hour. the rate changes based on utilization, it is calculated as (assets borrowed) / (total assets in pool) * 0.01%')
+            ),
+            'Total Fees'
+          ),
+          $text(style({ color: pallete.indeterminate }))(
+            map(total => readableFixedUSD30(total), adjustmentFeeUsd)
+          )
         )
       ),
 

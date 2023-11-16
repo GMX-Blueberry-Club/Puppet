@@ -121,7 +121,7 @@ export const $accountRef = (id: Address) => $anchor(attr({ href: getAccountExplo
 
 export const $accountIconLink = (address: Address) => $anchor(attr({ href: getAccountExplorerUrl(LAB_CHAIN, address) }))(
   $icon({ $content: $ethScan, width: '16px', viewBox: '0 0 24 24', svgOps: style({ margin: '3px 4px 0 0' }) }),
-  $text(style({}))(` ${shortenAddress(address)} `),
+  $text(style({}))(`${shortenAddress(address)} `),
 )
 
 export const $txnIconLink = (hash: string) => $anchor(attr({ href: getTxExplorerUrl(LAB_CHAIN, hash) }))(

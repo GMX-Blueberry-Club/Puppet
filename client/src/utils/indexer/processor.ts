@@ -89,9 +89,9 @@ export function defineProcess<TSeed, TProcessConfigList extends ILogOrdered[], T
         }
 
         // bootstrap using blueprint
-        // const blockNumber = loadedSeedfile!.blockNumber || config.blueprint.config.startBlock
-        // const orderId = loadedSeedfile!.orderId || getblockOrderIdentifier(config.blueprint.config.startBlock)
-        // return { ...loadedSeedfile, blockNumber, orderId }
+        const blockNumber = loadedSeedfile!.blockNumber || config.blueprint.config.startBlock
+        const orderId = loadedSeedfile!.orderId || getblockOrderIdentifier(config.blueprint.config.startBlock)
+        return { ...loadedSeedfile, blockNumber, orderId }
         return loadedSeedfile
       }, config.seedFile || now(null))
     }

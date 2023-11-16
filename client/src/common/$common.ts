@@ -11,7 +11,7 @@ import { $bear, $bull, $infoTooltipLabel, $Link, $skull, $tokenIconMap } from "g
 import {
   getBasisPoints,
   getRoughLiquidationPrice,
-  getTokenDescription, getTokenUsd, IAbstractPositionParams, IMarketCreatedEvent, IMarketInfo, IOraclePrice,
+  getTokenDescription, getTokenUsd, IAbstractPositionParams, IMarketInfo, IOraclePrice,
   IPositionSettled,
   isPositionSettled, liquidationWeight,
   lst,
@@ -19,7 +19,7 @@ import {
   readableLeverage,
   readablePercentage,
   readableTokenUsd,
-  streamOf, switchMap
+  streamOf, switchMap, IMarket, IMarketCreatedEvent, IRoute
 } from "gmx-middleware-utils"
 import { getMpSlotPnL, getParticiapntMpPortion, getPuppetSubscriptionKey, getRouteTypeKey, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -317,7 +317,8 @@ export const $openPositionPnlBreakdown = (pos: IPositionMirrorSlot, marketInfo: 
 
 interface ITraderDisplay {
   trader: viem.Address
-  markets: Stream<IMarketCreatedEvent[]>
+  marketList: Stream<IMarketCreatedEvent[]>
+  routeList: Stream<IRoute[]>
   subscriptionList: Stream<IPuppetRouteSubscritpion[]>
   route: router.Route
 }
@@ -330,7 +331,7 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
   [modifySubscribeList, modifySubscribeListTether]: Behavior<IPuppetRouteSubscritpion>,
 ) => {
 
-  const { markets } = config
+  const { marketList } = config
 
   const $trader = $Link({
     $content: $profileDisplay({
@@ -370,7 +371,7 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
               click: popRouteSubscriptionEditorTether()
             }),
           ),
-          $content: $RouteSubscriptionEditor({ routeSubscription, markets })({
+          $content: $RouteSubscriptionEditor({ routeSubscription, marketList })({
             changeRouteSubscription: modifySubscribeListTether(map(partialSubsc => {
               return { ...{ trader: config.trader, puppet: w3p.account.address, routeTypeKey: routeTypeKey }, ...partialSubsc }
             }))

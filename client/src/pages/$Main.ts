@@ -358,7 +358,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
             }, combineObject({ syncBlock, process })),
    
           ),
-
                         
           $column(style({ maxWidth: '850px', margin: '0 auto', width: '100%', zIndex: 10 }))(
             $RouteSubscriptionDrawer({

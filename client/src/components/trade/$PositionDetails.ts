@@ -1,44 +1,34 @@
-import { Behavior, O, combineObject } from "@aelea/core"
+import { O, combineObject } from "@aelea/core"
 import { $Node, $text, NodeComposeFn, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
 import {
   map,
-  mergeArray,
-  multicast, now,
-  snapshot
+  now
 } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
 import {
   $Table,
-  $info,
   $infoLabel,
   $txHashRef
 } from "gmx-middleware-ui-components"
 import {
-  DecreasePositionSwapType,
   IPositionDecrease,
   IPositionIncrease,
-  IPositionSlot, IPriceInterval,
-  OrderType,
+  IPriceInterval,
   StateStream,
-  abs,
   getTokenUsd,
   readableDate,
   readableFixedUSD30,
-  resolveAddress,
   switchMap,
   timeSince,
   unixTimestampNow
 } from "gmx-middleware-utils"
-import * as viem from "viem"
-import { $heading2 } from "../../common/$text.js"
-import { connectContract, wagmiWriteContract } from "../../logic/common.js"
-import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
-import { IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "./$PositionEditor.js"
-import { $route } from "../../common/$common"
 import { IPositionMirrorSlot } from "puppet-middleware-utils"
+import * as viem from "viem"
+import { connectContract } from "../../logic/common.js"
+import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
+import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 
 
 export enum ITradeFocusMode {
@@ -90,11 +80,22 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
   } = config.tradeConfig
   const {
     availableIndexLiquidityUsd, averagePrice, collateralDescription,
-    collateralTokenPoolInfo, collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee,
+    collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
     isTradingEnabled, liquidationPrice, marginFeeUsd, route, netPositionValueUsd,
-    position, swapFee, walletBalance, markets, priceImpactUsd, adjustmentFeeUsd
+    position, walletBalance, marketList, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
   } = config.tradeState
+
+
+  const dataSource = switchMap(pos => {
+    return pos
+      ? now(pos.updates)
+      : now([])
+  }, position)
+
+  
+
+
 
 
   return [
@@ -105,12 +106,7 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
       //   : $row(layoutSheet.spacingSmall, style({ padding: `2px 10px` })),
       // headerCellOp: style({ padding: screenUtils.isDesktopScreen ? '15px 15px' : '6px 4px' }),
       // cellOp: style({ padding: screenUtils.isDesktopScreen ? '4px 15px' : '6px 4px' }),
-      dataSource: mergeArray([
-        config.position
-          ? now(config.position.updates) as Stream<(IRequestTrade | IPositionIncrease | IPositionDecrease)[]>
-          : now([]),
-        // constant(initalList, periodic(3000)),
-      ]),
+      dataSource: dataSource,
       // $container: $defaultTableContainer(screenUtils.isDesktopScreen ? style({ flex: '1 1 0', minHeight: '100px' }) : style({})),
       scrollConfig: {
         insertAscending: true,

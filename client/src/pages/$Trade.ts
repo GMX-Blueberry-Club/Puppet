@@ -110,14 +110,13 @@ export const $Trade = (config: ITradeComponent) => component((
 
 ) => {
 
-  const markets = map(data => Object.values(data.markets), config.processData)
+  const marketList = map(data => Object.values(data.marketMap), config.processData)
   const processData = config.processData
 
   const chainId = config.chain.id
   const gmxContractMap = GMX.CONTRACT[config.chain.id]
   const puppetContractMap = PUPPET.CONTRACT[config.chain.id]
 
-  const tradeReader = trade.connectTrade(config.chain)
 
   // const vaultReader = contractReader(vaultConfig)
   
@@ -174,11 +173,11 @@ export const $Trade = (config: ITradeComponent) => component((
     map(params => {
       const stored = params.stored
       if (stored === undefined) {
-        return params.markets[1]
+        return params.marketList[1]
       }
 
-      return params.markets.find(m => m.marketToken === stored.marketToken) || params.markets[0]
-    }, combineObject({ stored: indexDB.get(tradingStore, 'market') as Stream<IMarket | undefined>, markets })),
+      return params.marketList.find(m => m.marketToken === stored.marketToken) || params.marketList[0]
+    }, combineObject({ stored: indexDB.get(tradingStore, 'market') as Stream<IMarket | undefined>, marketList })),
     // snapshot((params, posSlot) => {
     //   const update = lst(posSlot.updates)
     //   const market = params.markets.find(m => m.marketToken === update.market)
@@ -203,7 +202,7 @@ export const $Trade = (config: ITradeComponent) => component((
       return now(0n)
     }
 
-    return trade.getErc20Balance(config.chain, params.primaryToken, params.wallet.account.address)
+    return trade.getWalletErc20Balance(config.chain, params.primaryToken, params.wallet.account.address)
   }, combineObject({ primaryToken, wallet }))))
 
 
@@ -385,67 +384,67 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
 
-  const collateralTokenPoolInfo = replayLatest(multicast(tradeReader.getTokenPoolInfo(collateralToken)))
+  // const collateralTokenPoolInfo = replayLatest(multicast(tradeReader.getTokenPoolInfo(collateralToken)))
 
 
 
 
-  const swapFee = replayLatest(multicast(skipRepeats(map((params) => {
-    const inputAndIndexStable = params.primaryDescription.isUsd && params.indexDescription.isUsd
-    const swapFeeBasisPoints = inputAndIndexStable ? GMX.STABLE_SWAP_FEE_BASIS_POINTS : GMX.SWAP_FEE_BASIS_POINTS
-    const taxBasisPoints = inputAndIndexStable ? GMX.STABLE_TAX_BASIS_POINTS : GMX.TAX_BASIS_POINTS
+  // const swapFee = replayLatest(multicast(skipRepeats(map((params) => {
+  //   const inputAndIndexStable = params.primaryDescription.isUsd && params.indexDescription.isUsd
+  //   const swapFeeBasisPoints = inputAndIndexStable ? GMX.STABLE_SWAP_FEE_BASIS_POINTS : GMX.SWAP_FEE_BASIS_POINTS
+  //   const taxBasisPoints = inputAndIndexStable ? GMX.STABLE_TAX_BASIS_POINTS : GMX.TAX_BASIS_POINTS
 
-    return 0n
-    // const rsolvedInputAddress = resolveAddress(config.chain, params.primaryToken)
-    // if (rsolvedInputAddress === params.collateralToken) {
-    //   return 0n
-    // }
-
-
-    // let amountUsd = abs(params.collateralDeltaUsd)
-
-    // if (params.position && !params.isIncrease) {
-    //   const pnl = getPnL(params.isLong, params.position.averagePrice, params.marketPrice.indexTokenPrice.min, params.position.latestUpdate.sizeInUsd)
-    //   const adjustedDelta = getAdjustedDelta(params.position.latestUpdate.sizeInUsd, abs(params.sizeDeltaUsd), pnl)
-
-    //   if (adjustedDelta > 0n) {
-    //     amountUsd = amountUsd + adjustedDelta
-    //   }
-    // }
+  //   return 0n
+  //   // const rsolvedInputAddress = resolveAddress(config.chain, params.primaryToken)
+  //   // if (rsolvedInputAddress === params.collateralToken) {
+  //   //   return 0n
+  //   // }
 
 
-    // const usdgAmount = amountUsd * getDenominator(params.inputTokenDescription.decimals) / GMX.PRECISION
+  //   // let amountUsd = abs(params.collateralDeltaUsd)
 
-    // const feeBps0 = getFeeBasisPoints(
-    //   params.inputTokenDebtUsd,
-    //   params.inputTokenWeight,
-    //   usdgAmount,
-    //   swapFeeBasisPoints,
-    //   taxBasisPoints,
-    //   true,
-    //   params.usdgSupply,
-    //   params.totalTokenWeight
-    // )
-    // const feeBps1 = getFeeBasisPoints(
-    //   params.collateralTokenPoolInfo.usdgAmounts,
-    //   params.collateralTokenPoolInfo.tokenWeights,
-    //   usdgAmount,
-    //   swapFeeBasisPoints,
-    //   taxBasisPoints,
-    //   false,
-    //   params.usdgSupply,
-    //   params.totalTokenWeight
-    // )
+  //   // if (params.position && !params.isIncrease) {
+  //   //   const pnl = getPnL(params.isLong, params.position.averagePrice, params.marketPrice.indexTokenPrice.min, params.position.latestUpdate.sizeInUsd)
+  //   //   const adjustedDelta = getAdjustedDelta(params.position.latestUpdate.sizeInUsd, abs(params.sizeDeltaUsd), pnl)
 
-    // const feeBps = feeBps0 > feeBps1 ? feeBps0 : feeBps1
-    // const addedSwapFee = feeBps ? amountUsd * feeBps / GMX.PRECISION : 0n
+  //   //   if (adjustedDelta > 0n) {
+  //   //     amountUsd = amountUsd + adjustedDelta
+  //   //   }
+  //   // }
 
-    // return addedSwapFee
-  }, combineObject({
-    usdgSupply: usdg.read('totalSupply'), totalTokenWeight: vault.read('totalTokenWeights'),
-    collateralToken, primaryToken, isIncrease, sizeDeltaUsd, isLong, collateralTokenPoolInfo,
-    position, primaryDescription, inputTokenWeight, inputTokenDebtUsd, indexDescription, marketPrice
-  })))))
+
+  //   // const usdgAmount = amountUsd * getDenominator(params.inputTokenDescription.decimals) / GMX.PRECISION
+
+  //   // const feeBps0 = getFeeBasisPoints(
+  //   //   params.inputTokenDebtUsd,
+  //   //   params.inputTokenWeight,
+  //   //   usdgAmount,
+  //   //   swapFeeBasisPoints,
+  //   //   taxBasisPoints,
+  //   //   true,
+  //   //   params.usdgSupply,
+  //   //   params.totalTokenWeight
+  //   // )
+  //   // const feeBps1 = getFeeBasisPoints(
+  //   //   params.collateralTokenPoolInfo.usdgAmounts,
+  //   //   params.collateralTokenPoolInfo.tokenWeights,
+  //   //   usdgAmount,
+  //   //   swapFeeBasisPoints,
+  //   //   taxBasisPoints,
+  //   //   false,
+  //   //   params.usdgSupply,
+  //   //   params.totalTokenWeight
+  //   // )
+
+  //   // const feeBps = feeBps0 > feeBps1 ? feeBps0 : feeBps1
+  //   // const addedSwapFee = feeBps ? amountUsd * feeBps / GMX.PRECISION : 0n
+
+  //   // return addedSwapFee
+  // }, combineObject({
+  //   usdgSupply: usdg.read('totalSupply'), totalTokenWeight: vault.read('totalTokenWeights'),
+  //   collateralToken, primaryToken, isIncrease, sizeDeltaUsd, isLong, collateralTokenPoolInfo,
+  //   position, primaryDescription, inputTokenWeight, inputTokenDebtUsd, indexDescription, marketPrice
+  // })))))
 
 
   const priceImpactUsd = map(params => {
@@ -474,9 +473,9 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ marketInfo, sizeDeltaUsd, isLong, priceImpactUsd }))
 
   const adjustmentFeeUsd = map(params => {
-    return params.marginFeeUsd + params.swapFee // + params.priceImpactUsd
+    return params.marginFeeUsd // + params.priceImpactUsd
     // return params.marginFeeUsd + params.swapFee + params.priceImpactUsd
-  }, combineObject({ swapFee, marginFeeUsd, priceImpactUsd }))
+  }, combineObject({ marginFeeUsd, priceImpactUsd }))
 
   const collateralDelta = map(params => {
     return getTokenAmount(params.primaryPrice, params.collateralDeltaUsd)
@@ -685,7 +684,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   const tradeState: StateStream<ITradeParams> = {
-    markets,
+    marketList,
     route,
     routeTypeKey,
 
@@ -705,7 +704,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
     executionFee,
     marginFeeUsd,
-    swapFee,
+    // swapFee,
     priceImpactUsd,
     adjustmentFeeUsd,
 
@@ -718,8 +717,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
     stableFundingRateFactor,
     fundingRateFactor,
-
-    collateralTokenPoolInfo,
+    // collateralTokenPoolInfo,
   }
 
   const $tradebox = $PositionEditor({

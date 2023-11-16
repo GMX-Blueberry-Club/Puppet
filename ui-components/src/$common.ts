@@ -53,7 +53,7 @@ export const $infoLabel = (label: string | $Node) => {
 }
 
 export const $infoLabeledValue = (label: string | $Node, value: string | $Node) => {
-  return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', placeContent: 'space-between' }))(
+  return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
     $infoLabel(label),
     isStream(value) ? value : $text(value)
   )

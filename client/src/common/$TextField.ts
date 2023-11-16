@@ -63,7 +63,7 @@ export const $TextField = (config: TextField) => component((
 
   return [
     $label(
-      $row(layoutSheet.spacingTiny, style({ width: '100%' }))(
+      $row(layoutSheet.spacingSmall, style({ width: '100%' }))(
         $labelDisplay(style({ width: labelWidth ? labelWidth + 'px' : '' }))(label),
         placeholder ? attr({ placeholder: placeholder }, $field): $field,
       ),

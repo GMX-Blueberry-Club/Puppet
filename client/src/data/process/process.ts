@@ -4,8 +4,6 @@ import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, IntervalTime, TIME_INTERVAL_MAP, TO
 import {
   IEventLog1Args,
   ILogTxType,
-  IMarket,
-  IMarketCreatedEvent,
   IOraclePrice,
   IOraclePriceUpdateEvent,
   IPositionDecrease,
@@ -16,9 +14,10 @@ import {
   getDenominator,
   getIntervalIdentifier,
   getMappedValue,
-  getPositionKey,
+  IRoute,
   importGlobal,
-  unixTimestampNow
+  unixTimestampNow,
+  IMarketCreatedEvent
 } from "gmx-middleware-utils"
 import { IMirrorPositionRequest, IPositionMirrorSettled, IPositionMirrorSlot, IPuppetRouteSubscritpion, getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -55,6 +54,9 @@ export interface IGmxProcessState {
   latestPrice: Record<viem.Address, IOraclePrice>
   approximatedTimestamp: number
 
+  marketMap: Record<viem.Address, IMarketCreatedEvent>
+  routeMap: Record<viem.Hex, IRoute>
+  
   mirrorPositionRequest: Record<viem.Hex, IMirrorPositionRequest>
   mirrorPositionSlot: Record<viem.Hex, IPositionMirrorSlot>
   mirrorPositionSettled: IPositionMirrorSettled[]
@@ -62,12 +64,12 @@ export interface IGmxProcessState {
 
   // mirrorPositionSlotV2: Record<viem.Hex, IPositionMirrorSlotV2>
   // mirrorPositionSettledV2: IAccountToRouteMap<IPositionMirrorSettled[]>
-  markets: Record<viem.Address, IMarketCreatedEvent>
+
 }
 
 
 const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
-  const req = await (await fetch('/db/sha256-xl54_Pu162s93h5UPB5atIsXxCTsDSTbXfmKxheWYAw=.json')).json().catch(() => null)
+  const req = await (await fetch('/db/sha256-1RBFkvvr8xwuk6w74UGs1h+IOoP4_sztAWX1S1MBrBo=.json')).json().catch(() => null)
 
   if (req === null) {
     return null
@@ -107,12 +109,13 @@ const state: IGmxProcessState = {
   // V2
   // mirrorPositionSlotV2: {},
   // mirrorPositionSettledV2: {},
-  markets: {},
+  routeMap: {},
+  marketMap: {},
 }
 
 const config: IProcessedStoreConfig = {
   startBlock: 107745255n,
-  endBlock: 145000000n,
+  endBlock: 146000000n,
   chainId: arbitrum.id,
 }
 
@@ -130,7 +133,8 @@ export const gmxProcess = defineProcess(
     source: gmxLog.marketCreated,
     step(seed, value) {
       const entity = getEventType<IMarketCreatedEvent>('Market', value, seed.approximatedTimestamp)
-      seed.markets[entity.marketToken] = {
+
+      const market: IMarketCreatedEvent = {
         salt: entity.salt,
         indexToken: entity.indexToken,
         longToken: entity.longToken,
@@ -140,6 +144,25 @@ export const gmxProcess = defineProcess(
         blockTimestamp: seed.approximatedTimestamp,
         transactionHash: value.transactionHash,
       }
+
+      seed.marketMap[entity.marketToken] = market
+
+      if (entity.indexToken === viem.zeroAddress) {
+        return seed
+      }
+      
+      const trMarketLongLongTokenKey = getRouteTypeKey(entity.longToken, entity.indexToken, true, entity.salt)
+      const trMarketLongShortTokenKey = getRouteTypeKey(entity.shortToken, entity.indexToken, true, entity.salt)
+
+      const trMarketShortLongTokenKey = getRouteTypeKey(entity.longToken, entity.indexToken, false, entity.salt)
+      const trMarketShortShortTokenKey = getRouteTypeKey(entity.shortToken, entity.indexToken, false, entity.salt)
+
+      seed.routeMap[trMarketLongLongTokenKey] =   { marketSalt: entity.salt, indexToken: entity.indexToken, collateralToken: entity.longToken, isLong: true, routeTypeKey: trMarketLongLongTokenKey }
+      seed.routeMap[trMarketLongShortTokenKey] =  { marketSalt: entity.salt, indexToken: entity.indexToken, collateralToken: entity.shortToken, isLong: true, routeTypeKey: trMarketLongShortTokenKey }
+
+      seed.routeMap[trMarketShortLongTokenKey] =  { marketSalt: entity.salt, indexToken: entity.indexToken, collateralToken: entity.longToken, isLong: false, routeTypeKey: trMarketShortLongTokenKey }
+      seed.routeMap[trMarketShortShortTokenKey] = { marketSalt: entity.salt, indexToken: entity.indexToken, collateralToken: entity.shortToken, isLong: false, routeTypeKey: trMarketShortShortTokenKey }
+
       return seed
     },
   },
@@ -208,10 +231,19 @@ export const gmxProcess = defineProcess(
         return seed
       }
 
-      const market = seed.markets[update.market]
+      const market = seed.marketMap[update.market]
 
       const slot = seed.mirrorPositionSlot[update.positionKey] ??= {
-        ...initPartialPositionSlot,
+        averagePrice: 0n,
+        cumulativeFee: 0n,
+        maxCollateralUsd: 0n,
+        maxCollateralToken: 0n,
+        maxSizeToken: 0n,
+        maxSizeUsd: 0n,
+        cumulativeSizeToken: 0n,
+        cumulativeSizeUsd: 0n,
+        updates: [],
+        realisedPnl: 0n,
         key: update.positionKey,
         account: update.account,
         collateralToken: update.collateralToken,
@@ -229,6 +261,7 @@ export const gmxProcess = defineProcess(
         traderShare: 0n,
         transactionHash: value.transactionHash,
         blockTimestamp: unixTimestampNow(),
+        __typename: "PositionSlot",
       }
 
       const tokenDescription = getMappedValue(TOKEN_ADDRESS_DESCRIPTION_MAP, market.indexToken)
@@ -396,10 +429,6 @@ export const gmxProcess = defineProcess(
 )
 
 
-
-
-
-
 function storeCandle(seed: IGmxProcessState, token: viem.Address, interval: IntervalTime, price: bigint) {
   const id = getIntervalIdentifier(token, interval)
 
@@ -421,21 +450,6 @@ function storeCandle(seed: IGmxProcessState, token: viem.Address, interval: Inte
     seed.pricefeed[id][String(candleSlot)] = createPricefeedCandle(time, price)
   }
 }
-
-export const initPartialPositionSlot = {
-  averagePrice: 0n,
-  cumulativeFee: 0n,
-  maxCollateralUsd: 0n,
-  maxCollateralToken: 0n,
-  maxSizeToken: 0n,
-  maxSizeUsd: 0n,
-  cumulativeSizeToken: 0n,
-  cumulativeSizeUsd: 0n,
-  updates: [],
-  realisedPnl: 0n,
-  __typename: "PositionSlot",
-} as const
-
 
 
 

@@ -83,10 +83,10 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
   } = config.tradeConfig
   const {
     availableIndexLiquidityUsd, averagePrice, collateralDescription,
-    collateralTokenPoolInfo, collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee,
+    collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
     isTradingEnabled, liquidationPrice, marginFeeUsd, route, netPositionValueUsd,
-    swapFee, walletBalance, markets, position, priceImpactUsd, adjustmentFeeUsd, 
+    walletBalance, marketList, position, priceImpactUsd, adjustmentFeeUsd, 
   } = config.tradeState
 
 
@@ -168,11 +168,11 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
       ]),
       changeMarket: snapshot((params, posSlot) => {
         const update = lst(posSlot.updates)
-        const market = params.markets.find(m => m.marketToken === update.market)
+        const market = params.marketList.find(m => m.marketToken === update.market)
         if (!market) throw new Error(`Market not found for ${update.market}`)
 
         return market
-      }, combineObject({ markets }), switchPosition),
+      }, combineObject({ marketList }), switchPosition),
       switchIsLong: map(params => lst(params.switchPosition.updates).isLong, combineObject({ switchPosition })),
       switchIsIncrease: mergeArray([
         constant(true, switchPosition),

@@ -144,10 +144,10 @@ export function latestPriceFromExchanges(tokendescription: ITokenDescription): S
 }
 
 
-export function getErc20Balance(chain: ISupportedChain, token: viem.Address | typeof GMX.ADDRESS_ZERO, address: Address): Stream<bigint> {
+export function getWalletErc20Balance(chain: ISupportedChain, token: viem.Address | typeof GMX.ADDRESS_ZERO, walletAddress: Address): Stream<bigint> {
 
   if (token === GMX.ADDRESS_ZERO) {
-    return fromPromise(fetchBalance({ address }).then(res => res.value))
+    return fromPromise(fetchBalance({ address: walletAddress }).then(res => res.value))
   }
 
   const contractMapping = getMappedValue(GMX.TRADE_CONTRACT_MAPPING, chain.id)
@@ -162,7 +162,7 @@ export function getErc20Balance(chain: ISupportedChain, token: viem.Address | ty
     address: tokenAddress,
     abi: erc20Abi,
     functionName: 'balanceOf',
-    args: [address]
+    args: [walletAddress]
   })
 
   return fromPromise(erc20)
@@ -207,7 +207,7 @@ export function connectTrade(chain: ISupportedChain) {
   // }
 
 
-  const getTokenPoolInfo = (token: Stream<viem.Address>): Stream<ITokenPoolInfo> => {
+  const getTokenPoolInfo = (chain: ISupportedChain, token: Stream<viem.Address>): Stream<ITokenPoolInfo> => {
     const cumulativeRate = vault.read('cumulativeFundingRates', token)
     const reservedAmount = vault.read('reservedAmounts', token)
     const poolAmounts = vault.read('poolAmounts', token)
@@ -219,23 +219,6 @@ export function connectTrade(chain: ISupportedChain) {
     return dataRead
   }
 
-  const getAvailableLiquidityUsd = (indexToken: Stream<viem.Address>, collateralToken: Stream<viem.Address>) => {
-    const globalShortSizes = vault.read('globalShortSizes', indexToken)
-    const guaranteedUsd = vault.read('guaranteedUsd', indexToken)
-    const maxGlobalShortSizes = positionRouter.read('maxGlobalShortSizes', indexToken)
-    const maxGlobalLongSizes = positionRouter.read('maxGlobalLongSizes', indexToken)
-
-
-    return map(params => {
-      const collateralTokenDescription = getTokenDescription(params.collateralToken)
-      const isUsd = collateralTokenDescription.isUsd
-
-      const vaultSize = isUsd ? params.globalShortSizes : params.guaranteedUsd
-      const globalMaxSize = isUsd ? params.maxGlobalShortSizes : params.maxGlobalLongSizes
-
-      return globalMaxSize - vaultSize
-    }, combineObject({ collateralToken, maxGlobalShortSizes, maxGlobalLongSizes, indexToken, globalShortSizes, guaranteedUsd }))
-  }
 
 
   const positionSettled = (keyEvent: Stream<string | null>) => filterNull(snapshot((key, posSettled) => {
@@ -257,12 +240,30 @@ export function connectTrade(chain: ISupportedChain) {
     // getTokenFundingRate,
     // getFundingRateFactor,
     getTokenPoolInfo,
-    getAvailableLiquidityUsd,
+    // getAvailableLiquidityUsd,
 
     // contract readers
     router, vault, pricefeed, positionRouter,
   }
 }
+
+// const getAvailableLiquidityUsd = (indexToken: Stream<viem.Address>, collateralToken: Stream<viem.Address>) => {
+//   const globalShortSizes = vault.read('globalShortSizes', indexToken)
+//   const guaranteedUsd = vault.read('guaranteedUsd', indexToken)
+//   const maxGlobalShortSizes = positionRouter.read('maxGlobalShortSizes', indexToken)
+//   const maxGlobalLongSizes = positionRouter.read('maxGlobalLongSizes', indexToken)
+
+
+//   return map(params => {
+//     const collateralTokenDescription = getTokenDescription(params.collateralToken)
+//     const isUsd = collateralTokenDescription.isUsd
+
+//     const vaultSize = isUsd ? params.globalShortSizes : params.guaranteedUsd
+//     const globalMaxSize = isUsd ? params.maxGlobalShortSizes : params.maxGlobalLongSizes
+
+//     return globalMaxSize - vaultSize
+//   }, combineObject({ collateralToken, maxGlobalShortSizes, maxGlobalLongSizes, indexToken, globalShortSizes, guaranteedUsd }))
+// }
 
 
 export const exchangesWebsocketPriceSource = (token: viem.Address) => {

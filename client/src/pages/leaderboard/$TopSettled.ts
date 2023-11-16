@@ -61,7 +61,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
     return matchedMemType
   }), filterRouteList)
-  const markets = map(data => Object.values(data.markets), config.processData)
+  const markets = map(data => Object.values(data.routeMap), config.processData)
   const activityTimeframe = storage.replayWrite(store.activityTimeframe, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
   const pageParms = map(params => {
     const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
@@ -178,7 +178,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
                 return $TraderDisplay({
                   route: config.route,
-                  markets,
+                  marketList: markets,
                   // changeSubscriptionList: config.changeSubscriptionList,
                   subscriptionList: config.subscriptionList,
                   trader: pos.trader,
