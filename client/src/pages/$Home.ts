@@ -131,7 +131,10 @@ export const $Home = (config: ITreasury) => component((
           $column(style({ textAlign: 'center' }))(
             $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.85rem', whiteSpace: 'pre-wrap', letterSpacing: '2px' }))('Matching top Traders\nwith Investors'),
           ),
-          $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Traders earn more by trading as usual, while Puppets pick top traders to copy to manage a succesful portfolio`),
+          $column(layoutSheet.spacingSmall)(
+            $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Traders seamlessly boost earnings doing what they do best`),
+            $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Puppets (Investors) effortlessly pick and choose the strategies of the most successful traders to build a winning portfolio`),
+          ),
 
           $node(),
 
