@@ -2,23 +2,21 @@ import { O, Op, Tether } from "@aelea/core"
 import { $text, INode, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { map, now } from "@most/core"
+import { map } from "@most/core"
 import { Stream } from "@most/types"
-import * as GMX from 'gmx-middleware-const'
-import { $Link, $infoTooltipLabel, TableColumn } from "gmx-middleware-ui-components"
-import { getBasisPoints, readableDate, readablePercentage, switchMap, timeSince } from "gmx-middleware-utils"
+import { $Link, TableColumn } from "gmx-middleware-ui-components"
+import { getBasisPoints, readableDate, readablePercentage, timeSince } from "gmx-middleware-utils"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile.js"
-import { $entry, $openPnl, $openPositionPnlBreakdown, $pnlValue, $positionSlotPnl, $positionSlotRoi, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
-import { IGmxProcessState, latestTokenPrice } from "../../data/process/process.js"
+import { $entry, $openPnl, $pnlValue, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
 import { $txnIconLink } from "../../common/elements/$common.js"
-import { contractReader } from "../../logic/common.js"
+import { IGmxProcessState, latestTokenPrice } from "../../data/process/process.js"
 import { IProfileActiveTab } from "../../pages/$Profile.js"
 import { $seperator2 } from "../../pages/common.js"
 
 
-const $tableHeader = (primaryLabel: string, secondaryLabel: string) => $column(style({ textAlign: 'right' }))(
+export const $tableHeader = (primaryLabel: string, secondaryLabel: string) => $column(style({ textAlign: 'right' }))(
   $text(primaryLabel),
   $text(style({ fontSize: '.85rem' }))(secondaryLabel)
 )
@@ -56,6 +54,7 @@ export const entryColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorSl
 
 export const puppetsColumn = <T extends {puppets: readonly `0x${string}`[]}>(click: Tether<INode, string>): TableColumn<T> => ({
   $head: $text('Puppets'),
+  gridTemplate: '90px',
   $bodyCallback: map((pos) => {
     return $puppets(pos.puppets, click)
   })
@@ -90,7 +89,8 @@ export const traderColumn = <T extends IMirrorPositionListSummary & { trader: vi
 })
 
 export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IPositionMirrorSettled> => ({
-  $head: $tableHeader('PnL', 'ROI'),
+  $head: $tableHeader('PnL $', 'ROI %'),
+  gridTemplate: '90px',
   columnOp: style({ placeContent: 'flex-end' }),
   $bodyCallback: map(mp => {
     const pnl = getParticiapntMpPortion(mp, mp.realisedPnl, puppet)

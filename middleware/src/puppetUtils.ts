@@ -7,6 +7,9 @@ import { toBytes } from "viem"
 export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[], shareTarget?: viem.Address): IMirrorPositionListSummary {
 
   const seedAccountSummary: IMirrorPositionListSummary = {
+    settledTradeList,
+    trader: settledTradeList[0].trader,
+    routeTypeKey: settledTradeList[0].routeTypeKey,
     size: 0n,
     collateral: 0n,
     cumulativeLeverage: 0n,
@@ -42,6 +45,9 @@ export function summariesMirrorTrader(settledTradeList: IPositionMirrorSettled[]
     const puppets = [...seed.puppets, ...next.puppets.filter(x => !seed.puppets.includes(x))]
 
     return {
+      settledTradeList: seed.settledTradeList,
+      trader: seed.trader,
+      routeTypeKey: seed.routeTypeKey,
       size,
       collateral,
       cumulativeLeverage,

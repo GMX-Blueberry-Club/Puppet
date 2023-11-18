@@ -3,18 +3,18 @@ import { $element, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map, startWith } from "@most/core"
+import { empty, map, mergeArray, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
-import { $Table, ISortBy, ScrollRequest, TableColumn } from "gmx-middleware-ui-components"
-import { IAbstractPositionParams, IPositionListSummary, factor, getMappedValue, groupArrayMany, pagingQuery, readableLeverage, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { $Table, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "gmx-middleware-ui-components"
+import { IAbstractPositionParams, IPositionListSummary, ITradeRoute, factor, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readableLeverage, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { ROUTE_DESCRIPTION } from "puppet-middleware-const"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetRouteSubscritpion, getRouteTypeKey, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $labelDisplay } from "../../common/$TextField.js"
-import { $TraderDisplay, $pnlValue, $route, $size } from "../../common/$common.js"
+import { $PnlPercentageValue, $TraderDisplay, $TraderRouteDisplay, $pnlValue, $route, $size } from "../../common/$common.js"
 import { $DropMultiSelect } from "../../components/form/$Dropdown.js"
-import { puppetsColumn } from "../../components/table/$TableColumn.js"
+import { $tableHeader, puppetsColumn, settledPnlColumn } from "../../components/table/$TableColumn.js"
 import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceGraph.js"
 import { IGmxProcessState } from "../../data/process/process.js"
 import * as store from "../../data/store/store.js"
@@ -36,7 +36,7 @@ export type ITopSettled = {
 type FilterTable =  { activityTimeframe: GMX.IntervalTime } | null
 
 export const $TopSettled = (config: ITopSettled) => component((
-  [routeTypeChange, routeTypeChangeTether]: Behavior<IAbstractPositionParams[]>,
+  [routeTypeChange, routeTypeChangeTether]: Behavior<ITradeRoute[]>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
   
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
@@ -51,43 +51,33 @@ export const $TopSettled = (config: ITopSettled) => component((
 
   const exploreStore = storage.createStoreScope(rootStoreScope, 'topSettled' as const)
   const sortBy = storage.replayWrite(exploreStore, { direction: 'desc', selector: 'pnl' } as ISortBy<IPositionListSummary>, sortByChange, 'sortBy')
-  const filterRouteList = storage.replayWrite(exploreStore, [] as IAbstractPositionParams[], routeTypeChange, 'filterRouteList')
-  const routeList = map(list => list.map(rt => {
-    const matchedMemType = ROUTE_DESCRIPTION.find(rtd => getRouteTypeKey(rt.collateralToken, rt.indexToken, rt.isLong) === getRouteTypeKey(rtd.collateralToken, rtd.indexToken, rtd.isLong))
+  const filterRouteList = storage.replayWrite(exploreStore, [] as viem.Hex[], map(rl => rl.map(r => r.routeTypeKey), routeTypeChange), 'filterRouteList')
+  const routeList = map(pd => Object.values(pd.routeMap), config.processData)
+  const selectedRouteList = mergeArray([
+    routeList,
+    map(rl => rl.routeList.filter(r => rl.filterRouteList.findIndex(fr => r.routeTypeKey === fr) > -1 ), combineObject({ routeList, filterRouteList }))
+  ])
 
-    if (!matchedMemType) {
-      throw new Error(`Route type not found for ${rt.collateralToken} ${rt.indexToken} ${rt.isLong}`)
-    }
-
-    return matchedMemType
-  }), filterRouteList)
-  const markets = map(data => Object.values(data.routeMap), config.processData)
+  const markets = map(data => Object.values(data.marketMap), config.processData)
   const activityTimeframe = storage.replayWrite(store.activityTimeframe, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
   const pageParms = map(params => {
     const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
     const paging = startWith(requestPage, scrollRequest)
 
-    const dataSource =  map(req => {
+    const dataSource: Stream<TablePageResponse<IMirrorPositionListSummary>> =  map(req => {
       const filterStartTime = unixTimestampNow() - params.activityTimeframe
 
-      const flattenMapMap = params.data.mirrorPositionSettled
-        .filter(pos => {
-          // if (pos.route === GMX.ADDRESS_ZERO) {
-          //   return false
-          // }
+      const flattenMapMap = params.data.mirrorPositionSettled.filter(pos => {
+        if (params.filterRouteList.length && params.filterRouteList.findIndex(rt => rt === pos.routeTypeKey) === -1) {
+          return false
+        }
 
-          const routeLength = params.routeList.length
-          if (routeLength && params.routeList.findIndex(rt => getRouteTypeKey(rt.collateralToken, rt.indexToken, rt.isLong) === pos.routeTypeKey) === -1) {
-            return false
-          }
-
-          return pos.blockTimestamp > filterStartTime
-        })
-      const tradeListMap = groupArrayMany(flattenMapMap, a => a.trader)
+        return pos.blockTimestamp > filterStartTime
+      })
+      const tradeListMap = groupArrayMany(flattenMapMap, a => a.routeTypeKey)
       const tradeListEntries = Object.values(tradeListMap)
       const filterestPosList = tradeListEntries.map(settledTradeList => {
-
-        return { trader: settledTradeList[0].trader, settledTradeList, ...summariesMirrorTrader(settledTradeList) }
+        return summariesMirrorTrader(settledTradeList)
       })
 
       return pagingQuery({ ...params.sortBy, ...req }, filterestPosList)
@@ -95,7 +85,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
 
     return { ...params, dataSource }
-  }, combineObject({ data: config.processData, sortBy, activityTimeframe, routeList }))
+  }, combineObject({ data: config.processData, sortBy, activityTimeframe, filterRouteList }))
 
 
 
@@ -106,24 +96,27 @@ export const $TopSettled = (config: ITopSettled) => component((
       $card(layoutSheet.spacingBig, style({ flex: 1 }))(
 
         $row(layoutSheet.spacingBig, style({ placeContent: 'space-between', alignItems: 'flex-start' }))(
-          $DropMultiSelect({
+          switchMap(params => {
+
+            return $DropMultiSelect({
             // $container: $row(layoutSheet.spacingTiny, style({ display: 'flex', position: 'relative' })),
-            $input: $element('input')(style({ width: '100px' })),
-            $label: $labelDisplay(style({ color: pallete.foreground }))('Markets'),
-            placeholder: 'All / Select',
-            $$chip: map(rt => $route(rt)),
-            selector: {
-              list: ROUTE_DESCRIPTION,
-              $$option: map(route => {
-                return style({
-                  padding: '8px'
-                }, $route(route))
-              })
-            },
-            value: routeList
-          })({
-            select: routeTypeChangeTether()
-          }),
+              $input: $element('input')(style({ width: '100px' })),
+              $label: $labelDisplay(style({ color: pallete.foreground }))('Markets'),
+              placeholder: 'All / Select',
+              $$chip: map(rt => $route(rt)),
+              selector: {
+                list: params.routeList,
+                $$option: map(route => {
+                  return style({
+                    padding: '8px'
+                  }, $route(route))
+                })
+              },
+              value: selectedRouteList
+            })({
+              select: routeTypeChangeTether()
+            })
+          }, combineObject({ routeList })),
 
           // $Popover({
           //   $target: $ButtonSecondary({
@@ -169,30 +162,46 @@ export const $TopSettled = (config: ITopSettled) => component((
         switchMap(params => {
 
 
-          const columns: TableColumn<IMirrorPositionListSummary & { trader: viem.Address, settledTradeList: IPositionMirrorSettled[] }>[] = [
+
+          const columns: TableColumn<IMirrorPositionListSummary>[] = [
+            {
+              $head: $text('Trade Route'),
+              gridTemplate: '144px',
+              // columnOp: style({ placeContent: 'flex-end' }),
+              $bodyCallback: map(pos => {
+
+                return $TraderRouteDisplay({
+                  positionParams: pos.settledTradeList[0],
+                  trader: pos.trader,
+                  routeTypeKey: "0x4a5f536b51f398b15d598b18f6eb736e65b8c7b4bdcbf61935514d2114d5ca4b",
+                  subscriptionList: config.subscriptionList,
+                })({
+                  modifySubscribeList: modifySubscriberTether()
+                })
+              })
+            },
             {
               $head: $text('Trader'),
-              gridTemplate: 'minmax(140px, 180px)',
+              gridTemplate: 'minmax(95px, 100px)',
               columnOp: style({ alignItems: 'center' }),
               $bodyCallback: map(pos => {
 
                 return $TraderDisplay({
                   route: config.route,
-                  marketList: markets,
-                  // changeSubscriptionList: config.changeSubscriptionList,
-                  subscriptionList: config.subscriptionList,
                   trader: pos.trader,
                 })({ 
-                  modifySubscribeList: modifySubscriberTether(),
                   clickTrader: routeChangeTether()
                 })
               })
             },
+            
+            
             ...screenUtils.isDesktopScreen
               ? [
+                
                 {
                   $head: $text('Win / Loss'),
-                  // gridTemplate: 'minmax(110px, 120px)',
+                  gridTemplate: '90px',
                   columnOp: style({ alignItems: 'center', placeContent: 'center' }),
                   $bodyCallback: map((pos: IMirrorPositionListSummary) => {
                     return $row(
@@ -200,7 +209,6 @@ export const $TopSettled = (config: ITopSettled) => component((
                     )
                   })
                 },
-                puppetsColumn(routeChangeTether),
               ]
               : [],
             {
@@ -215,30 +223,26 @@ export const $TopSettled = (config: ITopSettled) => component((
               })
             },
             {
-              $head: $column(style({ textAlign: 'right' }))(
-                $text('PnL $'),
-                $text(style({ fontSize: '.85rem' }))('Return %'),
-              ),
-              sortBy: 'pnl',
+              $head: $tableHeader('PnL $', 'ROI %'),
               gridTemplate: '90px',
+              sortBy: 'pnl',
               columnOp: style({ placeContent: 'flex-end' }),
-              $bodyCallback: map(pos => {
+              $bodyCallback: map(mp => {
 
                 return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
-                  $pnlValue(pos.pnl),
+                  $pnlValue(mp.pnl),
                   $seperator2,
-                  $text(style({ fontSize: '.85rem' }))(
-                    readableLeverage(pos.size, pos.collateral)
-                  ),
+                  $text(style({ fontSize: '.85rem' }))(readablePercentage(getBasisPoints(mp.pnl, mp.collateral))),
                 )
               })
             },
+            
             ...screenUtils.isDesktopScreen
               ? [
                 {
+                  columnOp: style({ placeContent: 'flex-end' }),
                   $head: $text(`Last ${getMappedValue(LAST_ACTIVITY_LABEL_MAP, params.activityTimeframe)} activity`),
-                  gridTemplate: '160px',
-                  columnOp: style({ alignItems: 'center', placeContent: 'center' }),
+                  gridTemplate: '140px',
                   $bodyCallback: map((pos: IMirrorPositionListSummary & { trader: viem.Address, settledTradeList: IPositionMirrorSettled[]}) => {
                     
                     return screenUtils.isDesktopScreen

@@ -78,7 +78,6 @@ export const $berryByLabItems = (
 export interface IRouteDepositInfoConfig {
   routeDescription: IAbstractPositionParams
   wallet: IWalletClient
-  market: IMarket
 }
 
 export const $RouteDepositInfo = (config: IRouteDepositInfoConfig) => component((

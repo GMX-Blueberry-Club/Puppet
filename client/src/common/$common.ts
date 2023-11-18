@@ -7,7 +7,7 @@ import { map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { TOKEN_SYMBOL } from "gmx-middleware-const"
-import { $bear, $bull, $infoTooltipLabel, $Link, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
+import { $bear, $bull, $infoLabel, $infoTooltipLabel, $Link, $skull, $tokenIconMap } from "gmx-middleware-ui-components"
 import {
   getBasisPoints,
   getRoughLiquidationPrice,
@@ -19,7 +19,7 @@ import {
   readableLeverage,
   readablePercentage,
   readableTokenUsd,
-  streamOf, switchMap, IMarket, IMarketCreatedEvent, IRoute
+  streamOf, switchMap, IMarket, IMarketCreatedEvent, ITradeRoute
 } from "gmx-middleware-utils"
 import { getMpSlotPnL, getParticiapntMpPortion, getPuppetSubscriptionKey, getRouteTypeKey, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -34,6 +34,7 @@ import { $seperator2 } from "../pages/common.js"
 import { wallet } from "../wallet/walletLink.js"
 import { $puppetLogo } from "./$icons.js"
 import { $labeledDivider } from "./elements/$common"
+import { $caretDown } from "./elements/$icons"
 
 
 export const $midContainer = $column(
@@ -76,17 +77,20 @@ export const $entry = (isLong: boolean, indexToken: viem.Address, averagePrice: 
 export const $route = (pos: IAbstractPositionParams, size = '34px') => {
   const indexDescription = getTokenDescription(pos.indexToken)
   const collateralDescription = getTokenDescription(pos.collateralToken)
-  const seocndSideLabel = indexDescription.symbol === collateralDescription.symbol ? '' : '-' + collateralDescription.symbol
   
   return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
     $icon({
       svgOps: style({ borderRadius: '50%', padding: '4px', marginRight: '-20px', zIndex: 0, alignItems: 'center', fill: pallete.message, backgroundColor: pallete.horizon }),
       $content: pos.isLong ? $bull : $bear,
       viewBox: '0 0 32 32',
-      width: '26px'
+      width: '24px'
     }),
-    $tokenIcon(pos.indexToken, { width: '28px' }),
-    $text(style({ fontSize: '.85rem' }))(`${indexDescription.symbol}${seocndSideLabel}`),
+    $tokenIcon(pos.indexToken, { width: '36px' }),
+    $column(layoutSheet.spacingTiny)(
+      $text(style({ fontSize: '1rem' }))(`${indexDescription.symbol}`),
+      $infoLabel($text(style({ fontSize: '.85rem' }))((pos.isLong ? 'L' : 'S') + '-' + collateralDescription.symbol)),
+     
+    ),
   )
 }
 
@@ -111,7 +115,7 @@ export const $settledSizeDisplay = (pos: IPositionSettled) => {
 
 
 
-export const $tokenIcon = (indexToken: viem.Address, IIcon?: { width?: string }) => {
+export const $tokenIcon = (indexToken: viem.Address, IIcon: { width: string } = { width: '24px' }) => {
   const tokenDesc = getTokenDescription(indexToken)
   const $token = $tokenIconMap[tokenDesc.symbol] || $tokenIconMap[TOKEN_SYMBOL.GMX]
 
@@ -123,8 +127,7 @@ export const $tokenIcon = (indexToken: viem.Address, IIcon?: { width?: string })
     $content: $token,
     svgOps: style({ fill: pallete.message }),
     viewBox: '0 0 32 32',
-    width: '24px',
-    ...IIcon
+    width: IIcon.width
   })
 }
 
@@ -219,7 +222,7 @@ export const $pnlValue = (pnl: Stream<bigint> | bigint, colorful = true) => {
     : O()
 
   // @ts-ignore
-  return $text(colorStyle)(display)
+  return $text(colorStyle, style({ fontWeight: 'bold' }))(display)
 }
 
 export const $PnlPercentageValue = (pnl: Stream<bigint> | bigint, collateral: bigint, colorful = true) => {
@@ -317,10 +320,14 @@ export const $openPositionPnlBreakdown = (pos: IPositionMirrorSlot, marketInfo: 
 
 interface ITraderDisplay {
   trader: viem.Address
-  marketList: Stream<IMarketCreatedEvent[]>
-  routeList: Stream<IRoute[]>
-  subscriptionList: Stream<IPuppetRouteSubscritpion[]>
   route: router.Route
+}
+
+interface ITraderRouteDisplay {
+  trader: viem.Address
+  routeTypeKey: viem.Hex
+  subscriptionList: Stream<IPuppetRouteSubscritpion[]>
+  positionParams: IAbstractPositionParams
 }
 
 
@@ -331,50 +338,73 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
   [modifySubscribeList, modifySubscribeListTether]: Behavior<IPuppetRouteSubscritpion>,
 ) => {
 
-  const { marketList } = config
 
-  const $trader = $Link({
-    $content: $profileDisplay({
-      address: config.trader,
+
+  return [
+    $Link({
+      $content: $profileDisplay({
+        address: config.trader,
       // $profileContainer: $defaultBerry(style({ width: '50px' }))
-    }),
-    route: config.route.create({ fragment: 'baseRoute' }),
-    url: `/app/profile/${config.trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
-  })({ click: clickTraderTether() })
+      }),
+      route: config.route.create({ fragment: 'baseRoute' }),
+      url: `/app/profile/${config.trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
+    })({ click: clickTraderTether() }),
+
+
+    { modifySubscribeList, clickTrader }
+  ]
+})
+
+export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
+  [clickTrader, clickTraderTether]: Behavior<any, viem.Address>,
+  [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, IPuppetRouteSubscritpion>,
+  [modifySubscribeList, modifySubscribeListTether]: Behavior<IPuppetRouteSubscritpion>,
+) => {
+
+  // const { marketList } = config
+
+
 
 
   return [
     $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-    // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
-
-      // $trader,
       switchMap(params => {
         const w3p = params.wallet
         if (w3p === null) {
-          return $trader
+          return $text('Connect wallet')
         }
 
         const routeTypeKey = getRouteTypeKey(GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, true, '0x')
         const puppetSubscriptionKey = getPuppetSubscriptionKey(w3p.account.address, config.trader, routeTypeKey)
-        const routeSubscription = params.subscriptionList.find(x => x.puppetSubscriptionKey === puppetSubscriptionKey)
+        const existingSubscription = params.subscriptionList.find(x => x.puppetSubscriptionKey === puppetSubscriptionKey)
+        const routeSubscription: IPuppetRouteSubscritpion = {
+          routeTypeKey: config.routeTypeKey,
+          trader: config.trader,
+          puppet: w3p.account.address,
+          allowance: existingSubscription?.allowance || 0n,
+          expiry: existingSubscription?.expiry || 0n,
+          puppetSubscriptionKey,
+          subscribed: existingSubscription?.subscribed || false
+        }
 
 
         return $Popover({
           open: popRouteSubscriptionEditor,
           dismiss: modifySubscribeList,
           $target: $row(layoutSheet.spacing)(
-            $trader,
             $ButtonSecondary({
-              $content: routeSubscription ? $text('Change') : $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))($icon({ $content: $puppetLogo, fill: pallete.message, width: '16px', viewBox: `0 0 32 32` }), $text('Copy')),
-              $container: $defaultMiniButtonSecondary 
+              $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+                $route(config.positionParams),
+                // $icon({ $content: $puppetLogo, fill: pallete.message, width: '24px', viewBox: `0 0 32 32` }),
+                $icon({ $content: $caretDown, width: '14px', svgOps: style({ marginRight: '-4px' }), viewBox: '0 0 32 32' }),
+              ),
+              $container: $defaultMiniButtonSecondary(style({ borderRadius: '16px' })) 
             })({
               click: popRouteSubscriptionEditorTether()
             }),
           ),
-          $content: $RouteSubscriptionEditor({ routeSubscription, marketList })({
-            changeRouteSubscription: modifySubscribeListTether(map(partialSubsc => {
-              return { ...{ trader: config.trader, puppet: w3p.account.address, routeTypeKey: routeTypeKey }, ...partialSubsc }
-            }))
+          $content: $RouteSubscriptionEditor({ routeSubscription })({
+            changeRouteSubscription: modifySubscribeListTether()
           })
         })({})
       }, combineObject({ subscriptionList: config.subscriptionList, wallet }))

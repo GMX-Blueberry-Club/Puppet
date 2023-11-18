@@ -14,7 +14,7 @@ import {
   getDenominator,
   getIntervalIdentifier,
   getMappedValue,
-  IRoute,
+  ITradeRoute,
   importGlobal,
   unixTimestampNow,
   IMarketCreatedEvent
@@ -55,7 +55,7 @@ export interface IGmxProcessState {
   approximatedTimestamp: number
 
   marketMap: Record<viem.Address, IMarketCreatedEvent>
-  routeMap: Record<viem.Hex, IRoute>
+  routeMap: Record<viem.Hex, ITradeRoute>
   
   mirrorPositionRequest: Record<viem.Hex, IMirrorPositionRequest>
   mirrorPositionSlot: Record<viem.Hex, IPositionMirrorSlot>
