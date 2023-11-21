@@ -23,6 +23,7 @@ import { $IntermediateConnectButton } from "./$ConnectAccount.js"
 import { $RouteDepositInfo } from "./$common.js"
 import { $ButtonCircular, $ButtonPrimary, $ButtonPrimaryCtx } from "./form/$Button.js"
 import { $Dropdown, $defaultSelectContainer } from "./form/$Dropdown.js"
+import * as GMX from "gmx-middleware-const"
 
 
 

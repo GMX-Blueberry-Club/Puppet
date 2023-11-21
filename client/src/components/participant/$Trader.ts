@@ -45,7 +45,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
   
   const summary = map(params => {
-    const list = params.processData.mirrorPositionSettled.filter(pos => pos.account === config.address).reverse()
+    const list = params.processData.mirrorPositionSettled.filter(pos => pos.trader === config.address).reverse()
     const subscribedPuppets = params.processData.subscription.filter((sub) => sub.puppet === config.address).map(s => s.trader)
 
     return {
@@ -62,7 +62,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
   }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe }))
 
   const openTrades = map(params => {
-    const list = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.account === config.address)
+    const list = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address)
     return list
   }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe }))
 

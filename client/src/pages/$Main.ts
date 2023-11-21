@@ -333,9 +333,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               const refreshThreshold = SW_DEV ? 150 : 50
               const blockDelta = params.syncBlock ? params.syncBlock - params.process.blockNumber : null
 
-
-              if (blockDelta < refreshThreshold) return empty()
-
+              if (blockDelta === null || blockDelta < refreshThreshold) return empty()
 
               return fadeIn($row(style({ position: 'fixed', bottom: '18px', left: `50%` }))(
                 style({ transform: 'translateX(-50%)' })(
@@ -348,9 +346,9 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                   }))(
                     $text(`Syncing blocks of data: ${readableUnitAmount(Number(blockDelta))}`),
                     $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(
-                      params.process.state.approximatedTimestamp === 0
+                      params.process.state.blockMetrics.timestamp === 0n
                         ? `Indexing for the first time, this may take a minute or two.`
-                        : `${timeSince(params.process.state.approximatedTimestamp)} old data is displayed`
+                        : `${timeSince(Number(params.process.state.blockMetrics.timestamp))} old data is displayed`
                     ),
                   )
                 )

@@ -31,11 +31,7 @@ import * as GMX from "gmx-middleware-const"
 
 
 export interface IProcessMetrics {
-  cumulativeBlocks: bigint
-  cumulativeDeltaTime: bigint
   timestamp: bigint
-  avgDeltaTime: bigint
-  height: bigint
 }
 
 
@@ -52,7 +48,6 @@ export interface IGmxProcessState {
 
   pricefeed: Record<IPriceIntervalIdentity, Record<string, IPriceInterval>>
   latestPrice: Record<viem.Address, IOraclePrice>
-  approximatedTimestamp: number
 
   marketMap: Record<viem.Address, IMarketCreatedEvent>
   routeMap: Record<viem.Hex, ITradeRoute>
@@ -90,14 +85,13 @@ const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async (
 
 const state: IGmxProcessState = {
   blockMetrics: {
-    cumulativeBlocks: 0n,
-    cumulativeDeltaTime: 0n,
+    // cumulativeBlocks: 0n,
+    // cumulativeDeltaTime: 0n,
 
-    height: 0n,
+    // height: 0n,
     timestamp: 0n,
-    avgDeltaTime: 0n,
+    // avgDeltaTime: 0n,
   },
-  approximatedTimestamp: 0,
   pricefeed: {},
   latestPrice: {},
 
@@ -132,7 +126,7 @@ export const gmxProcess = defineProcess(
   {
     source: gmxLog.marketCreated,
     step(seed, value) {
-      const entity = getEventType<IMarketCreatedEvent>('Market', value, seed.approximatedTimestamp)
+      const entity = getEventType<IMarketCreatedEvent>('Market', value, seed.blockMetrics.timestamp)
 
       const market: IMarketCreatedEvent = {
         salt: entity.salt,
@@ -141,7 +135,7 @@ export const gmxProcess = defineProcess(
         marketToken: entity.marketToken,
         shortToken: entity.shortToken,
         __typename: 'MarketCreated',
-        blockTimestamp: seed.approximatedTimestamp,
+        blockTimestamp: entity.blockTimestamp,
         transactionHash: value.transactionHash,
       }
 
@@ -166,53 +160,33 @@ export const gmxProcess = defineProcess(
       return seed
     },
   },
-
-  {
-    // queryBlockRange: 100000n,
-    source: gmxLog.requestIncreasePosition,
-    step(seed, value) {
-      if (seed.blockMetrics.height > 0n)  {
-        const heightDelta = value.blockNumber - seed.blockMetrics.height
-        const timeDelta = value.args.blockTime - seed.blockMetrics.timestamp
-
-        if (seed.blockMetrics.cumulativeBlocks >= 10000)  {
-          seed.blockMetrics.cumulativeDeltaTime -= seed.blockMetrics.avgDeltaTime      
-          seed.blockMetrics.cumulativeBlocks -= heightDelta      
-        }
-
-        seed.blockMetrics.cumulativeDeltaTime += timeDelta
-        seed.blockMetrics.cumulativeBlocks += heightDelta
-        seed.blockMetrics.avgDeltaTime = seed.blockMetrics.cumulativeDeltaTime * BASIS_POINTS_DIVISOR / seed.blockMetrics.cumulativeBlocks
-      }
-
-      seed.blockMetrics.height = value.blockNumber
-      seed.blockMetrics.timestamp = value.args.blockTime
-
-      return seed
-    },
-  },
-
   {
     source: gmxLog.oraclePrice,
     // queryBlockRange: 100000n,
     step(seed, value) {
+      
       const entity = getEventdata<IOraclePriceUpdateEvent>(value)
 
-      seed.latestPrice[entity.token] = {
-        isPriceFeed: entity.isPriceFeed,
+      seed.blockMetrics.timestamp = entity.timestamp
+
+      const oraclePrice: IOraclePrice = {
+        timestamp: Number(entity.timestamp),
+        priceSourceType: entity.priceSourceType,
         max: entity.maxPrice,
         min: entity.minPrice,
         token: entity.token,
       }
 
+      seed.latestPrice[entity.token] = oraclePrice
+      
+
       if (seed.blockMetrics.timestamp === 0n) {
         return seed
       }
 
-      seed.approximatedTimestamp = Number(seed.blockMetrics.timestamp + (value.blockNumber - seed.blockMetrics.height) * seed.blockMetrics.avgDeltaTime / BASIS_POINTS_DIVISOR)
 
       for (const key in PRICEFEED_INTERVAL) {
-        storeCandle(seed, entity.token, PRICEFEED_INTERVAL[key], entity.minPrice)
+        storeCandle(seed, oraclePrice, PRICEFEED_INTERVAL[key])
       }
 
       return seed
@@ -223,7 +197,7 @@ export const gmxProcess = defineProcess(
     source: gmxLog.positionIncrease,
     // queryBlockRange: 100000n,
     step(seed, value) {
-      const update = getEventType<IPositionIncrease>('PositionIncrease', value, seed.approximatedTimestamp)
+      const update = getEventType<IPositionIncrease>('PositionIncrease', value, seed.blockMetrics.timestamp)
 
 
       const mirrorSlot = seed.mirrorPositionRequest[update.orderKey]
@@ -301,7 +275,7 @@ export const gmxProcess = defineProcess(
     source: gmxLog.positionDecrease,
     // queryBlockRange: 100000n,
     step(seed, value) {
-      const update = getEventType<IPositionDecrease>('PositionDecrease', value, seed.approximatedTimestamp)
+      const update = getEventType<IPositionDecrease>('PositionDecrease', value, seed.blockMetrics.timestamp)
       const slot = seed.mirrorPositionSlot[update.positionKey]
 
       if (!slot) return seed
@@ -333,7 +307,7 @@ export const gmxProcess = defineProcess(
           openBlockTimestamp: slot.blockTimestamp,
           isLiquidated: false,
           settlement: update,
-          blockTimestamp: seed.approximatedTimestamp,
+          blockTimestamp: Number(seed.blockMetrics.timestamp),
           transactionHash: value.transactionHash,
           __typename: 'PositionSettled',
         } as const)
@@ -429,13 +403,14 @@ export const gmxProcess = defineProcess(
 )
 
 
-function storeCandle(seed: IGmxProcessState, token: viem.Address, interval: IntervalTime, price: bigint) {
-  const id = getIntervalIdentifier(token, interval)
+function storeCandle(seed: IGmxProcessState, oraclePrice: IOraclePrice, interval: IntervalTime) {
+  const id = getIntervalIdentifier(oraclePrice.token, interval)
 
   seed.pricefeed[id] ??= {}
 
-  const candleSlot = Math.floor(seed.approximatedTimestamp / interval)
+  const candleSlot = Math.floor(oraclePrice.timestamp / interval)
   const time = candleSlot * interval
+  const price = oraclePrice.min
 
   const candle = seed.pricefeed[id][String(candleSlot)]
   if (candle) {
@@ -458,9 +433,9 @@ export const latestTokenPrice = (process: Stream<IGmxProcessState>, token: viem.
   return map(seed => seed.latestPrice[token], process)
 }
 
-export const getEventType = <T extends ILogTxType<any>>(typeName: string, log: IEventLog1Args, blockTimestamp: number): T => {
+export const getEventType = <T extends ILogTxType<any>>(typeName: string, log: IEventLog1Args, blockTimestamp: bigint): T => {
   const initObj = {
-    blockTimestamp,
+    blockTimestamp: Number(blockTimestamp),
     transactionHash: log.transactionHash,
     __typename: typeName,
   }

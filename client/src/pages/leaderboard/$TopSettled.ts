@@ -6,8 +6,8 @@ import { pallete } from "@aelea/ui-components-theme"
 import { empty, map, mergeArray, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
-import { $Table, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "gmx-middleware-ui-components"
-import { IAbstractPositionParams, IPositionListSummary, ITradeRoute, factor, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readableLeverage, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { $ButtonToggle, $Table, $bear, $bull, $icon, $marketLabel, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "gmx-middleware-ui-components"
+import { IAbstractPositionParams, IMarket, IMarketCreatedEvent, IPositionListSummary, ITradeRoute, factor, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readableLeverage, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { ROUTE_DESCRIPTION } from "puppet-middleware-const"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetRouteSubscritpion, getRouteTypeKey, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -36,30 +36,26 @@ export type ITopSettled = {
 type FilterTable =  { activityTimeframe: GMX.IntervalTime } | null
 
 export const $TopSettled = (config: ITopSettled) => component((
-  [routeTypeChange, routeTypeChangeTether]: Behavior<ITradeRoute[]>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
   
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
   [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionListSummary>>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<GMX.IntervalTime>,
   [routeChange, routeChangeTether]: Behavior<any, string>,
+  [changeMarket, changeMarketTether]: Behavior<IMarketCreatedEvent[]>,
+  [switchIsLong, switchIsLongTether]: Behavior<boolean>,
 
   [openFilterPopover, openFilterPopoverTether]: Behavior<any>,
-
 ) => {
-
 
   const exploreStore = storage.createStoreScope(rootStoreScope, 'topSettled' as const)
   const sortBy = storage.replayWrite(exploreStore, { direction: 'desc', selector: 'pnl' } as ISortBy<IPositionListSummary>, sortByChange, 'sortBy')
-  const filterRouteList = storage.replayWrite(exploreStore, [] as viem.Hex[], map(rl => rl.map(r => r.routeTypeKey), routeTypeChange), 'filterRouteList')
-  const routeList = map(pd => Object.values(pd.routeMap), config.processData)
-  const selectedRouteList = mergeArray([
-    routeList,
-    map(rl => rl.routeList.filter(r => rl.filterRouteList.findIndex(fr => r.routeTypeKey === fr) > -1 ), combineObject({ routeList, filterRouteList }))
-  ])
 
-  const markets = map(data => Object.values(data.marketMap), config.processData)
-  const activityTimeframe = storage.replayWrite(store.activityTimeframe, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
+
+  const marketList = map(pd => Object.values(pd.marketMap).filter(market => market.indexToken !== GMX.ADDRESS_ZERO), config.processData)
+  const filterMarketMarketList = storage.replayWrite(exploreStore, [], changeMarket, 'filterMarketMarketList')
+  const isLong = storage.replayWrite(exploreStore, true, switchIsLong, 'isLong')
+  const activityTimeframe = storage.replayWrite(exploreStore, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe, 'activityTimeframe')
   const pageParms = map(params => {
     const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
     const paging = startWith(requestPage, scrollRequest)
@@ -68,7 +64,11 @@ export const $TopSettled = (config: ITopSettled) => component((
       const filterStartTime = unixTimestampNow() - params.activityTimeframe
 
       const flattenMapMap = params.data.mirrorPositionSettled.filter(pos => {
-        if (params.filterRouteList.length && params.filterRouteList.findIndex(rt => rt === pos.routeTypeKey) === -1) {
+        if (params.isLong !== pos.isLong) {
+          return false
+        }
+
+        if (params.filterMarketMarketList.length && params.filterMarketMarketList.findIndex(rt => rt.indexToken === pos.indexToken) === -1) {
           return false
         }
 
@@ -85,7 +85,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
 
     return { ...params, dataSource }
-  }, combineObject({ data: config.processData, sortBy, activityTimeframe, filterRouteList }))
+  }, combineObject({ data: config.processData, sortBy, activityTimeframe, filterMarketMarketList, isLong }))
 
 
 
@@ -103,20 +103,37 @@ export const $TopSettled = (config: ITopSettled) => component((
               $input: $element('input')(style({ width: '100px' })),
               $label: $labelDisplay(style({ color: pallete.foreground }))('Markets'),
               placeholder: 'All / Select',
-              $$chip: map(rt => $route(rt)),
+              $$chip: map(rt => $marketLabel(rt, false)),
               selector: {
-                list: params.routeList,
-                $$option: map(route => {
+                list: params.marketList,
+                $$option: map(mkt => {
                   return style({
                     padding: '8px'
-                  }, $route(route))
+                  }, $marketLabel(mkt))
                 })
               },
-              value: selectedRouteList
+              value: filterMarketMarketList
             })({
-              select: routeTypeChangeTether()
+              select: changeMarketTether()
             })
-          }, combineObject({ routeList })),
+          }, combineObject({ marketList })),
+
+          $ButtonToggle({
+            // $container: $row(layoutSheet.spacingSmall),
+            selected: isLong,
+            options: [
+              true,
+              false,
+            ],
+            $$option: map(isLong => {
+              return $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+                $icon({ $content: isLong ? $bull : $bear, width: '18px', viewBox: '0 0 32 32' }),
+                $text(isLong ? 'Long' : 'Short'),
+              )
+            })
+          })({
+            select: switchIsLongTether()
+          }),
 
           // $Popover({
           //   $target: $ButtonSecondary({

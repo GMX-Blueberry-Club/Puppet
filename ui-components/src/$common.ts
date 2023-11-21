@@ -133,7 +133,7 @@ export const $tokenLabelFromSummary = (token: ITokenDescription, $label?: $Node)
   )
 }
 
-export const $marketLabel = (market: IMarket) => {
+export const $marketLabel = (market: IMarket, showLabel = true) => {
   const indexTokenDescription = getTokenDescription(market.indexToken)
   const longTokenDescription = getTokenDescription(market.longToken)
   const shortTokenDescription = getTokenDescription(market.shortToken)
@@ -141,11 +141,11 @@ export const $marketLabel = (market: IMarket) => {
 
   return $row(layoutSheet.spacing, style({ cursor: 'pointer', alignItems: 'center', }))(
     $icon({ $content: $iconG, width: '34px', viewBox: '0 0 32 32' }),
-    $column(layoutSheet.flex)(
-      $text(style({ fontWeight: 'bold' }))(indexTokenDescription.symbol),
-      $text(style({ fontSize: '.75rem', color: pallete.foreground }))(`${longTokenDescription.symbol}/${shortTokenDescription.symbol}`),
-    ),
-    // style({ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }, $label || empty())
+    showLabel
+      ? $column(layoutSheet.flex)(
+        $text(style({ fontWeight: 'bold' }))(indexTokenDescription.symbol),
+        $text(style({ fontSize: '.75rem', color: pallete.foreground }))(`${longTokenDescription.symbol}/${shortTokenDescription.symbol}`),
+      ): empty(),
   )
 }
 

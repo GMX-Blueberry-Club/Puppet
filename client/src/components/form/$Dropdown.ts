@@ -45,7 +45,12 @@ export interface IDropdown<T> {
 
 
 
-export const $defaultOptionContainer = $row(layoutSheet.spacingSmall, style({ alignItems: 'center', borderBottom: `1px solid ${pallete.horizon}`, padding: '12px 20px', width: '100%' }), style({ cursor: 'pointer' }), stylePseudo(':hover', { backgroundColor: pallete.horizon }))
+export const $defaultOptionContainer = $row(
+  layoutSheet.spacingSmall,
+  style({ alignItems: 'center', borderBottom: `1px solid ${pallete.horizon}`, padding: '12px 20px', width: '100%' }),
+  style({ cursor: 'pointer' }),
+  stylePseudo(':hover', { backgroundColor: pallete.horizon })
+)
 export const $defaultSelectContainer = $column(
   style({
     left: 0,
@@ -263,7 +268,7 @@ export const $DropMultiSelect = <T>({
             observer.intersection(),
             multicast
           ),
-          layoutSheet.flex, layoutSheet.spacing, style({ alignItems: 'center', position: 'relative', flexWrap: 'wrap' })
+          layoutSheet.flex, layoutSheet.spacingSmall, style({ alignItems: 'center', position: 'relative', flexWrap: 'wrap' })
         )(
           switchLatest(map(valueList => {
             return mergeArray(valueList.map(token => {

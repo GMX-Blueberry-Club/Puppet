@@ -146,6 +146,7 @@ export interface IPositionEditorAbstractParams {
   processData: Stream<IGmxProcessState>
 }
 
+
 interface IPositionEditorConfig extends IPositionEditorAbstractParams {
   openPositionList: Stream<IPositionSlot[]>
 

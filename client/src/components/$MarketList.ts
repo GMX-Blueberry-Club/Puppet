@@ -36,7 +36,7 @@ export const $MarketInfoList = ({
 
   const marketParamList = map(params => {
     const data = Object
-      .values(params.processData.routeMap)
+      .values(params.processData.marketMap)
       .filter(market => market.indexToken !== GMX.ADDRESS_ZERO)
       .map(market => {
         const longTokenPrice = params.processData.latestPrice[market.longToken]

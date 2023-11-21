@@ -96,20 +96,20 @@ export const $Home = (config: ITreasury) => component((
   const bodyPointerMove = eventElementTarget('pointermove', document.body)
 
   return [
-    $column(layoutSheet.spacingBig, style({ flex: 1 }))(
+    $column(layoutSheet.spacingBig, style({ flex: 1, lineHeight: '1.3' }))(
 
       // translateY(-100px) translateZ(100px) rotateX(40deg)
       $snapSection(
         style({
           placeSelf: 'center',
-          maxWidth: '600px',
+          maxWidth: '620px',
           position: 'relative',
           top: 0,
           height: `100vh`,
           paddingBottom: '30vh'
         })
       )(
-        $row(style({ flex: 1, perspective: '680px', position: 'absolute', bottom: 0 }))(
+        $row(style({ flex: 1, width: '50vh', perspective: '680px', position: 'absolute', bottom: 0 }))(
           $element('video')(
             attr({
               playsinline: '',
@@ -133,7 +133,7 @@ export const $Home = (config: ITreasury) => component((
           ),
           $column(layoutSheet.spacingSmall)(
             $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Traders seamlessly boost earnings doing what they do best`),
-            $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Puppets (Investors) effortlessly pick and choose the strategies of the most successful traders to build a winning portfolio`),
+            $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Puppets (Investors) effortlessly pick and choose top traders to copy based by their performance and strategy to build a winning Portfolio`),
           ),
 
           $node(),
