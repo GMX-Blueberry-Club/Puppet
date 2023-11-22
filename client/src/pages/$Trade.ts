@@ -157,7 +157,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const slippage = storage.replayWrite(tradingStore, 30n, changeSlippage, 'slippage')
   const executionFeeBuffer = storage.replayWrite(tradingStore, 3000n, changeExecutionFeeBuffer, 'executionFeeBuffer')
   const primaryToken = storage.replayWrite(tradingStore, GMX.ADDRESS_ZERO, changePrimaryToken, 'inputToken')
-  const isUsdCollateralToken = storage.replayWrite(tradingStore, false, changeIsUsdCollateralToken, 'shortCollateralToken')
+  const isUsdCollateralToken = storage.replayWrite(tradingStore, true, changeIsUsdCollateralToken, 'shortCollateralToken')
   const borrowRateIntervalDisplay = storage.replayWrite(tradingStore, GMX.TIME_INTERVAL_MAP.MIN60, changeBorrowRateIntervalDisplay, 'borrowRateIntervalDisplay')
   const fundingRateIntervalDisplay = storage.replayWrite(tradingStore, GMX.TIME_INTERVAL_MAP.MIN60, changeFundingRateIntervalDisplay, 'fundingRateIntervalDisplay')
 

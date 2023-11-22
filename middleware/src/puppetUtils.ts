@@ -139,5 +139,13 @@ export function getPuppetSubscriptionKey(puppet: viem.Address, trader: viem.Addr
 }
 
 
+export function getPuppetDepositAccountKey(puppet: viem.Address, asset: viem.Address): viem.Hex {
+  return hashData(
+    ["string", "address", "address"],
+    ["PUPPET_DEPOSIT_ACCOUNT", puppet, asset]
+  )
+}
+
+
 
 

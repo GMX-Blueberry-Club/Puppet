@@ -17,6 +17,7 @@ import { IWalletClient, nativeBalance } from "../wallet/walletLink.js"
 import { $berry } from "./$DisplayBerry.js"
 import { $Popover } from "./$Popover.js"
 import { $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "./form/$Button.js"
+import { getPuppetDepositAccountKey } from "puppet-middleware-utils"
 
 
 export const $CardTable = <T>(config: TableOption<T>) => {
@@ -76,8 +77,7 @@ export const $berryByLabItems = (
 
 
 export interface IRouteDepositInfoConfig {
-  routeDescription: IAbstractPositionParams
-  wallet: IWalletClient
+  account: viem.Address
 }
 
 export const $RouteDepositInfo = (config: IRouteDepositInfoConfig) => component((
@@ -90,14 +90,16 @@ export const $RouteDepositInfo = (config: IRouteDepositInfoConfig) => component(
 
 ) => {
 
+  const HARD_CODED_USDC = GMX.ARBITRUM_ADDRESS.USDC
+
   const datastore = connectContract(PUPPET.CONTRACT[42161].Datastore)
-  const indexToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION_MAP, config.routeDescription.indexToken)
-  const maxBalance = multicast(join(constant(map(amount => tokenAmount(config.routeDescription.indexToken, amount), nativeBalance), clickMaxDeposit)))
-  const readPuppetDeposit = datastore.read('getUint', hashData(['string', 'address', 'address'], ['PUPPET_DEPOSIT_ACCOUNT', config.wallet.account.address, config.routeDescription.indexToken]))
+  const indexToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION_MAP, HARD_CODED_USDC)
+  const maxBalance = multicast(join(constant(map(amount => tokenAmount(HARD_CODED_USDC, amount), nativeBalance), clickMaxDeposit)))
+  const readPuppetDeposit = datastore.read('getUint', getPuppetDepositAccountKey(config.account, HARD_CODED_USDC))
 
   return [
     $row(layoutSheet.spacingSmall)(
-      $route(config.routeDescription),
+      // $route(config.depositAccount),
 
       $node(style({ flex: 1 }))(),
 
@@ -116,7 +118,7 @@ export const $RouteDepositInfo = (config: IRouteDepositInfoConfig) => component(
             $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
               $infoTooltipLabel($text('The amount utialised by traders you subscribe'), 'Balance'),
               switchMap(amount => {
-                return $text(tokenAmountLabel(config.routeDescription.indexToken, amount))
+                return $text(tokenAmountLabel(HARD_CODED_USDC, amount))
               }, readPuppetDeposit)
             )
           ),
@@ -129,7 +131,7 @@ export const $RouteDepositInfo = (config: IRouteDepositInfoConfig) => component(
                 label: 'Amount',
                 value: maxBalance,
                 placeholder: 'Enter amount',
-                hint: startWith('Balance: ', map(amount => `Balance: ${tokenAmountLabel(config.routeDescription.indexToken, amount)}`, nativeBalance)),
+                hint: startWith('Balance: ', map(amount => `Balance: ${tokenAmountLabel(HARD_CODED_USDC, amount)}`, nativeBalance)),
               })({
                 change: inputDepositAmountTether()
               }),
@@ -155,7 +157,7 @@ export const $RouteDepositInfo = (config: IRouteDepositInfoConfig) => component(
                     ...PUPPET.CONTRACT[42161].Orchestrator,
                     functionName: 'deposit',
                     value: parsedFormatAmount,
-                    args: [parsedFormatAmount, config.routeDescription.indexToken, config.wallet.account.address] as const
+                    args: [parsedFormatAmount, HARD_CODED_USDC, config.account] as const
                   })
                 }, combineObject({ amount: mergeArray([maxBalance, inputDepositAmount]) })))
               })

@@ -234,7 +234,7 @@ export const gmxProcess = defineProcess(
         shareSupply: 0n,
         traderShare: 0n,
         transactionHash: value.transactionHash,
-        blockTimestamp: unixTimestampNow(),
+        blockTimestamp: update.blockTimestamp,
         __typename: "PositionSlot",
       }
 

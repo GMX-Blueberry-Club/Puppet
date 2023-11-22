@@ -24,6 +24,7 @@ import { $RouteDepositInfo } from "./$common.js"
 import { $ButtonCircular, $ButtonPrimary, $ButtonPrimaryCtx } from "./form/$Button.js"
 import { $Dropdown, $defaultSelectContainer } from "./form/$Dropdown.js"
 import * as GMX from "gmx-middleware-const"
+import { $route } from "../common/$common"
 
 
 
@@ -68,6 +69,10 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
               $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between', alignItems: 'center' }))(
                 $heading3('Match-making Rules'),
 
+                $RouteDepositInfo({
+                  account: w3p.account.address,
+                })({}),
+
                 $ButtonCircular({
                   $iconPath: $xCross,
                 })({
@@ -89,62 +94,59 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
                     }
 
 
-                    return $column(layoutSheet.spacing)(
-                      $RouteDepositInfo({
-                        routeDescription: tradeRoute,
-                        wallet: w3p
-                      })({}),
-
-                      $column(style({ paddingLeft: '16px' }))(
-                        $row(layoutSheet.spacing)(
-                          $seperator2,
-                          $column(style({ flex: 1 }))(
-                            ...subscList.map(modSubsc => {
-
-                              const subsc = params.subscriptionList.find(x => x.routeTypeKey === routeKey && x.trader === modSubsc.trader)
-
-                              const iconColorParams = subsc
-                                ? modSubsc.subscribed
-                                  ? { fill: pallete.message, icon: $target, label: 'Edit' }: { fill: pallete.negative, icon: $xCross, label: 'Remove' }
-                                : { fill: pallete.positive, icon: $check, label: 'Add' }
-
-                              // text-align: center;
-                              // color: rgb(56, 229, 103);
-                              // padding: 4px 12px;
-                              // border-radius: 6px;
-                              // background-color: rgba(56, 229, 103, 0.1);
-                              return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: `10px 0` }))(
-                                O(style({ marginLeft: '-32px', backgroundColor: pallete.horizon, cursor: 'pointer' }), clickRemoveSubscTether(nodeEvent('click'), constant(modSubsc)))(
-                                  $iconCircular($xCross)
-                                ),
-                                $row(style({ width: '62px' }))(
-                                  $text(style({ backgroundColor: colorAlpha(iconColorParams.fill, .1), marginLeft: `-30px`, borderRadius: '6px', padding: '6px 12px 6px 22px', color: iconColorParams.fill,  }))(iconColorParams.label),  
-                                ),
-
-                                // switchMap(amount => {
-                                //   return $text(tokenAmountLabel(routeType.indexToken, amount))
-                                // }, orchestrator.read('puppetAccountBalance', w3p.account.address, routeType.indexToken)),
-
-                                $profileDisplay({
-                                  address: modSubsc.trader,
-                                  // $profileContainer: $defaultBerry(style({ width: '50px' }))
-                                }),
-
-                                $row(style({ flex: 1 }))(),
-                                $infoLabeledValue(
-                                  'Allow',
-                                  $text(`${readablePercentage(modSubsc.allowance)}`)
-                                ),
-                                $infoLabeledValue('Until', readableDate(Number(modSubsc.expiry))),
-                                
-                                
-                              )
-                            })
-                          )
-                        ),
+                    return $column(style({ paddingLeft: '16px' }))(
+                      $row(style({ marginLeft: '-28px' }))(
+                        $route(tradeRoute)
+                      ),
+                      $row(layoutSheet.spacing)(
                         $seperator2,
-                      )
+                        $column(style({ flex: 1 }))(
+                          ...subscList.map(modSubsc => {
+
+                            const subsc = params.subscriptionList.find(x => x.routeTypeKey === routeKey && x.trader === modSubsc.trader)
+
+                            const iconColorParams = subsc
+                              ? modSubsc.subscribed
+                                ? { fill: pallete.message, icon: $target, label: 'Edit' }: { fill: pallete.negative, icon: $xCross, label: 'Remove' }
+                              : { fill: pallete.positive, icon: $check, label: 'Add' }
+
+                            // text-align: center;
+                            // color: rgb(56, 229, 103);
+                            // padding: 4px 12px;
+                            // border-radius: 6px;
+                            // background-color: rgba(56, 229, 103, 0.1);
+                            return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: `10px 0` }))(
+                              O(style({ marginLeft: '-32px', backgroundColor: pallete.horizon, cursor: 'pointer' }), clickRemoveSubscTether(nodeEvent('click'), constant(modSubsc)))(
+                                $iconCircular($xCross)
+                              ),
+                              $row(style({ width: '62px' }))(
+                                $text(style({ backgroundColor: colorAlpha(iconColorParams.fill, .1), marginLeft: `-30px`, borderRadius: '6px', padding: '6px 12px 6px 22px', color: iconColorParams.fill,  }))(iconColorParams.label),  
+                              ),
+
+                              // switchMap(amount => {
+                              //   return $text(tokenAmountLabel(routeType.indexToken, amount))
+                              // }, orchestrator.read('puppetAccountBalance', w3p.account.address, routeType.indexToken)),
+
+                              $profileDisplay({
+                                address: modSubsc.trader,
+                                // $profileContainer: $defaultBerry(style({ width: '50px' }))
+                              }),
+
+                              $row(style({ flex: 1 }))(),
+                              $infoLabeledValue(
+                                'Allow',
+                                $text(`${readablePercentage(modSubsc.allowance)}`)
+                              ),
+                              $infoLabeledValue('Until', readableDate(Number(modSubsc.expiry))),
+                                
+                                
+                            )
+                          })
+                        )
+                      ),
+                      $seperator2,
                     )
+                    
                   })
                 )
               }, combineObject({ tradeRouteList, subscriptionList, modifySubscriptionList })),

@@ -831,45 +831,50 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 const token = params.isUsdCollateralToken ? params.market.shortToken : params.market.longToken
                 const tokenDesc = getTokenDescription(token)
 
-                return $Dropdown({
-                  $container: $row(style({ position: 'relative', alignSelf: 'center' })),
-                  $selection: $row(style({ alignItems: 'center', cursor: 'pointer' }))(
-                    $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
-                      $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '14px', viewBox: '0 0 32 32' }),
-                      $text(tokenDesc.symbol)
-                    ),
-                    $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
-                  ),
-                  selector: {
-                    value: now(params.isUsdCollateralToken),
-                    $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0 })),
-                    $$option: map(option => {
-                      const token = option ? params.market.shortToken : params.market.longToken
-                      const desc = getTokenDescription(token)
-                      // const liquidity = tradeReader.getAvailableLiquidityUsd(now(token), now(option))
-                      // const poolInfo = tradeReader.getTokenPoolInfo(now(token))
+
+                return $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+                  $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '14px', viewBox: '0 0 32 32' }),
+                  $text(tokenDesc.symbol)
+                )
+                // return $Dropdown({
+                //   $container: $row(style({ position: 'relative', alignSelf: 'center' })),
+                //   $selection: $row(style({ alignItems: 'center', cursor: 'pointer' }))(
+                //     $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+                //       $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '14px', viewBox: '0 0 32 32' }),
+                //       $text(tokenDesc.symbol)
+                //     ),
+                //     $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
+                //   ),
+                //   selector: {
+                //     value: now(params.isUsdCollateralToken),
+                //     $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0 })),
+                //     $$option: map(option => {
+                //       const token = option ? params.market.shortToken : params.market.longToken
+                //       const desc = getTokenDescription(token)
+                //       // const liquidity = tradeReader.getAvailableLiquidityUsd(now(token), now(option))
+                //       // const poolInfo = tradeReader.getTokenPoolInfo(now(token))
 
 
-                      return $row(style({ placeContent: 'space-between', flex: 1 }))(
-                        $tokenLabelFromSummary(desc),
+                //       return $row(style({ placeContent: 'space-between', flex: 1 }))(
+                //         $tokenLabelFromSummary(desc),
 
-                        // $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end', placeContent: 'center' }))(
-                        //   $text(map(amountUsd => readableFixedUSD30(amountUsd), liquidity)),
-                        //   $row(style({ whiteSpace: 'pre' }))(
-                        //     $text(map(info => readablePercentage(info.rate), poolInfo)),
-                        //     $text(style({ color: pallete.foreground }))(' / hr')
-                        //   ),
-                        // )
-                      )
-                    }),
-                    list: [
-                      false,
-                      true
-                    ],
-                  }
-                })({
-                  select: changeIsUsdCollateralTokenTether()
-                })
+                //         // $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end', placeContent: 'center' }))(
+                //         //   $text(map(amountUsd => readableFixedUSD30(amountUsd), liquidity)),
+                //         //   $row(style({ whiteSpace: 'pre' }))(
+                //         //     $text(map(info => readablePercentage(info.rate), poolInfo)),
+                //         //     $text(style({ color: pallete.foreground }))(' / hr')
+                //         //   ),
+                //         // )
+                //       )
+                //     }),
+                //     list: [
+                //       false,
+                //       true
+                //     ],
+                //   }
+                // })({
+                //   select: changeIsUsdCollateralTokenTether()
+                // })
               }, combineObject({ market, isUsdCollateralToken })),
               
             ),
