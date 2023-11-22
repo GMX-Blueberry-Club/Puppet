@@ -118,7 +118,7 @@ const config: IProcessedStoreConfig = {
 export const gmxProcess = defineProcess(
   {
     seedFile,
-    mode: SW_DEV ? IProcessEnvironmentMode.DEV : IProcessEnvironmentMode.PROD,
+    mode: import.meta.env.VITE_SW_DEV ? IProcessEnvironmentMode.DEV : IProcessEnvironmentMode.PROD,
     blueprint: { config, state },
     parentScope: rootStoreScope,
     queryBlockRange: 100000n,

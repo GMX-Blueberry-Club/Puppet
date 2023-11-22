@@ -73,7 +73,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       return now(params.store)
     }
 
-    const refreshThreshold = SW_DEV ? 50 : 50
+    debugger
+    const refreshThreshold = import.meta.env.VITE_SW_DEV ? 50 : 50
     const blockDelta = params.syncBlock - params.store.blockNumber
 
     if (refreshThreshold < blockDelta) {
@@ -330,7 +331,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
             ),
             
             switchMap(params => {
-              const refreshThreshold = SW_DEV ? 150 : 50
+              const refreshThreshold = import.meta.env.VITE_SW_DEV ? 150 : 50
               const blockDelta = params.syncBlock ? params.syncBlock - params.process.blockNumber : null
 
               if (blockDelta === null || blockDelta < refreshThreshold) return empty()
