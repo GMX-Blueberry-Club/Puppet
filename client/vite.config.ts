@@ -82,7 +82,7 @@ const pwaOptions: Partial<VitePWAOptions> = {
 }
 
 
-const replaceOptions = process.env.SW_DEV ? { __DATE__: new Date().toISOString(), SW_DEV: process.env.SW_DEV } : { __DATE__: new Date().toISOString(), SW_DEV: process.env.SW_DEV, ...SITE_CONFIG }
+// const replaceOptions = process.env.SW_DEV ? { __DATE__: new Date().toISOString(), SW_DEV: process.env.SW_DEV } : { __DATE__: new Date().toISOString(), SW_DEV: process.env.SW_DEV, ...SITE_CONFIG }
 const selfDestroying = process.env.SW_DESTROY === 'true'
 
 if (selfDestroying)
@@ -98,7 +98,12 @@ export default defineConfig({
   publicDir: 'assets',
   plugins: [
     VitePWA(pwaOptions),
-    replace(replaceOptions),
+    replace({
+      include: 'index.html',
+      __DATE__: new Date().toISOString(),
+      SW_DEV: process.env.SW_DEV,
+      ...SITE_CONFIG
+    }),
   ],
   build: {
     outDir: ".dist",
