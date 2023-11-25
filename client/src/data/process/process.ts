@@ -64,7 +64,7 @@ export interface IGmxProcessState {
 
 
 const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
-  const req = await (await fetch('/db/sha256-1RBFkvvr8xwuk6w74UGs1h+IOoP4_sztAWX1S1MBrBo=.json')).json().catch(() => null)
+  const req = await (await fetch('/db/sha256-LruEufxZQeRDJwpeCi5Vg_jnfEEkw1Tv8fBo+bYobWg=.json')).json().catch(() => null)
 
   if (req === null) {
     return null
@@ -145,17 +145,11 @@ export const gmxProcess = defineProcess(
         return seed
       }
       
-      const trMarketLongLongTokenKey = getRouteTypeKey(entity.longToken, entity.indexToken, true, entity.salt)
-      const trMarketLongShortTokenKey = getRouteTypeKey(entity.shortToken, entity.indexToken, true, entity.salt)
-
-      const trMarketShortLongTokenKey = getRouteTypeKey(entity.longToken, entity.indexToken, false, entity.salt)
-      const trMarketShortShortTokenKey = getRouteTypeKey(entity.shortToken, entity.indexToken, false, entity.salt)
+      const trMarketLongLongTokenKey = getRouteTypeKey(entity.shortToken, entity.indexToken, true, entity.salt)
+      const trMarketShortLongTokenKey = getRouteTypeKey(entity.shortToken, entity.indexToken, false, entity.salt)
 
       seed.routeMap[trMarketLongLongTokenKey] =   { marketSalt: entity.salt, indexToken: entity.indexToken, collateralToken: entity.longToken, isLong: true, routeTypeKey: trMarketLongLongTokenKey }
-      seed.routeMap[trMarketLongShortTokenKey] =  { marketSalt: entity.salt, indexToken: entity.indexToken, collateralToken: entity.shortToken, isLong: true, routeTypeKey: trMarketLongShortTokenKey }
-
       seed.routeMap[trMarketShortLongTokenKey] =  { marketSalt: entity.salt, indexToken: entity.indexToken, collateralToken: entity.longToken, isLong: false, routeTypeKey: trMarketShortLongTokenKey }
-      seed.routeMap[trMarketShortShortTokenKey] = { marketSalt: entity.salt, indexToken: entity.indexToken, collateralToken: entity.shortToken, isLong: false, routeTypeKey: trMarketShortShortTokenKey }
 
       return seed
     },

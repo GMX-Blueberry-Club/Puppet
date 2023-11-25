@@ -80,11 +80,11 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       const syncParams = { ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlock }
       const storedBatch = queryLogs(syncParams, params.store)
       
-      return processLogs(syncParams, params.store, storedBatch)
-      // return mergeArray([
-      //   processLogs(syncParams, params.store, storedBatch),
-      //   now(params.store)
-      // ])
+      // return processLogs(syncParams, params.store, storedBatch)
+      return mergeArray([
+        processLogs(syncParams, params.store, storedBatch),
+        now(params.store)
+      ])
     }
 
     return now(params.store)
