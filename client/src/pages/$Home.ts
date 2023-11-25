@@ -139,7 +139,7 @@ export const $Home = (config: ITreasury) => component((
           $node(),
 
           $column(layoutSheet.spacing, style({ minWidth: '250px' }))(
-            screenUtils.isMobileScreen ? $text(style({ textAlign: 'center' }))('< Comming Soon (tm) >') : empty(),
+            screenUtils.isMobileScreen ? $text(style({ textAlign: 'center' }))('< Comming Soon >') : empty(),
 
             $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
               $Link({
@@ -182,7 +182,7 @@ export const $Home = (config: ITreasury) => component((
                 click: linkClickTether()
               }),
 
-              screenUtils.isDesktopScreen ? $text('< Comming Soon (tm) >') : empty(),
+              screenUtils.isDesktopScreen ? $text('< Comming Soon >') : empty(),
 
               $Link({
                 disabled: now(true),

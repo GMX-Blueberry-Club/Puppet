@@ -25,7 +25,7 @@ const pwaOptions: Partial<VitePWAOptions> = {
   registerType: 'autoUpdate',
   strategies: 'injectManifest',
   injectManifest: {
-    maximumFileSizeToCacheInBytes: 4000000,
+    maximumFileSizeToCacheInBytes: 15000000,
     globPatterns: ['**/*.{js,html,woff2}']
   },
   srcDir: 'src',
