@@ -164,7 +164,7 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
     {
       switchPosition: mergeArray([
         switchPosition,
-        clickClose
+        // clickClose
       ]),
       changeMarket: snapshot((params, posSlot) => {
         const update = lst(posSlot.updates)

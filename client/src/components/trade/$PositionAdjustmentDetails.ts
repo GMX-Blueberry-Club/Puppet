@@ -161,19 +161,19 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
         args: [
           {
             acceptablePrice,
-            collateralDelta: abs(req.collateralDelta),
+            collateralDelta: abs(0n),
             sizeDelta: abs(req.sizeDeltaUsd),
           },
           {
-            amount: wntCollateralAmount,
-            path: req.collateralDelta ? [req.indexToken] : [],
+            amount: req.collateralDelta,
+            path: req.collateralDelta ? [req.collateralToken] : [],
             minOut: 0n,
           },
           executionFeeAfterBuffer,
           req.collateralToken,
           req.indexToken,
           req.isLong,
-          '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000014bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075',
+          '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e5831000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000004bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075',
         ]
       })
       : wagmiWriteContract({

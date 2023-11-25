@@ -3,7 +3,7 @@ import { $element, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map, mergeArray, startWith } from "@most/core"
+import { empty, map, mergeArray, multicast, startWith, tap } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $ButtonToggle, $Table, $bear, $bull, $icon, $marketLabel, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "gmx-middleware-ui-components"
@@ -48,16 +48,18 @@ export const $TopSettled = (config: ITopSettled) => component((
   [openFilterPopover, openFilterPopoverTether]: Behavior<any>,
 ) => {
 
+  const marketList = map(pd => Object.values(pd.marketMap).filter(market => market.indexToken !== GMX.ADDRESS_ZERO), config.processData)
+
   const exploreStore = storage.createStoreScope(rootStoreScope, 'topSettled' as const)
   const sortBy = storage.replayWrite(exploreStore, { direction: 'desc', selector: 'pnl' } as ISortBy<IPositionListSummary>, sortByChange, 'sortBy')
-
-
-  const marketList = map(pd => Object.values(pd.marketMap).filter(market => market.indexToken !== GMX.ADDRESS_ZERO), config.processData)
   const filterMarketMarketList = storage.replayWrite(exploreStore, [], changeMarket, 'filterMarketMarketList')
   const isLong = storage.replayWrite(exploreStore, true, switchIsLong, 'isLong')
   const activityTimeframe = storage.replayWrite(exploreStore, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe, 'activityTimeframe')
+
   const pageParms = map(params => {
     const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
+
+    console.log('params', params)
     const paging = startWith(requestPage, scrollRequest)
 
     const dataSource: Stream<TablePageResponse<IMirrorPositionListSummary>> =  map(req => {

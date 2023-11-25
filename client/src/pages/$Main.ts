@@ -73,7 +73,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       return now(params.store)
     }
 
-    debugger
     const refreshThreshold = import.meta.env.VITE_SW_DEV ? 50 : 50
     const blockDelta = params.syncBlock - params.store.blockNumber
 

@@ -913,15 +913,8 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
         switchFocusMode,
       ]),
       leverage: mergeArray([
-        filterNull(zip((params, positionSlot) => {
-          if (positionSlot === null) return null
-
-          const lev = div(lst(positionSlot.updates).sizeInUsd, params.netPositionValueUsd)
-
-          return lev
-        }, combineObject({ netPositionValueUsd }), position)),
         slideLeverage,
-        switchMap(ii=> ii ? empty() : clickPrimary, isIncrease)
+        // switchMap(ii=> ii ? empty() : clickPrimary, isIncrease)
       ]),
       switchIsIncrease,
       isUsdCollateralToken: changeIsUsdCollateralToken,

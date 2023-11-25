@@ -310,7 +310,7 @@ export const $Trade = (config: ITradeComponent) => component((
     const routeKey = getRouteKey(w3p.account.address, params.routeTypeKey)
     const storedRouteKey = storage.get(tradingStore, GMX.ADDRESS_ZERO as viem.Address, routeKey)
     const fallbackGetRoute = switchMap(address => {
-      const routeAddressArgs = [w3p.account.address, params.collateralToken, params.indexToken, params.isLong, '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000014bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075'] as const
+      const routeAddressArgs = [w3p.account.address, params.collateralToken, params.indexToken, params.isLong, '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e5831000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000004bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075'] as const
 
       if (address === GMX.ADDRESS_ZERO) {
         return switchMap(res => {
@@ -348,7 +348,7 @@ export const $Trade = (config: ITradeComponent) => component((
       return existingSlot
     }, combineObject({ processData: config.processData, positionKeyArgs })),
     switchPosition,
-    clickResetPosition
+    // clickResetPosition
   ])))
 
 
@@ -381,7 +381,6 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const indexDescription = map(token => getTokenDescription(token), indexToken)
   const collateralDescription = map((address) => getTokenDescription(address), collateralToken)
-
 
 
   // const collateralTokenPoolInfo = replayLatest(multicast(tradeReader.getTokenPoolInfo(collateralToken)))
@@ -522,7 +521,14 @@ export const $Trade = (config: ITradeComponent) => component((
     filterNull(snapshot((netPosValue, posSlot) => {
       if (posSlot === null) return null
       return div(lst(posSlot.updates).sizeInUsd, netPosValue)
-    }, netPositionValueUsd, mergeArray([position, clickResetPosition])))
+    }, netPositionValueUsd, mergeArray([position, clickResetPosition]))),
+    filterNull(zip((params, positionSlot) => {
+      if (positionSlot === null) return null
+
+      const lev = div(lst(positionSlot.updates).sizeInUsd, params.netPositionValueUsd)
+
+      return lev
+    }, combineObject({ netPositionValueUsd }), position)),
   ])))
 
   // [config]

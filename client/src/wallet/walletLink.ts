@@ -147,11 +147,11 @@ const configChain = configureChains(
     //     }
     //   },
     // }),
+    walletConnectProvider({ projectId }),
+    publicProvider(),
     alchemyProvider({
       apiKey: 'RBsflxWv6IhITsLxAWcQlhCqSuxV7Low',
     }),
-    walletConnectProvider({ projectId }),
-    publicProvider(),
   ],
   {
     batch: { multicall: { wait: 30 } },

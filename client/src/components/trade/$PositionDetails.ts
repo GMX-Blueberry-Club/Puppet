@@ -88,6 +88,7 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
 
 
   const dataSource = switchMap(pos => {
+    console.log('pos', pos)
     return pos
       ? now(pos.updates)
       : now([])
