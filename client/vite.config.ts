@@ -30,7 +30,7 @@ const pwaOptions: Partial<VitePWAOptions> = {
   },
   srcDir: 'src',
   filename: 'sw.ts',
-  includeAssets: ['video/*.mp4', 'font/*.ttf', './*.png', './*.svg'],
+  includeAssets: ['font/*.ttf', './*.png', './*.svg'],
   manifest: {
     name: SITE_CONFIG.APP_NAME,
     short_name: SITE_CONFIG.APP_NAME,

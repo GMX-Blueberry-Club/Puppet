@@ -3,23 +3,21 @@ import { $element, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map, mergeArray, multicast, startWith, tap } from "@most/core"
+import { empty, map, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $ButtonToggle, $Table, $bear, $bull, $icon, $marketLabel, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "gmx-middleware-ui-components"
-import { IAbstractPositionParams, IMarket, IMarketCreatedEvent, IPositionListSummary, ITradeRoute, factor, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readableLeverage, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
-import { ROUTE_DESCRIPTION } from "puppet-middleware-const"
-import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetRouteSubscritpion, getRouteTypeKey, summariesMirrorTrader } from "puppet-middleware-utils"
+import { IMarketCreatedEvent, IPositionListSummary, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $labelDisplay } from "../../common/$TextField.js"
-import { $PnlPercentageValue, $TraderDisplay, $TraderRouteDisplay, $pnlValue, $route, $size } from "../../common/$common.js"
+import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $size } from "../../common/$common.js"
+import { $card } from "../../common/elements/$common.js"
 import { $DropMultiSelect } from "../../components/form/$Dropdown.js"
-import { $tableHeader, puppetsColumn, settledPnlColumn } from "../../components/table/$TableColumn.js"
+import { $tableHeader } from "../../components/table/$TableColumn.js"
 import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceGraph.js"
 import { IGmxProcessState } from "../../data/process/process.js"
-import * as store from "../../data/store/store.js"
 import { rootStoreScope } from "../../data/store/store.js"
-import { $card } from "../../common/elements/$common.js"
 import * as storage from "../../utils/storage/storeScope.js"
 import { $seperator2 } from "../common.js"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity.js"
@@ -43,7 +41,7 @@ export const $TopSettled = (config: ITopSettled) => component((
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<GMX.IntervalTime>,
   [routeChange, routeChangeTether]: Behavior<any, string>,
   [changeMarket, changeMarketTether]: Behavior<IMarketCreatedEvent[]>,
-  [switchIsLong, switchIsLongTether]: Behavior<boolean>,
+  [switchIsLong, switchIsLongTether]: Behavior<boolean | null>,
 
   [openFilterPopover, openFilterPopoverTether]: Behavior<any>,
 ) => {
@@ -53,20 +51,18 @@ export const $TopSettled = (config: ITopSettled) => component((
   const exploreStore = storage.createStoreScope(rootStoreScope, 'topSettled' as const)
   const sortBy = storage.replayWrite(exploreStore, { direction: 'desc', selector: 'pnl' } as ISortBy<IPositionListSummary>, sortByChange, 'sortBy')
   const filterMarketMarketList = storage.replayWrite(exploreStore, [], changeMarket, 'filterMarketMarketList')
-  const isLong = storage.replayWrite(exploreStore, true, switchIsLong, 'isLong')
+  const isLong = storage.replayWrite(exploreStore, null, switchIsLong, 'isLong')
   const activityTimeframe = storage.replayWrite(exploreStore, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe, 'activityTimeframe')
 
   const pageParms = map(params => {
     const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
-
-    console.log('params', params)
     const paging = startWith(requestPage, scrollRequest)
 
     const dataSource: Stream<TablePageResponse<IMirrorPositionListSummary>> =  map(req => {
       const filterStartTime = unixTimestampNow() - params.activityTimeframe
 
       const flattenMapMap = params.data.mirrorPositionSettled.filter(pos => {
-        if (params.isLong !== pos.isLong) {
+        if (params.isLong !== null && params.isLong !== pos.isLong) {
           return false
         }
 
@@ -124,13 +120,16 @@ export const $TopSettled = (config: ITopSettled) => component((
             // $container: $row(layoutSheet.spacingSmall),
             selected: isLong,
             options: [
+              null,
               true,
               false,
             ],
-            $$option: map(isLong => {
+            $$option: map(il => {
               return $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
-                $icon({ $content: isLong ? $bull : $bear, width: '18px', viewBox: '0 0 32 32' }),
-                $text(isLong ? 'Long' : 'Short'),
+                il === null
+                  ? empty()
+                  : $icon({ $content: il ? $bull : $bear, width: '18px', viewBox: '0 0 32 32' }),
+                $text(il === null ? 'All' : il ? 'Long' : 'Short'),
               )
             })
           })({
@@ -192,7 +191,7 @@ export const $TopSettled = (config: ITopSettled) => component((
                 return $TraderRouteDisplay({
                   positionParams: pos.settledTradeList[0],
                   trader: pos.trader,
-                  routeTypeKey: "0x4a5f536b51f398b15d598b18f6eb736e65b8c7b4bdcbf61935514d2114d5ca4b",
+                  routeTypeKey: "0x93cb002897c6c7abbfb8c989a4a7ff330281ef970b11063800469e7ea87f063d",
                   subscriptionList: config.subscriptionList,
                 })({
                   modifySubscribeList: modifySubscriberTether()

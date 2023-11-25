@@ -3,7 +3,7 @@ import { $text, component, INode, nodeEvent, style, styleInline } from "@aelea/d
 import * as router from '@aelea/router'
 import { $column, $icon, $row, $seperator, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { map, now, skipRepeats } from "@most/core"
+import { empty, map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { TOKEN_SYMBOL } from "gmx-middleware-const"
@@ -74,7 +74,7 @@ export const $entry = (isLong: boolean, indexToken: viem.Address, averagePrice: 
   )
 }
 
-export const $route = (pos: IAbstractPositionParams, size = '34px') => {
+export const $route = (pos: IAbstractPositionParams, displayLabel = true) => {
   const indexDescription = getTokenDescription(pos.indexToken)
   const collateralDescription = getTokenDescription(pos.collateralToken)
   
@@ -86,11 +86,12 @@ export const $route = (pos: IAbstractPositionParams, size = '34px') => {
       width: '24px'
     }),
     $tokenIcon(pos.indexToken, { width: '36px' }),
-    $column(layoutSheet.spacingTiny)(
-      $text(style({ fontSize: '1rem' }))(`${indexDescription.symbol}`),
-      $infoLabel($text(style({ fontSize: '.85rem' }))((pos.isLong ? 'L' : 'S') + '-' + collateralDescription.symbol)),
-     
-    ),
+    displayLabel
+      ? $column(layoutSheet.spacingTiny)(
+        $text(style({ fontSize: '1rem' }))(`${indexDescription.symbol}`),
+        $infoLabel($text(style({ fontSize: '.85rem' }))((pos.isLong ? 'Long' : 'Short'))),
+      )
+      : empty(),
   )
 }
 

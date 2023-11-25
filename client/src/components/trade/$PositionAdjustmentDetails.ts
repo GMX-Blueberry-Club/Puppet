@@ -191,7 +191,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
             path: req.collateralDelta ? [req.indexToken] : [],
             minOut: 0n,
           },
-          '0x166ADAC0AD02595E646DCD39235B6DB5B974DBE905DBA5D909099F1091953A7B',
+          '0x93cb002897c6c7abbfb8c989a4a7ff330281ef970b11063800469e7ea87f063d',
           executionFeeAfterBuffer,
           req.isIncrease
         ]

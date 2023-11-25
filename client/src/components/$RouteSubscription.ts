@@ -152,7 +152,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
               }, combineObject({ tradeRouteList, subscriptionList, modifySubscriptionList })),
 
               $ButtonPrimaryCtx({
-                $content: $text('Subscribe'),
+                $content: $text('Save Changes'),
                 request: requestChangeSubscription
               })({
                 click: requestChangeSubscriptionTether(
