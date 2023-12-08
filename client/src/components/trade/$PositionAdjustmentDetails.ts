@@ -187,11 +187,11 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
             sizeDelta: abs(req.sizeDeltaUsd),
           },
           {
-            amount: wntCollateralAmount,
-            path: req.collateralDelta ? [req.indexToken] : [],
+            amount: req.collateralDelta,
+            path: req.collateralDelta ? [req.collateralToken] : [],
             minOut: 0n,
           },
-          '0x93cb002897c6c7abbfb8c989a4a7ff330281ef970b11063800469e7ea87f063d',
+          '0xa437f95c9cee26945f76bc090c3491ffa4e8feb32fd9f4fefbe32c06a7184ff3',
           executionFeeAfterBuffer,
           req.isIncrease
         ]

@@ -1,6 +1,6 @@
 import { combineObject, isStream, O, Op } from "@aelea/core"
 import { $element, $Node, $svg, $text, attr, IBranch, style, styleBehavior, stylePseudo } from "@aelea/dom"
-import { $column, $row, layoutSheet } from "@aelea/ui-components"
+import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { empty, map, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
@@ -52,8 +52,10 @@ export const $infoLabel = (label: string | $Node) => {
     : $text(style({ color: pallete.foreground }))(label)
 }
 
-export const $infoLabeledValue = (label: string | $Node, value: string | $Node) => {
-  return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+export const $infoLabeledValue = (label: string | $Node, value: string | $Node, collapseMobile = false) => {
+  const $container = collapseMobile && screenUtils.isMobileScreen ? $column : $row(style({ alignItems: 'center' }))
+
+  return $container(layoutSheet.spacingSmall)(
     $infoLabel(label),
     isStream(value) ? value : $text(value)
   )

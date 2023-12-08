@@ -1,23 +1,9 @@
-import { Behavior, combineObject } from "@aelea/core"
-import { $node, $text, component, style } from "@aelea/dom"
-import { $column, $row, layoutSheet } from "@aelea/ui-components"
+import { style } from "@aelea/dom"
 import { pallete } from "@aelea/ui-components-theme"
 import { IAttributeBackground, IAttributeBadge, IAttributeMappings, IBerryDisplayTupleMap, IToken, getBerryFromItems, getLabItemTupleIndex, tokenIdAttributeTuple } from "@gambitdao/gbc-middleware"
-import { constant, join, map, mergeArray, multicast, snapshot, startWith } from "@most/core"
-import * as GMX from "gmx-middleware-const"
-import { $Table, $alertTooltip, $defaultVScrollContainer, $infoLabeledValue, $infoTooltipLabel, $spinner, IMarker, TableOption } from "gmx-middleware-ui-components"
-import { IAbstractPositionParams, IMarket, getMappedValue, hashData, parseFixed, switchMap, tokenAmount, tokenAmountLabel } from "gmx-middleware-utils"
-import * as PUPPET from "puppet-middleware-const"
-import * as viem from "viem"
-import { $TextField } from "../common/$TextField.js"
-import { $route } from "../common/$common.js"
+import { $Table, $defaultVScrollContainer, $infoLabeledValue, $spinner, TableOption } from "gmx-middleware-ui-components"
 import { $card } from "../common/elements/$common.js"
-import { connectContract, wagmiWriteContract } from "../logic/common.js"
-import { IWalletClient, nativeBalance } from "../wallet/walletLink.js"
 import { $berry } from "./$DisplayBerry.js"
-import { $Popover } from "./$Popover.js"
-import { $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "./form/$Button.js"
-import { getPuppetDepositAccountKey } from "puppet-middleware-utils"
 
 
 export const $CardTable = <T>(config: TableOption<T>) => {
@@ -40,8 +26,6 @@ export const $CardTable = <T>(config: TableOption<T>) => {
     ...config
   })
 }
-
-
 
 export const $berryByToken = (token: IToken) => {
   const display = getBerryFromItems(token.labItems.map(li => Number(li.id)))
@@ -74,102 +58,4 @@ export const $berryByLabItems = (
 
   return $berry(tuple)
 }
-
-
-export interface IRouteDepositInfoConfig {
-  account: viem.Address
-}
-
-export const $RouteDepositInfo = (config: IRouteDepositInfoConfig) => component((
-  [requestChangeSubscription, requestChangeSubscriptionTether]: Behavior<PointerEvent, Promise<viem.TransactionReceipt>>,
-  [requestDepositAsset, requestDepositAssetTether]: Behavior<PointerEvent, Promise<viem.TransactionReceipt>>,
-  [inputDepositAmount, inputDepositAmountTether]: Behavior<string>,
-
-  [openDepositPopover, openDepositPopoverTether]: Behavior<any>,
-  [clickMaxDeposit, clickMaxDepositTether]: Behavior<any>,
-
-) => {
-
-  const HARD_CODED_USDC = GMX.ARBITRUM_ADDRESS.USDC
-
-  const datastore = connectContract(PUPPET.CONTRACT[42161].Datastore)
-  const indexToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION_MAP, HARD_CODED_USDC)
-  const maxBalance = multicast(join(constant(map(amount => tokenAmount(HARD_CODED_USDC, amount), nativeBalance), clickMaxDeposit)))
-  const readPuppetDeposit = datastore.read('getUint', getPuppetDepositAccountKey(config.account, HARD_CODED_USDC))
-
-  return [
-    $row(layoutSheet.spacingSmall)(
-      // $route(config.depositAccount),
-
-      $node(style({ flex: 1 }))(),
-
-      $alertTooltip($text('Deposit funds to this route to enable Mirroring')),
-
-      $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
-        $Popover({
-          open: openDepositPopover,
-          $target: $row(layoutSheet.spacing)(
-            $ButtonSecondary({
-              $container: $defaultMiniButtonSecondary,
-              $content: $text('Deposit')
-            })({
-              click: openDepositPopoverTether()
-            }),
-            $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-              $infoTooltipLabel($text('The amount utialised by traders you subscribe'), 'Balance'),
-              switchMap(amount => {
-                return $text(tokenAmountLabel(HARD_CODED_USDC, amount))
-              }, readPuppetDeposit)
-            )
-          ),
-          $content: $column(layoutSheet.spacing)(
-
-            $text(style({ maxWidth: '310px' }))('The amount utialised by traders you subscribed'),
-
-            $row(layoutSheet.spacingSmall, style({ position: 'relative' }))(
-              $TextField({
-                label: 'Amount',
-                value: maxBalance,
-                placeholder: 'Enter amount',
-                hint: startWith('Balance: ', map(amount => `Balance: ${tokenAmountLabel(HARD_CODED_USDC, amount)}`, nativeBalance)),
-              })({
-                change: inputDepositAmountTether()
-              }),
-
-              $ButtonSecondary({
-                $container: $defaultMiniButtonSecondary(style({ position: 'absolute', right: 0, bottom: '28px' })),
-                $content: $text('Max'),
-              })({
-                click: clickMaxDepositTether()
-              })
-            ),
-                                
-            $row(style({ placeContent: 'space-between' }))(
-              $node(),
-              $ButtonPrimaryCtx({
-                $content: $text('Deposit'),
-                request: requestDepositAsset,
-              })({
-                click: requestDepositAssetTether(snapshot(params => {
-                  const parsedFormatAmount = parseFixed(params.amount, indexToken.decimals)
-
-                  return wagmiWriteContract({
-                    ...PUPPET.CONTRACT[42161].Orchestrator,
-                    functionName: 'deposit',
-                    value: parsedFormatAmount,
-                    args: [parsedFormatAmount, HARD_CODED_USDC, config.account] as const
-                  })
-                }, combineObject({ amount: mergeArray([maxBalance, inputDepositAmount]) })))
-              })
-            )
-          )
-        })({}),
-
-        
-      )
-                      
-    )
-
-  ]
-})
 

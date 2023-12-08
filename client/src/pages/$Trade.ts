@@ -553,11 +553,12 @@ export const $Trade = (config: ITradeComponent) => component((
   }
 
   const positionList = map(params => {
-    if (!params.route) return []
+    const w3p = params.wallet
+    if (!w3p) return []
 
-    const filtered = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.account === viem.getAddress(params.route))
+    const filtered = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === w3p.account.address)
     return filtered
-  }, combineObject({ processData: config.processData, route }))
+  }, combineObject({ processData: config.processData, wallet }))
 
 
   const averagePrice = map(params => {

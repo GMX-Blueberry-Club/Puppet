@@ -19,7 +19,7 @@ import {
   unixTimestampNow,
   IMarketCreatedEvent
 } from "gmx-middleware-utils"
-import { IMirrorPositionRequest, IPositionMirrorSettled, IPositionMirrorSlot, IPuppetRouteSubscritpion, getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-utils"
+import { IMirrorPositionRequest, IPositionMirrorSettled, IPositionMirrorSlot, IPuppetSubscritpion, getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { IProcessEnvironmentMode, IProcessedStore, IProcessedStoreConfig, defineProcess, validateConfig } from "../../utils/indexer/processor.js"
@@ -55,16 +55,15 @@ export interface IGmxProcessState {
   mirrorPositionRequest: Record<viem.Hex, IMirrorPositionRequest>
   mirrorPositionSlot: Record<viem.Hex, IPositionMirrorSlot>
   mirrorPositionSettled: IPositionMirrorSettled[]
-  subscription: IPuppetRouteSubscritpion[]
+  subscription: IPuppetSubscritpion[]
 
   // mirrorPositionSlotV2: Record<viem.Hex, IPositionMirrorSlotV2>
   // mirrorPositionSettledV2: IAccountToRouteMap<IPositionMirrorSettled[]>
 
 }
 
-
 const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
-  const req = await (await fetch('/db/sha256-LruEufxZQeRDJwpeCi5Vg_jnfEEkw1Tv8fBo+bYobWg=.json')).json().catch(() => null)
+  const req = await (await fetch('/db/sha256-UEb947xBE+yJ1jQ2YyQMcaPdL4_JLMCBmE+gBf6fO_I=.json')).json().catch(() => null)
 
   if (req === null) {
     return null
@@ -109,7 +108,7 @@ const state: IGmxProcessState = {
 
 const config: IProcessedStoreConfig = {
   startBlock: 107745255n,
-  endBlock: 146000000n,
+  endBlock: 146100000n,
   chainId: arbitrum.id,
 }
 
@@ -118,7 +117,7 @@ const config: IProcessedStoreConfig = {
 export const gmxProcess = defineProcess(
   {
     seedFile,
-    mode: import.meta.env.VITE_SW_DEV ? IProcessEnvironmentMode.DEV : IProcessEnvironmentMode.PROD,
+    mode: import.meta.env.DEV ? IProcessEnvironmentMode.DEV : IProcessEnvironmentMode.PROD,
     blueprint: { config, state },
     parentScope: rootStoreScope,
     queryBlockRange: 100000n,
@@ -194,8 +193,8 @@ export const gmxProcess = defineProcess(
       const update = getEventType<IPositionIncrease>('PositionIncrease', value, seed.blockMetrics.timestamp)
 
 
-      const mirrorSlot = seed.mirrorPositionRequest[update.orderKey]
-      if (!mirrorSlot) {
+      const mirrorSlotRequest = seed.mirrorPositionRequest[update.positionKey]
+      if (!mirrorSlotRequest) {
         return seed
       }
 
@@ -218,12 +217,12 @@ export const gmxProcess = defineProcess(
         isLong: update.isLong,
         indexToken: market.indexToken,
         // latestUpdate: update,
-        puppets: [],
+        puppets: mirrorSlotRequest.puppets,
         // feeUpdates: [],
         orderKey: update.orderKey,
-        routeTypeKey: getRouteTypeKey(update.collateralToken, update.market, update.isLong, '0x'),
+        routeTypeKey: mirrorSlotRequest.routeTypeKey,
         route: ADDRESS_ZERO,
-        trader: mirrorSlot.trader,
+        trader: mirrorSlotRequest.trader,
         shares: [],
         shareSupply: 0n,
         traderShare: 0n,
@@ -269,6 +268,17 @@ export const gmxProcess = defineProcess(
     source: gmxLog.positionDecrease,
     // queryBlockRange: 100000n,
     step(seed, value) {
+      // TODO: remove
+      if (!seed.routeMap['0xa437f95c9cee26945f76bc090c3491ffa4e8feb32fd9f4fefbe32c06a7184ff3']) { 
+        seed.routeMap['0xa437f95c9cee26945f76bc090c3491ffa4e8feb32fd9f4fefbe32c06a7184ff3'] =  {
+          marketSalt: '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e5831000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000004bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075',
+          indexToken: GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN,
+          collateralToken: GMX.ARBITRUM_ADDRESS.USDC,
+          isLong: false,
+          routeTypeKey: '0xa437f95c9cee26945f76bc090c3491ffa4e8feb32fd9f4fefbe32c06a7184ff3'
+        }
+      }
+
       const update = getEventType<IPositionDecrease>('PositionDecrease', value, seed.blockMetrics.timestamp)
       const slot = seed.mirrorPositionSlot[update.positionKey]
 
@@ -305,10 +315,10 @@ export const gmxProcess = defineProcess(
           transactionHash: value.transactionHash,
           __typename: 'PositionSettled',
         } as const)
-      }
 
-      delete seed.mirrorPositionSlot[update.positionKey]
-      delete seed.mirrorPositionRequest[update.orderKey]
+        delete seed.mirrorPositionSlot[update.positionKey]
+        delete seed.mirrorPositionRequest[update.positionKey]
+      }
 
 
       return seed
@@ -358,7 +368,7 @@ export const gmxProcess = defineProcess(
     step(seed, value) {
       const args = value.args
 
-      seed.mirrorPositionRequest[args.requestKey] ??= {
+      seed.mirrorPositionRequest[args.positionKey] ??= {
         ...args,
       }
 
@@ -370,26 +380,24 @@ export const gmxProcess = defineProcess(
     source: puppetLog.subscribeRoute,
     step(seed, value) {
       const args = value.args
-      const subscKey = getPuppetSubscriptionKey(args.puppet, args.trader, args.routeTypeKey)
-      let subsc = seed.subscription.find(subsc => subsc.puppetSubscriptionKey === subscKey)
+      const puppetSubscriptionKey = getPuppetSubscriptionKey(args.puppet, args.trader, args.routeTypeKey)
+      const subsc = seed.subscription.find(s => s.puppetSubscriptionKey === puppetSubscriptionKey)
 
-      if (!subsc) {
-        subsc = {
-          allowance: 0n,
+
+      if (subsc) {
+        Object.assign(subsc, args)
+      } else {
+        seed.subscription.push({
+          allowance: args.allowance,
           puppet: args.puppet,
           trader: args.trader,
-          puppetSubscriptionKey: subscKey,
+          puppetSubscriptionKey,
           routeTypeKey: args.routeTypeKey,
-          subscribed: args.subscribe,
-          expiry: 0n,
-          // settled: [],
-          // open: []
-        }
-
-        seed.subscription.push(subsc)
+          subscribe: args.subscribe,
+          subscriptionExpiry: args.subscriptionExpiry,
+        })
       }
 
-      subsc.subscribed = args.subscribe
 
       return seed
     },

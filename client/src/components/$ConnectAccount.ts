@@ -64,7 +64,7 @@ export const $ConnectWeb3Modal = () => component((
           $content: $walletConnectLogo,
           viewBox: '0 0 32 32',
         }),
-        $text('WalletConnect'),
+        $text('Connect Wallet'),
       )
     })({
       click: walletChangeTether(

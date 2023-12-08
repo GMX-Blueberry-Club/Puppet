@@ -16,7 +16,7 @@ export const CONTRACT = {
       abi: puppet,
     },
     Datastore: {
-      address: "0x7c543a3B2b463984bCf94847798be384a4022E16",
+      address: "0x803f3e2ab48DD93ac62bf1d0DB5F434E7B915158",
       abi: datastore,
     },
     Orchestrator: {

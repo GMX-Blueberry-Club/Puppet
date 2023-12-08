@@ -9,7 +9,7 @@ import * as GMX from 'gmx-middleware-const'
 import { $Table, ISortBy, ScrollRequest } from "gmx-middleware-ui-components"
 import { IAbstractPositionParams, pagingQuery, switchMap } from "gmx-middleware-utils"
 import { ROUTE_DESCRIPTION } from "puppet-middleware-const"
-import { IPositionMirrorSlot, IPuppetRouteSubscritpion, getMpSlotPnL, getRouteTypeKey } from "puppet-middleware-utils"
+import { IPositionMirrorSlot, IPuppetSubscritpion, getMpSlotPnL, getRouteTypeKey } from "puppet-middleware-utils"
 import { $labelDisplay } from "../../common/$TextField.js"
 import { $TraderDisplay, $route, $size } from "../../common/$common.js"
 import { $DropMultiSelect } from "../../components/form/$Dropdown.js"
@@ -27,14 +27,14 @@ import * as storage from "../../utils/storage/storeScope.js"
 
 export type ITopOpen = {
   route: router.Route
-  subscriptionList: Stream<IPuppetRouteSubscritpion[]>
+  subscriptionList: Stream<IPuppetSubscritpion[]>
   processData: Stream<IGmxProcessState>
 }
 
 
 export const $TopOpen = (config: ITopOpen) => component((
   [routeChange, routeChangeTether]: Behavior<any, string>,
-  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
   [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionOpen>>,
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
   [routeTypeChange, routeTypeChangeTether]: Behavior<IAbstractPositionParams[]>,

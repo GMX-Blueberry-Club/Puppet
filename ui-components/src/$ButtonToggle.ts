@@ -18,12 +18,12 @@ export interface IButtonToggle<T> {
 
 export const $defaulButtonToggleBtn = $row(style({
   placeContent: 'center', fontWeight: 'bold',
-  borderRadius: '442px', padding: '6px 12px', alignItems: 'center', border: '1px solid transparent',
-  cursor: 'pointer'
+  borderRadius: '442px', padding: '8px 14px', alignItems: 'center', border: '1px solid transparent',
+  cursor: 'pointer', margin: '-1px'
 }))
 
-export const $defaulButtonToggleContainer = $row(layoutSheet.spacingSmall, style({
-  borderRadius: '442px', padding: '8px 12px',
+export const $defaulButtonToggleContainer = $row(style({
+  borderRadius: '442px',
   border: `1px solid ${pallete.horizon}`, backgroundColor: pallete.background
 }))
 
@@ -45,7 +45,7 @@ export const $ButtonToggle = <T>({ options, selected, $$option = defaultOption, 
           styleBehavior(
             map(selectedOpt => {
               return selectedOpt === opt
-                ? { backgroundColor: pallete.primary, cursor: 'default' }
+                ? { boxShadow: `0px 0px 0 2px ${pallete.primary} inset`, cursor: 'default' }
                 : null
             }, selected)
           )

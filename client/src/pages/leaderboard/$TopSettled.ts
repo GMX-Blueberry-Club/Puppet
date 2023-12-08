@@ -8,11 +8,11 @@ import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $ButtonToggle, $Table, $bear, $bull, $icon, $marketLabel, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "gmx-middleware-ui-components"
 import { IMarketCreatedEvent, IPositionListSummary, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
-import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
+import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetSubscritpion, accountSettledTradeListSummary } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $labelDisplay } from "../../common/$TextField.js"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $size } from "../../common/$common.js"
-import { $card } from "../../common/elements/$common.js"
+import { $card, $responsiveFlex } from "../../common/elements/$common.js"
 import { $DropMultiSelect } from "../../components/form/$Dropdown.js"
 import { $tableHeader } from "../../components/table/$TableColumn.js"
 import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceGraph.js"
@@ -21,6 +21,7 @@ import { rootStoreScope } from "../../data/store/store.js"
 import * as storage from "../../utils/storage/storeScope.js"
 import { $seperator2 } from "../common.js"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity.js"
+import { $ButtonPrimaryCtx } from "../../components/form/$Button"
 
 
 
@@ -28,13 +29,13 @@ import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivi
 export type ITopSettled = {
   route: router.Route
   processData: Stream<IGmxProcessState>
-  subscriptionList: Stream<IPuppetRouteSubscritpion[]>
+  subscriptionList: Stream<IPuppetSubscritpion[]>
 }
 
 type FilterTable =  { activityTimeframe: GMX.IntervalTime } | null
 
 export const $TopSettled = (config: ITopSettled) => component((
-  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
   
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
   [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionListSummary>>,
@@ -75,7 +76,7 @@ export const $TopSettled = (config: ITopSettled) => component((
       const tradeListMap = groupArrayMany(flattenMapMap, a => a.routeTypeKey)
       const tradeListEntries = Object.values(tradeListMap)
       const filterestPosList = tradeListEntries.map(settledTradeList => {
-        return summariesMirrorTrader(settledTradeList)
+        return accountSettledTradeListSummary(settledTradeList[0].trader, settledTradeList)
       })
 
       return pagingQuery({ ...params.sortBy, ...req }, filterestPosList)
@@ -93,7 +94,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
       $card(layoutSheet.spacingBig, style({ flex: 1 }))(
 
-        $row(layoutSheet.spacingBig, style({ placeContent: 'space-between', alignItems: 'flex-start' }))(
+        $responsiveFlex(layoutSheet.spacingBig, style({ placeContent: 'space-between', alignItems: 'flex-start' }))(
           switchMap(params => {
 
             return $DropMultiSelect({
@@ -170,11 +171,9 @@ export const $TopSettled = (config: ITopSettled) => component((
           //   }, openFilterPopover)
           // })({}),
           
-          style({ flexDirection: screenUtils.isDesktopScreen ? 'row': 'column' })(
-            $LastAtivity(activityTimeframe)({
-              changeActivityTimeframe: changeActivityTimeframeTether()
-            })
-          ),
+          $LastAtivity(activityTimeframe)({
+            changeActivityTimeframe: changeActivityTimeframeTether()
+          }),
         ),
     
         switchMap(params => {
@@ -184,14 +183,14 @@ export const $TopSettled = (config: ITopSettled) => component((
           const columns: TableColumn<IMirrorPositionListSummary>[] = [
             {
               $head: $text('Trade Route'),
-              gridTemplate: '144px',
+              gridTemplate: screenUtils.isDesktopScreen ? '144px' : '80px',
               // columnOp: style({ placeContent: 'flex-end' }),
               $bodyCallback: map(pos => {
 
                 return $TraderRouteDisplay({
                   positionParams: pos.settledTradeList[0],
-                  trader: pos.trader,
-                  routeTypeKey: "0x93cb002897c6c7abbfb8c989a4a7ff330281ef970b11063800469e7ea87f063d",
+                  trader: pos.account,
+                  routeTypeKey: "0xa437f95c9cee26945f76bc090c3491ffa4e8feb32fd9f4fefbe32c06a7184ff3",
                   subscriptionList: config.subscriptionList,
                 })({
                   modifySubscribeList: modifySubscriberTether()
@@ -206,7 +205,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
                 return $TraderDisplay({
                   route: config.route,
-                  trader: pos.trader,
+                  trader: pos.account,
                 })({ 
                   clickTrader: routeChangeTether()
                 })
@@ -242,7 +241,7 @@ export const $TopSettled = (config: ITopSettled) => component((
             },
             {
               $head: $tableHeader('PnL $', 'ROI %'),
-              gridTemplate: '90px',
+              gridTemplate: screenUtils.isDesktopScreen ? '120px' : '80px',
               sortBy: 'pnl',
               columnOp: style({ placeContent: 'flex-end' }),
               $bodyCallback: map(mp => {
@@ -265,7 +264,8 @@ export const $TopSettled = (config: ITopSettled) => component((
                     
                     return screenUtils.isDesktopScreen
                       ? $ProfilePerformanceGraph({
-                        $container: $row(style({ position: 'relative',  width: `160px`, height: `80px`, margin: '-16px 0' })),
+                        account: pos.account,
+                        $container: $row(style({ position: 'relative',  width: `180px`, height: `80px`, margin: '-16px 0' })),
                         tickCount: 50,
                         processData: params.data,
                         positionList: pos.settledTradeList,

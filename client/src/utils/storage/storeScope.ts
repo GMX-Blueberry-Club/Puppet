@@ -50,14 +50,14 @@ export function get<TData, TKey extends string, TName extends string, TOptions e
 export function write<TData, TKey extends string, TName extends string, TOptions extends indexDB.IDbStoreConfig>(
   scope: IStoreScope<TName, TOptions>, writeEvent: Stream<TData>, key: TKey | IStoreScope<TName, TOptions>['name'] = scope.name
 ): Stream<TData> {
-  return multicast(join(map(data => indexDB.set(scope, data, key), writeEvent)))
+  return join(map(data => indexDB.set(scope, data, key), writeEvent))
 }
 
 export function replayWrite<TData, TKey extends string, TName extends string, TOptions extends indexDB.IDbStoreConfig>(
   scope: IStoreScope<TName, TOptions>, seed: TData, writeEvent: Stream<TData>, key: TKey | IStoreScope<TName, TOptions>['name'] = scope.name
 ): Stream<TData> {
   const storedValue = get(scope, seed, key)
-  return replayLatest(multicast(continueWith(() => write(scope, writeEvent, key), storedValue)))
+  return continueWith(() => write(scope, writeEvent, key), storedValue)
 }
 
 

@@ -130,8 +130,8 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
                     constant(pos),
                   )
                 }),
-                $sizeAndLiquidation(pos, positionMarkPrice),
-                $openPnl(config.processData, pos),
+                $sizeAndLiquidation(pos, positionMarkPrice, pos.trader),
+                $openPnl(config.processData, pos, pos.trader),
 
                 $ButtonSecondary({
                   $content: $text('Close'),

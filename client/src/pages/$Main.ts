@@ -10,11 +10,11 @@ import * as GMX from "gmx-middleware-const"
 import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN } from "gmx-middleware-const"
 import { $Tooltip, $alertContainer, $spinner } from "gmx-middleware-ui-components"
 import { filterNull, readableUnitAmount, switchMap, timeSince } from "gmx-middleware-utils"
-import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
+import { IPuppetSubscritpion } from "puppet-middleware-utils"
 import { $midContainer } from "../common/$common.js"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount.js"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu.js'
-import { $RouteSubscriptionDrawer } from "../components/$RouteSubscription.js"
+import { $RouteSubscriptionDrawer } from "../components/route/$RouteSubscriptionDrawer.js"
 import { gmxProcess } from "../data/process/process.js"
 import { contractReader } from "../logic/common.js"
 import { fadeIn } from "../transitions/enter.js"
@@ -44,8 +44,8 @@ interface Website {
 
 export const $Main = ({ baseRoute = '' }: Website) => component((
   [routeChanges, linkClickTether]: Behavior<any, string>,
-  [modifySubscriptionList, modifySubscriptionListTether]: Behavior<IPuppetRouteSubscritpion[]>,
-  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
+  [modifySubscriptionList, modifySubscriptionListTether]: Behavior<IPuppetSubscritpion[]>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
   [syncProcessData, syncProcessDataTether]: Behavior<bigint>,
   [clickUpdateVersion, clickUpdateVersionTether]: Behavior<any, bigint>,
 
@@ -73,7 +73,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       return now(params.store)
     }
 
-    const refreshThreshold = import.meta.env.VITE_SW_DEV ? 50 : 50
+    const refreshThreshold = import.meta.env.DEV ? 50 : 50
     const blockDelta = params.syncBlock - params.store.blockNumber
 
     if (refreshThreshold < blockDelta) {
@@ -162,7 +162,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   const isDesktopScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
 
   
-  const subscriptionList: Stream<IPuppetRouteSubscritpion[]> = replayLatest(multicast(switchLatest(map(w3p => {
+  const subscriptionList: Stream<IPuppetSubscritpion[]> = replayLatest(multicast(switchLatest(map(w3p => {
     if (!w3p) {
       return now([])
     }
@@ -235,13 +235,14 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                           route: walletRoute,
                           processData,
                           wallet: wallet,
+                          subscriptionList
                         })({
                           changeRoute: linkClickTether(),
                         }))
                     })
                   })({})
                 ),
-                router.contains(leaderboardRoute)(
+                router.match(leaderboardRoute)(
                   $midContainer(
                     fadeIn($Leaderboard({
                       subscriptionList,
@@ -330,7 +331,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
             ),
             
             switchMap(params => {
-              const refreshThreshold = import.meta.env.VITE_SW_DEV ? 150 : 50
+              const refreshThreshold = import.meta.env.DEV ? 150 : 50
               const blockDelta = params.syncBlock ? params.syncBlock - params.process.blockNumber : null
 
               if (blockDelta === null || blockDelta < refreshThreshold) return empty()
@@ -357,9 +358,9 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
    
           ),
                         
-          $column(style({ maxWidth: '850px', margin: '0 auto', width: '100%', zIndex: 10 }))(
+          $column(style({ maxWidth: '1000px', margin: '0 auto', width: '100%', zIndex: 10 }))(
             $RouteSubscriptionDrawer({
-              modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetRouteSubscritpion[]),
+              modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetSubscritpion[]),
               modifySubscriber,
               subscriptionList,
               processData

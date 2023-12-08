@@ -1,4 +1,4 @@
-import { Behavior } from "@aelea/core"
+import { Behavior, combineObject } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
@@ -8,17 +8,19 @@ import * as GMX from 'gmx-middleware-const'
 import { $ButtonToggle, $defaulButtonToggleContainer } from "gmx-middleware-ui-components"
 import {
   ETH_ADDRESS_REGEXP,
-  IRequestAccountTradeListApi
+  IRequestAccountTradeListApi,
+  unixTimestampNow
 } from "gmx-middleware-utils"
-import { IPuppetRouteSubscritpion } from "puppet-middleware-utils"
+import { IPuppetSubscritpion } from "puppet-middleware-utils"
 import * as viem from 'viem'
-import { $PuppetProfile } from "../components/participant/$Puppet.js"
+import { $PuppetPortfolio, $PuppetProfile } from "../components/participant/$Puppet.js"
 import { $TraderProfile } from "../components/participant/$Trader.js"
 import { IGmxProcessState } from "../data/process/process.js"
 import * as store from "../data/store/store.js"
 import * as storage from "../utils/storage/storeScope.js"
 import { $LastAtivity } from "./components/$LastActivity.js"
 import { rootStoreScope } from "../data/store/store.js"
+import { $TraderProfileSummary } from "../components/participant/$Summary"
 
 
 export enum IProfileActiveTab {
@@ -29,7 +31,7 @@ export enum IProfileActiveTab {
 export interface IProfile {
   route: router.Route
   processData: Stream<IGmxProcessState>
-  subscriptionList: Stream<IPuppetRouteSubscritpion[]>
+  subscriptionList: Stream<IPuppetSubscritpion[]>
 }
 
 const $title = $text(style({ fontWeight: 'bold', fontSize: '1.35em' }))
@@ -44,7 +46,7 @@ type IRouteOption = {
 export const $Profile = (config: IProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [selectProfileMode, selectProfileModeTether]: Behavior<IRouteOption, IRouteOption>,
-  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetRouteSubscritpion>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
   
 ) => {
@@ -57,29 +59,29 @@ export const $Profile = (config: IProfile) => component((
 
   const options: IRouteOption[] = [
     {
+      label: 'Puppet',
+      fragment: 'puppet'
+    },
+    {
       label: 'Trader',
       fragment: 'trader'
     },
-    {
-      label: 'Puppet',
-      fragment: 'puppet'
-    }
   ]
 
 
 
   return [
 
-    $column(layoutSheet.spacingBig, style({ paddingTop: '50px', }))(
+    $column(layoutSheet.spacingBig)(
+
+      $node(),
 
       $column(layoutSheet.spacingBig, style({ alignItems: 'center', placeContent: 'center' }))(
-        
-
         $ButtonToggle({
           $container: $defaulButtonToggleContainer(style({ alignSelf: 'center', })),
           selected: mergeArray([
-            router.match<IRouteOption>(traderRoute)(now(options[0])),
-            router.match<IRouteOption>(puppetRoute)(now(options[1])),
+            router.match<IRouteOption>(puppetRoute)(now(options[0])),
+            router.match<IRouteOption>(traderRoute)(now(options[1])),
           ]),
           options,
           $$option: map(option => {
@@ -90,34 +92,36 @@ export const $Profile = (config: IProfile) => component((
 
       
 
-      router.match(traderRoute)(
-        {
-          run(sink, scheduler) {
-            const urlFragments = document.location.pathname.split('/')
-            const address = viem.getAddress(urlFragments[urlFragments.length - 2])
+     
+      {
+        run(sink, scheduler) {
+          const urlFragments = document.location.pathname.split('/')
+          const address = viem.getAddress(urlFragments[urlFragments.length - 2])
 
-            return $TraderProfile({ ...config, address, activityTimeframe })({
-              subscribeTreader: modifySubscriberTether(),
-              changeRoute: changeRouteTether(),
-              changeActivityTimeframe: changeActivityTimeframeTether(),
-            }).run(sink, scheduler)
-          },
-        }
-      ),
-      router.match(puppetRoute)(
-        {
-          run(sink, scheduler) {
-            const urlFragments = document.location.pathname.split('/')
-            const address = urlFragments[urlFragments.length - 2] as viem.Address
+          const settledTradeList = map(params => {
+            const filterStartTime = unixTimestampNow() - params.activityTimeframe
+            const list = params.processData.mirrorPositionSettled.filter(pos => pos.trader === address && pos.blockTimestamp > filterStartTime).reverse()
+            return list
+          }, combineObject({ processData: config.processData, activityTimeframe }))
 
-            return $PuppetProfile({ ...config, address, activityTimeframe })({
-              changeRoute: changeRouteTether(),
-              changeActivityTimeframe: changeActivityTimeframeTether(),
-              modifySubscriber: modifySubscriberTether()
-            }).run(sink, scheduler)
-          },
-        }
-      ),
+          return  $column(
+            router.match(traderRoute)(
+              $TraderProfile({ ...config, address, activityTimeframe })({
+                modifySubscriber: modifySubscriberTether(),
+                changeRoute: changeRouteTether(),
+                changeActivityTimeframe: changeActivityTimeframeTether(),
+              })
+            ),
+            router.match(puppetRoute)(
+              $PuppetProfile({ ...config, address, activityTimeframe })({
+                changeRoute: changeRouteTether(),
+                changeActivityTimeframe: changeActivityTimeframeTether(),
+                modifySubscriber: modifySubscriberTether()
+              })
+            ),
+          ).run(sink, scheduler)
+        },
+      },
       
       $node(),
       $node(),

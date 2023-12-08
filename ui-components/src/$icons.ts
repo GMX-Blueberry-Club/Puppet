@@ -187,7 +187,6 @@ export const $sol = $svg('g')(
 
 export const $tokenIconMap = {
   [TOKEN_SYMBOL.GMX]: $gmx,
-  [TOKEN_SYMBOL.ARB]: $gmx,
   [TOKEN_SYMBOL.ESGMX]: $gmx,
   [TOKEN_SYMBOL.GLP]: $glp,
 

@@ -32,20 +32,23 @@ export interface IPositionMirrorSettled extends IPositionSettled, IPositionMirro
 }
 
 export interface IMirrorPositionListSummary extends IPositionListSummary {
-  routeTypeKey: viem.Hex
+  // routeTypeKey?: viem.Hex
   puppets: viem.Address[]
-  trader: viem.Address
+  account: viem.Address
   settledTradeList: IPositionMirrorSettled[]
 }
 
 
-export type IPuppetRouteSubscritpion = {
-  trader: viem.Address
-  puppet: viem.Address
-  subscribed: boolean
+export type IPuppetSubscritpionParams = {
+  subscribe: boolean
   allowance: bigint
+  subscriptionExpiry: bigint
   routeTypeKey: viem.Hex
-  expiry: bigint
+  trader: viem.Address
+}
+
+export type IPuppetSubscritpion = IPuppetSubscritpionParams & {
+  puppet: viem.Address
   puppetSubscriptionKey: viem.Hex
 }
 

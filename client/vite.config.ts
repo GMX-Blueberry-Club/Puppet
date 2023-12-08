@@ -22,6 +22,7 @@ const pwaOptions: Partial<VitePWAOptions> = {
   workbox: {
     cleanupOutdatedCaches: false
   },
+  // selfDestroying: Boolean(process.env.SW_DESTROY),
   registerType: 'autoUpdate',
   strategies: 'injectManifest',
   injectManifest: {
@@ -37,7 +38,12 @@ const pwaOptions: Partial<VitePWAOptions> = {
     description: SITE_CONFIG.APP_DESC_LONG,
     theme_color: SITE_CONFIG.THEME_BACKGROUND,
     background_color: SITE_CONFIG.THEME_BACKGROUND,
+    lang:"en",
     start_url: '/app/leaderboard/settled',
+    display:"standalone",
+    orientation: "any",
+    categories:[ "Copy Trading", "Decentralized Perpetual Exchange", "DeFi" ],
+
     // screenshots: [
     //   {
     //     src: "video/trade-adjust.mp4",
@@ -54,6 +60,19 @@ const pwaOptions: Partial<VitePWAOptions> = {
     //     label: "Wonder Widgets"
     //   }
     // ],
+    // share_target: { 
+    //   action:"/?utm_medium=PWA&utm_source=share-target&share-target",
+    //   method:"POST",
+    //   enctype:"multipart/form-data", params:{ files:[{ name:"file", accept:["image/*"] }] }
+    // },
+    screenshots:[
+      { src:"/screenshot/narrow1.png", type:"image/png", sizes:"828x1792", form_factor:"narrow" },
+      { src:"/screenshot/narrow2.png", type:"image/png", sizes:"828x1792", form_factor:"narrow" },
+
+      { src:"/screenshot/wide1.png", type:"image/png", sizes:"3260x1692", form_factor:"wide" },
+      { src:"/screenshot/wide2.png", type:"image/png", sizes:"3260x1692", form_factor:"wide" }
+      
+    ],
     icons: [
       {
         src: 'pwa-192x192.png',
@@ -71,21 +90,15 @@ const pwaOptions: Partial<VitePWAOptions> = {
   mode: 'development',
   base: '/',
   devOptions: {
+    // navigateFallbackAllowlist: [/^index.html$/],
     // enabled: true,
-    enabled: process.env.SW_DEV === 'true',
+    enabled: Boolean(process.env.SW_DEV),
     /* when using generateSW the PWA plugin will switch to classic */
     type: 'module',
     navigateFallback: 'index.html',
     suppressWarnings: true,
   },
 }
-
-
-// const replaceOptions = process.env.SW_DEV ? { __DATE__: new Date().toISOString(), SW_DEV: process.env.SW_DEV } : { __DATE__: new Date().toISOString(), SW_DEV: process.env.SW_DEV, ...SITE_CONFIG }
-const selfDestroying = process.env.SW_DESTROY === 'true'
-
-if (selfDestroying)
-  pwaOptions.selfDestroying = selfDestroying
 
 
 // https://vitejs.dev/config/
@@ -100,9 +113,9 @@ export default defineConfig({
     replace({
       include: 'index.html',
       __DATE__: new Date().toISOString(),
-      SW_DEV: process.env.SW_DEV,
+      SW_DEV: process.env.DEV,
       ...SITE_CONFIG
-    }),
+    }) as any,
   ],
   build: {
     outDir: ".dist",

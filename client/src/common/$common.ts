@@ -21,11 +21,10 @@ import {
   readableTokenUsd,
   streamOf, switchMap, IMarket, IMarketCreatedEvent, ITradeRoute
 } from "gmx-middleware-utils"
-import { getMpSlotPnL, getParticiapntMpPortion, getPuppetSubscriptionKey, getRouteTypeKey, IPositionMirrorSlot, IPuppetRouteSubscritpion } from "puppet-middleware-utils"
+import { getMpSlotPnL, getParticiapntMpPortion, getPuppetSubscriptionKey, getRouteTypeKey, IPositionMirrorSlot, IPuppetSubscritpion, IPuppetSubscritpionParams } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile.js"
 import { $Popover } from "../components/$Popover.js"
-import { $RouteSubscriptionEditor } from "../components/$RouteSubscription.js"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button.js"
 import { IGmxProcessState, latestTokenPrice } from "../data/process/process"
 import { contractReader } from "../logic/common"
@@ -35,12 +34,13 @@ import { wallet } from "../wallet/walletLink.js"
 import { $puppetLogo } from "./$icons.js"
 import { $labeledDivider } from "./elements/$common"
 import { $caretDown } from "./elements/$icons"
+import { $RouteSubscriptionEditor } from "../components/route/$RouteSubscriptionEditor"
 
 
 export const $midContainer = $column(
   style({
     margin: '0 auto',
-    maxWidth: '840px', padding: '0px 12px 26px',
+    maxWidth: '980px', padding: '0px 12px 26px',
     gap: screenUtils.isDesktopScreen ? '50px' : '50px',
     width: '100%',
   })
@@ -132,9 +132,9 @@ export const $tokenIcon = (indexToken: viem.Address, IIcon: { width: string } = 
   })
 }
 
-export const $sizeAndLiquidation = (mp: IPositionMirrorSlot, markPrice: Stream<IOraclePrice>, shareTarget?: viem.Address) => {
-  const size = getParticiapntMpPortion(mp, mp.maxSizeUsd, shareTarget)
-  const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, shareTarget)
+export const $sizeAndLiquidation = (mp: IPositionMirrorSlot, markPrice: Stream<IOraclePrice>, account: viem.Address) => {
+  const size = getParticiapntMpPortion(mp, mp.maxSizeUsd, account)
+  const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, account)
   const update = lst(mp.updates)
 
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
@@ -169,22 +169,22 @@ export const $puppets = (puppets: readonly viem.Address[], click: Tether<INode, 
   )
 }
 
-export const $openPnl = (processData: Stream<IGmxProcessState>, pos: IPositionMirrorSlot, shareTarget?: viem.Address) => {
+export const $openPnl = (processData: Stream<IGmxProcessState>, pos: IPositionMirrorSlot, account: viem.Address) => {
   const positionMarkPrice = latestTokenPrice(processData, pos.indexToken)
 
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
     style({ flexDirection: 'row-reverse' })(
       $infoTooltipLabel(
-        $positionSlotPnl(pos, positionMarkPrice, shareTarget),
-        $positionSlotPnl(pos, positionMarkPrice, shareTarget),
+        $positionSlotPnl(pos, positionMarkPrice, account),
+        $positionSlotPnl(pos, positionMarkPrice, account),
       )
     ),
     $seperator2,
-    style({ fontSize: '.85rem' })($positionSlotRoi(pos, positionMarkPrice)),
+    style({ fontSize: '.85rem' })($positionSlotRoi(pos, positionMarkPrice, account)),
   )
 }
 
-export const $stake = (processData: Stream<IGmxProcessState>, pos: IPositionMirrorSlot, shareTarget?: viem.Address) => {
+export const $stake = (processData: Stream<IGmxProcessState>, pos: IPositionMirrorSlot, account: viem.Address) => {
   const positionMarkPrice = latestTokenPrice(processData, pos.indexToken)
   const cumulativeTokenFundingRates = contractReader(GMX.CONTRACT['42161'].Vault)('cumulativeFundingRates', pos.collateralToken)
 
@@ -193,11 +193,11 @@ export const $stake = (processData: Stream<IGmxProcessState>, pos: IPositionMirr
     style({ flexDirection: 'row-reverse' })(
       $infoTooltipLabel(
         $openPositionPnlBreakdown(pos, ff),
-        $positionSlotPnl(pos, positionMarkPrice, shareTarget)
+        $positionSlotPnl(pos, positionMarkPrice, account)
       )
     ),
     $seperator2,
-    style({ fontSize: '.85rem' })($positionSlotRoi(pos, positionMarkPrice)),
+    style({ fontSize: '.85rem' })($positionSlotRoi(pos, positionMarkPrice, account)),
   )
 }
 
@@ -234,10 +234,10 @@ export const $PnlPercentageValue = (pnl: Stream<bigint> | bigint, collateral: bi
   )
 }
 
-export const $positionSlotPnl = (mp: IPositionMirrorSlot, positionMarkPrice: Stream<IOraclePrice> | bigint, shareTarget?: viem.Address) => {
+export const $positionSlotPnl = (mp: IPositionMirrorSlot, positionMarkPrice: Stream<IOraclePrice> | bigint, account: viem.Address) => {
   const value = isStream(positionMarkPrice)
     ? map((price) => {
-      const pnl = getMpSlotPnL(mp, price, shareTarget)
+      const pnl = getMpSlotPnL(mp, price, account)
       return mp.realisedPnl + pnl - mp.cumulativeFee
     }, positionMarkPrice)
     : positionMarkPrice
@@ -245,9 +245,9 @@ export const $positionSlotPnl = (mp: IPositionMirrorSlot, positionMarkPrice: Str
   return $pnlValue(value)
 }
 
-export const $positionSlotRoi = (pos: IPositionMirrorSlot, positionMarkPrice: Stream<IOraclePrice> | IOraclePrice) => {
+export const $positionSlotRoi = (pos: IPositionMirrorSlot, positionMarkPrice: Stream<IOraclePrice> | IOraclePrice, account: viem.Address) => {
   const roi = map(markPrice => {
-    const delta = getMpSlotPnL(pos, markPrice)
+    const delta = getMpSlotPnL(pos, markPrice, account)
     return readablePercentage(getBasisPoints(pos.realisedPnl + delta - pos.cumulativeFee, pos.maxCollateralUsd))
   }, streamOf(positionMarkPrice))
 
@@ -327,7 +327,7 @@ interface ITraderDisplay {
 interface ITraderRouteDisplay {
   trader: viem.Address
   routeTypeKey: viem.Hex
-  subscriptionList: Stream<IPuppetRouteSubscritpion[]>
+  subscriptionList: Stream<IPuppetSubscritpion[]>
   positionParams: IAbstractPositionParams
 }
 
@@ -335,8 +335,8 @@ interface ITraderRouteDisplay {
 
 export const $TraderDisplay =  (config: ITraderDisplay) => component((
   [clickTrader, clickTraderTether]: Behavior<any, viem.Address>,
-  [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, IPuppetRouteSubscritpion>,
-  [modifySubscribeList, modifySubscribeListTether]: Behavior<IPuppetRouteSubscritpion>,
+  [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, IPuppetSubscritpionParams>,
+  [modifySubscribeList, modifySubscribeListTether]: Behavior<IPuppetSubscritpionParams>,
 ) => {
 
 
@@ -358,8 +358,8 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
 
 export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
   [clickTrader, clickTraderTether]: Behavior<any, viem.Address>,
-  [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, IPuppetRouteSubscritpion>,
-  [modifySubscribeList, modifySubscribeListTether]: Behavior<IPuppetRouteSubscritpion>,
+  [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, IPuppetSubscritpionParams>,
+  [modifySubscribeList, modifySubscribeListTether]: Behavior<IPuppetSubscritpionParams>,
 ) => {
 
   // const { marketList } = config
@@ -371,21 +371,19 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
     $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
       switchMap(params => {
         const w3p = params.wallet
-        if (w3p === null) {
-          return $text('Connect wallet')
-        }
+        const account = w3p?.account.address || GMX.ADDRESS_ZERO
 
         const routeTypeKey = getRouteTypeKey(GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, true, '0x')
-        const puppetSubscriptionKey = getPuppetSubscriptionKey(w3p.account.address, config.trader, routeTypeKey)
+        const puppetSubscriptionKey = getPuppetSubscriptionKey(account, config.trader, routeTypeKey)
         const existingSubscription = params.subscriptionList.find(x => x.puppetSubscriptionKey === puppetSubscriptionKey)
-        const routeSubscription: IPuppetRouteSubscritpion = {
+        const routeSubscription: IPuppetSubscritpion = {
           routeTypeKey: config.routeTypeKey,
           trader: config.trader,
-          puppet: w3p.account.address,
+          puppet: account,
           allowance: existingSubscription?.allowance || 0n,
-          expiry: existingSubscription?.expiry || 0n,
+          subscriptionExpiry: existingSubscription?.subscriptionExpiry || 0n,
           puppetSubscriptionKey,
-          subscribed: existingSubscription?.subscribed || false
+          subscribe: existingSubscription?.subscribe || false
         }
 
 
@@ -395,7 +393,7 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
           $target: $row(layoutSheet.spacing)(
             $ButtonSecondary({
               $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
-                $route(config.positionParams),
+                $route(config.positionParams, screenUtils.isDesktopScreen),
                 // $icon({ $content: $puppetLogo, fill: pallete.message, width: '24px', viewBox: `0 0 32 32` }),
                 $icon({ $content: $caretDown, width: '14px', svgOps: style({ marginRight: '-4px' }), viewBox: '0 0 32 32' }),
               ),
@@ -405,7 +403,7 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
             }),
           ),
           $content: $RouteSubscriptionEditor({ routeSubscription })({
-            changeRouteSubscription: modifySubscribeListTether()
+            modifySubscribeList: modifySubscribeListTether()
           })
         })({})
       }, combineObject({ subscriptionList: config.subscriptionList, wallet }))

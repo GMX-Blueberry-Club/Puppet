@@ -1,5 +1,5 @@
 import { Behavior, combineObject, replayLatest } from "@aelea/core"
-import { $Node, $text, MOTION_NO_WOBBLE, NodeComposeFn, component, motion, style } from "@aelea/dom"
+import { $Node, $node, $text, MOTION_NO_WOBBLE, NodeComposeFn, component, motion, style } from "@aelea/dom"
 import { $NumberTicker, $column, $row } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { empty, map, multicast, now, skipRepeatsWith, startWith } from "@most/core"
@@ -18,12 +18,14 @@ import {
   parseReadableNumber,
   readableFixedUSD30,
   readableUnitAmount,
-  unixTimestampNow
+  unixTimestampNow,
+  getMappedValue
 } from "gmx-middleware-utils"
 import { BaselineData, ChartOptions, DeepPartial, LineType, MouseEventParams, Time } from "lightweight-charts"
 import { IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { IGmxProcessState, PRICEFEED_INTERVAL } from "../../data/process/process.js"
+import { LAST_ACTIVITY_LABEL_MAP } from "../../pages/components/$LastActivity"
 
 type IPerformanceTickUpdateTick = {
   update: IPositionIncrease | IPositionDecrease
@@ -37,11 +39,11 @@ type ITimelinePositionSlot = IPerformanceTickUpdateTick & {
 }
 
 export interface IPerformanceTimeline {
+  account: viem.Address,
   positionList: (IPositionMirrorSettled | IPositionMirrorSlot)[],
   processData: IGmxProcessState,
   tickCount: number,
   activityTimeframe: GMX.IntervalTime,
-  targetShare?: viem.Address,
   chartConfig?: DeepPartial<ChartOptions>
 }
 
@@ -121,7 +123,7 @@ export function performanceTimeline(config: IPerformanceTimeline) {
       delete acc.positionSlot[key]
 
       const nextSettlePnl = next.update.basePnlUsd
-      const pnlPortion = getParticiapntMpPortion(next.source, nextSettlePnl, config.targetShare)
+      const pnlPortion = getParticiapntMpPortion(next.source, nextSettlePnl, config.account)
       const openPnl = Object.values(acc.positionSlot).reduce((a, b) => a + b.openPnl + b.realisedPnl, 0n)
 
       const settledPnl = acc.settledPnl + pnlPortion // - position.cumulativeFee
@@ -137,7 +139,7 @@ export function performanceTimeline(config: IPerformanceTimeline) {
         const tokenPrice = getClosestpricefeedCandle(config.processData.pricefeed, tickerId, intervalSlot, 0)
 
         const pnl = getPositionPnlUsd(slot.update.isLong, slot.update.sizeInUsd, slot.update.sizeInTokens, tokenPrice.c)
-        const pnlShare = getParticiapntMpPortion(mp, pnl, config.targetShare)
+        const pnlShare = getParticiapntMpPortion(mp, pnl, config.account)
 
         return pnlAcc + pnlShare
       }, 0n)
@@ -205,15 +207,9 @@ export const $ProfilePerformanceCard = (config: IParticipantPerformanceGraph) =>
   }).sort((a, b) => Number(a.time) - Number(b.time))
 
 
-
   return [
-    $container(
+    config.positionList.length > 0 ? $container(
       $row(style({ position: 'absolute', placeContent: 'center',  top: '10px', alignSelf: 'center', zIndex: 11, alignItems: 'center', placeSelf: 'center' }))(
-        config.positionList.length === 0
-          ? $text(style({ 
-            fontSize: '.85rem', color: pallete.foreground, textAlign: 'center',
-          }))('No trades yet')
-          : empty(),
         $column(style({ alignItems: 'center' }))(
           $NumberTicker({
             textStyle: {
@@ -272,6 +268,13 @@ export const $ProfilePerformanceCard = (config: IParticipantPerformanceGraph) =>
           skipRepeatsWith((a, b) => a.point?.x === b.point?.x)
         )
       })
+    ) : $container(style({ placeContent: 'center', alignItems: 'center' }))(
+      $node(
+        $text(style({ 
+          color: pallete.foreground, textAlign: 'center',
+        }))('No activity within last '),
+        $text(getMappedValue(LAST_ACTIVITY_LABEL_MAP, config.activityTimeframe) )
+      )
     ),
 
     {

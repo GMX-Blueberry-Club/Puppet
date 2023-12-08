@@ -8,7 +8,7 @@ import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Link, $Table, $arrowDown, $arrowRight, $icon, ScrollRequest } from "gmx-middleware-ui-components"
 import { readableLeverage, pagingQuery, switchMap, unixTimestampNow, readableUnitAmount, formatFixed } from "gmx-middleware-utils"
-import { IPuppetRouteSubscritpion, summariesMirrorTrader } from "puppet-middleware-utils"
+import { IPuppetSubscritpion, accountSettledTradeListSummary } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileAvatar, $profileDisplay } from "../$AccountProfile.js"
 import { $heading2, $heading3 } from "../../common/$text.js"
@@ -22,6 +22,7 @@ import * as storage from "../../utils/storage/storeScope.js"
 import * as store from "../../data/store/store.js"
 import { $metricLabel, $metricRow, $metricValue } from "./profileUtils.js"
 import { rootStoreScope } from "../../data/store/store.js"
+import { $TraderProfileSummary } from "./$Summary"
 
 
 
@@ -29,33 +30,22 @@ export interface ITraderProfile {
   route: router.Route
   address: viem.Address
   processData: Stream<IGmxProcessState>
-  activityTimeframe: Stream<GMX.IntervalTime>;}
+  activityTimeframe: Stream<GMX.IntervalTime>
+}
 
 
 
 
-export const $TraderProfile = (config: ITraderProfile) => component((
+export const $TraderPortfolio = (config: ITraderProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<any, string>,
-  [subscribeTreader, subscribeTreaderTether]: Behavior<PointerEvent, IPuppetRouteSubscritpion>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
 
 ) => {
 
 
-  
-  const summary = map(params => {
-    const list = params.processData.mirrorPositionSettled.filter(pos => pos.trader === config.address).reverse()
-    const subscribedPuppets = params.processData.subscription.filter((sub) => sub.puppet === config.address).map(s => s.trader)
-
-    return {
-      stats: summariesMirrorTrader(list),
-      subscribedPuppets
-    }
-  }, combineObject({ processData: config.processData }))
-
-
-  const settledTrades = map(params => {
+  const settledTradeList = map(params => {
     const filterStartTime = unixTimestampNow() - params.activityTimeframe
     const list = params.processData.mirrorPositionSettled.filter(pos => pos.trader === config.address && pos.blockTimestamp > filterStartTime).reverse()
     return list
@@ -71,65 +61,10 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
   return [
 
-    $column(style({ gap: '46px', width: '100%', margin: '0 auto' }))(
-        
-
-      $column(layoutSheet.spacing, style({ minHeight: '90px' }))(
-        switchMap(params => {
-          const metrics = params.summary.stats
-
-          return $node(style({ display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column', gap: screenUtils.isDesktopScreen ? '76px' : '26px', zIndex: 10, placeContent: 'center', alignItems: 'center', padding: '0 8px' }))(
-            $row(
-              $profileDisplay({
-                address: config.address,
-                labelSize: '22px',
-                profileSize: screenUtils.isDesktopScreen ? 90 : 90
-              })
-            ),
-            $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end' }))(
-              $metricRow(
-                params.summary.subscribedPuppets.length
-                  ? $metricValue(style({ paddingBottom: '5px' }))(
-                    ...params.summary.subscribedPuppets.map(address => {
-                      return $profileAvatar({ address, profileSize: 26 })
-                    })
-                  )
-                  : $metricValue($text('-')),
-                $metricLabel($text('Puppets'))
-              ),
-              $metricRow(
-                $heading2(metrics.size ? `${metrics.winCount} / ${metrics.lossCount}` : '-'),
-                $metricLabel($text('Win / Loss'))
-              ),
-              $metricRow(
-                $heading2(metrics.size ? readableLeverage(metrics.avgSize, metrics.avgCollateral) : '-'),
-                $metricLabel($text('Avg Leverage'))
-              )
-            ),
-          )
-        }, combineObject({ summary })),
-      ),
-
+    $column(layoutSheet.spacingBig)(
 
       $column(layoutSheet.spacingTiny)(
-        $row(style({ placeContent: 'space-between', alignItems: 'center' }))(
-          $Link({
-            $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center', cursor: 'pointer' }))(
-              $icon({
-                $content: $arrowRight,
-                svgOps: style({ width: '16px', height: '16px', transform: 'rotate(180deg)' }),
-              }),
-              $text(style({ color: pallete.message }))(`Leaderboard`)
-            ),
-            url: `/app/leaderboard/settled`,
-            route: config.route,
-          })({
-            click: changeRouteTether()
-          }),
-          $LastAtivity(config.activityTimeframe)({
-            changeActivityTimeframe: changeActivityTimeframeTether()
-          })
-        ),
+        
      
         
         $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
@@ -142,6 +77,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
 
 
               return $ProfilePerformanceCard({
+                account: config.address,
                 $container: $column(style({ width: '100%', padding: 0, height: '200px' })),
                 processData: params.processData,
                 tickCount: 100,
@@ -169,8 +105,8 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                     ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
                     entryColumn,
                     puppetsColumn(changeRouteTether),
-                    slotSizeColumn(config.processData),
-                    pnlSlotColumn(config.processData),
+                    slotSizeColumn(config.processData, config.address),
+                    pnlSlotColumn(config.processData, config.address),
                   ],
                 })({
                   // scrollIndex: changePageIndexTether()
@@ -181,7 +117,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
             switchMap(params => {
               const paging = startWith({ offset: 0, pageSize: 20 }, scrollRequest)
               const dataSource = map(req => {
-                return pagingQuery(req, params.settledTrades)
+                return pagingQuery(req, params.settledTradeList)
               }, paging)
 
               return $column(layoutSheet.spacingSmall)(
@@ -192,14 +128,14 @@ export const $TraderProfile = (config: ITraderProfile) => component((
                     ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
                     entryColumn,
                     puppetsColumn(changeRouteTether),
-                    settledSizeColumn(),
-                    settledPnlColumn(),
+                    settledSizeColumn(config.address),
+                    settledPnlColumn(config.address),
                   ],
                 })({
                   scrollRequest: scrollRequestTether()
                 })
               )
-            }, combineObject({ settledTrades }))
+            }, combineObject({ settledTradeList }))
             
           ),
         )
@@ -208,7 +144,61 @@ export const $TraderProfile = (config: ITraderProfile) => component((
       
     ),
     {
-      changeRoute, subscribeTreader, changeActivityTimeframe
+      changeRoute, modifySubscriber, changeActivityTimeframe
+    }
+  ]
+})
+
+export const $TraderProfile = (config: ITraderProfile) => component((
+  [changeRoute, changeRouteTether]: Behavior<any, string>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
+  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
+  [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
+
+) => {
+
+
+  const settledTradeList = map(params => {
+    const filterStartTime = unixTimestampNow() - params.activityTimeframe
+    const list = params.processData.mirrorPositionSettled.filter(pos => pos.trader === config.address && pos.blockTimestamp > filterStartTime).reverse()
+    return list
+  }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe }))
+
+
+  return [
+    $column(layoutSheet.spacingBig)(
+      $TraderProfileSummary({
+        address: config.address, settledTradeList,
+        route: config.route,
+      })({}),
+
+      $row(style({ placeContent: 'space-between', alignItems: 'center', marginBottom: '-20px' }))(
+        $Link({
+          $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center', cursor: 'pointer' }))(
+            $icon({
+              $content: $arrowRight,
+              svgOps: style({ width: '16px', height: '16px', transform: 'rotate(180deg)' }),
+            }),
+            $text(style({ color: pallete.message }))(`Leaderboard`)
+          ),
+          url: `/app/leaderboard/settled`,
+          route: config.route,
+        })({
+          click: changeRouteTether()
+        }),
+        $LastAtivity(config.activityTimeframe)({
+          changeActivityTimeframe: changeActivityTimeframeTether()
+        })
+      ),
+
+      $TraderPortfolio({ ...config })({
+        modifySubscriber: modifySubscriberTether(),
+        changeRoute: changeRouteTether(),
+        changeActivityTimeframe: changeActivityTimeframeTether(),
+      })
+    ),
+    {
+      changeRoute, modifySubscriber, changeActivityTimeframe
     }
   ]
 })
