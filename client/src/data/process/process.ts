@@ -17,7 +17,8 @@ import {
   ITradeRoute,
   importGlobal,
   unixTimestampNow,
-  IMarketCreatedEvent
+  IMarketCreatedEvent,
+  IPricefeed
 } from "gmx-middleware-utils"
 import { IMirrorPositionRequest, IPositionMirrorSettled, IPositionMirrorSlot, IPuppetSubscritpion, getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -46,7 +47,7 @@ export const PRICEFEED_INTERVAL = [
 export interface IGmxProcessState {
   blockMetrics: IProcessMetrics,
 
-  pricefeed: Record<IPriceIntervalIdentity, Record<string, IPriceInterval>>
+  pricefeed: IPricefeed
   latestPrice: Record<viem.Address, IOraclePrice>
 
   marketMap: Record<viem.Address, IMarketCreatedEvent>

@@ -237,6 +237,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                           wallet: wallet,
                           subscriptionList
                         })({
+                          modifySubscriber: modifySubscriberTether(),
                           changeRoute: linkClickTether(),
                         }))
                     })

@@ -126,6 +126,7 @@ export const $Wallet = (config: IProfile) => component((
     ),
 
     {
+      modifySubscriber,
       changeRoute
     }
   ]

@@ -13,6 +13,7 @@ export interface ILink extends Omit<IAnchor, '$anchor'> {
 
 const $anchor = $element('a')(
   style({
+    flexShrink: 0,
     minWidth: 0,
     color: pallete.message
   }),

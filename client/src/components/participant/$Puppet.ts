@@ -10,7 +10,7 @@ import { getMappedValue, groupArrayMany, readableLeverage, pagingQuery, switchMa
 import { IPuppetSubscritpion, accountSettledTradeListSummary } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileAvatar, $profileDisplay } from "../$AccountProfile.js"
-import { $TraderDisplay, $pnlValue, $route } from "../../common/$common.js"
+import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $route } from "../../common/$common.js"
 import { $heading2, $heading3 } from "../../common/$text.js"
 import { IGmxProcessState } from "../../data/process/process.js"
 import { $card, $card2 } from "../../common/elements/$common.js"
@@ -57,12 +57,19 @@ export const $PuppetPortfolio = (config: ITraderProfile) => component((
     return tradeList
   }, config.processData)))
 
-  const settledTradeList = replayLatest(map(params => {
-    const list = params.processData.mirrorPositionSettled.filter(pos => pos.trader === config.address).reverse()
-    return list
-  }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe })))
+  const routeMap = map(data => data.routeMap, config.processData)
+  const pricefeed = map(data => data.pricefeed, config.processData)
+
 
   const subscribedRoutes = map(data => data.subscription.filter(s => s.puppet === config.address), config.processData)
+
+  const routeTradeGroupMap = map(params => {
+    const allTrades = [...params.openTrades, ...params.settledTrades]
+    const tradeRouteMap = groupArrayMany(allTrades, t => t.routeTypeKey)
+    const subscribeRouteMap = groupArrayMany(params.subscribedRoutes, s => s.routeTypeKey)
+
+    return { ...params, tradeRouteMap, subscribeRouteMap, allTrades }
+  }, combineObject({ settledTrades, openTrades, subscribedRoutes, activityTimeframe: config.activityTimeframe, routeMap, pricefeed }))
 
   return [
 
@@ -81,13 +88,13 @@ export const $PuppetPortfolio = (config: ITraderProfile) => component((
               return $ProfilePerformanceCard({
                 account: config.address,
                 $container: $column(style({ width: '100%', padding: 0, height: '200px' })),
-                processData: params.processData,
+                pricefeed: params.pricefeed,
                 activityTimeframe: params.activityTimeframe,
                 tickCount: 100,
                 positionList: allPositions,
                 // trader: config.address,
               })({ })
-            }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe, openTrades, settledTrades })),
+            }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe, openTrades, settledTrades, pricefeed })),
           ),
 
           $column(layoutSheet.spacing)(
@@ -95,16 +102,17 @@ export const $PuppetPortfolio = (config: ITraderProfile) => component((
             switchMap(params => {
 
               if (params.subscribedRoutes.length === 0) {
-                return $text('No routes subscribed routes yet, go to the leaderboard and pick a trader to subscribe to')
+                return $text('No active trade routes')
               }
 
-              const subscList = params.processData.subscription.filter(s => s.puppet === config.address)
-              const group = Object.entries(groupArrayMany(subscList, s => s.routeTypeKey))
+              const group = Object.entries(params.subscribeRouteMap)
 
               return $column(layoutSheet.spacingBig, style({ width: '100%' }))(
                 ...group.map(([key, list]) => {
 
-                  const route = getMappedValue(params.processData.routeMap, key)
+                  const route = getMappedValue(params.routeMap, key)
+                  const routeTrades = params.tradeRouteMap[key as viem.Hex]
+                  const traderTrades = groupArrayMany(routeTrades, s => s.trader)
 
                   return $column(layoutSheet.spacing)(
                     $route(route),
@@ -121,26 +129,28 @@ export const $PuppetPortfolio = (config: ITraderProfile) => component((
                         $column(layoutSheet.spacing, style({ flex: 1 }))( 
                           ...list.map(sub => {
 
-                            if (params.settledTrades.length === 0) {
-                              return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: '10px 0' }))(
-                                $Link({
-                                  $content: $profileDisplay({
-                                    address: sub.trader,
-                                  }),
-                                  route: config.route.create({ fragment: 'baseRoute' }),
-                                  url: `/app/profile/${sub.trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
-                                })({ click: changeRouteTether() }),
-                                $infoLabel($text('No trades yet')),
+                            
+                            // if (params.settledTrades.length === 0) {
+                            //   return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: '10px 0' }))(
+                            //     $Link({
+                            //       $content: $profileDisplay({
+                            //         address: sub.trader,
+                            //       }),
+                            //       route: config.route.create({ fragment: 'baseRoute' }),
+                            //       url: `/app/profile/${sub.trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
+                            //     })({ click: changeRouteTether() }),
+                            //     $infoLabel($text('No trades yet')),
 
-                                $infoLabeledValue('Expiration', readableDate(Number(sub.subscriptionExpiry)), true),
-                                $infoLabeledValue('Allow', $text(`${readablePercentage(sub.allowance)}`), true),
-                              )
-                            }
+                            //     $infoLabeledValue('Expiration', readableDate(Number(sub.subscriptionExpiry)), true),
+                            //     $infoLabeledValue('Allow', $text(`${readablePercentage(sub.allowance)}`), true),
+                            //   )
+                            // }
 
+                            const traderTradeList = traderTrades[sub.trader]
 
                             const summary = accountSettledTradeListSummary(config.address, params.settledTrades)
 
-                            return $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
+                            return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: '10px 0' }))(
                               $TraderDisplay({
                                 route: config.route,
                                 trader: sub.trader,
@@ -148,14 +158,21 @@ export const $PuppetPortfolio = (config: ITraderProfile) => component((
                                 clickTrader: changeRouteTether(),
                                 modifySubscribeList: modifySubscriberTether(),
                               }),
+                              $TraderRouteDisplay({
+                                positionParams: route,
+                                trader: sub.trader,
+                                routeTypeKey: "0xa437f95c9cee26945f76bc090c3491ffa4e8feb32fd9f4fefbe32c06a7184ff3",
+                                subscriptionList: config.subscriptionList,
+                              })({
+                                modifySubscribeList: modifySubscriberTether()
+                              }),
 
-                              $node(style({ flex: 1 }))(),
 
                               $ProfilePerformanceGraph({
                                 account: config.address,
-                                $container: $column(style({ width: '100%', padding: 0, height: '100px', position: 'relative' })),
-                                processData: params.processData,
-                                positionList: params.settledTrades,
+                                $container: $column(style({ width: '100%', padding: 0, height: '75px', position: 'relative', margin: '-16px 0' })),
+                                pricefeed: params.pricefeed,
+                                positionList: traderTradeList,
                                 tickCount: 100,
                                 activityTimeframe: params.activityTimeframe
                               })({}),
@@ -170,7 +187,7 @@ export const $PuppetPortfolio = (config: ITraderProfile) => component((
                   )
                 })
               )
-            }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe, settledTrades, subscribedRoutes })),
+            }, routeTradeGroupMap),
 
               
           

@@ -54,6 +54,7 @@ export const $TopSettled = (config: ITopSettled) => component((
   const filterMarketMarketList = storage.replayWrite(exploreStore, [], changeMarket, 'filterMarketMarketList')
   const isLong = storage.replayWrite(exploreStore, null, switchIsLong, 'isLong')
   const activityTimeframe = storage.replayWrite(exploreStore, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe, 'activityTimeframe')
+  const pricefeed = map(pd => pd.pricefeed, config.processData)
 
   const pageParms = map(params => {
     const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
@@ -84,7 +85,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
 
     return { ...params, dataSource }
-  }, combineObject({ data: config.processData, sortBy, activityTimeframe, filterMarketMarketList, isLong }))
+  }, combineObject({ data: config.processData, sortBy, activityTimeframe, filterMarketMarketList, isLong, pricefeed }))
 
 
 
@@ -267,7 +268,7 @@ export const $TopSettled = (config: ITopSettled) => component((
                         account: pos.account,
                         $container: $row(style({ position: 'relative',  width: `180px`, height: `80px`, margin: '-16px 0' })),
                         tickCount: 50,
-                        processData: params.data,
+                        pricefeed: params.pricefeed,
                         positionList: pos.settledTradeList,
                         activityTimeframe: params.activityTimeframe,
                       })({})

@@ -19,13 +19,15 @@ import {
   readableFixedUSD30,
   readableUnitAmount,
   unixTimestampNow,
-  getMappedValue
+  getMappedValue,
+  IPricefeed
 } from "gmx-middleware-utils"
 import { BaselineData, ChartOptions, DeepPartial, LineType, MouseEventParams, Time } from "lightweight-charts"
 import { IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { IGmxProcessState, PRICEFEED_INTERVAL } from "../../data/process/process.js"
 import { LAST_ACTIVITY_LABEL_MAP } from "../../pages/components/$LastActivity"
+import { Stream } from "@most/types"
 
 type IPerformanceTickUpdateTick = {
   update: IPositionIncrease | IPositionDecrease
@@ -39,11 +41,11 @@ type ITimelinePositionSlot = IPerformanceTickUpdateTick & {
 }
 
 export interface IPerformanceTimeline {
-  account: viem.Address,
-  positionList: (IPositionMirrorSettled | IPositionMirrorSlot)[],
-  processData: IGmxProcessState,
-  tickCount: number,
-  activityTimeframe: GMX.IntervalTime,
+  account: viem.Address
+  positionList: (IPositionMirrorSettled | IPositionMirrorSlot)[]
+  pricefeed: IPricefeed
+  tickCount: number
+  activityTimeframe: GMX.IntervalTime
   chartConfig?: DeepPartial<ChartOptions>
 }
 
@@ -136,7 +138,7 @@ export function performanceTimeline(config: IPerformanceTimeline) {
         if  (slot.update.collateralAmount === 0n) return pnlAcc
         const mp = slot.source
         const tickerId = `${mp.indexToken}:${interval}` as const
-        const tokenPrice = getClosestpricefeedCandle(config.processData.pricefeed, tickerId, intervalSlot, 0)
+        const tokenPrice = getClosestpricefeedCandle(config.pricefeed, tickerId, intervalSlot, 0)
 
         const pnl = getPositionPnlUsd(slot.update.isLong, slot.update.sizeInUsd, slot.update.sizeInTokens, tokenPrice.c)
         const pnlShare = getParticiapntMpPortion(mp, pnl, config.account)

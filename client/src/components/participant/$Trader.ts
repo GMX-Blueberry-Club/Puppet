@@ -56,6 +56,7 @@ export const $TraderPortfolio = (config: ITraderProfile) => component((
     return list
   }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe }))
 
+  const pricefeed = map(pd => pd.pricefeed, config.processData)
 
 
 
@@ -79,13 +80,13 @@ export const $TraderPortfolio = (config: ITraderProfile) => component((
               return $ProfilePerformanceCard({
                 account: config.address,
                 $container: $column(style({ width: '100%', padding: 0, height: '200px' })),
-                processData: params.processData,
+                pricefeed: params.pricefeed,
                 tickCount: 100,
                 activityTimeframe: params.activityTimeframe,
                 positionList: allPositions,
                 // trader: config.address,
               })({ })
-            }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe })),
+            }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe, pricefeed })),
           ),
           $column(layoutSheet.spacingBig)(
 
