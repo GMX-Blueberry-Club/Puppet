@@ -1,7 +1,6 @@
-import { continueWith, join, map, multicast } from "@most/core"
+import { continueWith, join, map } from "@most/core"
 import { Stream } from "@most/types"
 import * as indexDB from './indexDB.js'
-import { replayLatest } from "@aelea/core"
 
 
 // stringify with bigint support
@@ -57,7 +56,8 @@ export function replayWrite<TData, TKey extends string, TName extends string, TO
   scope: IStoreScope<TName, TOptions>, seed: TData, writeEvent: Stream<TData>, key: TKey | IStoreScope<TName, TOptions>['name'] = scope.name
 ): Stream<TData> {
   const storedValue = get(scope, seed, key)
-  return continueWith(() => write(scope, writeEvent, key), storedValue)
+  const writeSrc = write(scope, writeEvent, key)
+  return continueWith(() => writeSrc, storedValue)
 }
 
 

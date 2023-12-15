@@ -5,6 +5,7 @@ import { registerSW } from "virtual:pwa-register"
 
 export const newUpdateInvoke: Stream<() => void> = fromCallback(cb => {
   const reloadCb = registerSW({
+    immediate: true,
     async onNeedRefresh() {
       // if (import.meta.env.DEV) {
       //   return

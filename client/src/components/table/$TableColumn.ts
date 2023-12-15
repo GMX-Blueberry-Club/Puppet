@@ -22,21 +22,21 @@ export const $tableHeader = (primaryLabel: string, secondaryLabel: string) => $c
 )
 
 
-export const slotSizeColumn = <T extends IPositionMirrorSlot>(processData: Stream<IGmxProcessState>, account: viem.Address): TableColumn<T> => ({
+export const slotSizeColumn = <T extends IPositionMirrorSlot>(processData: Stream<IGmxProcessState>, puppet?: viem.Address): TableColumn<T> => ({
   $head: $tableHeader('Size', 'Leverage'),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $bodyCallback: map(mp => {
     const positionMarkPrice = latestTokenPrice(processData, mp.indexToken)
-    return $sizeAndLiquidation(mp, positionMarkPrice, account)
+    return $sizeAndLiquidation(mp, positionMarkPrice, puppet)
   })
 })
 
-export const settledSizeColumn = (account: viem.Address): TableColumn<IPositionMirrorSettled> => ({
+export const settledSizeColumn = (puppet?: viem.Address): TableColumn<IPositionMirrorSettled> => ({
   $head: $tableHeader('Size', 'Leverage'),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $bodyCallback: map(mp => {
-    const size = getParticiapntMpPortion(mp, mp.maxSizeUsd, account)
-    const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, account)
+    const size = getParticiapntMpPortion(mp, mp.maxSizeUsd, puppet)
+    const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, puppet)
 
     return $size(size, collateral)
   })
@@ -60,42 +60,22 @@ export const puppetsColumn = <T extends {puppets: readonly `0x${string}`[]}>(cli
   })
 })
 
-export const pnlSlotColumn = <T extends IPositionMirrorSlot>(processData: Stream<IGmxProcessState>, account: viem.Address): TableColumn<T> => ({
+export const pnlSlotColumn = <T extends IPositionMirrorSlot>(processData: Stream<IGmxProcessState>, puppet?: viem.Address): TableColumn<T> => ({
   $head: $tableHeader('PnL', 'ROI'),
   gridTemplate: '90px',
   columnOp: style({ placeContent: 'flex-end' }),
   $bodyCallback: map(pos => {
-    return $openPnl(processData, pos, account)
+    return $openPnl(processData, pos, puppet)
   })
 })
 
-export const traderColumn = <T extends IMirrorPositionListSummary & { trader: viem.Address }>(click: Op<string, string>, route: router.Route): TableColumn<T> => ({
-  $head: $text('Trader'),
-  // gridTemplate: 'minmax(110px, 120px)',
-  columnOp: style({ alignItems: 'center' }),
-  $bodyCallback: map(pos => {
-
-    return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-      // $alertTooltip($text(`This account requires GBC to receive the prize once competition ends`)),
-      $Link({
-        $content: $profileDisplay({
-          address: pos.account,
-          // $profileContainer: $defaultBerry(style({ width: '50px' }))
-        }),
-        route: route.create({ fragment: 'baseRoute' }),
-        url: `/app/profile/${pos.account}/${IProfileActiveTab.TRADER.toLowerCase()}`
-      })({ click: click }),
-    )
-  })
-})
-
-export const settledPnlColumn = (account: viem.Address): TableColumn<IPositionMirrorSettled> => ({
+export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IPositionMirrorSettled> => ({
   $head: $tableHeader('PnL $', 'ROI %'),
   gridTemplate: '90px',
   columnOp: style({ placeContent: 'flex-end' }),
   $bodyCallback: map(mp => {
-    const pnl = getParticiapntMpPortion(mp, mp.realisedPnl, account)
-    const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, account)
+    const pnl = getParticiapntMpPortion(mp, mp.realisedPnl, puppet)
+    const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, puppet)
       
     return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
       $pnlValue(pnl),

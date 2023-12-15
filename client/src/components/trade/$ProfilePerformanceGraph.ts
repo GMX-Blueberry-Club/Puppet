@@ -20,7 +20,7 @@ import {
   readableUnitAmount,
   unixTimestampNow,
   getMappedValue,
-  IPricefeed
+  IPricefeedMap
 } from "gmx-middleware-utils"
 import { BaselineData, ChartOptions, DeepPartial, LineType, MouseEventParams, Time } from "lightweight-charts"
 import { IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
@@ -41,9 +41,9 @@ type ITimelinePositionSlot = IPerformanceTickUpdateTick & {
 }
 
 export interface IPerformanceTimeline {
-  account: viem.Address
+  puppet?: viem.Address
   positionList: (IPositionMirrorSettled | IPositionMirrorSlot)[]
-  pricefeed: IPricefeed
+  pricefeedMap: IPricefeedMap
   tickCount: number
   activityTimeframe: GMX.IntervalTime
   chartConfig?: DeepPartial<ChartOptions>
@@ -125,7 +125,7 @@ export function performanceTimeline(config: IPerformanceTimeline) {
       delete acc.positionSlot[key]
 
       const nextSettlePnl = next.update.basePnlUsd
-      const pnlPortion = getParticiapntMpPortion(next.source, nextSettlePnl, config.account)
+      const pnlPortion = getParticiapntMpPortion(next.source, nextSettlePnl, config.puppet)
       const openPnl = Object.values(acc.positionSlot).reduce((a, b) => a + b.openPnl + b.realisedPnl, 0n)
 
       const settledPnl = acc.settledPnl + pnlPortion // - position.cumulativeFee
@@ -138,10 +138,10 @@ export function performanceTimeline(config: IPerformanceTimeline) {
         if  (slot.update.collateralAmount === 0n) return pnlAcc
         const mp = slot.source
         const tickerId = `${mp.indexToken}:${interval}` as const
-        const tokenPrice = getClosestpricefeedCandle(config.pricefeed, tickerId, intervalSlot, 0)
+        const tokenPrice = getClosestpricefeedCandle(config.pricefeedMap, tickerId, intervalSlot, 0)
 
         const pnl = getPositionPnlUsd(slot.update.isLong, slot.update.sizeInUsd, slot.update.sizeInTokens, tokenPrice.c)
-        const pnlShare = getParticiapntMpPortion(mp, pnl, config.account)
+        const pnlShare = getParticiapntMpPortion(mp, pnl, config.puppet)
 
         return pnlAcc + pnlShare
       }, 0n)
@@ -172,121 +172,6 @@ function getClosestpricefeedCandle(pricefeed: Record<IPriceIntervalIdentity, Rec
   return price
 }
 
-export const $ProfilePerformanceCard = (config: IParticipantPerformanceGraph) => component((
-  [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams>
-) => {
-
-  const $container = config.$container
-  const timeline = performanceTimeline(config)
-  const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
-
-
-  const hoverChartPnl = filterNull(map(params => {
-    if (params.pnlCrossHairTimeChange?.point) {
-      const value = params.pnlCrossHairTimeChange.seriesData.values().next().value.value
-      return value
-    }
-
-    const data = timeline
-    const value = data[data.length - 1]?.value
-    return value || null
-  }, combineObject({ pnlCrossHairTimeChange })))
-
-
-
-  const markerList: IMarker[] = config.positionList.map((pos) => {
-    const isSettled = 'settlement' in pos
-    const position = pos.realisedPnl > 0n ? 'aboveBar' as const : 'belowBar' as const
-
-    return {
-      position,
-      text: readableFixedUSD30(pos.realisedPnl),
-      color: colorAlpha(pallete.message, .25),
-      time: pos.blockTimestamp as Time,
-      size: 0.1,
-      shape: !isSettled ? 'arrowUp' as const : 'circle' as const,
-    }
-  }).sort((a, b) => Number(a.time) - Number(b.time))
-
-
-  return [
-    config.positionList.length > 0 ? $container(
-      $row(style({ position: 'absolute', placeContent: 'center',  top: '10px', alignSelf: 'center', zIndex: 11, alignItems: 'center', placeSelf: 'center' }))(
-        $column(style({ alignItems: 'center' }))(
-          $NumberTicker({
-            textStyle: {
-              fontSize: '1.85rem',
-              fontWeight: '900',
-            },
-            // background: `radial-gradient(${colorAlpha(invertColor(pallete.message), .7)} 9%, transparent 63%)`,
-            value$: map(hoverValue => {
-              const newLocal2 = readableUnitAmount(hoverValue)
-              const newLocal = parseReadableNumber(newLocal2)
-              return newLocal
-            }, motion({ ...MOTION_NO_WOBBLE, precision: 15, stiffness: 210 }, 0, hoverChartPnl)),
-            incrementColor: pallete.positive,
-            decrementColor: pallete.negative
-          }),
-          $infoTooltipLabel('The total combined settled and open trades', $text(style({ fontSize: '.85rem' }))('PnL'))
-        ),
-      ),
-      $Baseline({
-        markers: now(markerList),
-        chartConfig: {
-          leftPriceScale: {
-            autoScale: true,
-            ticksVisible: true,
-            scaleMargins: {
-              top: 0.35,
-              bottom: 0,
-            }
-          },
-        },
-        baselineOptions: {
-          baseLineColor: pallete.message,
-          baseLineVisible: true,
-          lineWidth: 2,
-          baseValue: {
-            price: 0,
-            type: 'price',
-          },
-        },
-        // appendData: scan((prev, next) => {
-        //   const marketPrice = formatFixed(next.indexTokenPrice, 30)
-        //   const timeNow = unixTimestampNow()
-        //   const prevTimeSlot = Math.floor(prev.time as number / tf)
-        //   const nextTimeSlot = Math.floor(timeNow / tf)
-        //   const time = nextTimeSlot * tf as Time
-        //   const isNext = nextTimeSlot > prevTimeSlot
-
-        //   return {
-        //     value: marketPrice,
-        //     time
-        //   }
-        // }, data[data.length - 1], config.processData),
-        data: timeline as any as BaselineData[],
-      })({
-        crosshairMove: crosshairMoveTether(
-          skipRepeatsWith((a, b) => a.point?.x === b.point?.x)
-        )
-      })
-    ) : $container(style({ placeContent: 'center', alignItems: 'center' }))(
-      $node(
-        $text(style({ 
-          color: pallete.foreground, textAlign: 'center',
-        }))('No activity within last '),
-        $text(getMappedValue(LAST_ACTIVITY_LABEL_MAP, config.activityTimeframe) )
-      )
-    ),
-
-    {
-      crosshairMove,
-      // requestPricefeed
-    }
-  ]
-})
-
-
 export const $ProfilePerformanceGraph = (config: IPerformanceTimeline & { $container: NodeComposeFn<$Node> }) => component((
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
 ) => {
@@ -314,7 +199,7 @@ export const $ProfilePerformanceGraph = (config: IPerformanceTimeline & { $conta
         markers: now(markerList),
         chartConfig: {
           leftPriceScale: {
-            autoScale: true,
+            // autoScale: true,
             ticksVisible: true,
             scaleMargins: {
               top: 0,

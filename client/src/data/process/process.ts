@@ -18,7 +18,8 @@ import {
   importGlobal,
   unixTimestampNow,
   IMarketCreatedEvent,
-  IPricefeed
+  IPricefeedMap,
+  IPriceLatestMap
 } from "gmx-middleware-utils"
 import { IMirrorPositionRequest, IPositionMirrorSettled, IPositionMirrorSlot, IPuppetSubscritpion, getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -47,8 +48,8 @@ export const PRICEFEED_INTERVAL = [
 export interface IGmxProcessState {
   blockMetrics: IProcessMetrics,
 
-  pricefeed: IPricefeed
-  latestPrice: Record<viem.Address, IOraclePrice>
+  pricefeed: IPricefeedMap
+  latestPrice: IPriceLatestMap
 
   marketMap: Record<viem.Address, IMarketCreatedEvent>
   routeMap: Record<viem.Hex, ITradeRoute>
@@ -345,6 +346,7 @@ export const gmxProcess = defineProcess(
   {
     source: puppetLog.shareIncrease,
     step(seed, value) {
+      debugger
       const args = value.args
       const positionSlot = seed.mirrorPositionSlot[args.positionKey]
 

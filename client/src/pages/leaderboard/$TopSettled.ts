@@ -3,7 +3,7 @@ import { $element, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map, startWith } from "@most/core"
+import { empty, map, startWith, tap } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $ButtonToggle, $Table, $bear, $bull, $icon, $marketLabel, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "gmx-middleware-ui-components"
@@ -24,21 +24,24 @@ import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivi
 import { $ButtonPrimaryCtx } from "../../components/form/$Button"
 
 
-
-
 export type ITopSettled = {
   route: router.Route
   processData: Stream<IGmxProcessState>
   subscriptionList: Stream<IPuppetSubscritpion[]>
 }
 
-type FilterTable =  { activityTimeframe: GMX.IntervalTime } | null
+
+type ITableRow = {
+  summary: IMirrorPositionListSummary
+  account: viem.Address
+  settledTradeList: IPositionMirrorSettled[]
+}
 
 export const $TopSettled = (config: ITopSettled) => component((
   [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
   
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
-  [sortByChange, sortByChangeTether]: Behavior<ISortBy<IPositionListSummary>>,
+  [sortByChange, sortByChangeTether]: Behavior<ISortBy>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<GMX.IntervalTime>,
   [routeChange, routeChangeTether]: Behavior<any, string>,
   [changeMarket, changeMarketTether]: Behavior<IMarketCreatedEvent[]>,
@@ -50,17 +53,18 @@ export const $TopSettled = (config: ITopSettled) => component((
   const marketList = map(pd => Object.values(pd.marketMap).filter(market => market.indexToken !== GMX.ADDRESS_ZERO), config.processData)
 
   const exploreStore = storage.createStoreScope(rootStoreScope, 'topSettled' as const)
-  const sortBy = storage.replayWrite(exploreStore, { direction: 'desc', selector: 'pnl' } as ISortBy<IPositionListSummary>, sortByChange, 'sortBy')
+  const sortBy = storage.replayWrite(exploreStore, { direction: 'desc', selector: 'pnl' } as ISortBy, sortByChange, 'sortBy')
   const filterMarketMarketList = storage.replayWrite(exploreStore, [], changeMarket, 'filterMarketMarketList')
   const isLong = storage.replayWrite(exploreStore, null, switchIsLong, 'isLong')
   const activityTimeframe = storage.replayWrite(exploreStore, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe, 'activityTimeframe')
   const pricefeed = map(pd => pd.pricefeed, config.processData)
+  const priceLatestMap = map(pd => pd.latestPrice, config.processData)
 
   const pageParms = map(params => {
     const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
     const paging = startWith(requestPage, scrollRequest)
 
-    const dataSource: Stream<TablePageResponse<IMirrorPositionListSummary>> =  map(req => {
+    const dataSource: Stream<TablePageResponse<ITableRow>> =  map(req => {
       const filterStartTime = unixTimestampNow() - params.activityTimeframe
 
       const flattenMapMap = params.data.mirrorPositionSettled.filter(pos => {
@@ -77,7 +81,7 @@ export const $TopSettled = (config: ITopSettled) => component((
       const tradeListMap = groupArrayMany(flattenMapMap, a => a.routeTypeKey)
       const tradeListEntries = Object.values(tradeListMap)
       const filterestPosList = tradeListEntries.map(settledTradeList => {
-        return accountSettledTradeListSummary(settledTradeList[0].trader, settledTradeList)
+        return { account: settledTradeList[0].trader, summary: accountSettledTradeListSummary(settledTradeList, params.priceLatestMap), settledTradeList }
       })
 
       return pagingQuery({ ...params.sortBy, ...req }, filterestPosList)
@@ -85,7 +89,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
 
     return { ...params, dataSource }
-  }, combineObject({ data: config.processData, sortBy, activityTimeframe, filterMarketMarketList, isLong, pricefeed }))
+  }, combineObject({ data: config.processData, sortBy, activityTimeframe, filterMarketMarketList, isLong, pricefeed, priceLatestMap }))
 
 
 
@@ -179,9 +183,7 @@ export const $TopSettled = (config: ITopSettled) => component((
     
         switchMap(params => {
 
-
-
-          const columns: TableColumn<IMirrorPositionListSummary>[] = [
+          const columns: TableColumn<ITableRow>[] = [
             {
               $head: $text('Trade Route'),
               gridTemplate: screenUtils.isDesktopScreen ? '144px' : '80px',
@@ -221,9 +223,9 @@ export const $TopSettled = (config: ITopSettled) => component((
                   $head: $text('Win / Loss'),
                   gridTemplate: '90px',
                   columnOp: style({ alignItems: 'center', placeContent: 'center' }),
-                  $bodyCallback: map((pos: IMirrorPositionListSummary) => {
+                  $bodyCallback: map((pos: ITableRow) => {
                     return $row(
-                      $text(`${pos.winCount} / ${pos.lossCount}`)
+                      $text(`${pos.summary.winCount} / ${pos.summary.lossCount}`)
                     )
                   })
                 },
@@ -237,7 +239,7 @@ export const $TopSettled = (config: ITopSettled) => component((
               sortBy: 'size',
               columnOp: style({ placeContent: 'flex-end' }),
               $bodyCallback: map((pos) => {
-                return $size(pos.size, pos.collateral)
+                return $size(pos.summary.size, pos.summary.collateral)
               })
             },
             {
@@ -248,9 +250,9 @@ export const $TopSettled = (config: ITopSettled) => component((
               $bodyCallback: map(mp => {
 
                 return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
-                  $pnlValue(mp.pnl),
+                  $pnlValue(mp.summary.realisedPnl),
                   $seperator2,
-                  $text(style({ fontSize: '.85rem' }))(readablePercentage(getBasisPoints(mp.pnl, mp.collateral))),
+                  $text(style({ fontSize: '.85rem' }))(readablePercentage(getBasisPoints(mp.summary.realisedPnl, mp.summary.collateral))),
                 )
               })
             },
@@ -261,14 +263,13 @@ export const $TopSettled = (config: ITopSettled) => component((
                   columnOp: style({ placeContent: 'flex-end' }),
                   $head: $text(`Last ${getMappedValue(LAST_ACTIVITY_LABEL_MAP, params.activityTimeframe)} activity`),
                   gridTemplate: '140px',
-                  $bodyCallback: map((pos: IMirrorPositionListSummary & { trader: viem.Address, settledTradeList: IPositionMirrorSettled[]}) => {
+                  $bodyCallback: map((pos: ITableRow) => {
                     
                     return screenUtils.isDesktopScreen
                       ? $ProfilePerformanceGraph({
-                        account: pos.account,
                         $container: $row(style({ position: 'relative',  width: `180px`, height: `80px`, margin: '-16px 0' })),
                         tickCount: 50,
-                        pricefeed: params.pricefeed,
+                        pricefeedMap: params.pricefeed,
                         positionList: pos.settledTradeList,
                         activityTimeframe: params.activityTimeframe,
                       })({})

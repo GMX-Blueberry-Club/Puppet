@@ -790,7 +790,7 @@ export const $Trade = (config: ITradeComponent) => component((
             ? style({ pointerEvents: 'none', flexDirection: 'row', marginTop: '12px', zIndex: 20, placeContent: 'space-between', alignItems: 'flex-start' })
             : style({ pointerEvents: 'none', flex: 0, flexDirection: 'row', zIndex: 20, margin: '8px', alignItems: 'flex-start' })
         )(
-          $row(layoutSheet.spacingBig, style({ pointerEvents: 'all' }))(
+          $row(layoutSheet.spacingBig, style({ pointerEvents: 'all', alignItems: 'center' }))(
             $column(layoutSheet.spacingSmall)(
               $infoLabel('Borrow Rate'),
               $row(style({ whiteSpace: 'pre' }))(
@@ -815,64 +815,64 @@ export const $Trade = (config: ITradeComponent) => component((
             $column(layoutSheet.spacingSmall)(
               $infoLabel('Available Liquidity'),
               $text(map(amountUsd => readableFixedUSD30(amountUsd), availableIndexLiquidityUsd))
-            )
+            ),
+            screenUtils.isDesktopScreen
+              ? style({ pointerEvents: 'all' })(
+                $ButtonToggle({
+                  selected: chartInterval,
+                  options: [
+                    GMX.TIME_INTERVAL_MAP.MIN5,
+                    GMX.TIME_INTERVAL_MAP.MIN15,
+                    GMX.TIME_INTERVAL_MAP.MIN60,
+                    GMX.TIME_INTERVAL_MAP.HR4,
+                    GMX.TIME_INTERVAL_MAP.HR24,
+                  // GMX.TIME_INTERVAL_MAP.DAY7,
+                  ],
+                  $$option: map(option => {
+                    const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
+
+                    return $text(timeframeLabel)
+                  })
+                })({ select: selectTimeFrameTether() })
+              )
+              : $Dropdown({
+                $selection: switchLatest(map((option) => {
+                  const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
+
+                  return style({ padding: '8px', alignSelf: 'center' })(
+                    $ButtonSecondary({
+                      $content: $row(
+                        $text(timeframeLabel),
+                        $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
+                      )
+                    })({})
+                  )
+                }, chartInterval)),
+                selector: {
+                  value: chartInterval,
+                  $$option: map((option) => {
+                    const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
+
+                    return $text(style({ fontSize: '.85rem' }))(timeframeLabel)
+                  }),
+                  list: [
+                    GMX.TIME_INTERVAL_MAP.MIN5,
+                    GMX.TIME_INTERVAL_MAP.MIN15,
+                    GMX.TIME_INTERVAL_MAP.MIN60,
+                    GMX.TIME_INTERVAL_MAP.HR4,
+                    GMX.TIME_INTERVAL_MAP.HR24,
+                  // GMX.TIME_INTERVAL_MAP.DAY7,
+                  ],
+                }
+              })({
+                select: selectTimeFrameTether()
+              }),
           ),
 
-          screenUtils.isDesktopScreen
-            ? style({ pointerEvents: 'all' })(
-              $ButtonToggle({
-                selected: chartInterval,
-                options: [
-                  GMX.TIME_INTERVAL_MAP.MIN5,
-                  GMX.TIME_INTERVAL_MAP.MIN15,
-                  GMX.TIME_INTERVAL_MAP.MIN60,
-                  GMX.TIME_INTERVAL_MAP.HR4,
-                  GMX.TIME_INTERVAL_MAP.HR24,
-                  // GMX.TIME_INTERVAL_MAP.DAY7,
-                ],
-                $$option: map(option => {
-                  const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
-
-                  return $text(timeframeLabel)
-                })
-              })({ select: selectTimeFrameTether() })
-            )
-            : $Dropdown({
-              $selection: switchLatest(map((option) => {
-                const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
-
-                return style({ padding: '8px', alignSelf: 'center' })(
-                  $ButtonSecondary({
-                    $content: $row(
-                      $text(timeframeLabel),
-                      $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
-                    )
-                  })({})
-                )
-              }, chartInterval)),
-              selector: {
-                value: chartInterval,
-                $$option: map((option) => {
-                  const timeframeLabel = TIME_INTERVAL_LABEL_MAP[option]
-
-                  return $text(style({ fontSize: '.85rem' }))(timeframeLabel)
-                }),
-                list: [
-                  GMX.TIME_INTERVAL_MAP.MIN5,
-                  GMX.TIME_INTERVAL_MAP.MIN15,
-                  GMX.TIME_INTERVAL_MAP.MIN60,
-                  GMX.TIME_INTERVAL_MAP.HR4,
-                  GMX.TIME_INTERVAL_MAP.HR24,
-                  // GMX.TIME_INTERVAL_MAP.DAY7,
-                ],
-              }
-            })({
-              select: selectTimeFrameTether()
-            }),
           
 
           screenUtils.isDesktopScreen
-            ? $column(style({ position: 'absolute', pointerEvents: 'all', zIndex: 20, bottom: '40px', width: '500px', left: '0' }))(
+            ? $column(style({ position: 'absolute', pointerEvents: 'all', zIndex: 20, bottom: '40px', width: '460px', left: '0' }))(
               $tradebox,
             ) : empty(),
         ),
@@ -1072,7 +1072,6 @@ export const $Trade = (config: ITradeComponent) => component((
               pricefeed,
               tradeConfig,
               tradeState,
-              wallet,
               $container: $column
             })({
               clickResetPosition: clickResetPositionTether(),

@@ -1,16 +1,15 @@
+import { IOraclePrice, IPriceLatestMap, factor, getMappedValue, getPositionPnlUsd, hashData, isPositionSettled, lst } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorSlot } from "./types.js"
-import { IOraclePrice, factor, getPositionPnlUsd, hashData, lst } from "gmx-middleware-utils"
-import { toBytes } from "viem"
 
 
 export function accountSettledTradeListSummary(
-  account: viem.Address,
-  settledTradeList: IPositionMirrorSettled[],
+  tradeList: (IPositionMirrorSlot | IPositionMirrorSettled)[],
+  priceLatestMap: IPriceLatestMap,
+  puppet?: viem.Address,
 ): IMirrorPositionListSummary {
 
   const seedAccountSummary: IMirrorPositionListSummary = {
-    settledTradeList, account,
     size: 0n,
     collateral: 0n,
     cumulativeLeverage: 0n,
@@ -21,23 +20,27 @@ export function accountSettledTradeListSummary(
 
     fee: 0n,
     lossCount: 0,
+    realisedPnl: 0n,
+    openPnl: 0n,
     pnl: 0n,
     winCount: 0,
   }
 
-  const summary = settledTradeList.reduce((seed, next, idx): IMirrorPositionListSummary => {
+  const summary = tradeList.reduce((seed, next, idx): IMirrorPositionListSummary => {
     const idxBn = BigInt(idx) + 1n
 
 
-    const size = seed.size + getParticiapntMpPortion(next, next.maxSizeUsd, account)
-    const collateral = seed.collateral + getParticiapntMpPortion(next, next.maxCollateralUsd, account)
-    const cumulativeLeverage = seed.cumulativeLeverage + getParticiapntMpPortion(next, factor(next.maxSizeUsd, next.maxCollateralUsd), account)
+    const size = seed.size + getParticiapntMpPortion(next, next.maxSizeUsd, puppet)
+    const collateral = seed.collateral + getParticiapntMpPortion(next, next.maxCollateralUsd, puppet)
+    const cumulativeLeverage = seed.cumulativeLeverage + getParticiapntMpPortion(next, factor(next.maxSizeUsd, next.maxCollateralUsd), puppet)
 
     const avgSize = size / idxBn
     const avgCollateral = collateral / idxBn
 
-    const fee = seed.fee + getParticiapntMpPortion(next, next.cumulativeFee, account)
-    const pnl = seed.pnl + getParticiapntMpPortion(next, next.realisedPnl, account)
+    const fee = seed.fee + getParticiapntMpPortion(next, next.cumulativeFee, puppet)
+    const realisedPnl = seed.pnl + getParticiapntMpPortion(next, next.realisedPnl, puppet)
+    const openPnl = isPositionSettled(next) ? seed.openPnl : getMpSlotPnL(next, getMappedValue(priceLatestMap, next.indexToken), puppet) + seed.openPnl
+    const pnl = realisedPnl + openPnl
 
 
     const winCount = seed.winCount + (next.realisedPnl > 0n ? 1 : 0)
@@ -46,8 +49,6 @@ export function accountSettledTradeListSummary(
     const puppets = [...seed.puppets, ...next.puppets.filter(x => !seed.puppets.includes(x))]
 
     return {
-      settledTradeList: seed.settledTradeList,
-      account: seed.account,
       size,
       collateral,
       cumulativeLeverage,
@@ -56,6 +57,8 @@ export function accountSettledTradeListSummary(
       fee,
       lossCount,
       pnl,
+      openPnl,
+      realisedPnl,
       winCount,
       puppets,
     }
@@ -71,27 +74,31 @@ export function getPuppetShare(shares: readonly bigint[], puppets: readonly viem
 
   if (idx == -1) throw new Error("Puppet not found")
 
-  return shares[idx]
+  const share = shares[idx]
+
+  if (share === undefined) throw new Error("Puppet share not found")
+
+  return share
 }
 
-export function getParticiapntMpShare(mp: IPositionMirrorSettled | IPositionMirrorSlot, account: viem.Address): bigint {
-  if (mp.trader === account) return mp.traderShare
-  if (mp.puppets.indexOf(account) === -1) throw new Error("Account is not a participant")
+export function getParticiapntMpShare(mp: IPositionMirrorSettled | IPositionMirrorSlot, puppet?: viem.Address): bigint {
+  if (!puppet) return mp.traderShare
+  if (mp.puppets.indexOf(puppet) === -1) throw new Error("Account is not a participant")
 
-  return getPuppetShare(mp.shares, mp.puppets, account)
+  return getPuppetShare(mp.shares, mp.puppets, puppet)
 }
 
-export function getParticiapntMpPortion(mp: IPositionMirrorSettled | IPositionMirrorSlot, amount: bigint, account: viem.Address): bigint {
-  const share = getParticiapntMpShare(mp, account)
+export function getParticiapntMpPortion(mp: IPositionMirrorSettled | IPositionMirrorSlot, amount: bigint, puppet?: viem.Address): bigint {
+  const share = getParticiapntMpShare(mp, puppet)
 
   return getPortion(mp.shareSupply, share, amount)
 }
 
 
-export function getMpSlotPnL(mp: IPositionMirrorSlot, markPrice: IOraclePrice, account: viem.Address): bigint {
+export function getMpSlotPnL(mp: IPositionMirrorSlot, markPrice: IOraclePrice, puppet?: viem.Address): bigint {
   const update = lst(mp.updates)
   const delta = getPositionPnlUsd(mp.isLong,  update.sizeInUsd, update.sizeInTokens, markPrice.min)
-  const openPnl = getParticiapntMpPortion(mp, delta, account)
+  const openPnl = getParticiapntMpPortion(mp, delta, puppet)
 
   return openPnl
 }

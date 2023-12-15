@@ -132,9 +132,9 @@ export const $tokenIcon = (indexToken: viem.Address, IIcon: { width: string } = 
   })
 }
 
-export const $sizeAndLiquidation = (mp: IPositionMirrorSlot, markPrice: Stream<IOraclePrice>, account: viem.Address) => {
-  const size = getParticiapntMpPortion(mp, mp.maxSizeUsd, account)
-  const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, account)
+export const $sizeAndLiquidation = (mp: IPositionMirrorSlot, markPrice: Stream<IOraclePrice>, puppet?: viem.Address) => {
+  const size = getParticiapntMpPortion(mp, mp.maxSizeUsd, puppet)
+  const collateral = getParticiapntMpPortion(mp, mp.maxCollateralUsd, puppet)
   const update = lst(mp.updates)
 
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
@@ -169,7 +169,7 @@ export const $puppets = (puppets: readonly viem.Address[], click: Tether<INode, 
   )
 }
 
-export const $openPnl = (processData: Stream<IGmxProcessState>, pos: IPositionMirrorSlot, account: viem.Address) => {
+export const $openPnl = (processData: Stream<IGmxProcessState>, pos: IPositionMirrorSlot, account?: viem.Address) => {
   const positionMarkPrice = latestTokenPrice(processData, pos.indexToken)
 
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
@@ -234,7 +234,7 @@ export const $PnlPercentageValue = (pnl: Stream<bigint> | bigint, collateral: bi
   )
 }
 
-export const $positionSlotPnl = (mp: IPositionMirrorSlot, positionMarkPrice: Stream<IOraclePrice> | bigint, account: viem.Address) => {
+export const $positionSlotPnl = (mp: IPositionMirrorSlot, positionMarkPrice: Stream<IOraclePrice> | bigint, account?: viem.Address) => {
   const value = isStream(positionMarkPrice)
     ? map((price) => {
       const pnl = getMpSlotPnL(mp, price, account)
@@ -245,7 +245,7 @@ export const $positionSlotPnl = (mp: IPositionMirrorSlot, positionMarkPrice: Str
   return $pnlValue(value)
 }
 
-export const $positionSlotRoi = (pos: IPositionMirrorSlot, positionMarkPrice: Stream<IOraclePrice> | IOraclePrice, account: viem.Address) => {
+export const $positionSlotRoi = (pos: IPositionMirrorSlot, positionMarkPrice: Stream<IOraclePrice> | IOraclePrice, account?: viem.Address) => {
   const roi = map(markPrice => {
     const delta = getMpSlotPnL(pos, markPrice, account)
     return readablePercentage(getBasisPoints(pos.realisedPnl + delta - pos.cumulativeFee, pos.maxCollateralUsd))
@@ -357,15 +357,9 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
 })
 
 export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
-  [clickTrader, clickTraderTether]: Behavior<any, viem.Address>,
   [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, IPuppetSubscritpionParams>,
   [modifySubscribeList, modifySubscribeListTether]: Behavior<IPuppetSubscritpionParams>,
 ) => {
-
-  // const { marketList } = config
-
-
-
 
   return [
     $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
@@ -410,6 +404,6 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
     ),
 
 
-    { modifySubscribeList, clickTrader }
+    { modifySubscribeList }
   ]
 })

@@ -485,7 +485,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                       $heading2(tokenDesc.symbol),
                       $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' }),
                     ),
-                    $container: $defaultMiniButtonSecondary(style({ borderColor: pallete.foreground, backgroundColor: 'transparent' })),
+                    $container: $defaultMiniButtonSecondary(style({ borderColor: colorAlpha(pallete.foreground, .2), backgroundColor: 'transparent' })),
                   })({})
                 }, primaryToken)),
                 // $selection: switchLatest(map(option => {
@@ -743,7 +743,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                   : getTokenDescription(resolveAddress(config.chain, token))
 
                 return $ButtonSecondary({
-                  $container: $defaultMiniButtonSecondary,
+                  $container: $defaultMiniButtonSecondary(style({ borderColor: colorAlpha(pallete.foreground, .2) })),
                   $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
                     $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '34px', svgOps: style({ paddingRight: '4px' }), viewBox: '0 0 32 32' }),
                     $heading2(tokenDesc.symbol),

@@ -1,8 +1,8 @@
-import { Behavior, combineObject, O, Op } from "@aelea/core"
-import { $element, $node, $Node, $svg, attr, component, INode, NodeComposeFn, nodeEvent, style } from '@aelea/dom'
+import { Behavior, O, Op } from "@aelea/core"
+import { $Node, $svg, attr, component, INode, NodeComposeFn, nodeEvent, style } from '@aelea/dom'
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { constant, empty, map, now, snapshot, switchLatest } from "@most/core"
+import { constant, empty, map, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { $QuantumScroll, IScrollPagable, QuantumScroll, ScrollRequest } from "./$QuantumScroll.js"
 
@@ -29,14 +29,14 @@ export interface TableOption<T> {
   $bodyCell?: NodeComposeFn<$Node>
   $headerCell?: NodeComposeFn<$Node>
 
-  sortBy?: ISortBy<T>
+  sortBy?: ISortBy
   $sortArrowDown?: $Node
 }
 
 export interface TableColumn<T> {
   $head: $Node
   $bodyCallback: Op<T, $Node>
-  sortBy?: keyof T,
+  sortBy?: string,
 
   gridTemplate?: string
 
@@ -48,9 +48,9 @@ export interface IPageRequest {
   pageSize: number
 }
 
-export interface ISortBy<T> {
+export interface ISortBy {
   direction: 'asc' | 'desc'
-  selector: keyof T
+  selector: string
 }
 
 
@@ -86,7 +86,7 @@ export const $Table = <T>({
   $sortArrowDown = $caretDown
 }: TableOption<T>) => component((
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest, ScrollRequest>,
-  [sortByChange, sortByChangeTether]: Behavior<INode, keyof T>
+  [sortByChange, sortByChangeTether]: Behavior<INode, string>
 ) => {
 
   const gridTemplateColumns = columns.map(col => col.gridTemplate || '1fr').join(' ')

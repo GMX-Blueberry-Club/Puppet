@@ -34,8 +34,8 @@ export interface IPositionMirrorSettled extends IPositionSettled, IPositionMirro
 export interface IMirrorPositionListSummary extends IPositionListSummary {
   // routeTypeKey?: viem.Hex
   puppets: viem.Address[]
-  account: viem.Address
-  settledTradeList: IPositionMirrorSettled[]
+  // account: viem.Address
+  // tradeList: (IPositionMirrorSlot | IPositionMirrorSettled)[]
 }
 
 

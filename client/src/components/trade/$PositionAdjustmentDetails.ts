@@ -49,7 +49,6 @@ export enum ITradeFocusMode {
 interface IPositionAdjustmentHistory {
   processData: Stream<IGmxProcessState>
   chain: ISupportedChain
-  wallet: Stream<IWalletClient>
   openPositionList: Stream<IPositionSlot[]>
 
   pricefeed: Stream<IPriceInterval[]>
@@ -76,10 +75,9 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
   [dismissEnableTradingOverlay, dismissEnableTradingOverlayTether]: Behavior<any, false>,
 
   [approveTrading, approveTradingTether]: Behavior<PointerEvent, true>,
-  [clickApproveprimaryToken, clickApproveprimaryTokenTether]: Behavior<PointerEvent, { route: viem.Address, primaryToken: viem.Address }>,
+  [clickApproveprimaryToken, clickApproveprimaryTokenTether]: Behavior<IWalletClient, { wallet: IWalletClient, route: viem.Address, primaryToken: viem.Address }>,
   [clickResetPosition, clickResetPositionTether]: Behavior<any, IPositionSlot | null>,
-
-  [clickProposeTrade, clickProposeTradeTether]: Behavior<PointerEvent, IWalletClient>,
+  [clickProposeTrade, clickProposeTradeTether]: Behavior<IWalletClient>,
 
 ) => {
 
@@ -466,7 +464,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
                 $content: $text(`Approve ${params.primaryDescription.symbol}`)
               })({
                 click: clickApproveprimaryTokenTether(
-                  constant({ route: params.route, primaryToken: params.primaryToken })
+                  map(wallet => ({ wallet, route: params.route, primaryToken: params.primaryToken }))
                 )
               })
               : $ButtonPrimaryCtx({
@@ -495,9 +493,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
                   }, combineObject({ position, sizeDeltaUsd, isIncrease, focusPrice }))
                 )
               })({
-                click: clickProposeTradeTether(
-                  constant(config.wallet)
-                )
+                click: clickProposeTradeTether()
               })
 
           return $primary

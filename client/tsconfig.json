@@ -3,6 +3,7 @@
     "target": "ESNext",
     "types": [
       "vite-plugin-pwa/client",
+      "vite/client",
     ],
     "lib": [
       "DOM",

@@ -222,6 +222,7 @@ export const $Chart = <TSeriesType extends keyof SeriesDataItemTypeMap>(config: 
         combineArray(([containerDimension]) => {
           const { width, height } = containerDimension.contentRect
           chartApi.resize(width, height)
+          // timeScale.fitContent()
           timeScale.resetTimeScale()
 
           return empty()

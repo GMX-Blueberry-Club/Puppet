@@ -1,4 +1,5 @@
-import { constant } from "@most/core"
+import { replayLatest } from "@aelea/core"
+import { constant, multicast } from "@most/core"
 import { disposeNone } from "@most/disposable"
 import { Stream } from "@most/types"
 import { switchMap } from "gmx-middleware-utils"
