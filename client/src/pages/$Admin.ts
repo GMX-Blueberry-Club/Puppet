@@ -51,7 +51,7 @@ export const $Admin = component((
           $ProcessDetails({ seed: processState, title: 'Runtime' })({}),
 
           $node(),
-
+ 
           $row(style({ placeContent:'space-between' }))(
             $infoLabeledValue('Latest Block', $text(map(s => String(s), blockChange))),
 

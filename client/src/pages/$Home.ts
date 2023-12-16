@@ -3,15 +3,14 @@ import { $element, $node, $text, attr, component, eventElementTarget, style, sty
 import { Route } from "@aelea/router"
 import { $column, $icon, $row, designSheet, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map, now, tap } from "@most/core"
-import { $Link, $anchor } from "gmx-middleware-ui-components"
-import { $gmxLogo, $puppetLogo } from "../common/$icons.js"
-import { $ButtonSecondary } from "../components/form/$Button.js"
-import { filterNull, switchMap } from "gmx-middleware-utils"
+import { empty, map, now } from "@most/core"
 import { Stream } from "@most/types"
-import { $seperator2 } from "./common.js"
-import { $labeledDivider } from "../common/elements/$common.js"
+import { $Link, $anchor } from "gmx-middleware-ui-components"
+import { filterNull, invertColor, switchMap } from "gmx-middleware-utils"
+import { $gmxLogo, $puppetLogo } from "../common/$icons.js"
 import { $heading1 } from "../common/$text"
+import { $labeledDivider } from "../common/elements/$common.js"
+import { $ButtonSecondary } from "../components/form/$Button.js"
 
 
 
@@ -44,94 +43,58 @@ export const $Home = (config: ITreasury) => component((
   [clickDownloadBtn, clickDownloadBtnTether]: Behavior<any, any>,
 ) => {
 
-  const wheelClockwise = createAnimationKeyframe(`
-	0% {
-    transform: rotate(0deg);
-	}
-	100% {
-		transform: rotate(360deg);
-	}
-`)
-
-  const wheelCounterClockwise = createAnimationKeyframe(`
-  0% {
-		transform: rotate(0deg);
-	}
-	100% {
-		transform: rotate(-360deg);
-	}
-  `)
-
 
 
   const $snapSection = $column(style({ alignItems: 'center', gap: '26px', scrollSnapAlign: 'start', minHeight: '100vh', placeContent: 'center' }))
 
-  const $wheelWrapper = $node(style({
-    pointerEvents: 'none',
-    position: 'absolute',
-    width: `100vw`,
-    height: `100vw`,
-    top: '50%',
-    transform: 'translateY(-50%) rotateX(17deg)',
-  }))
-  const $wheel = $node(style({
-    border: '1px solid #4d4d4d',
-    borderRadius: '50%',
-    inset: '0',
-    position: 'absolute',
-
-  }))
-  const $cabin = $node(style({
-    // zIndex: 1,
-    display: 'block',
-    backgroundColor: pallete.background,
-    borderRadius: '50%',
-    width: '70px',
-    height: '70px',
-    transform: 'translateX(-50%)',
-    border: '1px solid #4d4d4d',
-    position: 'absolute',
-  }))
 
   const bodyPointerMove = eventElementTarget('pointermove', document.body)
 
   return [
     $column(layoutSheet.spacingBig, style({ flex: 1, lineHeight: '1.3' }))(
 
-      // translateY(-100px) translateZ(100px) rotateX(40deg)
       $snapSection(
         style({
+          // radial-gradient(circle at center 34vh, rgb(255, 255, 255) 0%, rgb(148, 164, 194) min(40vh, 370px), rgb(41, 44, 55) min(25vh, 370px), rgb(41, 44, 55) min(95vw, 670px), rgb(29, 32, 43) min(60vh, 670px), rgb(16, 18, 23) 90%) no-repeat local
+          // background: `radial-gradient(circle at center 34vh, ${pallete.message} 0%, ${pallete.foreground} min(50vw, 370px), ${pallete.horizon} min(50vw, 370px), ${pallete.horizon} min(66vw, 670px), ${pallete.middleground} min(66vw, 670px), ${pallete.background} 90%)`,
+          width: '100vw',
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'local',
           placeSelf: 'center',
-          maxWidth: '620px',
           position: 'relative',
           top: 0,
           height: `100vh`,
           paddingBottom: '30vh'
         })
       )(
-        $row(style({ flex: 1, width: '50vh', perspective: '680px', position: 'absolute', bottom: 0 }))(
-          $element('video')(
-            attr({
-              playsinline: '',
-              width: '100%',
-              height: '100%',
-              loop: '',
-              autoplay: '',
-            }),
-            style({
-              willChange: 'transform, opacity',
-              transform: 'translateY(0px) translateZ(0) rotateX(40deg)',
-            })
-          )(
-            $element('source')(attr({ type: 'video/mp4', src: '/video/leaderboard-pick-traders.mp4' }))()
-          )
+        $row(style({  flex: 1, width: '50vh', perspective: '680px', position: 'absolute', bottom: 0 }))(
+          $column(style({ transform: 'translateY(0px) translateZ(0) rotateX(40deg)', borderRadius: '8px', overflow: 'hidden', boxShadow: '0px 5px 20px 3px black' }))(
+          // mac os window style
+            $row(style({ backgroundColor: pallete.background, height: '30px', flexDirection: 'column', alignItems: 'center' }))(
+
+            ),
+            $element('video')(
+              attr({
+                playsinline: '',
+                width: '100%',
+                height: '100%',
+                loop: '',
+                autoplay: '',
+              })
+            )(
+              $element('source')(attr({ type: 'video/mp4', src: '/video/leaderboard-pick-traders.mp4' }))()
+            )
+          ),
         ),
 
-        $column(layoutSheet.spacingBig, style({ alignItems: 'center' }))(
+        $column(layoutSheet.spacingBig, style({ 
+          alignItems: 'center',
+          // color: invertColor(pallete.message)
+        }))(
           $column(style({ textAlign: 'center' }))(
             $text(style({ fontWeight: 'bold', fontSize: screenUtils.isDesktopScreen ? '2.5em' : '1.85rem', whiteSpace: 'pre-wrap', letterSpacing: '2px' }))('Matching top Traders\nwith Investors'),
           ),
-          $column(layoutSheet.spacingSmall)(
+          $column(layoutSheet.spacingSmall, style({ maxWidth: '624px' }))(
             $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Traders seamlessly earn more doing what they do best`),
             $text(style({ whiteSpace: 'pre-wrap', textAlign: 'center', maxWidth: '878px' }))(`Puppets (Investors) effortlessly pick and choose top traders to copy based by their performance and strategy to build a winning Portfolio`),
           ),
