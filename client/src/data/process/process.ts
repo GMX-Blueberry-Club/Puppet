@@ -65,7 +65,7 @@ export interface IGmxProcessState {
 }
 
 const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
-  const req = await (await fetch('/db/sha256-UEb947xBE+yJ1jQ2YyQMcaPdL4_JLMCBmE+gBf6fO_I=.json')).json().catch(() => null)
+  const req = await (await fetch('/db/sha256-fNPTHJeW5_l2gEVhGYoF5yEI7cEddvO_ClCeV_Ms8xE=.json')).json().catch(() => null)
 
   if (req === null) {
     return null
