@@ -1,19 +1,18 @@
-import { Behavior, O, Op } from '@aelea/core'
+import { Behavior, O } from '@aelea/core'
 import { $Node, $node, INode, NodeComposeFn, component, nodeEvent, style, styleBehavior } from '@aelea/dom'
 import { $column, observer } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { constant, empty, filter, map, merge, multicast, switchLatest, until, zip } from "@most/core"
+import { constant, empty, filter, map, merge, switchLatest, until, zip } from "@most/core"
 import { Stream } from "@most/types"
 
 
 export const $defaultPopoverContainer = $column(style({ backgroundColor: pallete.middleground, padding: '36px', borderRadius: '24px', border: '1px solid ' + pallete.background, boxShadow: '0 0 10px 0 ' + colorAlpha(pallete.background, .5) }))
 
 interface IPocus {
-  open: Stream<any>
+  open: Stream<$Node>
   dismiss?: Stream<any>
 
   $target: $Node
-  $content: $Node
 
   $container?: NodeComposeFn<$Node>
   $wrapper?: NodeComposeFn<$Node>
@@ -21,7 +20,7 @@ interface IPocus {
   padding?: number
 }
 
-export const $Popover = ({ open, dismiss = empty(), $content, margin = 10, padding = 76, $container = $defaultPopoverContainer, $wrapper = $node, $target }: IPocus) => component((
+export const $Popover = ({ open, dismiss = empty(), margin = 10, padding = 76, $container = $defaultPopoverContainer, $wrapper = $node, $target }: IPocus) => component((
   [overlayClick, overlayClickTether]: Behavior<INode, false>,
   [targetIntersection, targetIntersectionTether]: Behavior<INode, IntersectionObserverEntry[]>,
   [popoverContentDimension, popoverContentDimensionTether]: Behavior<INode, ResizeObserverEntry[]>,
@@ -59,7 +58,6 @@ export const $Popover = ({ open, dismiss = empty(), $content, margin = 10, paddi
   )
 
 
-  const $popContent = constant($content, open)
 
   const $overlay = $node(
     style({
@@ -115,7 +113,7 @@ export const $Popover = ({ open, dismiss = empty(), $content, margin = 10, paddi
   const $popover = switchLatest(
     map(content => {
       return until(dismissEvent, $overlay(contentOps(content)))
-    }, $popContent)
+    }, open)
   )
 
 

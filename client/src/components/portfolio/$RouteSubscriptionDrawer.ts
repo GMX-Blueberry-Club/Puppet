@@ -6,7 +6,7 @@ import { awaitPromises, constant, empty, join, map, mergeArray, now, skipRepeats
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
 import { $alertTooltip, $check, $infoLabeledValue, $infoTooltip, $infoTooltipLabel, $target, $xCross } from "gmx-middleware-ui-components"
-import { groupArrayMany, readableDate, readablePercentage, switchMap, tokenAmountLabel } from "gmx-middleware-utils"
+import { groupArrayMany, readableDate, readablePercentage, readableTokenAmountLabel, switchMap, tokenAmountLabel } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { IPuppetSubscritpion, getPuppetDepositAccountKey } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -21,7 +21,7 @@ import { $seperator2 } from "../../pages/common.js"
 import { fadeIn } from "../../transitions/enter.js"
 import { IWalletClient, wallet } from "../../wallet/walletLink.js"
 import { $ButtonCircular, $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
-import { $RouteDepositEditor } from "./$RouteDepositEditor"
+import { $AssetDepositEditor } from "./$AssetDepositEditor.js"
 
 
 
@@ -160,11 +160,18 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
             switchMap(amount => {
               return $row(layoutSheet.spacing, style({ alignItems: 'center', minWidth: '0' }))(
                 $Popover({
-                  open: openDepositPopover,
+                  open: constant(
+                    $AssetDepositEditor({
+                      token: GMX.ARBITRUM_ADDRESS.USDC
+                    })({
+                      requestDepositAsset: requestDepositAssetTether(),
+                    }),
+                    openDepositPopover
+                  ),
                   $target: $row(layoutSheet.spacing)(
                     $responsiveFlex(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
                       $infoTooltipLabel($text('The amount utialised by traders you subscribe'), 'Balance'),
-                      $text(tokenAmountLabel(GMX.ARBITRUM_ADDRESS.USDC, amount))
+                      $text(readableTokenAmountLabel(GMX.ARBITRUM_ADDRESS.USDC, amount))
                     ),
                     $ButtonSecondary({
                       $container: $defaultMiniButtonSecondary,
@@ -173,11 +180,6 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
                       click: openDepositPopoverTether()
                     }),
                   ),
-                  $content: $RouteDepositEditor({
-                    token: GMX.ARBITRUM_ADDRESS.USDC
-                  })({
-                    requestDepositAsset: requestDepositAssetTether(),
-                  })
                 })({}),
 
                 amount === 0n ? $alertTooltip($text('You need to deposit funds to to enable mirroring')) : empty(),

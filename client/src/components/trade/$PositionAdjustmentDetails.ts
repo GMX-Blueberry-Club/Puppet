@@ -424,7 +424,28 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
         switchLatest(map(params => {
           const $primary = !params.isTradingEnabled
             ? $Popover({
-              open: openEnableTradingPopover,
+              open: constant(
+                $column(layoutSheet.spacing, style({ maxWidth: '400px' }))(
+                  $heading2(`By using Puppet, I agree to the following Disclaimer`),
+                  $text(style({}))(`By accessing, I agree that ${document.location.href} is an interface that interacts with external GMX smart contracts, and does not have access to my funds.`),
+                  $alert(
+                    $node(
+                      $text('This beta version may contain bugs. Feedback and issue reports are greatly appreciated.'),
+                      $anchor(attr({ href: 'https://discord.com/channels/941356283234250772/1068946527021695168' }))($text('discord'))
+                    )
+                  ),
+                  $node(
+                    $text(style({ whiteSpace: 'pre-wrap' }))(`By clicking Agree you accept the `),
+                    $anchor(attr({ href: '/app/trading-terms-and-conditions' }))($text('Terms & Conditions'))
+                  ),
+                  $ButtonPrimary({
+                    $content: $text('Approve T&C'),
+                  })({
+                    click: approveTradingTether(constant(true))
+                  })
+                ),
+                openEnableTradingPopover
+              ),
               $target: $row(style({ placeContent: 'flex-end' }))(
                 $ButtonSecondary({
                   $content: $text('Enable Trading'),
@@ -434,25 +455,6 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
                   ])
                 })({
                   click: openEnableTradingPopoverTether()
-                })
-              ),
-              $content: $column(layoutSheet.spacing, style({ maxWidth: '400px' }))(
-                $heading2(`By using Puppet, I agree to the following Disclaimer`),
-                $text(style({}))(`By accessing, I agree that ${document.location.href} is an interface that interacts with external GMX smart contracts, and does not have access to my funds.`),
-                $alert(
-                  $node(
-                    $text('This beta version may contain bugs. Feedback and issue reports are greatly appreciated.'),
-                    $anchor(attr({ href: 'https://discord.com/channels/941356283234250772/1068946527021695168' }))($text('discord'))
-                  )
-                ),
-                $node(
-                  $text(style({ whiteSpace: 'pre-wrap' }))(`By clicking Agree you accept the `),
-                  $anchor(attr({ href: '/app/trading-terms-and-conditions' }))($text('Terms & Conditions'))
-                ),
-                $ButtonPrimary({
-                  $content: $text('Approve T&C'),
-                })({
-                  click: approveTradingTether(constant(true))
                 })
               ),
             })({

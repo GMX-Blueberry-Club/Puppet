@@ -20,6 +20,7 @@ export interface TextField extends Field {
 export const $label2 = $element('label')(
   layoutSheet.spacingSmall,
   style({ 
+    width: '100%',
     cursor: 'pointer',
     display: 'flex',
     flexDirection: 'column',

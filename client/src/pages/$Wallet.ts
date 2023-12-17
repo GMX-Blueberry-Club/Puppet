@@ -15,6 +15,7 @@ import {
   lst,
   parseReadableNumber,
   readableFixedUSD30,
+  readableTokenAmountLabel,
   readableUnitAmount,
   switchMap,
   tokenAmountLabel,
@@ -35,7 +36,7 @@ import { $Popover } from "../components/$Popover"
 import { connectContract } from "../logic/common"
 import { $card, $card2, $responsiveFlex } from "../common/elements/$common"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
-import { $RouteDepositEditor } from "../components/route/$RouteDepositEditor"
+import { $AssetDepositEditor } from "../components/portfolio/$AssetDepositEditor.js"
 import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
 import { $seperator2 } from "./common"
@@ -43,9 +44,10 @@ import { $heading2, $heading3 } from "../common/$text"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
 import { $ProfilePerformanceGraph, performanceTimeline } from "../components/trade/$ProfilePerformanceGraph"
 import { $route, $TraderDisplay, $TraderRouteDisplay, $pnlValue } from "../common/$common"
-import { $RouteSubscriptionEditor } from "../components/route/$RouteSubscriptionEditor"
+import { $RouteSubscriptionEditor } from "../components/portfolio/$RouteSubscriptionEditor.js"
 import { $caretDown } from "../common/elements/$icons"
 import { $puppetLogo } from "../common/$icons"
+import { $AssetWithdrawEditor } from "../components/portfolio/$AssetWithdrawEditor"
 
 
 
@@ -79,9 +81,13 @@ export const $Wallet = (config: IProfile) => component((
   [selectProfileMode, selectProfileModeTether]: Behavior<IProfileMode>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
+
   [openDepositPopover, openDepositPopoverTether]: Behavior<any>,
-  [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, IPuppetSubscritpionParams>,
+  [openWithdrawPopover, openWithdrawPopoverTether]: Behavior<any>,
   [requestDepositAsset, requestDepositAssetTether]: Behavior<Promise<viem.TransactionReceipt>>,
+  [requestWithdrawAsset, requestWithdrawAssetTether]: Behavior<Promise<viem.TransactionReceipt>>,
+
+  [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, IPuppetSubscritpionParams>,
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams>
 
 ) => {
@@ -106,7 +112,8 @@ export const $Wallet = (config: IProfile) => component((
 
   const readPuppetDeposit = mergeArray([
     readDepositBalance,
-    join(constant(readDepositBalance, awaitPromises(requestDepositAsset)))
+    join(constant(readDepositBalance, awaitPromises(requestDepositAsset))),
+    join(constant(readDepositBalance, awaitPromises(requestWithdrawAsset))),
   ])
 
 
@@ -180,8 +187,6 @@ export const $Wallet = (config: IProfile) => component((
                     const position = lst(pos.updates)
                     const collateralAmount = getParticiapntMpPortion(pos, position.collateralDeltaAmount, config.wallet.account.address)
                     const collateralUsd = getTokenUsd(collateralAmount, params.priceLatestMap[position.collateralToken].max)
-
-                    debugger
 
                     return acc + collateralUsd
                   }, 0n)
@@ -318,11 +323,29 @@ export const $Wallet = (config: IProfile) => component((
                   $row(layoutSheet.spacingBig, style({ alignItems: 'center', minWidth: '0', flexShrink: 0 }))(
                     switchMap(amount => {
                       return $Popover({
-                        open: openDepositPopover,
+                        open: mergeArray([
+                          constant(
+                            $AssetDepositEditor({
+                              token: GMX.ARBITRUM_ADDRESS.USDC
+                            })({
+                              requestDepositAsset: requestDepositAssetTether(),
+                            }),
+                            openDepositPopover
+                          ),
+                          constant(
+                            $AssetWithdrawEditor({
+                              token: GMX.ARBITRUM_ADDRESS.USDC,
+                              balance: amount
+                            })({
+                              requestDepositAsset: requestWithdrawAssetTether(),
+                            }),
+                            openWithdrawPopover
+                          ),
+                        ]),
                         $target: $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
                           $responsiveFlex(layoutSheet.spacingSmall)(
                             $infoTooltipLabel($text('The available amount ready to be matched against'), 'Available balance'),
-                            $text(tokenAmountLabel(GMX.ARBITRUM_ADDRESS.USDC, amount))
+                            $text(readableTokenAmountLabel(GMX.ARBITRUM_ADDRESS.USDC, amount))
                           ),
                           $ButtonSecondary({
                             $container: $defaultMiniButtonSecondary,
@@ -332,16 +355,12 @@ export const $Wallet = (config: IProfile) => component((
                           }),
                           $ButtonSecondary({
                             $container: $defaultMiniButtonSecondary,
-                            $content: $text('Withdraw')
+                            $content: $text('Withdraw'),
+                            disabled: now(amount === 0n)
                           })({
-                            click: openDepositPopoverTether()
+                            click: openWithdrawPopoverTether()
                           }),
                         ),
-                        $content: $RouteDepositEditor({
-                          token: GMX.ARBITRUM_ADDRESS.USDC
-                        })({
-                          requestDepositAsset: requestDepositAssetTether(),
-                        })
                       })({})
                     }, readPuppetDeposit),
 
@@ -419,7 +438,12 @@ export const $Wallet = (config: IProfile) => component((
                                     modifySubscribeList: modifySubscriberTether(),
                                   }),
                                   $Popover({
-                                    open: popRouteSubscriptionEditor,
+                                    open: constant(
+                                      $RouteSubscriptionEditor({ routeSubscription })({
+                                        modifySubscribeList: modifySubscriberTether()
+                                      }),
+                                      popRouteSubscriptionEditor
+                                    ),
                                     dismiss: modifySubscriber,
                                     $target: $row(layoutSheet.spacing)(
                                       $ButtonSecondary({
@@ -431,10 +455,7 @@ export const $Wallet = (config: IProfile) => component((
                                       })({
                                         click: popRouteSubscriptionEditorTether()
                                       }),
-                                    ),
-                                    $content: $RouteSubscriptionEditor({ routeSubscription })({
-                                      modifySubscribeList: modifySubscriberTether()
-                                    })
+                                    )
                                   })({}),
 
 

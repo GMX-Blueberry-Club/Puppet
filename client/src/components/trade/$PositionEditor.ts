@@ -45,7 +45,7 @@ import {
   parseFixed, parseReadableNumber,
   readableFixedUSD30,
   readableNumber,
-  readableTokenAmount,
+  readableTokenValueUsd,
   readableTokenUsd,
   readableUnitAmount,
   resolveAddress,
@@ -379,54 +379,56 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
         })({}),
 
         $Popover({
-          open: clickSettingsPopover,
+          open: constant(
+            $column(layoutSheet.spacing, style({ width: '300px' }))(
+
+              $TextField({
+                label: 'Slippage %',
+                value: map(x => formatFixed(x, 4) * 100, config.tradeConfig.slippage),
+                hint: 'the difference between the expected price of the trade and the execution price',
+                // inputOp: style({ width: '60px', maxWidth: '60px', textAlign: 'right', fontWeight: 'normal' }),
+                validation: map(n => {
+                  const val = Number(n)
+                  const valid = val >= 0
+                  if (!valid) {
+                    return 'Invalid Basis point'
+                  }
+                  if (val > 5) {
+                    return 'Slippage should be less than 5%'
+                  }
+                  return null
+                }),
+              })({
+                change: changeSlippageTether(
+                  map(x => parseBps(Number(x) / 100))
+                )
+              }),
+
+              $TextField({
+                label: 'Execution Fee Buffer %',
+                value: map(x => formatFixed(x, 4) * 100, config.tradeConfig.executionFeeBuffer),
+                hint: 'higher value to handle potential increases in gas price during order execution',
+                // inputOp: style({ width: '60px', maxWidth: '60px', textAlign: 'right', fontWeight: 'normal' }),
+                validation: map(n => {
+                  const val = Number(n)
+                  const valid = val >= 0
+                  if (!valid) {
+                    return 'Invalid Basis point'
+                  }
+                  return null
+                }),
+              })({
+                change: changeExecutionFeeBufferTether(
+                  map(x => parseBps(Number(x) / 100))
+                )
+              }),
+            ),
+            clickSettingsPopover
+          ),
           $target: $ButtonCircular({
             // disabled: clickSettingsPopover,
             $iconPath: $moreDots,
           })({ click: clickSettingsPopoverTether() }),
-          $content: $column(layoutSheet.spacing, style({ width: '300px' }))(
-
-            $TextField({
-              label: 'Slippage %',
-              value: map(x => formatFixed(x, 4) * 100, config.tradeConfig.slippage),
-              hint: 'the difference between the expected price of the trade and the execution price',
-              // inputOp: style({ width: '60px', maxWidth: '60px', textAlign: 'right', fontWeight: 'normal' }),
-              validation: map(n => {
-                const val = Number(n)
-                const valid = val >= 0
-                if (!valid) {
-                  return 'Invalid Basis point'
-                }
-                if (val > 5) {
-                  return 'Slippage should be less than 5%'
-                }
-                return null
-              }),
-            })({
-              change: changeSlippageTether(
-                map(x => parseBps(Number(x) / 100))
-              )
-            }),
-
-            $TextField({
-              label: 'Execution Fee Buffer %',
-              value: map(x => formatFixed(x, 4) * 100, config.tradeConfig.executionFeeBuffer),
-              hint: 'higher value to handle potential increases in gas price during order execution',
-              // inputOp: style({ width: '60px', maxWidth: '60px', textAlign: 'right', fontWeight: 'normal' }),
-              validation: map(n => {
-                const val = Number(n)
-                const valid = val >= 0
-                if (!valid) {
-                  return 'Invalid Basis point'
-                }
-                return null
-              }),
-            })({
-              change: changeExecutionFeeBufferTether(
-                map(x => parseBps(Number(x) / 100))
-              )
-            }),
-          )
         })({
           // overlayClick: clickSettingsPopoverTether()
         }),
@@ -735,7 +737,23 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
           $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
 
             $Popover({
-              open: clickChooseMarketPopover,
+              open: constant(
+                $MarketInfoList({
+                  chain: config.chain,
+                  processData: config.processData,
+                  $rowCallback: map(params => {
+                    return $defaultTableRowContainer(style({ borderTop: `1px solid ${colorAlpha(pallete.foreground, .20)}` }))(
+                      changeMarketTether(
+                        nodeEvent('click'),
+                        constant(params.market),
+                      )
+                    )
+                  })
+                })({
+                // changeMarket: changeMarketTether(),
+                }),
+                clickChooseMarketPopover
+              ),
               $target: switchLatest(map(token => {
                 const nativeToken = getNativeTokenAddress(config.chain)
                 const tokenDesc = token === nativeToken
@@ -753,20 +771,6 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                   click: clickChooseMarketPopoverTether()
                 })
               }, indexToken)),
-              $content: $MarketInfoList({
-                chain: config.chain,
-                processData: config.processData,
-                $rowCallback: map(params => {
-                  return $defaultTableRowContainer(style({ borderTop: `1px solid ${colorAlpha(pallete.foreground, .20)}` }))(
-                    changeMarketTether(
-                      nodeEvent('click'),
-                      constant(params.market),
-                    )
-                  )
-                })
-              })({
-                // changeMarket: changeMarketTether(),
-              }),
             })({
               // overlayClick: clickPopoverClaimTether()
             }),
@@ -780,7 +784,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                       if (value === 0n) {
                         node.element.value = ''
                       } else {
-                        node.element.value = readableTokenAmount(params.indexDescription.decimals, params.indexPrice, value)
+                        node.element.value = readableTokenValueUsd(params.indexDescription.decimals, params.indexPrice, value)
                       }
 
                       return null

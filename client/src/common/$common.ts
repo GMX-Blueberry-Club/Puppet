@@ -3,7 +3,7 @@ import { $text, component, INode, nodeEvent, style, styleInline } from "@aelea/d
 import * as router from '@aelea/router'
 import { $column, $icon, $row, $seperator, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map, now, skipRepeats } from "@most/core"
+import { constant, empty, map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { TOKEN_SYMBOL } from "gmx-middleware-const"
@@ -34,7 +34,7 @@ import { wallet } from "../wallet/walletLink.js"
 import { $puppetLogo } from "./$icons.js"
 import { $labeledDivider } from "./elements/$common"
 import { $caretDown } from "./elements/$icons"
-import { $RouteSubscriptionEditor } from "../components/route/$RouteSubscriptionEditor"
+import { $RouteSubscriptionEditor } from "../components/portfolio/$RouteSubscriptionEditor.js"
 
 
 export const $midContainer = $column(
@@ -382,7 +382,12 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
 
 
         return $Popover({
-          open: popRouteSubscriptionEditor,
+          open: constant(
+            $RouteSubscriptionEditor({ routeSubscription })({
+              modifySubscribeList: modifySubscribeListTether()
+            }),
+            popRouteSubscriptionEditor
+          ),
           dismiss: modifySubscribeList,
           $target: $row(layoutSheet.spacing)(
             $ButtonSecondary({
@@ -395,10 +400,7 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
             })({
               click: popRouteSubscriptionEditorTether()
             }),
-          ),
-          $content: $RouteSubscriptionEditor({ routeSubscription })({
-            modifySubscribeList: modifySubscribeListTether()
-          })
+          )
         })({})
       }, combineObject({ subscriptionList: config.subscriptionList, wallet }))
     ),

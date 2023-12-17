@@ -6,27 +6,26 @@ import { constant, empty, fromPromise, join, map, mergeArray, multicast, now, sn
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
-import { getMappedValue, parseFixed, switchMap, tokenAmount, tokenAmountLabel } from "gmx-middleware-utils"
+import { getMappedValue, parseFixed, readableTokenAmount, readableTokenAmountLabel, switchMap } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
-import { getWalletErc20Balance } from "../../logic/trade"
 import { $TextField } from "../../common/$TextField.js"
-import { $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { wagmiWriteContract } from "../../logic/common.js"
+import { getWalletErc20Balance } from "../../logic/trade.js"
 import { IWalletClient, wallet } from "../../wallet/walletLink.js"
+import { $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 
 
 
-export interface IRouteDepositInfoConfig {
+interface IAssetDepositEditor {
   token: viem.Address
 }
 
-export const $RouteDepositEditor = (config: IRouteDepositInfoConfig) => component((
+export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
   [requestChangeSubscription, requestChangeSubscriptionTether]: Behavior<IWalletClient, Promise<viem.TransactionReceipt>>,
   [requestDepositAsset, requestDepositAssetTether]: Behavior<IWalletClient, Promise<viem.TransactionReceipt>>,
   [inputDepositAmount, inputDepositAmountTether]: Behavior<string>,
-
   [clickMaxDeposit, clickMaxDepositTether]: Behavior<any>,
 ) => {
 
@@ -34,7 +33,7 @@ export const $RouteDepositEditor = (config: IRouteDepositInfoConfig) => componen
 
   const balance = switchMap(address => address ? getWalletErc20Balance(arbitrum, config.token, address) : now(0n), account)
   const indexToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION_MAP, config.token)
-  const maxBalance = multicast(join(constant(map(amount => tokenAmount(config.token, amount), balance), clickMaxDeposit)))
+  const maxBalance = multicast(join(constant(map(amount => readableTokenAmount(config.token, amount), balance), clickMaxDeposit)))
   const allowance = replayLatest(multicast(switchMap(address => {
     if (address == null) {
       return now(0n)
@@ -61,7 +60,7 @@ export const $RouteDepositEditor = (config: IRouteDepositInfoConfig) => componen
           label: 'Amount',
           value: maxBalance,
           placeholder: 'Enter amount',
-          hint: startWith('Balance: ', map(amount => `Balance: ${tokenAmountLabel(config.token, amount)}`, balance)),
+          hint: startWith('Balance: ', map(amount => `Balance: ${readableTokenAmountLabel(config.token, amount)}`, balance)),
         })({
           change: inputDepositAmountTether()
         }),

@@ -14,7 +14,7 @@ import { IPuppetSubscritpion } from "puppet-middleware-utils"
 import { $midContainer } from "../common/$common.js"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount.js"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu.js'
-import { $RouteSubscriptionDrawer } from "../components/route/$RouteSubscriptionDrawer.js"
+import { $RouteSubscriptionDrawer } from "../components/portfolio/$RouteSubscriptionDrawer.js"
 import { gmxProcess } from "../data/process/process.js"
 import { contractReader } from "../logic/common.js"
 import { fadeIn } from "../transitions/enter.js"
