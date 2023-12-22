@@ -17,7 +17,7 @@ import * as GMX from "gmx-middleware-const"
 import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $target } from "gmx-middleware-ui-components"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
-import { IPositionMirrorSlot, getRouteKey, getRouteTypeKey } from "puppet-middleware-utils"
+import { IPositionMirrorSlot, getTradeRouteKey, getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $midContainer } from "../common/$common.js"
 import { $caretDown } from "../common/elements/$icons.js"
@@ -307,7 +307,7 @@ export const $Trade = (config: ITradeComponent) => component((
       return now(GMX.ADDRESS_ZERO)
     }
 
-    const routeKey = getRouteKey(w3p.account.address, params.routeTypeKey)
+    const routeKey = getTradeRouteKey(w3p.account.address, params.routeTypeKey)
     const storedRouteKey = storage.get(tradingStore, GMX.ADDRESS_ZERO as viem.Address, routeKey)
     const fallbackGetRoute = switchMap(address => {
       const routeAddressArgs = [w3p.account.address, params.collateralToken, params.indexToken, params.isLong, '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e5831000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000004bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075'] as const

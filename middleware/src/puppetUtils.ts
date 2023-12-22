@@ -132,10 +132,10 @@ export function getRouteTypeKey(collateralToken: viem.Address, indexToken: viem.
 }
 
 
-export function getRouteKey(trader: viem.Address, routeTypeKey: viem.Hex): viem.Hex {
+export function getTradeRouteKey(trader: viem.Address, tradeRouteTypeKey: viem.Hex): viem.Hex {
   return hashData(
     ["address", "bytes"],
-    [trader, routeTypeKey]
+    [trader, tradeRouteTypeKey]
   )
 }
 

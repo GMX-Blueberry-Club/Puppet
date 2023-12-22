@@ -346,7 +346,6 @@ export const gmxProcess = defineProcess(
   {
     source: puppetLog.shareIncrease,
     step(seed, value) {
-      debugger
       const args = value.args
       const positionSlot = seed.mirrorPositionSlot[args.positionKey]
 
