@@ -113,18 +113,18 @@ type PositionDecrease @entity(immutable: true) {
 }
 
 type PositionFeeUpdate @entity(immutable: true) {
-  id: Bytes!
-  link: PositionLink!
+  id: Bytes! # bytes32
+  link: PositionLink! # bytes32
 
-  orderKey: Bytes!
-  positionKey: Bytes!
-  referralCode: Bytes!
+  orderKey: Bytes! # bytes32
+  positionKey: Bytes! # bytes32
+  referralCode: Bytes! # bytes32
 
-  market: Bytes!
-  collateralToken: Bytes!
-  affiliate: Bytes!
-  trader: Bytes!
-  uiFeeReceiver: Bytes!
+  market: Bytes! # address
+  collateralToken: Bytes! # address
+  affiliate: Bytes! # address
+  trader: Bytes! # address
+  uiFeeReceiver: Bytes! # address
 
   collateralTokenPriceMin: BigInt!
   collateralTokenPriceMax: BigInt!
@@ -165,14 +165,14 @@ type PositionFeeUpdate @entity(immutable: true) {
 }
 
 type PositionOpen @entity {
-  id: Bytes!
-  link: PositionLink!
-  key: Bytes!
+  id: Bytes! # bytes32
+  link: PositionLink! # bytes32
+  key: Bytes! # bytes32
 
   # indexToken: Bytes!
-  account: Bytes!
-  market: Bytes!
-  collateralToken: Bytes!
+  account: Bytes! # address
+  market: Bytes! # address
+  collateralToken: Bytes! # address
 
   sizeInUsd: BigInt!
   sizeInTokens: BigInt!
@@ -196,14 +196,14 @@ type PositionOpen @entity {
 }
 
 type PositionSettled @entity(immutable: true) {
-  id: Bytes!
-  link: PositionLink!
-  key: Bytes!
+  id: Bytes! # bytes32
+  link: PositionLink! # bytes32
+  key: Bytes! # bytes32
 
   # indexToken: Bytes!
-  account: Bytes!
-  market: Bytes!
-  collateralToken: Bytes!
+  account: Bytes! # address
+  market: Bytes! # address
+  collateralToken: Bytes! # address
 
   sizeInUsd: BigInt!
   sizeInTokens: BigInt!
@@ -243,14 +243,60 @@ type PriceCandle @entity(immutable: true) {
   c: BigInt!
 }
 
+type MirrorPositionLink @entity(immutable: true) {
+  id: Bytes!
+  shareIncreaseList: [SharesIncrease!] @derivedFrom(field: "link")
+  executeList: [ExecutePosition!] @derivedFrom(field: "link")
+}
 
+type RouteOpenRef @entity {
+  id: Bytes!
+  mirrorPositionOpen: MirrorPositionOpen!
+}
 
+type MirrorPositionOpen @entity {
+  id: Bytes!
+  link: MirrorPositionLink!
 
+  position: PositionOpen
 
+  trader: Bytes!
+  tradeRoute: Bytes!
+  puppets: [Bytes!]! # address[]
 
+  puppetsShares: [BigInt!]!
+  traderShares: BigInt!
+  totalSupply: BigInt!
 
+  routeTypeKey: Bytes!
+  tradeRouteKey: Bytes!
 
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
 
+type MirrorPositionSettled @entity(immutable: true) {
+  id: Bytes!
+  link: MirrorPositionLink!
+
+  position: PositionSettled!
+
+  trader: Bytes!
+  tradeRoute: Bytes!
+  puppets: [Bytes!]! # address[]
+
+  puppetsShares: [BigInt!]!
+  traderShares: BigInt!
+  totalSupply: BigInt!
+
+  routeTypeKey: Bytes!
+  tradeRouteKey: Bytes!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
 
 type AdjustPosition @entity(immutable: true) {
   id: Bytes!
@@ -332,6 +378,7 @@ type Deposit @entity(immutable: true) {
 
 type ExecutePosition @entity(immutable: true) {
   id: Bytes!
+  link: MirrorPositionLink!
   performanceFeePaid: BigInt! # uint256
   route: Bytes! # address
   requestKey: Bytes! # bytes32
@@ -364,7 +411,7 @@ type LiquidatePosition @entity(immutable: true) {
   transactionHash: Bytes!
 }
 
-type OpenPosition @entity(immutable: true) {
+type RequestMirrorPosition @entity(immutable: true) {
   id: Bytes!
   puppets: [Bytes!]! # address[]
   trader: Bytes! # address
@@ -457,6 +504,7 @@ type SetThrottleLimit @entity(immutable: true) {
 
 type SharesIncrease @entity(immutable: true) {
   id: Bytes!
+  link: MirrorPositionLink!
   puppetsShares: [BigInt!]! # uint256[]
   traderShares: BigInt! # uint256
   totalSupply: BigInt! # uint256

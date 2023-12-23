@@ -1,3 +1,4 @@
+import { Value, ethereum, store } from "@graphprotocol/graph-ts"
 import {
   AdjustPosition as AdjustPositionEvent,
   AdjustTargetLeverage as AdjustTargetLeverageEvent,
@@ -41,11 +42,15 @@ import {
   ExecutePosition,
   Initialize,
   LiquidatePosition,
-  OpenPosition,
+  MirrorPositionOpen,
+  MirrorPositionSettled,
   OwnershipTransferred,
   Pause,
+  PositionOpen,
   RegisterRouteAccount,
+  RequestMirrorPosition,
   RescueRouteFunds,
+  RouteOpenRef,
   SetFees,
   SetFeesRecipient,
   SetRouteType,
@@ -62,6 +67,7 @@ import {
   Withdraw,
   WithdrawPlatformFees
 } from "../generated/schema"
+import { ZERO_BI } from "./utils/const"
 
 export function handleAdjustPosition(event: AdjustPositionEvent): void {
   const entity = new AdjustPosition(
@@ -182,6 +188,7 @@ export function handleExecutePosition(event: ExecutePositionEvent): void {
   const entity = new ExecutePosition(
     event.transaction.hash.concatI32(event.logIndex.toI32())
   )
+
   entity.performanceFeePaid = event.params.performanceFeePaid
   entity.route = event.params.route
   entity.requestKey = event.params.requestKey
@@ -191,6 +198,30 @@ export function handleExecutePosition(event: ExecutePositionEvent): void {
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
   entity.transactionHash = event.transaction.hash
+
+  if (entity.isExecuted === false) {
+    const routeOpenRef = RouteOpenRef.load(entity.route)
+
+    if (routeOpenRef && routeOpenRef.mirrorPositionOpen) {
+      const positionOpen = MirrorPositionOpen.load(routeOpenRef.mirrorPositionOpen)
+
+      if (positionOpen) {
+        const position = PositionOpen.load(positionOpen.id)
+
+        if (position === null) {
+          const settledMirrorPosition = new MirrorPositionSettled(event.transaction.hash.concatI32(event.logIndex.toI32()))
+
+          settledMirrorPosition.merge([positionOpen])
+          settledMirrorPosition.save()
+
+          store.remove("MirrorPositionOpen", routeOpenRef.mirrorPositionOpen.toString())
+        }
+      }
+    
+    }
+  }
+
+
 
   entity.save()
 }
@@ -228,10 +259,9 @@ export function handleLiquidatePosition(event: LiquidatePositionEvent): void {
 }
 
 export function handleOpenPosition(event: OpenPositionEvent): void {
-  const entity = new OpenPosition(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.puppets = event.params.puppets
+  const entity = new RequestMirrorPosition(event.params.requestKey)
+
+  entity.puppets = Value.fromAddressArray(event.params.puppets).toBytesArray()
   entity.trader = event.params.trader
   entity.route = event.params.route
   entity.isIncrease = event.params.isIncrease
@@ -244,6 +274,42 @@ export function handleOpenPosition(event: OpenPositionEvent): void {
   entity.transactionHash = event.transaction.hash
 
   entity.save()
+
+  if (MirrorPositionOpen.load(event.params.positionKey)) {
+    throw new Error("OpenPosition already exists")
+  }
+
+  
+  const openPosition = new MirrorPositionOpen(entity.positionKey)
+
+  
+
+  openPosition.link = entity.requestKey
+
+  openPosition.position = entity.positionKey
+
+  openPosition.trader = entity.trader
+  openPosition.tradeRoute = entity.route
+  openPosition.puppets = entity.puppets
+
+  openPosition.puppetsShares = []
+  openPosition.traderShares = ZERO_BI
+  openPosition.totalSupply = ZERO_BI
+
+  openPosition.routeTypeKey = entity.routeTypeKey
+  openPosition.tradeRouteKey = entity.trader.concat(entity.routeTypeKey)
+
+  openPosition.blockNumber = event.block.number
+  openPosition.blockTimestamp = event.block.timestamp
+  openPosition.transactionHash = event.transaction.hash
+
+
+  const routeOpenRef = new RouteOpenRef(event.params.route)
+
+  routeOpenRef.mirrorPositionOpen = openPosition.id
+
+  openPosition.save()
+  routeOpenRef.save()
 }
 
 export function handleOwnershipTransferred(
@@ -371,6 +437,8 @@ export function handleSharesIncrease(event: SharesIncreaseEvent): void {
   const entity = new SharesIncrease(
     event.transaction.hash.concatI32(event.logIndex.toI32())
   )
+
+
   entity.puppetsShares = event.params.puppetsShares
   entity.traderShares = event.params.traderShares
   entity.totalSupply = event.params.totalSupply
@@ -380,6 +448,18 @@ export function handleSharesIncrease(event: SharesIncreaseEvent): void {
   entity.blockTimestamp = event.block.timestamp
   entity.transactionHash = event.transaction.hash
 
+  const openPosition = MirrorPositionOpen.load(entity.positionKey)
+
+  if (openPosition) {
+    openPosition.puppetsShares = entity.puppetsShares
+    openPosition.traderShares = entity.traderShares
+    openPosition.totalSupply = entity.totalSupply
+
+    entity.link = openPosition.id
+
+    openPosition.save()
+  } 
+ 
   entity.save()
 }
 
@@ -452,7 +532,7 @@ export function handleUpdateOpenTimestamp(
   const entity = new UpdateOpenTimestamp(
     event.transaction.hash.concatI32(event.logIndex.toI32())
   )
-  entity.puppets = event.params.puppets
+  entity.puppets = Value.fromAddressArray(event.params.puppets).toBytesArray()
   entity.routeType = event.params.routeType
 
   entity.blockNumber = event.block.number

@@ -91,7 +91,7 @@ export function getParticiapntMpShare(mp: IPositionMirrorSettled | IPositionMirr
 export function getParticiapntMpPortion(mp: IPositionMirrorSettled | IPositionMirrorSlot, amount: bigint, puppet?: viem.Address): bigint {
   const share = getParticiapntMpShare(mp, puppet)
 
-  return getPortion(mp.shareSupply, share, amount)
+  return getPortion(mp.totalSupply, share, amount)
 }
 
 

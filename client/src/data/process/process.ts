@@ -226,7 +226,7 @@ export const gmxProcess = defineProcess(
         route: ADDRESS_ZERO,
         trader: mirrorSlotRequest.trader,
         shares: [],
-        shareSupply: 0n,
+        totalSupply: 0n,
         traderShare: 0n,
         transactionHash: value.transactionHash,
         blockTimestamp: update.blockTimestamp,
@@ -356,7 +356,7 @@ export const gmxProcess = defineProcess(
 
       positionSlot.shares = args.puppetsShares
       positionSlot.traderShare = args.traderShares
-      positionSlot.shareSupply = args.totalSupply
+      positionSlot.totalSupply = args.totalSupply
 
       // positionSlot.position.cumulativeFee += args.fee
       // positionSlot.position.link.decreaseList.push({ ...value.args, blockTimestamp: seed.approximatedTimestamp, transactionHash: value.transactionHash, __typename: 'DecreasePosition' })

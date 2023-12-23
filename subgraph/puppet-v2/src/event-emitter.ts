@@ -1,9 +1,10 @@
 import { store } from "@graphprotocol/graph-ts"
 import { EventLog1 } from "../generated/EventEmitter/EventEmitter"
-import { PositionLink, PositionOpen, PriceLatest } from "../generated/schema"
+import { PositionLink, PositionOpen, PositionSettled, PriceLatest } from "../generated/schema"
 import * as dto from "./dto"
 import { IntervalUnixTime, ZERO_BI } from "./utils/const"
 import { getAddressItem, getBytes32Item, getUintItem } from "./utils/datastore"
+import { getIdFromEvent } from "./utils/gmxHelpers"
 
 
 export function handleEventLog1(event: EventLog1): void {
@@ -64,17 +65,22 @@ function onPositionDecrease(event: EventLog1): void {
   const entity = dto.createPositionDecrease(event, openPosition.link)
   entity.save()
 
-  if (openPosition.sizeInTokens.equals(ZERO_BI)) {
-    store.remove("PositionOpen", openPosition.link.toString())
-  } else {
+  if (openPosition.sizeInTokens.gt(ZERO_BI)) {
     openPosition.sizeInUsd = entity.sizeInUsd
     openPosition.sizeInTokens = entity.sizeInTokens
     openPosition.collateralAmount = entity.collateralAmount
     openPosition.realisedPnlUsd = openPosition.realisedPnlUsd.plus(entity.basePnlUsd)
 
     openPosition.save()
+  } else {
+    const positionSettled = new PositionSettled(getIdFromEvent(event))
+
+    positionSettled.merge([openPosition])
+    positionSettled.save()
+
+    store.remove("PositionOpen", openPosition.link.toString())
   }
-  
+
 }
 
 function onPositionFeeUpdate(event: EventLog1): void {

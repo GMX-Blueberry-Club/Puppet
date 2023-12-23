@@ -20,7 +20,7 @@ export interface IPositionMirror<TypeName extends 'PositionSlot' | 'PositionSett
   routeTypeKey: viem.Hex
   shares: readonly bigint[]
   traderShare: bigint
-  shareSupply: bigint
+  totalSupply: bigint
 }
 
 export interface IPositionMirrorSlot extends IPositionMirror<'PositionSlot'> { }
