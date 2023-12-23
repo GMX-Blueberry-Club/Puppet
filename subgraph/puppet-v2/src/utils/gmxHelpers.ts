@@ -1,6 +1,5 @@
-import { Address, BigInt, Bytes, ethereum, log } from "@graphprotocol/graph-ts"
-import { PriceLatest } from "../../generated/schema"
-import { BASIS_POINTS_DIVISOR, ONE_BI, ZERO_BI } from "./const"
+import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts"
+import { BASIS_POINTS_DIVISOR, ZERO_BI } from "./const"
 
 
 
@@ -12,26 +11,6 @@ export function negate(n: BigInt): BigInt {
 
 export function timestampToDay(timestamp: BigInt): BigInt {
   return BigInt.fromI32(86400).times(BigInt.fromI32(86400)).div(timestamp)
-}
-
-
-export function getTokenUsdAmount(amount: BigInt, tokenAddress: Address, decimals: number): BigInt {
-  const priceUsd = getTokenPrice(tokenAddress)
-  const denominator = BigInt.fromI32(10).pow(decimals as u8)
-
-  return amount.times(priceUsd).div(denominator)
-}
-
-
-export function getTokenPrice(tokenAddress: Address): BigInt {
-  const chainlinkPriceEntity = PriceLatest.load(tokenAddress)
-
-  if (chainlinkPriceEntity == null) {
-    log.warning(`Pricefeed doesn't exist: ${tokenAddress}`, [])
-    return ONE_BI
-  }
-
-  return chainlinkPriceEntity.value
 }
 
 
@@ -61,5 +40,4 @@ export function calculatePositionDeltaPercentage(delta: BigInt, collateral: BigI
 }
 
 
-export const uniqueEventId = (ev: ethereum.Event): string => ev.transaction.hash.toHex() + ':' + ev.logIndex.toString()
 

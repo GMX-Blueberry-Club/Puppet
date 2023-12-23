@@ -9,7 +9,7 @@ type MarketCreated @entity(immutable: true) {
 }
 
 type PositionLink @entity(immutable: true) {
-  id: Bytes!
+  id: ID!
   key: Bytes!
 
   # indexToken: Bytes!
@@ -165,7 +165,7 @@ type PositionFeeUpdate @entity(immutable: true) {
 }
 
 type PositionOpen @entity {
-  id: Bytes! # bytes32
+  id: ID! # bytes32
   link: PositionLink! # bytes32
   key: Bytes! # bytes32
 
@@ -181,7 +181,6 @@ type PositionOpen @entity {
 
   cumulativeSizeUsd: BigInt!
   cumulativeSizeToken: BigInt!
-  cumulativeFeeUsd: BigInt!
 
   maxSizeUsd: BigInt!
   maxSizeToken: BigInt!
@@ -196,7 +195,7 @@ type PositionOpen @entity {
 }
 
 type PositionSettled @entity(immutable: true) {
-  id: Bytes! # bytes32
+  id: Bytes!
   link: PositionLink! # bytes32
   key: Bytes! # bytes32
 
@@ -212,7 +211,6 @@ type PositionSettled @entity(immutable: true) {
 
   cumulativeSizeUsd: BigInt!
   cumulativeSizeToken: BigInt!
-  cumulativeFeeUsd: BigInt!
 
   maxSizeUsd: BigInt!
   maxSizeToken: BigInt!
@@ -226,10 +224,15 @@ type PositionSettled @entity(immutable: true) {
   logIndex: BigInt!
 }
 
-type PriceLatest @entity {
-  id: Bytes!
-  value: BigInt!
+type PriceCandleLatest @entity {
+  id: ID!
+  token: Bytes!
+  interval: Int!
   timestamp: Int!
+  o: BigInt!
+  h: BigInt!
+  l: BigInt!
+  c: BigInt!
 }
 
 type PriceCandle @entity(immutable: true) {
@@ -244,18 +247,18 @@ type PriceCandle @entity(immutable: true) {
 }
 
 type MirrorPositionLink @entity(immutable: true) {
-  id: Bytes!
+  id: ID!
   shareIncreaseList: [SharesIncrease!] @derivedFrom(field: "link")
   executeList: [ExecutePosition!] @derivedFrom(field: "link")
 }
 
 type RouteOpenRef @entity {
-  id: Bytes!
+  id: ID!
   mirrorPositionOpen: MirrorPositionOpen!
 }
 
 type MirrorPositionOpen @entity {
-  id: Bytes!
+  id: ID!
   link: MirrorPositionLink!
 
   position: PositionOpen

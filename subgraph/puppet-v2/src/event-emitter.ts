@@ -1,90 +1,89 @@
-import { store } from "@graphprotocol/graph-ts"
+import { log, store } from "@graphprotocol/graph-ts"
 import { EventLog1 } from "../generated/EventEmitter/EventEmitter"
-import { PositionLink, PositionOpen, PositionSettled, PriceLatest } from "../generated/schema"
+import { PositionLink, PositionOpen, PriceCandle, PriceCandleLatest } from "../generated/schema"
 import * as dto from "./dto"
 import { IntervalUnixTime, ZERO_BI } from "./utils/const"
 import { getAddressItem, getBytes32Item, getUintItem } from "./utils/datastore"
-import { getIdFromEvent } from "./utils/gmxHelpers"
 
 
 export function handleEventLog1(event: EventLog1): void {
-  if (event.params.eventName == "PositionFeeUpdate") {
-    onPositionFeeUpdate(event)
+  if (event.params.eventName == "PositionFeesInfo") {
+    onPositionFeesInfo(event)
   } else if (event.params.eventName == "MarketCreated") {
     dto.createMarketCreated(event).save()
   } else if (event.params.eventName == "PositionIncrease") {
     onPositionIncrease(event)
   } else if (event.params.eventName == "PositionDecrease") {
     onPositionDecrease(event)
-  } else if (event.params.eventName == "PriceInterval") {
-    onPriceInterval(event)
+  } else if (event.params.eventName == "OraclePriceUpdate") {
+    onOraclePriceUpdate(event)
   }
 }
 
 
 function onPositionIncrease (event: EventLog1): void {
   const positionKey = getBytes32Item(event.params.eventData, 1)
-  let openSlot = PositionOpen.load(positionKey)
+  let openSlot = PositionOpen.load(positionKey.toHex())
 
   if (openSlot === null) {
     openSlot = dto.createPositionOpen(event)
   }
 
-  const entity = dto.createPositionIncrease(event, openSlot.link)
-  entity.save()
+  let positionLink = PositionLink.load(openSlot.link)
 
-  openSlot.sizeInUsd = getUintItem(event.params.eventData, 0)
-  openSlot.sizeInTokens = getUintItem(event.params.eventData, 1)
-  openSlot.collateralAmount = getUintItem(event.params.eventData, 2)
+  if (positionLink === null) {
+    positionLink = dto.createPositionLink(event, openSlot)
+    positionLink.save()
+  }
 
-  openSlot.cumulativeSizeUsd = openSlot.cumulativeSizeUsd.plus(getUintItem(event.params.eventData, 4))
-  openSlot.cumulativeSizeToken = openSlot.cumulativeSizeToken.plus(getUintItem(event.params.eventData, 5))
-  openSlot.cumulativeFeeUsd = openSlot.cumulativeFeeUsd.plus(getUintItem(event.params.eventData, 6))
+  const positionIncrease = dto.createPositionIncrease(event, openSlot.link)
+
+
+  openSlot.sizeInUsd = positionIncrease.sizeInUsd
+  openSlot.sizeInTokens = positionIncrease.sizeInTokens
+  openSlot.collateralAmount = positionIncrease.collateralAmount
+
+  openSlot.cumulativeSizeUsd = openSlot.cumulativeSizeUsd.plus(positionIncrease.sizeDeltaUsd)
+  openSlot.cumulativeSizeToken = openSlot.cumulativeSizeToken.plus(positionIncrease.sizeDeltaInTokens)
 
   openSlot.maxSizeUsd = openSlot.maxSizeUsd.gt(openSlot.sizeInUsd) ? openSlot.maxSizeUsd : openSlot.sizeInUsd
   openSlot.maxSizeToken = openSlot.maxSizeToken.gt(openSlot.maxSizeToken) ? openSlot.maxSizeToken : openSlot.maxSizeToken
 
   openSlot.save()
+  positionIncrease.save()
 
-  if (PositionLink.load(openSlot.link) === null) {
-    const positionLink = dto.createPositionLink(event, openSlot)
-    positionLink.save()
-  }
 }
 
 function onPositionDecrease(event: EventLog1): void {
   const positionKey = getBytes32Item(event.params.eventData, 1)
-  const openPosition = PositionOpen.load(positionKey)
+  const openPosition = PositionOpen.load(positionKey.toHex())
 
   if (openPosition === null) {
+    log.error("PositionOpen not found", [])
     return
-    // log.error("PositionOpen not found", [])
-    // throw new Error("PositionOpen not found")
   }
-  
+
+
   const entity = dto.createPositionDecrease(event, openPosition.link)
   entity.save()
 
-  if (openPosition.sizeInTokens.gt(ZERO_BI)) {
-    openPosition.sizeInUsd = entity.sizeInUsd
-    openPosition.sizeInTokens = entity.sizeInTokens
-    openPosition.collateralAmount = entity.collateralAmount
+  if (entity.sizeInTokens.gt(ZERO_BI)) {
+    // openPosition.sizeInUsd = entity.sizeInUsd
+    // openPosition.sizeInTokens = entity.sizeInTokens
+    // openPosition.collateralAmount = entity.collateralAmount
     openPosition.realisedPnlUsd = openPosition.realisedPnlUsd.plus(entity.basePnlUsd)
-
     openPosition.save()
   } else {
-    const positionSettled = new PositionSettled(getIdFromEvent(event))
-
-    positionSettled.merge([openPosition])
+    const positionSettled = dto.createPositionSettled(event, openPosition)
     positionSettled.save()
 
-    store.remove("PositionOpen", openPosition.link.toString())
+    store.remove("PositionOpen", openPosition.link)
   }
 
 }
 
-function onPositionFeeUpdate(event: EventLog1): void {
-  const openPosition = PositionOpen.load(getBytes32Item(event.params.eventData, 1))
+function onPositionFeesInfo(event: EventLog1): void {
+  const openPosition = PositionOpen.load(getBytes32Item(event.params.eventData, 1).toHex())
 
   if (openPosition) {
     dto.createPositionFeeUpdate(event, openPosition.link).save()
@@ -103,26 +102,61 @@ export const PRICEFEED_INTERVAL = [
   IntervalUnixTime.MONTH,
 ]
 
-function onPriceInterval(event: EventLog1): void {
+function onOraclePriceUpdate(event: EventLog1): void {
   const token = getAddressItem(event.params.eventData, 0)
-  let latestPrice = PriceLatest.load(token)
-
-  if (latestPrice === null) {
-    latestPrice = new PriceLatest(token)
-  }
-
-  latestPrice.value = getUintItem(event.params.eventData, 1)
-  latestPrice.timestamp = getUintItem(event.params.eventData, 2).toI32()
+  const price = getUintItem(event.params.eventData, 1)
+  const timestamp = getUintItem(event.params.eventData, 2).toI32()
+  
 
   for (let index = 0; index < PRICEFEED_INTERVAL.length; index++) {
     const interval = PRICEFEED_INTERVAL[index]
-    const slot = latestPrice.timestamp / interval
-    const timeSlot = slot * interval
+    const nextSlot = timestamp / interval
+    const nextTimeSlot = nextSlot * interval
+    const latestId = `${token.toHex()}:${interval}`
 
-    const candle = dto.createPriceLatest(latestPrice, interval, timeSlot)
+    let latest = PriceCandleLatest.load(latestId)
+    
+    if (latest === null) {
+      latest = new PriceCandleLatest(latestId)
+      latest.timestamp = nextTimeSlot as i32
+      latest.token = token
+      latest.interval = interval
+      latest.o = price
+      latest.h = price
+      latest.l = price
+      latest.c = price
+      latest.save()
+      
 
-    candle.save()
+      return
+    }
+    
+    if (latest.timestamp !== nextTimeSlot) {
+      const candleId = `${latest.token.toHex()}:${interval}:${latest.timestamp.toString()}`
+      const candle = new PriceCandle(candleId)
+
+      candle.token = latest.token
+      candle.interval = latest.interval
+      candle.timestamp = latest.timestamp
+      candle.o = latest.o
+      candle.h = latest.h
+      candle.l = latest.l
+      candle.c = latest.c
+      
+      candle.save()
+
+      latest.timestamp = nextTimeSlot as i32
+    }
+
+
+    if (price.gt(latest.h)) {
+      latest.h = price
+    } else if (price.lt(latest.l)) {
+      latest.l = price
+    }
+
+    latest.c = price
+
+    latest.save()
   }
-
-
 }

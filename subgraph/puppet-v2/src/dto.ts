@@ -1,6 +1,6 @@
-import { Bytes } from "@graphprotocol/graph-ts"
+import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts"
 import { EventLog } from "../generated/EventEmitter/EventEmitter"
-import { MarketCreated, PositionDecrease, PositionFeeUpdate, PositionIncrease, PositionLink, PositionOpen, PriceCandle, PriceLatest } from "../generated/schema"
+import { MarketCreated, PositionDecrease, PositionFeeUpdate, PositionIncrease, PositionLink, PositionOpen, PositionSettled, PriceCandle, PriceCandleLatest } from "../generated/schema"
 import { getAddressItem, getBoolItem, getBytes32Item, getIntItem, getUintItem } from "./utils/datastore"
 import { getIdFromEvent } from "./utils/gmxHelpers"
 import { IntervalUnixTime } from "./utils/const"
@@ -20,7 +20,7 @@ export function createMarketCreated<T extends EventLog>(event: T): MarketCreated
   return dto
 }
 
-export function createPositionIncrease<T extends EventLog>(event: T, linkId: Bytes): PositionIncrease {
+export function createPositionIncrease<T extends EventLog>(event: T, linkId: string): PositionIncrease {
   const eventId = getIdFromEvent(event)
   const dto = new PositionIncrease(eventId)
 
@@ -64,7 +64,7 @@ export function createPositionIncrease<T extends EventLog>(event: T, linkId: Byt
   return dto
 }
 
-export function createPositionFeeUpdate<T extends EventLog>(event: T, linkId: Bytes): PositionFeeUpdate {
+export function createPositionFeeUpdate<T extends EventLog>(event: T, linkId: string): PositionFeeUpdate {
   const eventId = getIdFromEvent(event)
   const dto = new PositionFeeUpdate(eventId)
 
@@ -120,7 +120,7 @@ export function createPositionFeeUpdate<T extends EventLog>(event: T, linkId: By
   return dto
 }
 
-export function createPositionDecrease<T extends EventLog>(event: T, linkId: Bytes): PositionDecrease {
+export function createPositionDecrease<T extends EventLog>(event: T, linkId: string): PositionDecrease {
   const eventId = getIdFromEvent(event)
   const dto = new PositionDecrease(eventId)
 
@@ -186,11 +186,11 @@ export function createPositionLink<T extends EventLog>(event: T, openSlot: Posit
 }
 
 export function createPositionOpen<T extends EventLog>(event: T): PositionOpen {
-  const eventId = getIdFromEvent(event)
-  const dto = new PositionOpen(eventId)
+  const positionKey = getBytes32Item(event.params.eventData, 1)
+  const dto = new PositionOpen(positionKey.toHex())
 
-  dto.key = getBytes32Item(event.params.eventData, 1)
-  dto.link = Bytes.fromUTF8('PositionLink').concat(eventId)
+  dto.key = positionKey
+  dto.link = Bytes.fromUTF8('PositionLink').concat(getIdFromEvent(event)).toHex()
 
   dto.account = getAddressItem(event.params.eventData, 0)
   dto.market = getAddressItem(event.params.eventData, 1)
@@ -203,7 +203,6 @@ export function createPositionOpen<T extends EventLog>(event: T): PositionOpen {
 
   dto.cumulativeSizeUsd = getUintItem(event.params.eventData, 4)
   dto.cumulativeSizeToken = getUintItem(event.params.eventData, 5)
-  dto.cumulativeFeeUsd = getUintItem(event.params.eventData, 6)
 
   dto.maxSizeUsd = getUintItem(event.params.eventData, 7)
   dto.maxSizeToken = getUintItem(event.params.eventData, 8)
@@ -219,30 +218,36 @@ export function createPositionOpen<T extends EventLog>(event: T): PositionOpen {
   return dto
 }
 
-export function createPriceLatest(latestPrice: PriceLatest, interval: IntervalUnixTime, timeSlot: number): PriceCandle {
-  const id = `${latestPrice.id}:${interval}:${timeSlot}`
 
-  let candle = PriceCandle.load(id)
+export function createPositionSettled<T extends EventLog>(event: T, openPosition: PositionOpen): PositionSettled {
+  const dto = new PositionSettled(getIdFromEvent(event))
 
-  if (candle) {
-    if (latestPrice.value.gt(candle.h)) {
-      candle.h = latestPrice.value
-    }
-    if (latestPrice.value.lt(candle.l)) {
-      candle.l = latestPrice.value
-    }
-    candle.c = latestPrice.value
-  } else {
-    candle = new PriceCandle(id)
-    candle.token = latestPrice.id
-    candle.interval = interval
-    candle.o = latestPrice.value
-    candle.h = latestPrice.value
-    candle.l = latestPrice.value
-    candle.c = latestPrice.value
-  }
+  dto.link = openPosition.link
+  dto.key = openPosition.key
 
-  return candle
+  dto.account = openPosition.account
+  dto.market = openPosition.market
+  dto.collateralToken = openPosition.collateralToken
+
+  dto.sizeInUsd = openPosition.sizeInUsd
+  dto.sizeInTokens = openPosition.sizeInTokens
+  dto.collateralAmount = openPosition.collateralAmount
+  dto.realisedPnlUsd = openPosition.realisedPnlUsd
+
+  dto.cumulativeSizeUsd = openPosition.cumulativeSizeUsd
+  dto.cumulativeSizeToken = openPosition.cumulativeSizeToken
+
+  dto.maxSizeUsd = openPosition.maxSizeUsd
+  dto.maxSizeToken = openPosition.maxSizeToken
+
+  dto.isLong = openPosition.isLong
+
+  dto.blockNumber = event.block.number
+  dto.blockTimestamp = event.block.timestamp
+  dto.transactionHash = event.transaction.hash
+  dto.transactionIndex = event.transaction.index
+  dto.logIndex = event.logIndex
+
+  return dto
 }
-
 
