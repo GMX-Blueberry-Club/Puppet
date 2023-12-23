@@ -9,7 +9,7 @@ import {
 import { Address, Bytes } from "@graphprotocol/graph-ts"
 import { EventLog } from "../generated/schema"
 import { EventLog as EventLogEvent } from "../generated/Contract/Contract"
-import { handleEventLog } from "../src/contract"
+import { handleEventLog } from "../../test/src/contract"
 import { createEventLogEvent } from "./contract-utils"
 
 // Tests structure (matchstick-as >=0.5.0)

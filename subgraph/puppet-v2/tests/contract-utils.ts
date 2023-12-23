@@ -1,6 +1,6 @@
 import { newMockEvent } from "matchstick-as"
 import { ethereum, Address, Bytes } from "@graphprotocol/graph-ts"
-import { EventLog, EventLog1, EventLog2 } from "../generated/Contract/Contract"
+import { EventLog, EventLog1, EventLog2 } from "../generated/EventEmitter/EventEmitter"
 
 export function createEventLogEvent(
   msgSender: Address,
@@ -8,9 +8,9 @@ export function createEventLogEvent(
   eventNameHash: string,
   eventData: ethereum.Tuple
 ): EventLog {
-  let eventLogEvent = changetype<EventLog>(newMockEvent())
+  const eventLogEvent = changetype<EventLog>(newMockEvent())
 
-  eventLogEvent.parameters = new Array()
+  eventLogEvent.parameters = []
 
   eventLogEvent.parameters.push(
     new ethereum.EventParam("msgSender", ethereum.Value.fromAddress(msgSender))
@@ -38,9 +38,9 @@ export function createEventLog1Event(
   topic1: Bytes,
   eventData: ethereum.Tuple
 ): EventLog1 {
-  let eventLog1Event = changetype<EventLog1>(newMockEvent())
+  const eventLog1Event = changetype<EventLog1>(newMockEvent())
 
-  eventLog1Event.parameters = new Array()
+  eventLog1Event.parameters = []
 
   eventLog1Event.parameters.push(
     new ethereum.EventParam("msgSender", ethereum.Value.fromAddress(msgSender))
@@ -72,9 +72,9 @@ export function createEventLog2Event(
   topic2: Bytes,
   eventData: ethereum.Tuple
 ): EventLog2 {
-  let eventLog2Event = changetype<EventLog2>(newMockEvent())
+  const eventLog2Event = changetype<EventLog2>(newMockEvent())
 
-  eventLog2Event.parameters = new Array()
+  eventLog2Event.parameters = []
 
   eventLog2Event.parameters.push(
     new ethereum.EventParam("msgSender", ethereum.Value.fromAddress(msgSender))

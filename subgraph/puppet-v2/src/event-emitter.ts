@@ -7,16 +7,17 @@ import { getAddressItem, getBytes32Item, getUintItem } from "./utils/datastore"
 
 
 export function handleEventLog1(event: EventLog1): void {
-  if (event.params.eventName == "PositionFeesInfo") {
-    onPositionFeesInfo(event)
-  } else if (event.params.eventName == "MarketCreated") {
-    dto.createMarketCreated(event).save()
-  } else if (event.params.eventName == "PositionIncrease") {
-    onPositionIncrease(event)
-  } else if (event.params.eventName == "PositionDecrease") {
-    onPositionDecrease(event)
-  } else if (event.params.eventName == "OraclePriceUpdate") {
-    onOraclePriceUpdate(event)
+  switch (event.params.eventName) {
+  case "PositionFeesInfo": onPositionFeesInfo(event)
+    break
+  case "MarketCreated": dto.createMarketCreated(event).save()
+    break
+  case "PositionIncrease": onPositionIncrease(event)
+    break
+  case "PositionDecrease": onPositionDecrease(event)
+    break
+  case "OraclePriceUpdate": onOraclePriceUpdate(event)
+    break
   }
 }
 
@@ -68,9 +69,9 @@ function onPositionDecrease(event: EventLog1): void {
   entity.save()
 
   if (entity.sizeInTokens.gt(ZERO_BI)) {
-    // openPosition.sizeInUsd = entity.sizeInUsd
-    // openPosition.sizeInTokens = entity.sizeInTokens
-    // openPosition.collateralAmount = entity.collateralAmount
+    openPosition.sizeInUsd = entity.sizeInUsd
+    openPosition.sizeInTokens = entity.sizeInTokens
+    openPosition.collateralAmount = entity.collateralAmount
     openPosition.realisedPnlUsd = openPosition.realisedPnlUsd.plus(entity.basePnlUsd)
     openPosition.save()
   } else {
@@ -127,12 +128,13 @@ function onOraclePriceUpdate(event: EventLog1): void {
       latest.c = price
       latest.save()
       
-
       return
     }
     
-    if (latest.timestamp !== nextTimeSlot) {
-      const candleId = `${latest.token.toHex()}:${interval}:${latest.timestamp.toString()}`
+    if (nextTimeSlot > latest.timestamp) {
+      const candleId = `${latest.token.toHex()}:${interval}:${latest.timestamp}`
+
+      log.warning(candleId, [])
       const candle = new PriceCandle(candleId)
 
       candle.token = latest.token
@@ -142,7 +144,6 @@ function onOraclePriceUpdate(event: EventLog1): void {
       candle.h = latest.h
       candle.l = latest.l
       candle.c = latest.c
-      
       candle.save()
 
       latest.timestamp = nextTimeSlot as i32
