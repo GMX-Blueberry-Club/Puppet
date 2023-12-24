@@ -7,17 +7,16 @@ import { getAddressItem, getBytes32Item, getUintItem } from "./utils/datastore"
 
 
 export function handleEventLog1(event: EventLog1): void {
-  switch (event.params.eventName) {
-  case "PositionFeesInfo": onPositionFeesInfo(event)
-    break
-  case "MarketCreated": dto.createMarketCreated(event).save()
-    break
-  case "PositionIncrease": onPositionIncrease(event)
-    break
-  case "PositionDecrease": onPositionDecrease(event)
-    break
-  case "OraclePriceUpdate": onOraclePriceUpdate(event)
-    break
+  if (event.params.eventName == "PositionFeesInfo") {
+    onPositionFeesInfo(event)
+  } else if (event.params.eventName == "MarketCreated") {
+    dto.createMarketCreated(event).save()
+  } else if (event.params.eventName == "PositionIncrease") {
+    onPositionIncrease(event)
+  } else if (event.params.eventName == "PositionDecrease") {
+    onPositionDecrease(event)
+  } else if (event.params.eventName == "OraclePriceUpdate") {
+    onOraclePriceUpdate(event)
   }
 }
 
@@ -60,7 +59,7 @@ function onPositionDecrease(event: EventLog1): void {
   const openPosition = PositionOpen.load(positionKey.toHex())
 
   if (openPosition === null) {
-    log.error("PositionOpen not found", [])
+    log.warning("PositionOpen not found", [])
     return
   }
 
