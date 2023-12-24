@@ -316,7 +316,7 @@ type ExecutePosition @entity(immutable: true) {
 
 
 
-type RequestMirrorPosition @entity(immutable: true) {
+type RequestOpenMirrorPosition @entity(immutable: true) {
   id: Bytes!
   puppets: [Bytes!]! # address[]
   trader: Bytes! # address
@@ -364,6 +364,7 @@ type SubscribeTradeRoute @entity(immutable: true) {
   route: Bytes! # address
   routeTypeKey: Bytes! # bytes32
   subscribe: Boolean! # bool
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -414,6 +415,7 @@ type PuppetPositionSettled @entity(immutable: true) {
 type PuppetTradeRoute @entity(immutable: true) {
   id: Bytes!
   routeTypeKey: Bytes! # bytes32
+  puppet: Bytes! # address
   trader: Bytes! # address
 
   puppetPositionSettledList: [PuppetPositionSettled!] @derivedFrom(field: "puppetTradeRoute")
@@ -421,6 +423,18 @@ type PuppetTradeRoute @entity(immutable: true) {
   subscriptionList: [SubscribeTradeRoute!] @derivedFrom(field: "puppetTradeRoute")
 }
 
+type AdjustPosition @entity(immutable: true) {
+  id: Bytes!
+  trader: Bytes! # address
+  route: Bytes! # address
+  isIncrease: Boolean! # bool
+  requestKey: Bytes! # bytes32
+  routeTypeKey: Bytes! # bytes32
+  positionKey: Bytes! # bytes32
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
 
 # type OwnershipTransferred @entity(immutable: true) {
 #   id: Bytes!
@@ -561,18 +575,7 @@ type PuppetTradeRoute @entity(immutable: true) {
 # }
 
 
-# type AdjustPosition @entity(immutable: true) {
-#   id: Bytes!
-#   trader: Bytes! # address
-#   route: Bytes! # address
-#   isIncrease: Boolean! # bool
-#   requestKey: Bytes! # bytes32
-#   routeTypeKey: Bytes! # bytes32
-#   positionKey: Bytes! # bytes32
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
+
 
 # type AdjustTargetLeverage @entity(immutable: true) {
 #   id: Bytes!

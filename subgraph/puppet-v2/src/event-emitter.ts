@@ -51,7 +51,6 @@ function onPositionIncrease (event: EventLog1): void {
 
   openSlot.save()
   positionIncrease.save()
-
 }
 
 function onPositionDecrease(event: EventLog1): void {

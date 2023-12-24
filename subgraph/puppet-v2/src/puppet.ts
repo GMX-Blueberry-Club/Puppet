@@ -7,6 +7,7 @@ import {
   SubscribeRoute as SubscribeRouteEvent,
   Withdraw as WithdrawEvent,
   Deposit as DepositEvent,
+  AdjustPosition as AdjustPositionEvent,
 } from "../generated/Orchestrator/Orchestrator"
 import {
   Deposit,
@@ -15,79 +16,22 @@ import {
   MirrorPositionSettled,
   PositionOpen,
   PuppetPositionOpen,
+  PuppetPositionSettled,
   PuppetTradeRoute,
-  RequestMirrorPosition,
+  RequestOpenMirrorPosition,
   RouteOpenRef,
   SetRouteType,
   SharesIncrease,
   SubscribeTradeRoute,
-  Withdraw
+  Withdraw,
+  AdjustPosition,
 } from "../generated/schema"
 import { ZERO_BI } from "./utils/const"
 
 
-export function handleExecutePosition(event: ExecutePositionEvent): void {
-  const entity = new ExecutePosition(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-
-  entity.performanceFeePaid = event.params.performanceFeePaid
-  entity.route = event.params.route
-  entity.requestKey = event.params.requestKey
-  entity.isExecuted = event.params.isExecuted
-  entity.isIncrease = event.params.isIncrease
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  if (entity.isIncrease) {
-    entity.save()
-    return
-  }
-
-  const routeOpenRef = RouteOpenRef.load(entity.route.toHex())
-
-  if (routeOpenRef === null || routeOpenRef.mirrorPositionOpen === null)  {
-    log.error("RouteOpenRef not found", [])
-    return
-  }
-
-  const mirrorPositionOpen = MirrorPositionOpen.load(routeOpenRef.mirrorPositionOpen)
-
-  if (mirrorPositionOpen === null) {
-    log.error("MirrorPositionOpen not found", [])
-    return
-  }
-
-
-  if (mirrorPositionOpen.position !== null) {
-    return
-  }
-
-
-  const settledMirrorPosition = new MirrorPositionSettled(event.transaction.hash.concatI32(event.logIndex.toI32()))
-  const puppetPositionSettled = new PuppetPositionOpen(event.transaction.hash.concatI32(event.logIndex.toI32()))
-
-  puppetPositionSettled.position = mirrorPositionOpen.id
-  puppetPositionSettled.puppetTradeRoute = mirrorPositionOpen.tradeRouteKey
-
-  puppetPositionSettled.blockNumber = event.block.number
-  puppetPositionSettled.blockTimestamp = event.block.timestamp
-  puppetPositionSettled.transactionHash = event.transaction.hash
-
-  settledMirrorPosition.merge([mirrorPositionOpen])
-  settledMirrorPosition.save()
-
-  store.remove("MirrorPositionOpen", routeOpenRef.mirrorPositionOpen)
-  store.remove("RouteOpenRef", entity.route.toHexString())
-  entity.save()
-}
-
-
 
 export function handleOpenPosition(event: OpenPositionEvent): void {
-  const entity = new RequestMirrorPosition(event.params.requestKey)
+  const entity = new RequestOpenMirrorPosition(event.params.requestKey)
 
   entity.puppets = Value.fromAddressArray(event.params.puppets).toBytesArray()
   entity.trader = event.params.trader
@@ -103,9 +47,10 @@ export function handleOpenPosition(event: OpenPositionEvent): void {
 
   entity.save()
 
-  // if (MirrorPositionOpen.load(event.params.positionKey)) {
-  //   throw new Error("OpenPosition already exists")
-  // }
+  if (MirrorPositionOpen.load(event.params.positionKey.toHex())) {
+    log.error("MirrorPositionOpen already exists", [])
+    return 
+  }
 
   
   const mirrorPositionOpen = new MirrorPositionOpen(entity.positionKey.toHex())
@@ -128,15 +73,19 @@ export function handleOpenPosition(event: OpenPositionEvent): void {
   mirrorPositionOpen.blockTimestamp = event.block.timestamp
   mirrorPositionOpen.transactionHash = event.transaction.hash
 
-  const puppetPositionOpen = new PuppetPositionOpen(entity.positionKey)
+  for (let i = 0; i < mirrorPositionOpen.puppets.length; i++) {
+    const puppet = mirrorPositionOpen.puppets[i]
+    const puppetPositionOpen = new PuppetPositionOpen(puppet.concat(mirrorPositionOpen.routeTypeKey))
 
-  puppetPositionOpen.position = mirrorPositionOpen.id
-  puppetPositionOpen.puppetTradeRoute = mirrorPositionOpen.tradeRouteKey
+    puppetPositionOpen.position = mirrorPositionOpen.id
+    puppetPositionOpen.puppetTradeRoute = puppet.concat(mirrorPositionOpen.routeTypeKey)
 
-  puppetPositionOpen.blockNumber = event.block.number
-  puppetPositionOpen.blockTimestamp = event.block.timestamp
-  puppetPositionOpen.transactionHash = event.transaction.hash
+    puppetPositionOpen.blockNumber = event.block.number
+    puppetPositionOpen.blockTimestamp = event.block.timestamp
+    puppetPositionOpen.transactionHash = event.transaction.hash
 
+    puppetPositionOpen.save()
+  }
 
   const routeOpenRef = new RouteOpenRef(event.params.route.toHex())
 
@@ -144,7 +93,79 @@ export function handleOpenPosition(event: OpenPositionEvent): void {
 
   mirrorPositionOpen.save()
   routeOpenRef.save()
-  puppetPositionOpen.save()
+}
+
+
+export function handleExecutePosition(event: ExecutePositionEvent): void {
+  const executePosition = new ExecutePosition(
+    event.transaction.hash.concatI32(event.logIndex.toI32())
+  )
+
+  executePosition.performanceFeePaid = event.params.performanceFeePaid
+  executePosition.route = event.params.route
+  executePosition.requestKey = event.params.requestKey
+  executePosition.isExecuted = event.params.isExecuted
+  executePosition.isIncrease = event.params.isIncrease
+
+  executePosition.blockNumber = event.block.number
+  executePosition.blockTimestamp = event.block.timestamp
+  executePosition.transactionHash = event.transaction.hash
+
+  executePosition.save()
+
+  if (executePosition.isIncrease) {
+    return
+  }
+
+  const routeOpenRef = RouteOpenRef.load(executePosition.route.toHex())
+
+  if (routeOpenRef === null || routeOpenRef.mirrorPositionOpen === null)  {
+    log.error("RouteOpenRef not found", [])
+    return
+  }
+
+  const mirrorPositionOpen = MirrorPositionOpen.load(routeOpenRef.mirrorPositionOpen)
+
+  if (mirrorPositionOpen === null) {
+    log.error("MirrorPositionOpen not found", [])
+    return
+  }
+
+
+  if (mirrorPositionOpen.position !== null) {
+    return
+  }
+
+
+  const settledMirrorPosition = new MirrorPositionSettled(event.transaction.hash.concatI32(event.logIndex.toI32()))
+
+  for (let i = 0; i < mirrorPositionOpen.puppets.length; i++) {
+    const puppet = mirrorPositionOpen.puppets[i]
+    const puppetPositionSettled = PuppetPositionSettled.load(puppet.concat(mirrorPositionOpen.routeTypeKey))
+
+    if (puppetPositionSettled === null) {
+      log.error("PuppetTradeRoute not found", [])
+      return
+    }
+
+  
+    store.remove("PuppetPositionOpen", puppet.concat(mirrorPositionOpen.routeTypeKey).toHex())
+
+    puppetPositionSettled.position = settledMirrorPosition.id
+    puppetPositionSettled.puppetTradeRoute = puppet.concat(mirrorPositionOpen.routeTypeKey)
+    
+    puppetPositionSettled.blockNumber = event.block.number
+    puppetPositionSettled.blockTimestamp = event.block.timestamp
+    puppetPositionSettled.transactionHash = event.transaction.hash
+
+    puppetPositionSettled.save()
+  }
+
+  settledMirrorPosition.merge([mirrorPositionOpen])
+  settledMirrorPosition.save()
+
+  store.remove("MirrorPositionOpen", routeOpenRef.mirrorPositionOpen)
+  store.remove("RouteOpenRef", executePosition.route.toHexString())
 }
 
 
@@ -199,7 +220,7 @@ export function handleSubscribeRoute(event: SubscribeRouteEvent): void {
   const entity = new SubscribeTradeRoute(
     event.transaction.hash.concatI32(event.logIndex.toI32())
   )
-  entity.puppetTradeRoute = entity.trader.concat(entity.routeTypeKey)
+  entity.puppetTradeRoute = event.params.puppet.concat(event.params.routeTypeKey)
   entity.allowance = event.params.allowance
   entity.subscriptionExpiry = event.params.subscriptionExpiry
   entity.trader = event.params.trader
@@ -213,10 +234,11 @@ export function handleSubscribeRoute(event: SubscribeRouteEvent): void {
   entity.transactionHash = event.transaction.hash
 
 
-  const puppetTradeRoute = new PuppetTradeRoute(entity.trader.concat(entity.routeTypeKey))
+  const puppetTradeRoute = new PuppetTradeRoute(entity.puppet.concat(entity.routeTypeKey))
   puppetTradeRoute.routeTypeKey = entity.routeTypeKey
   puppetTradeRoute.trader = entity.trader
-  
+  puppetTradeRoute.puppet = entity.puppet
+
 
   entity.save()
   puppetTradeRoute.save()
@@ -255,26 +277,23 @@ export function handleWithdraw(event: WithdrawEvent): void {
 }
 
 
+export function handleAdjustPosition(event: AdjustPositionEvent): void {
+  const entity = new AdjustPosition(
+    event.transaction.hash.concatI32(event.logIndex.toI32())
+  )
+  entity.trader = event.params.trader
+  entity.route = event.params.route
+  entity.isIncrease = event.params.isIncrease
+  entity.requestKey = event.params.requestKey
+  entity.routeTypeKey = event.params.routeTypeKey
+  entity.positionKey = event.params.positionKey
 
+  entity.blockNumber = event.block.number
+  entity.blockTimestamp = event.block.timestamp
+  entity.transactionHash = event.transaction.hash
 
-
-// export function handleAdjustPosition(event: AdjustPositionEvent): void {
-//   const entity = new AdjustPosition(
-//     event.transaction.hash.concatI32(event.logIndex.toI32())
-//   )
-//   entity.trader = event.params.trader
-//   entity.route = event.params.route
-//   entity.isIncrease = event.params.isIncrease
-//   entity.requestKey = event.params.requestKey
-//   entity.routeTypeKey = event.params.routeTypeKey
-//   entity.positionKey = event.params.positionKey
-
-//   entity.blockNumber = event.block.number
-//   entity.blockTimestamp = event.block.timestamp
-//   entity.transactionHash = event.transaction.hash
-
-//   entity.save()
-// }
+  entity.save()
+}
 
 // export function handleAdjustTargetLeverage(
 //   event: AdjustTargetLeverageEvent
