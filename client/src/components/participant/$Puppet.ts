@@ -9,7 +9,7 @@ import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $Link, $arrowRight, $icon, $infoTooltipLabel, IMarker, ScrollRequest } from "gmx-middleware-ui-components"
 import { filterNull, getMappedValue, groupArrayMany, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
-import { IPuppetSubscritpion, accountSettledTradeListSummary } from "puppet-middleware-utils"
+import { IPuppetSubscritpion, accountSettledPositionListSummary } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
@@ -246,7 +246,7 @@ export const $PuppetPortfolio = (config: ITraderProfile) => component((
                           // }
 
                           const traderTradeList = traderTrades[sub.trader]
-                          const summary = accountSettledTradeListSummary(traderTradeList, params.priceLatestMap, config.address)
+                          const summary = accountSettledPositionListSummary(traderTradeList, params.priceLatestMap, config.address)
 
                           return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: '10px 0' }))(
                             $TraderDisplay({

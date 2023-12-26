@@ -1,106 +1,192 @@
-// import { IPositionLink, IPositionSettled } from "gmx-middleware-utils"
-// import { ISchema } from "../../utils/indexer/subgraph"
-
-// const adjustPosition = {
-//   collateralDelta: 'uint256',
-//   collateralToken: 'uint256',
-//   fee: 'uint256',
-//   id: 'uint256',
-//   indexToken: 'uint256',
-//   isLong: 'bool',
-//   key: 'uint256',
-//   account: 'uint256',
-//   price: 'uint256',
-//   sizeDelta: 'uint256',
-
-//   blockNumber: 'int',
-//   blockTimestamp: 'uint256',
-//   transactionHash: 'uint256',
-//   transactionIndex: 'uint256',
-//   logIndex: 'uint256',
-// } as const
-
-// const increasePosition = { ...adjustPosition, __typename: 'IncreasePosition' }
-// const decreasePosition = { ...adjustPosition, __typename: 'DecreasePosition' }
-
-// const positionLink: ISchema<IPositionLink> = {
-//   id: 'uint256',
-//   account: 'uint256',
-//   collateralToken: 'uint256',
-//   indexToken: 'uint256',
-//   isLong: 'bool',
-//   key: 'uint256',
-//   updateList: {
-//     id: 'uint256',
-
-//     averagePrice: 'uint256',
-//     collateral: 'uint256',
-//     entryFundingRate: 'uint256',
-//     key: 'uint256',
-//     realisedPnl: 'uint256',
-//     reserveAmount: 'uint256',
-//     size: 'uint256',
-
-//     blockNumber: 'int',
-//     blockTimestamp: 'uint256',
-//     transactionHash: 'uint256',
-//     transactionIndex: 'uint256',
-//     logIndex: 'uint256',
-//     __typename: 'UpdatePosition',
-//   },
-//   increaseList: increasePosition,
-//   decreaseList: decreasePosition,
-
-//   blockNumber: 'int',
-//   blockTimestamp: 'uint256',
-//   transactionHash: 'uint256',
-//   transactionIndex: 'uint256',
-//   logIndex: 'uint256',
-
-//   __typename: 'PositionLink',
-// }
-
-// const positionSettled: ISchema<IPositionSettled> = {
-//   link: positionLink,
-//   id: 'string',
-//   key: 'uint256',
-//   idCount: 'int',
-
-//   account: 'string',
-//   collateralToken: 'string',
-//   indexToken: 'string',
-//   isLong: 'bool',
-
-//   size: 'uint256',
-//   collateral: 'uint256',
-//   averagePrice: 'uint256',
-//   entryFundingRate: 'uint256',
-//   reserveAmount: 'uint256',
-//   realisedPnl: 'int256',
-
-//   cumulativeSize: 'uint256',
-//   cumulativeCollateral: 'uint256',
-//   cumulativeFee: 'uint256',
-
-//   maxSize: 'uint256',
-//   maxCollateral: 'uint256',
-
-//   settlePrice: 'uint256',
-//   isLiquidated: 'bool',
-
-//   blockNumber: 'int',
-//   blockTimestamp: 'uint256',
-//   transactionHash: 'uint256',
-//   transactionIndex: 'uint256',
-//   logIndex: 'uint256',
-
-//   __typename: 'PositionSettled',
-// }
+import { IPositionDecrease, IPositionFeeUpdate, IPositionIncrease, IPositionLink, IPositionSettled } from "gmx-middleware-utils"
+import { ISchema } from "gmx-middleware-utils/src/subgraph"
 
 
 
+const positionIncrease: ISchema<IPositionIncrease> = {
+  id: 'string',
 
-// export const schema = { positionSettled, positionLink, increasePosition, decreasePosition }
+  account: 'string',
+  market: 'string',
+  collateralToken: 'string',
+
+  sizeInTokens: 'uint256',
+  sizeInUsd: 'uint256',
+  collateralAmount: 'uint256',
+  borrowingFactor: 'uint256',
+  fundingFeeAmountPerSize: 'uint256',
+  longTokenClaimableFundingAmountPerSize: 'uint256',
+  shortTokenClaimableFundingAmountPerSize: 'uint256',
+  executionPrice: 'uint256',
+  indexTokenPriceMax: 'uint256',
+  indexTokenPriceMin: 'uint256',
+  collateralTokenPriceMax: 'uint256',
+  collateralTokenPriceMin: 'uint256',
+  sizeDeltaUsd: 'uint256',
+  sizeDeltaInTokens: 'uint256',
+  orderType: 'uint256',
+
+  collateralDeltaAmount: 'int256',
+  priceImpactUsd: 'int256',
+  priceImpactAmount: 'int256',
+  
+  isLong: 'bool',
+
+  orderKey: 'uint256',
+  positionKey: 'uint256',
+
+  blockTimestamp: 'uint256',
+  transactionHash: 'string',
+
+  __typename: 'PositionIncrease',
+}
+
+const positionDecrease: ISchema<IPositionDecrease> = {
+  id: 'string',
+
+  account: 'string',
+  market: 'string',
+  collateralToken: 'string',
+
+  sizeInTokens: 'uint256',
+  sizeInUsd: 'uint256',
+  collateralAmount: 'uint256',
+  borrowingFactor: 'uint256',
+  fundingFeeAmountPerSize: 'uint256',
+  longTokenClaimableFundingAmountPerSize: 'uint256',
+  shortTokenClaimableFundingAmountPerSize: 'uint256',
+  executionPrice: 'uint256',
+  indexTokenPriceMax: 'uint256',
+  indexTokenPriceMin: 'uint256',
+  collateralTokenPriceMax: 'uint256',
+  collateralTokenPriceMin: 'uint256',
+  sizeDeltaUsd: 'uint256',
+  sizeDeltaInTokens: 'uint256',
+  collateralDeltaAmount: 'uint256',
+  valuesPriceImpactDiffUsd: 'uint256',
+  orderType: 'uint256',
+
+  priceImpactUsd: 'int256',
+  basePnlUsd: 'int256',
+  uncappedBasePnlUsd: 'int256',
+  
+  isLong: 'bool',
+
+  orderKey: 'uint256',
+  positionKey: 'uint256',
+
+  blockTimestamp: 'uint256',
+  transactionHash: 'string',
+
+  __typename: 'PositionDecrease',
+}
+
+const positionFeeUpdate: ISchema<IPositionFeeUpdate> = {
+  id: 'string',
+
+  orderKey: 'uint256',
+  positionKey: 'uint256',
+  referralCode: 'string',
+
+  market: 'string',
+  collateralToken: 'string',
+  affiliate: 'string',
+  trader: 'string',
+  uiFeeReceiver: 'string',
+
+  collateralTokenPrice: 'uint256',
+  tradeSizeUsd: 'uint256',
+  totalRebateFactor: 'uint256',
+  traderDiscountFactor: 'uint256',
+  totalRebateAmount: 'uint256',
+  traderDiscountAmount: 'uint256',
+  affiliateRewardAmount: 'uint256',
+  fundingFeeAmount: 'uint256',
+  claimableLongTokenAmount: 'uint256',
+  claimableShortTokenAmount: 'uint256',
+  latestFundingFeeAmountPerSize: 'uint256',
+  latestLongTokenClaimableFundingAmountPerSize: 'uint256',
+  latestShortTokenClaimableFundingAmountPerSize: 'uint256',
+  borrowingFeeUsd: 'uint256',
+  borrowingFeeAmount: 'uint256',
+  borrowingFeeReceiverFactor: 'uint256',
+  borrowingFeeAmountForFeeReceiver: 'uint256',
+  positionFeeFactor: 'uint256',
+  protocolFeeAmount: 'uint256',
+  positionFeeReceiverFactor: 'uint256',
+  feeReceiverAmount: 'uint256',
+  feeAmountForPool: 'uint256',
+  positionFeeAmountForPool: 'uint256',
+  positionFeeAmount: 'uint256',
+  totalCostAmount: 'uint256',
+  uiFeeReceiverFactor: 'uint256',
+  uiFeeAmount: 'uint256',
+
+  isIncrease: 'bool',
+
+  blockTimestamp: 'uint256',
+  transactionHash: 'string',
+
+  __typename: 'PositionFeeUpdate',
+
+}
+
+const positionLink: ISchema<IPositionLink> = {
+  id: 'string',
+  key: 'uint256',
+
+  account: 'string',
+  market: 'string',
+  collateralToken: 'string',
+
+  isLong: 'bool',
+
+  increaseList: positionIncrease,
+  decreaseList: positionDecrease,
+  feeUpdateList: positionFeeUpdate,
+
+  blockTimestamp: 'uint256',
+  transactionHash: 'string',
+  
+  __typename: 'PositionLink',
+}
+
+const positionSettled: ISchema<IPositionSettled> = {
+  id: 'string',
+  link: positionLink,
+
+  key: 'uint256',
+
+  account: 'string',
+  market: 'string',
+  collateralToken: 'string',
+
+  sizeInUsd: 'uint256',
+  sizeInToken: 'uint256',
+  collateralAmount: 'uint256',
+  realisedPnlUsd: 'uint256',
+
+  cumulativeSizeUsd: 'uint256',
+  cumulativeSizeToken: 'uint256',
+
+  maxSizeUsd: 'uint256',
+  maxSizeToken: 'uint256',
+
+  isLong: 'bool',
+
+  blockTimestamp: 'uint256',
+  transactionHash: 'string',
+
+  __typename: 'PositionSettled',
+}
+
+
+
+export const schema = { 
+  positionSettled, positionLink,
+  
+  positionIncrease, positionDecrease
+}
 
 
 
@@ -109,11 +195,11 @@
 // }
 
 
-// // const gmxTradingSubgraph = replaySubgraphQuery(
-// //   {
-// //     subgraph: `https://gateway-arbitrum.network.thegraph.com/api/${import.meta.env.THE_GRAPH}/subgraphs/id/DJ4SBqiG8A8ytcsNJSuUU2gDTLFXxxPrAN8Aags84JH2`,
-// //     parentStoreScope: rootStoreScope,
-// //   },
-// //   schema.positionSettled,
-// //   processSeed
-// // )
+// const gmxTradingSubgraph = replaySubgraphQuery(
+//   {
+//     subgraph: `https://gateway-arbitrum.network.thegraph.com/api/${import.meta.env.THE_GRAPH}/subgraphs/id/DJ4SBqiG8A8ytcsNJSuUU2gDTLFXxxPrAN8Aags84JH2`,
+//     parentStoreScope: rootStoreScope,
+//   },
+//   schema.positionSettled,
+//   processSeed
+// )

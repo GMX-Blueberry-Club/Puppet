@@ -3,31 +3,27 @@ import { $Node, $text, NodeComposeFn, component, style, styleBehavior } from "@a
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import {
-  combine,
   constant,
   map,
   mergeArray,
-  snapshot,
-  switchLatest,
-  tap
+  snapshot
 } from "@most/core"
 import { Stream } from "@most/types"
 import {
   IMarket,
-  IPositionSlot, IPriceInterval,
+  IPriceLatestMap,
   StateStream,
-  lst,
+  TEMP_MARKET_TOKEN_MARKET_MAP,
+  filterNull,
   switchMap
 } from "gmx-middleware-utils"
-import { IPositionMirrorSlot } from "puppet-middleware-utils"
+import { IPositionMirrorOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $entry, $openPnl, $sizeAndLiquidation } from "../../common/$common.js"
-import { IGmxProcessState, latestTokenPrice } from "../../data/process/process.js"
 import { $seperator2 } from "../../pages/common"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
-import { IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "./$PositionEditor.js"
-
+import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 
 export enum ITradeFocusMode {
   collateral,
@@ -38,15 +34,12 @@ export enum ITradeFocusMode {
 
 
 interface IPositionDetailsPanel {
-  processData: Stream<IGmxProcessState>
   chain: ISupportedChain
   wallet: Stream<IWalletClient>
-  openPositionList: Stream<IPositionMirrorSlot[]>
-
-  pricefeed: Stream<IPriceInterval[]>
+  openPositionList: Stream<IPositionMirrorOpen[]>
+  priceMap: Stream<IPriceLatestMap>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>
-
   $container: NodeComposeFn<$Node>
 }
 
@@ -68,8 +61,8 @@ export type IRequestTrade = IRequestTradeParams & {
 // 
 
 export const $PositionListDetails = (config: IPositionDetailsPanel) => component((
-  [switchPosition, switchPositionTether]: Behavior<any, IPositionSlot>,
-  [clickClose, clickCloseTeter]: Behavior<any, IPositionSlot>,
+  [switchPosition, switchPositionTether]: Behavior<any, IPositionMirrorOpen>,
+  [clickClose, clickCloseTeter]: Behavior<any, IPositionMirrorOpen>,
 
   [changeMarket, changeMarketTether]: Behavior<IMarket>,
   [switchIsLong, switchIsLongTether]: Behavior<boolean>,
@@ -103,9 +96,9 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
       switchMap(posList => {
         return $column(layoutSheet.spacing, style({ flex: 1 }))(
 
-          ...posList.map(pos => {
+          ...posList.map(mp => {
 
-            const positionMarkPrice = latestTokenPrice(config.processData, pos.indexToken)
+            const positionMarkPrice = map(pm => pm[mp.position.indexToken], config.priceMap)
             // const cumulativeFee = vault.read('cumulativeFundingRates', pos.collateralToken)
             // const pnl = map(params => {
             //   const delta = getPnL(pos.isLong, pos.averagePrice, params.positionMarkPrice.min, pos.size)
@@ -117,28 +110,28 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
 
             return $column(layoutSheet.spacing)(
               style({ marginRight: screenUtils.isDesktopScreen ? '-16px' : '' })($seperator2),
-                
+
               $row(style({ placeContent: 'space-between', alignItems: 'center' }))(
                 $ButtonPrimary({
-                  $content: $entry(pos.isLong, pos.indexToken, pos.averagePrice),
+                  $content: $entry(mp),
                   $container: $defaultMiniButtonSecondary(
-                    styleBehavior(map(activePositionSlot => ({ backgroundColor: activePositionSlot?.key === pos.key ? pallete.primary : pallete.middleground }), position)),
+                    styleBehavior(map(activePositionSlot => ({ backgroundColor: activePositionSlot.position.key === mp.position.key ? pallete.primary : pallete.middleground }), filterNull(position))),
                     style({ borderRadius: '20px', borderColor: 'transparent',  })
                   )
                 })({
                   click: switchPositionTether(
-                    constant(pos),
+                    constant(mp),
                   )
                 }),
-                $sizeAndLiquidation(pos, positionMarkPrice, pos.trader),
-                $openPnl(config.processData, pos, pos.trader),
+                $sizeAndLiquidation(mp, positionMarkPrice),
+                $openPnl(positionMarkPrice, mp),
 
                 $ButtonSecondary({
                   $content: $text('Close'),
                   $container: $defaultMiniButtonSecondary
                 })({
                   click: clickCloseTeter(
-                    constant(pos),
+                    constant(mp),
                   )
                 })
               ),
@@ -167,22 +160,19 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
         // clickClose
       ]),
       changeMarket: snapshot((params, posSlot) => {
-        const update = lst(posSlot.updates)
-        const market = params.marketList.find(m => m.marketToken === update.market)
-        if (!market) throw new Error(`Market not found for ${update.market}`)
+        const mm = params.marketList.find(m => m.marketToken === posSlot.position.market)
+        if (!mm) throw new Error(`Market not found for ${posSlot.position.market}`)
 
-        return market
+        return mm
       }, combineObject({ marketList }), switchPosition),
-      switchIsLong: map(params => lst(params.switchPosition.updates).isLong, combineObject({ switchPosition })),
+      switchIsLong: map(params => params.switchPosition.position.isLong, combineObject({ switchPosition })),
       switchIsIncrease: mergeArray([
         constant(true, switchPosition),
         constant(false, clickClose)
       ]),
       changeLeverage: constant(0n, clickClose),
       changeIsUsdCollateralToken: snapshot((params, posSlot) => {
-        const update = lst(posSlot.updates)
-
-        return params.market.shortToken === update.collateralToken
+        return params.market.shortToken === posSlot.position.collateralToken
       }, combineObject({ market }), switchPosition),
     }
   ]

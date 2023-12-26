@@ -38,7 +38,7 @@ import {
   IMarketInfo,
   IMarketPrice,
   IOraclePrice,
-  IPositionSlot,
+  IPositionOpen,
   ITokenDescription,
   lst,
   parseBps,
@@ -66,6 +66,7 @@ import * as trade from "../../logic/trade.js"
 import { account, ISupportedChain } from "../../wallet/walletLink.js"
 import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown.js"
+import { IPositionMirrorOpen } from "puppet-middleware-utils"
 
 
 
@@ -79,7 +80,7 @@ export interface ITradeParams {
   route: viem.Address | null
   routeTypeKey: viem.Hex
 
-  position: IPositionSlot | null
+  position: IPositionMirrorOpen | null
   netPositionValueUsd: bigint
   isTradingEnabled: boolean
   isPrimaryApproved: boolean
@@ -148,7 +149,7 @@ export interface IPositionEditorAbstractParams {
 
 
 interface IPositionEditorConfig extends IPositionEditorAbstractParams {
-  openPositionList: Stream<IPositionSlot[]>
+  openPositionList: Stream<IPositionMirrorOpen[]>
 
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>
@@ -218,8 +219,8 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
     if (params.isIncrease) return getTokenUsd(params.primaryPrice, balance)
     if (!params.position) return 0n
 
-    const maxCollateral = div(lst(params.position.updates).sizeInUsd, GMX.MAX_LEVERAGE_FACTOR)
-    const positionCollateralUsd = lst(params.position.updates).collateralAmount * params.marketPrice.indexTokenPrice.min
+    const maxCollateral = div(params.position.position.sizeInUsd, GMX.MAX_LEVERAGE_FACTOR)
+    const positionCollateralUsd = params.position.position.collateralAmount * params.marketPrice.indexTokenPrice.min
     const deltaUsd = maxCollateral - positionCollateralUsd
 
     return deltaUsd
@@ -244,7 +245,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
     constant(0n, config.resetAdjustments),
     clickMaxPrimary,
     skipRepeats(snapshot((params, nextSizeDeltaUsdFx) => {
-      const positionSizeUsd = params.position ? lst(params.position.updates).sizeInUsd : 0n
+      const positionSizeUsd = params.position ? params.position.position.sizeInUsd : 0n
       const nextFeeUsd = params.adjustmentFeeUsd * params.leverage / GMX.BASIS_POINTS_DIVISOR
       const totalSize = nextSizeDeltaUsdFx + positionSizeUsd
       const nextCollateralUsd = div(totalSize - nextFeeUsd, params.leverage)
@@ -255,7 +256,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
         
         if (deltaMultiplier < 500n) {
           if (!params.isIncrease && params.leverage <= GMX.MIN_LEVERAGE_FACTOR) {
-            return -lst(params.position.updates).sizeInUsd
+            return -params.position.position.sizeInUsd
           }
 
           return 0n
@@ -287,12 +288,11 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   const autoChangeSize = multicast(mergeArray([
     constant(0n, config.resetAdjustments),
     snapshot((params) => {
-      const positionSizeUsd = params.position ? lst(params.position.updates).sizeInUsd : 0n
+      const positionSizeUsd = params.position ? params.position.position.sizeInUsd : 0n
       const totalCollateral = params.collateralDeltaUsd + params.netPositionValueUsd - params.adjustmentFeeUsd
      
       if (params.position) {
-        const lstUpdate = lst(params.position.updates)
-        const positionMultiplier = div(lstUpdate.sizeInUsd, totalCollateral)
+        const positionMultiplier = div(params.position.position.sizeInUsd, totalCollateral)
         const deltaMultiplier = delta(positionMultiplier, params.leverage) // params.isIncrease ? params.leverage - positionMultiplier : positionMultiplier - params.leverage
 
         if (deltaMultiplier < 500n) {
@@ -647,8 +647,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 if (params.position) {
                   if (params.focusMode === ITradeFocusMode.size) {
                     const walletBalanceUsd = getTokenUsd(params.primaryPrice, params.walletBalance)
-                    const lastUpdate = lst(params.position.updates)
-                    const ratio = div(lastUpdate.sizeInUsd + params.sizeDeltaUsd, walletBalanceUsd + params.netPositionValueUsd - params.adjustmentFeeUsd)
+                    const ratio = div(params.position.position.sizeInUsd + params.sizeDeltaUsd, walletBalanceUsd + params.netPositionValueUsd - params.adjustmentFeeUsd)
                     return formatDiv(ratio, GMX.MAX_LEVERAGE_FACTOR)
                   }
 
@@ -656,14 +655,14 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                   // const totalCollateral = params.collateralDeltaUsd + params.netPositionValueUsd + params.totalFeeUsd
                   const totalCollateral = params.collateralDeltaUsd + params.netPositionValueUsd
 
-                  return Math.max(MIN_LEVERAGE_NORMAL, formatDiv(div(lst(params.position.updates).sizeInUsd, totalCollateral), GMX.MAX_LEVERAGE_FACTOR))
+                  return Math.max(MIN_LEVERAGE_NORMAL, formatDiv(div(params.position.position.sizeInUsd, totalCollateral), GMX.MAX_LEVERAGE_FACTOR))
                 }
 
                 return MIN_LEVERAGE_NORMAL
               }
 
               if (params.focusMode === ITradeFocusMode.size) {
-                const totalSize = params.position ? params.sizeDeltaUsd + lst(params.position.updates).sizeInUsd : params.sizeDeltaUsd
+                const totalSize = params.position ? params.sizeDeltaUsd + params.position.position.sizeInUsd : params.sizeDeltaUsd
 
                 if (params.position) {
                   return Math.max(MIN_LEVERAGE_NORMAL, formatDiv(div(totalSize, params.netPositionValueUsd + params.adjustmentFeeUsd), GMX.MAX_LEVERAGE_FACTOR))
@@ -683,7 +682,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 return 1
               }
 
-              const totalSize = lst(params.position.updates).sizeInUsd + params.sizeDeltaUsd
+              const totalSize = params.position.position.sizeInUsd + params.sizeDeltaUsd
 
               if (params.isIncrease) {
                 if (params.focusMode === ITradeFocusMode.size) {
@@ -698,7 +697,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
               } else  {
                 if (params.focusMode === ITradeFocusMode.collateral) {
                   const totalCollateral = params.netPositionValueUsd + params.collateralDeltaUsd
-                  const ratio = div(lst(params.position.updates).sizeInUsd, totalCollateral)
+                  const ratio = div(params.position.position.sizeInUsd, totalCollateral)
 
                   return Math.min(1, formatDiv(ratio, GMX.MAX_LEVERAGE_FACTOR))
                 }
@@ -887,7 +886,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
               label: screenUtils.isDesktopScreen ? `Size` : undefined,
               change: map((params) => {
                 if (params.position === null) return null
-                const totalSize = params.sizeDeltaUsd + lst(params.position.updates).sizeInUsd
+                const totalSize = params.sizeDeltaUsd + params.position.position.sizeInUsd
 
                 return readableFixedUSD30(totalSize)
               }, combineObject({ sizeDeltaUsd, position })),
@@ -897,7 +896,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 $text('Higher Leverage increases Liquidation Risk'),
               ),
               val: map(params => {
-                const valueUsd = params.position ? lst(params.position.updates).sizeInUsd : params.sizeDeltaUsd
+                const valueUsd = params.position ? params.position.position.sizeInUsd : params.sizeDeltaUsd
 
                 return readableFixedUSD30(valueUsd)
               }, combineObject({ sizeDeltaUsd, position })),

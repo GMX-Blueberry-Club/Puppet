@@ -6,7 +6,7 @@ import { empty, map, multicast, now, skipRepeatsWith, startWith } from "@most/co
 import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $infoTooltipLabel, IMarker } from "gmx-middleware-ui-components"
 import {
-  IPriceInterval,
+  IPriceCandle,
   IPriceIntervalIdentity,
   IPositionDecrease,
   IPositionIncrease,
@@ -23,7 +23,7 @@ import {
   IPricefeedMap
 } from "gmx-middleware-utils"
 import { BaselineData, ChartOptions, DeepPartial, LineType, MouseEventParams, Time } from "lightweight-charts"
-import { IPositionMirrorSettled, IPositionMirrorSlot, getParticiapntMpPortion } from "puppet-middleware-utils"
+import { IPositionMirrorSettled, IPositionMirrorOpen, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { IGmxProcessState, PRICEFEED_INTERVAL } from "../../data/process/process.js"
 import { LAST_ACTIVITY_LABEL_MAP } from "../../pages/components/$LastActivity"
@@ -31,7 +31,7 @@ import { Stream } from "@most/types"
 
 type IPerformanceTickUpdateTick = {
   update: IPositionIncrease | IPositionDecrease
-  source: IPositionMirrorSettled | IPositionMirrorSlot
+  source: IPositionMirrorSettled | IPositionMirrorOpen
 }
 
 
@@ -42,7 +42,7 @@ type ITimelinePositionSlot = IPerformanceTickUpdateTick & {
 
 export interface IPerformanceTimeline {
   puppet?: viem.Address
-  positionList: (IPositionMirrorSettled | IPositionMirrorSlot)[]
+  positionList: (IPositionMirrorSettled | IPositionMirrorOpen)[]
   pricefeedMap: IPricefeedMap
   tickCount: number
   activityTimeframe: GMX.IntervalTime
@@ -71,8 +71,8 @@ function findClosest<T extends readonly number[]> (arr: T, chosen: number): T[nu
 }
 
 
-function getTime(tickItem: IPositionIncrease | IPositionDecrease) {
-  return tickItem.blockTimestamp
+function getTime(tickItem: IPositionIncrease | IPositionDecrease): number {
+  return Number(tickItem.blockTimestamp)
 }
 
 
@@ -137,7 +137,7 @@ export function performanceTimeline(config: IPerformanceTimeline) {
       const pendingPnl = Object.values(acc.positionSlot).reduce((pnlAcc, slot) => {
         if  (slot.update.collateralAmount === 0n) return pnlAcc
         const mp = slot.source
-        const tickerId = `${mp.indexToken}:${interval}` as const
+        const tickerId = `${mp.position.indexToken}:${interval}` as const
         const tokenPrice = getClosestpricefeedCandle(config.pricefeedMap, tickerId, intervalSlot, 0)
 
         const pnl = getPositionPnlUsd(slot.update.isLong, slot.update.sizeInUsd, slot.update.sizeInTokens, tokenPrice.c)
@@ -157,7 +157,7 @@ export function performanceTimeline(config: IPerformanceTimeline) {
 
 
 
-function getClosestpricefeedCandle(pricefeed: Record<IPriceIntervalIdentity, Record<string, IPriceInterval>>, tickerId: IPriceIntervalIdentity, intervalSlot: number, offset: number) {
+function getClosestpricefeedCandle(pricefeed: Record<IPriceIntervalIdentity, Record<string, IPriceCandle>>, tickerId: IPriceIntervalIdentity, intervalSlot: number, offset: number) {
 
   if (offset > 50) {
     throw new Error('No recent pricefeed data found')
@@ -185,7 +185,7 @@ export const $ProfilePerformanceGraph = (config: IPerformanceTimeline & { $conta
     return {
       position: 'inBar',
       color: isSettled ? colorAlpha(pallete.message, .15) : colorAlpha(pallete.primary, .15),
-      time: pos.blockTimestamp as Time,
+      time: Number(pos.blockTimestamp) as Time,
       size: 0.1,
       shape: isSettled ? 'circle' as const : 'circle' as const,
     }
@@ -246,14 +246,12 @@ export const $ProfilePerformanceGraph = (config: IPerformanceTimeline & { $conta
 })
 
 
-export function getUpdateTickList(list: (IPositionMirrorSettled | IPositionMirrorSlot)[]): IPerformanceTickUpdateTick[] {
+export function getUpdateTickList(list: (IPositionMirrorSettled | IPositionMirrorOpen)[]): IPerformanceTickUpdateTick[] {
   const updateList: IPerformanceTickUpdateTick[] = list
     .flatMap(mp => {
-      const tickList = mp.updates.map(update => ({ update, source: mp }))
-
-      // if (mp.__typename === 'PositionSettled') {
-      //   return [...tickList, { update: mp.settlement, source: mp }]
-      // }
+      const tickList = [...mp.position.link.increaseList, ...mp.position.link.decreaseList]
+        .sort((a, b) => getTime(a) - getTime(b))
+        .map(update => ({ update, source: mp }))
 
       return tickList
     })

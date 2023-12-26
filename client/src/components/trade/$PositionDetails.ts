@@ -15,7 +15,7 @@ import {
 import {
   IPositionDecrease,
   IPositionIncrease,
-  IPriceInterval,
+  IPriceCandle,
   StateStream,
   getTokenUsd,
   readableDate,
@@ -24,7 +24,7 @@ import {
   timeSince,
   unixTimestampNow
 } from "gmx-middleware-utils"
-import { IPositionMirrorSlot } from "puppet-middleware-utils"
+import { IPositionMirrorOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { connectContract } from "../../logic/common.js"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
@@ -42,9 +42,9 @@ export enum ITradeFocusMode {
 interface IPositionAdjustmentHistory {
   chain: ISupportedChain
   wallet: Stream<IWalletClient>
-  openPositionList: Stream<IPositionMirrorSlot[]>
+  openPositionList: Stream<IPositionMirrorOpen[]>
 
-  pricefeed: Stream<IPriceInterval[]>
+  pricefeed: Stream<IPriceCandle[]>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>
 
@@ -90,7 +90,7 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
   const dataSource = switchMap(pos => {
     console.log('pos', pos)
     return pos
-      ? now(pos.updates)
+      ? now([...pos.position.link.increaseList, ...pos.position.link.decreaseList].sort((a, b) => b.blockTimestamp - a.blockTimestamp ))
       : now([])
   }, position)
 
@@ -141,7 +141,7 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
             const $requestRow = $row(style({ alignItems: 'center' }))
 
             if ('key' in pos) {
-              const direction = pos.__typename === 'IncreasePosition' ? '↑' : '↓'
+              const direction = pos.__typename === 'PositionIncrease' ? '↑' : '↓'
               return $row(layoutSheet.spacingSmall)(
                 $txHashRef(pos.transactionHash, w3p.chain.id, $text(`${direction} ${readableFixedUSD30(pos.price)}`))
               )

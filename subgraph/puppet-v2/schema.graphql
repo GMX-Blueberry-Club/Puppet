@@ -9,7 +9,7 @@ type MarketCreated @entity(immutable: true) {
 }
 
 type PositionLink @entity(immutable: true) {
-  id: ID!
+  id: Bytes!
   key: Bytes!
 
   # indexToken: Bytes!
@@ -169,10 +169,10 @@ type PositionOpen @entity {
   link: PositionLink! # bytes32
   key: Bytes! # bytes32
 
-  # indexToken: Bytes!
   account: Bytes! # address
   market: Bytes! # address
   collateralToken: Bytes! # address
+  indexToken: Bytes! # address
 
   sizeInUsd: BigInt!
   sizeInTokens: BigInt!
@@ -181,9 +181,13 @@ type PositionOpen @entity {
 
   cumulativeSizeUsd: BigInt!
   cumulativeSizeToken: BigInt!
+  cumulativeCollateralUsd: BigInt!
+  cumulativeCollateralToken: BigInt!
 
   maxSizeUsd: BigInt!
   maxSizeToken: BigInt!
+  maxCollateralUsd: BigInt!
+  maxCollateralToken: BigInt!
 
   isLong: Boolean!
 
@@ -199,10 +203,10 @@ type PositionSettled @entity(immutable: true) {
   link: PositionLink! # bytes32
   key: Bytes! # bytes32
 
-  # indexToken: Bytes!
   account: Bytes! # address
   market: Bytes! # address
   collateralToken: Bytes! # address
+  indexToken: Bytes! # address
 
   sizeInUsd: BigInt!
   sizeInTokens: BigInt!
@@ -211,9 +215,13 @@ type PositionSettled @entity(immutable: true) {
 
   cumulativeSizeUsd: BigInt!
   cumulativeSizeToken: BigInt!
+  cumulativeCollateralUsd: BigInt!
+  cumulativeCollateralToken: BigInt!
 
   maxSizeUsd: BigInt!
   maxSizeToken: BigInt!
+  maxCollateralUsd: BigInt!
+  maxCollateralToken: BigInt!
 
   isLong: Boolean!
 
@@ -247,7 +255,7 @@ type PriceCandle @entity(immutable: true) {
 }
 
 type MirrorPositionLink @entity(immutable: true) {
-  id: ID!
+  id: Bytes!
   shareIncreaseList: [SharesIncrease!] @derivedFrom(field: "link")
   executeList: [ExecutePosition!] @derivedFrom(field: "link")
 }
@@ -309,12 +317,11 @@ type ExecutePosition @entity(immutable: true) {
   requestKey: Bytes! # bytes32
   isExecuted: Boolean! # bool
   isIncrease: Boolean! # bool
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
-
-
 
 type RequestOpenMirrorPosition @entity(immutable: true) {
   id: Bytes!
@@ -352,7 +359,6 @@ type SharesIncrease @entity(immutable: true) {
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
-
 
 type SubscribeTradeRoute @entity(immutable: true) {
   id: Bytes!

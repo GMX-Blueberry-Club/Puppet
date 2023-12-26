@@ -3,7 +3,7 @@
 // import { ILogType, ILogTypeName, orderEvents } from "gmx-middleware-utils"
 // import * as store from "../storage/storeScope"
 // import { publicClient } from "../../wallet/walletLink"
-// import { IQuerySubgraphConfig, ISchema, ISchemaQuery, PrettifyReturn, querySubgraph } from "./subgraph"
+// import { IQuerySubgraphConfig, ISchema, ISchemaQuery, PrettifyReturn, querySubgraph } from "gmx-middleware-utils/src/subgraph"
 // import * as indexDB from "../storage/indexDB"
 
 
@@ -89,12 +89,5 @@
 // }
 
 
-// export function fillQuery(obj: any){
-//   return Object.keys(obj).reduce((acc, key) => {
-//     const value = obj[key]
-//     acc[key] = value instanceof Object ? fillQuery(value) : null
-//     return acc
-//   }, {} as any)
-// }
 
 

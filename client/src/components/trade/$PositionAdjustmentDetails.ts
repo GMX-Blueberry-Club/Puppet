@@ -2,16 +2,14 @@ import { Behavior, combineObject } from "@aelea/core"
 import { $Node, $node, $text, NodeComposeFn, attr, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
 import { awaitPromises, constant, empty, map, mergeArray, multicast, sample, skipRepeats, snapshot, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
-import * as PUPPET from "puppet-middleware-const"
 import { $alert, $alertTooltip, $anchor, $infoLabeledValue, $infoTooltipLabel } from "gmx-middleware-ui-components"
 import {
-  DecreasePositionSwapType,
-  IPositionSlot, IPriceInterval,
+  IPriceCandle,
+  IPriceLatestMap,
   OrderType,
   StateStream,
   abs,
@@ -21,12 +19,13 @@ import {
   getNativeTokenAddress,
   getTokenDescription,
   getTokenUsd,
-  lst,
   readableFixedUSD30,
   readablePercentage,
   readableUnitAmount,
   resolveAddress
 } from "gmx-middleware-utils"
+import * as PUPPET from "puppet-middleware-const"
+import { IPositionMirrorOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $Popover } from "../$Popover.js"
 import { $heading2 } from "../../common/$text.js"
@@ -35,7 +34,6 @@ import { connectContract, wagmiWriteContract } from "../../logic/common.js"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary } from "../form/$Button.js"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
-import { getRouteTypeKey } from "puppet-middleware-utils"
 
 
 export enum ITradeFocusMode {
@@ -47,11 +45,11 @@ export enum ITradeFocusMode {
 
 
 interface IPositionAdjustmentHistory {
-  processData: Stream<IGmxProcessState>
   chain: ISupportedChain
-  openPositionList: Stream<IPositionSlot[]>
+  openPositionList: Stream<IPositionMirrorOpen[]>
 
-  pricefeed: Stream<IPriceInterval[]>
+  priceMap: Stream<IPriceLatestMap>
+  pricefeed: Stream<IPriceCandle[]>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>
 
@@ -76,7 +74,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
 
   [approveTrading, approveTradingTether]: Behavior<PointerEvent, true>,
   [clickApproveprimaryToken, clickApproveprimaryTokenTether]: Behavior<IWalletClient, { wallet: IWalletClient, route: viem.Address, primaryToken: viem.Address }>,
-  [clickResetPosition, clickResetPositionTether]: Behavior<any, IPositionSlot | null>,
+  [clickResetPosition, clickResetPositionTether]: Behavior<any, IPositionMirrorOpen | null>,
   [clickProposeTrade, clickProposeTradeTether]: Behavior<IWalletClient>,
 
 ) => {
@@ -343,13 +341,23 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
     return false
   }, validationError)
 
-  const executionFeeAfterBuffer = map(params => {
+  const latestWntPrice = map(priceMap => {
     const nativeToken = getNativeTokenAddress(config.chain)
+    const price = priceMap[nativeToken]
+
+    if (!price) {
+      throw new Error(`Price not found for ${nativeToken}`)
+    }
+
+    return price.min
+  }, config.priceMap)
+
+  const executionFeeAfterBuffer = map(params => {
     const executionFeeAfterBuffer = params.executionFee * (params.executionFeeBuffer + GMX.BASIS_POINTS_DIVISOR) / GMX.BASIS_POINTS_DIVISOR // params.executionFee
-    const feeUsd = getTokenUsd(params.processData.latestPrice[nativeToken].min, executionFeeAfterBuffer)
+    const feeUsd = getTokenUsd(params.latestWntPrice, executionFeeAfterBuffer)
 
     return feeUsd
-  }, combineObject({ executionFee, processData: config.processData, executionFeeBuffer }))
+  }, combineObject({ executionFee, latestWntPrice, executionFeeBuffer }))
 
   return [
     config.$container(layoutSheet.spacing)(
@@ -483,7 +491,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
                       if (_params.isIncrease) {
                         modLabel = 'Increase'
                       } else {
-                        modLabel = (_params.sizeDeltaUsd + lst(_params.position.updates).sizeInUsd === 0n) ? 'Close' : 'Reduce'
+                        modLabel = (_params.sizeDeltaUsd + _params.position.position.sizeInUsd === 0n) ? 'Close' : 'Reduce'
                       }
                     } else {
                       modLabel = 'Open'

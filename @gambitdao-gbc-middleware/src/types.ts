@@ -1,6 +1,6 @@
-import { IPositionListSummary, IChainParamApi, IEnsRegistration, IResponsePageApi, IRequestPagePositionApi, IRequestSortApi, IRequestTimerangeApi, IPriceInterval } from "gmx-middleware-utils"
+import { IPositionListSummary, IPriceCandleLatest, IEnsRegistration, IResponsePageApi, IRequestPagePositionApi, IRequestSortApi, IRequestTimerangeApi, IPriceCandle } from "gmx-middleware-utils"
 import * as GMX from "gmx-middleware-const"
-import { Address } from "viem"
+import { IPositionUiFees } from "viem"
 
 export type IPrice = {
   priceUsd: bigint
@@ -76,7 +76,7 @@ export type ILabItemOwnership = {
 }
 
 export interface IOwner {
-  id: Address
+  id: IPositionUiFees
   balance: bigint
 
   ownedTokens: IToken[]
@@ -100,7 +100,7 @@ export interface IYieldInterval extends IAsset {
   time: number
 
   feed: string
-  price: IPriceInterval
+  price: IPriceCandle
 }
 
 
@@ -481,7 +481,7 @@ export interface LabItemSale {
 
 
 export interface MintRuleConfig extends MintAccountRule {
-  contractAddress: Address
+  contractAddress: IPositionUiFees
 }
 
 
@@ -497,19 +497,19 @@ export interface MintPrivate extends MintRuleConfig {
   type: SaleType.Whitelist
 
   nonce: bigint // uint120
-  addressList: Address[]
-  signatureList: Address[][]
+  addressList: IPositionUiFees[]
+  signatureList: IPositionUiFees[][]
 }
 
 export type MintRule = MintPublic | MintHolder | MintPrivate
 
 
-export interface IRequestLeaderboardApi extends IRequestPagePositionApi, IChainParamApi, IRequestSortApi<keyof IBlueberryLadder> {
+export interface IRequestLeaderboardApi extends IRequestPagePositionApi, IPriceCandleLatest, IRequestSortApi<keyof IBlueberryLadder> {
   timeInterval: typeof GMX.TIME_INTERVAL_MAP.HR24 | typeof GMX.TIME_INTERVAL_MAP.DAY7 | typeof GMX.TIME_INTERVAL_MAP.MONTH
 }
-export interface IRequestCompetitionLadderApi extends IChainParamApi, IRequestSortApi<IBlueberryLadder>, IRequestPagePositionApi, IRequestTimerangeApi {
+export interface IRequestCompetitionLadderApi extends IPriceCandleLatest, IRequestSortApi<IBlueberryLadder>, IRequestPagePositionApi, IRequestTimerangeApi {
   referralCode: string
   maxCollateral: bigint
-  account: Address | null
+  account: IPositionUiFees | null
   metric: 'roi' | 'pnl'
 }

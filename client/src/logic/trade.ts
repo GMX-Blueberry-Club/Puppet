@@ -7,11 +7,11 @@ import { fetchBalance, readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
 import {
-  IAbstractPositionIdentity, IPriceInterval, IRequestPricefeedApi, ITokenDescription, ITokenSymbol,
+  IAbstractPositionIdentity, IPositionUiFees, IPriceInterval, IRequestPricefeedApi, ITokenDescription, ITokenSymbol,
   filterNull, getDenominator, getMappedValue, getTokenDescription, parseFixed, periodicRun, resolveAddress
 } from "gmx-middleware-utils"
 import * as viem from "viem"
-import { Address, Chain } from "viem"
+import {  } from "viem"
 import { arbitrum, avalanche } from "viem/chains"
 import { ISupportedChain } from "../wallet/walletLink.js"
 import { connectContract } from "./common.js"
@@ -144,7 +144,7 @@ export function latestPriceFromExchanges(tokendescription: ITokenDescription): S
 }
 
 
-export function getWalletErc20Balance(chain: ISupportedChain, token: viem.Address | typeof GMX.ADDRESS_ZERO, walletAddress: Address): Stream<bigint> {
+export function getWalletErc20Balance(chain: ISupportedChain, token: viem.Address | typeof GMX.ADDRESS_ZERO, walletAddress: viem.Address): Stream<bigint> {
 
   if (token === GMX.ADDRESS_ZERO) {
     return fromPromise(fetchBalance({ address: walletAddress }).then(res => res.value))

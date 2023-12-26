@@ -1,27 +1,24 @@
 import { map } from "@most/core"
 import { Stream } from "@most/types"
-import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, IntervalTime, TIME_INTERVAL_MAP, TOKEN_ADDRESS_DESCRIPTION_MAP } from "gmx-middleware-const"
+import * as GMX from "gmx-middleware-const"
+import { ADDRESS_ZERO, IntervalTime, TIME_INTERVAL_MAP, TOKEN_ADDRESS_DESCRIPTION_MAP } from "gmx-middleware-const"
 import {
   IEventLog1Args,
   ILogTxType,
+  IMarketCreatedEvent,
   IOraclePrice,
   IOraclePriceUpdateEvent,
   IPositionDecrease,
   IPositionIncrease,
-  IPriceInterval,
-  IPriceIntervalIdentity,
-  createPricefeedCandle,
+  IPriceLatestMap,
+  IPricefeedMap,
+  ITradeRoute,
   getDenominator,
   getIntervalIdentifier,
   getMappedValue,
-  ITradeRoute,
-  importGlobal,
-  unixTimestampNow,
-  IMarketCreatedEvent,
-  IPricefeedMap,
-  IPriceLatestMap
+  importGlobal
 } from "gmx-middleware-utils"
-import { IMirrorPositionRequest, IPositionMirrorSettled, IPositionMirrorSlot, IPuppetSubscritpion, getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-utils"
+import { IMirrorPositionRequest, IPositionMirrorOpen, IPositionMirrorSettled, IPuppetSubscritpion, getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { IProcessEnvironmentMode, IProcessedStore, IProcessedStoreConfig, defineProcess, validateConfig } from "../../utils/indexer/processor.js"
@@ -29,7 +26,6 @@ import { transformBigints } from "../../utils/storage/storeScope.js"
 import * as gmxLog from "../scope/gmx.js"
 import * as puppetLog from "../scope/puppet"
 import { rootStoreScope } from "../store/store.js"
-import * as GMX from "gmx-middleware-const"
 
 
 export interface IProcessMetrics {
@@ -55,7 +51,7 @@ export interface IGmxProcessState {
   routeMap: Record<viem.Hex, ITradeRoute>
   
   mirrorPositionRequest: Record<viem.Hex, IMirrorPositionRequest>
-  mirrorPositionSlot: Record<viem.Hex, IPositionMirrorSlot>
+  mirrorPositionSlot: Record<viem.Hex, IPositionMirrorOpen>
   mirrorPositionSettled: IPositionMirrorSettled[]
   subscription: IPuppetSubscritpion[]
 
@@ -426,7 +422,7 @@ function storeCandle(seed: IGmxProcessState, oraclePrice: IOraclePrice, interval
     }
     candle.c = price
   } else {
-    seed.pricefeed[id][String(candleSlot)] = createPricefeedCandle(time, price)
+    // seed.pricefeed[id][String(candleSlot)] = createPricefeedCandle(time, price)
   }
 }
 

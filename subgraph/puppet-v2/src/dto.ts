@@ -3,7 +3,7 @@ import { EventLog } from "../generated/EventEmitter/EventEmitter"
 import { MarketCreated, PositionDecrease, PositionFeeUpdate, PositionIncrease, PositionLink, PositionOpen, PositionSettled, PriceCandle, PriceCandleLatest } from "../generated/schema"
 import { getAddressItem, getBoolItem, getBytes32Item, getIntItem, getUintItem } from "./utils/datastore"
 import { getIdFromEvent } from "./utils/gmxHelpers"
-import { IntervalUnixTime } from "./utils/const"
+import { IntervalUnixTime, MARKET_TOKEN_MAP, ZERO_BI } from "./utils/const"
 
 
 
@@ -20,11 +20,10 @@ export function createMarketCreated<T extends EventLog>(event: T): MarketCreated
   return dto
 }
 
-export function createPositionIncrease<T extends EventLog>(event: T, linkId: string): PositionIncrease {
+export function createPositionIncrease<T extends EventLog>(event: T): PositionIncrease {
   const eventId = getIdFromEvent(event)
   const dto = new PositionIncrease(eventId)
 
-  dto.link = linkId
 
   dto.account = getAddressItem(event.params.eventData, 0)
   dto.market = getAddressItem(event.params.eventData, 1)
@@ -64,11 +63,9 @@ export function createPositionIncrease<T extends EventLog>(event: T, linkId: str
   return dto
 }
 
-export function createPositionFeeUpdate<T extends EventLog>(event: T, linkId: string): PositionFeeUpdate {
+export function createPositionFeeUpdate<T extends EventLog>(event: T): PositionFeeUpdate {
   const eventId = getIdFromEvent(event)
   const dto = new PositionFeeUpdate(eventId)
-
-  dto.link = linkId
 
   dto.orderKey = getBytes32Item(event.params.eventData, 0)
   dto.positionKey = getBytes32Item(event.params.eventData, 1)
@@ -120,11 +117,9 @@ export function createPositionFeeUpdate<T extends EventLog>(event: T, linkId: st
   return dto
 }
 
-export function createPositionDecrease<T extends EventLog>(event: T, linkId: string): PositionDecrease {
+export function createPositionDecrease<T extends EventLog>(event: T): PositionDecrease {
   const eventId = getIdFromEvent(event)
   const dto = new PositionDecrease(eventId)
-
-  dto.link = linkId
 
   dto.account = getAddressItem(event.params.eventData, 0)
   dto.market = getAddressItem(event.params.eventData, 1)
@@ -185,35 +180,36 @@ export function createPositionLink<T extends EventLog>(event: T, openSlot: Posit
   return dto
 }
 
-export function createPositionOpen<T extends EventLog>(event: T): PositionOpen {
-  const positionKey = getBytes32Item(event.params.eventData, 1)
-  const dto = new PositionOpen(positionKey.toHex())
+export function initPositionOpen(positionIncrease: PositionIncrease): PositionOpen {
+  const dto = new PositionOpen(positionIncrease.positionKey.toHex())
 
-  dto.key = positionKey
-  dto.link = Bytes.fromUTF8('PositionLink').concat(getIdFromEvent(event)).toHex()
+  dto.key = positionIncrease.positionKey
+  dto.link = positionIncrease.orderKey
 
-  dto.account = getAddressItem(event.params.eventData, 0)
-  dto.market = getAddressItem(event.params.eventData, 1)
-  dto.collateralToken = getAddressItem(event.params.eventData, 2)
+  dto.account = positionIncrease.account
+  dto.market = positionIncrease.market
+  dto.collateralToken = positionIncrease.collateralToken
+  dto.indexToken = MARKET_TOKEN_MAP.get(positionIncrease.market.toHex())
 
-  dto.sizeInUsd = getUintItem(event.params.eventData, 0)
-  dto.sizeInTokens = getUintItem(event.params.eventData, 1)
-  dto.collateralAmount = getUintItem(event.params.eventData, 2)
-  dto.realisedPnlUsd = getUintItem(event.params.eventData, 3)
+  dto.cumulativeSizeUsd = ZERO_BI
+  dto.cumulativeSizeToken = ZERO_BI
+  dto.cumulativeCollateralUsd = ZERO_BI
+  dto.cumulativeCollateralToken = ZERO_BI
 
-  dto.cumulativeSizeUsd = getUintItem(event.params.eventData, 4)
-  dto.cumulativeSizeToken = getUintItem(event.params.eventData, 5)
+  dto.maxSizeUsd = ZERO_BI
+  dto.maxSizeToken = ZERO_BI
+  dto.maxCollateralToken = ZERO_BI
+  dto.maxCollateralUsd = ZERO_BI
 
-  dto.maxSizeUsd = getUintItem(event.params.eventData, 7)
-  dto.maxSizeToken = getUintItem(event.params.eventData, 8)
+  dto.isLong = positionIncrease.isLong
 
-  dto.isLong = getBoolItem(event.params.eventData, 0)
+  dto.realisedPnlUsd = ZERO_BI
   
-  dto.blockNumber = event.block.number
-  dto.blockTimestamp = event.block.timestamp
-  dto.transactionHash = event.transaction.hash
-  dto.transactionIndex = event.transaction.index
-  dto.logIndex = event.logIndex
+  dto.blockNumber = positionIncrease.blockNumber
+  dto.blockTimestamp = positionIncrease.blockTimestamp
+  dto.transactionHash = positionIncrease.transactionHash
+  dto.transactionIndex = positionIncrease.transactionIndex
+  dto.logIndex = positionIncrease.logIndex
 
   return dto
 }
@@ -228,6 +224,7 @@ export function createPositionSettled<T extends EventLog>(event: T, openPosition
   dto.account = openPosition.account
   dto.market = openPosition.market
   dto.collateralToken = openPosition.collateralToken
+  dto.indexToken = openPosition.indexToken
 
   dto.sizeInUsd = openPosition.sizeInUsd
   dto.sizeInTokens = openPosition.sizeInTokens
@@ -236,11 +233,17 @@ export function createPositionSettled<T extends EventLog>(event: T, openPosition
 
   dto.cumulativeSizeUsd = openPosition.cumulativeSizeUsd
   dto.cumulativeSizeToken = openPosition.cumulativeSizeToken
+  dto.cumulativeCollateralUsd = openPosition.cumulativeCollateralUsd
+  dto.cumulativeCollateralToken = openPosition.cumulativeCollateralToken
 
   dto.maxSizeUsd = openPosition.maxSizeUsd
   dto.maxSizeToken = openPosition.maxSizeToken
+  dto.maxCollateralToken = openPosition.maxCollateralToken
+  dto.maxCollateralUsd = openPosition.maxCollateralUsd
 
   dto.isLong = openPosition.isLong
+
+  dto.realisedPnlUsd = openPosition.realisedPnlUsd
 
   dto.blockNumber = event.block.number
   dto.blockTimestamp = event.block.timestamp

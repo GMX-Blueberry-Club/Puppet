@@ -21,7 +21,7 @@ import {
   tokenAmountLabel,
   unixTimestampNow
 } from "gmx-middleware-utils"
-import { IPuppetSubscritpion, IPuppetSubscritpionParams, accountSettledTradeListSummary, getParticiapntMpPortion, getPuppetDepositAccountKey, getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-utils"
+import { IPuppetSubscritpion, IPuppetSubscritpionParams, accountSettledPositionListSummary, getParticiapntMpPortion, getPuppetDepositAccountKey, getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-utils"
 import { $PuppetPortfolio } from "../components/participant/$Puppet"
 import { IGmxProcessState } from "../data/process/process.js"
 import * as store from "../data/store/store.js"
@@ -427,7 +427,7 @@ export const $Wallet = (config: IProfile) => component((
                                 // }
 
                                 const traderTradeList = traderTrades[sub.trader]
-                                const summary = accountSettledTradeListSummary(traderTradeList, params.priceLatestMap, config.wallet.account.address)
+                                const summary = accountSettledPositionListSummary(traderTradeList, params.priceLatestMap, config.wallet.account.address)
 
                                 return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: '10px 0' }))(
                                   $TraderDisplay({

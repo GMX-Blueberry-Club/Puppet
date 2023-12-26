@@ -25,6 +25,7 @@ import {
   SubscribeTradeRoute,
   Withdraw,
   AdjustPosition,
+  MirrorPositionLink,
 } from "../generated/schema"
 import { ZERO_BI } from "./utils/const"
 
@@ -52,10 +53,10 @@ export function handleOpenPosition(event: OpenPositionEvent): void {
     return 
   }
 
-  
+  const mirrorPositionLink = new MirrorPositionLink(entity.requestKey)
   const mirrorPositionOpen = new MirrorPositionOpen(entity.positionKey.toHex())
 
-  mirrorPositionOpen.link = entity.requestKey.toHex()
+  mirrorPositionOpen.link = mirrorPositionLink.id
   mirrorPositionOpen.position = entity.positionKey.toHex()
 
   mirrorPositionOpen.trader = entity.trader
@@ -91,6 +92,7 @@ export function handleOpenPosition(event: OpenPositionEvent): void {
 
   routeOpenRef.mirrorPositionOpen = mirrorPositionOpen.id
 
+  mirrorPositionLink.save()
   mirrorPositionOpen.save()
   routeOpenRef.save()
 }
@@ -191,7 +193,6 @@ export function handleSharesIncrease(event: SharesIncreaseEvent): void {
     event.transaction.hash.concatI32(event.logIndex.toI32())
   )
 
-
   entity.puppetsShares = event.params.puppetsShares
   entity.traderShares = event.params.traderShares
   entity.totalSupply = event.params.totalSupply
@@ -203,12 +204,17 @@ export function handleSharesIncrease(event: SharesIncreaseEvent): void {
 
   const openPosition = MirrorPositionOpen.load(entity.positionKey.toHex())
 
+  if (openPosition === null) {
+    log.error("MirrorPositionOpen not found", [])
+    return
+  }
+
+  entity.link = openPosition.link
+
   if (openPosition) {
     openPosition.puppetsShares = entity.puppetsShares
     openPosition.traderShares = entity.traderShares
     openPosition.totalSupply = entity.totalSupply
-
-    entity.link = openPosition.id
 
     openPosition.save()
   } 

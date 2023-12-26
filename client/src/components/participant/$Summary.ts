@@ -5,7 +5,7 @@ import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { IPriceLatestMap, IPricefeedMap, readableFixedUSD30, readableLeverage, readableNumber, readableUSD, switchMap } from "gmx-middleware-utils"
-import { IPositionMirrorSettled, accountSettledTradeListSummary } from "puppet-middleware-utils"
+import { IPositionMirrorSettled, accountSettledPositionListSummary } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile.js"
 import { $heading2 } from "../../common/$text.js"
@@ -31,7 +31,7 @@ export const $TraderProfileSummary = (config: IAccountSummary) => component((
 
     $column(layoutSheet.spacing, style({ minHeight: '90px' }))(
       switchMap(params => {
-        const metrics = accountSettledTradeListSummary(params.settledTradeList, params.priceLatestMap)
+        const metrics = accountSettledPositionListSummary(params.settledTradeList, params.priceLatestMap)
 
         return $node(style({ display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column', gap: screenUtils.isDesktopScreen ? '76px' : '26px', zIndex: 10, placeContent: 'center', alignItems: 'center', padding: '0 8px' }))(
           $row(
@@ -80,7 +80,7 @@ export const $PuppetProfileSummary = (config: IAccountSummary) => component(() =
 
     $column(layoutSheet.spacing, style({ minHeight: '90px' }))(
       switchMap(params => {
-        const metrics = accountSettledTradeListSummary(params.settledTradeList, params.priceLatestMap, config.address)
+        const metrics = accountSettledPositionListSummary(params.settledTradeList, params.priceLatestMap, config.address)
 
         return $node(style({ display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column', gap: screenUtils.isDesktopScreen ? '76px' : '26px', zIndex: 10, placeContent: 'center', alignItems: 'center', padding: '0 8px' }))(
           $row(

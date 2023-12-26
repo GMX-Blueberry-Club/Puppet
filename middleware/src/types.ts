@@ -1,4 +1,4 @@
-import { IPosition, IPositionDecrease, IPositionListSummary, IPositionSettled } from "gmx-middleware-utils"
+import { ILogTxType, ILogTypeId, IPosition, IPositionLink, IPositionListSummary, IPositionSettled } from "gmx-middleware-utils"
 import * as viem from "viem"
 
 
@@ -13,23 +13,50 @@ export interface IMirrorPositionRequest {
   requestKey: viem.Hex
 }
 
-export interface IPositionMirror<TypeName extends 'PositionSlot' | 'PositionSettled'> extends IPosition<TypeName> {
-  puppets: readonly viem.Address[]
-  trader: viem.Address
+
+
+export interface IExecutePosition extends ILogTxType<'ExecutePosition'> {
+  link: IMirrorPositionLink
+  performanceFeePaid: bigint
   route: viem.Address
-  routeTypeKey: viem.Hex
-  shares: readonly bigint[]
-  traderShare: bigint
+  requestKey: viem.Hex
+  isExecuted: boolean
+  isIncrease: boolean
+}
+
+export interface ISharesIncrease extends ILogTxType<'SharesIncrease'> {
+  link: IMirrorPositionLink
+  puppetsShares: bigint[]
+  traderShares: bigint
   totalSupply: bigint
+  positionKey: viem.Hex
 }
 
-export interface IPositionMirrorSlot extends IPositionMirror<'PositionSlot'> { }
-
-export interface IPositionMirrorSettled extends IPositionSettled, IPositionMirror<'PositionSettled'> {
-  settlement: IPositionDecrease
-  isLiquidated: boolean
-  openBlockTimestamp: number
+export interface IMirrorPositionLink extends ILogTypeId<'MirrorPositionLink'> {
+  shareIncreaseList: ISharesIncrease[]
+  executeList: IExecutePosition[]
 }
+
+
+export interface IPositionMirror<TypeName extends 'MirrorPositionOpen' | 'MirrorPositionSettled' = 'MirrorPositionOpen' | 'MirrorPositionSettled'> extends ILogTxType<TypeName> {
+  link: IMirrorPositionLink
+
+  position: IPosition<TypeName extends 'MirrorPositionOpen' ? 'PositionOpen' : 'PositionSettled'>
+
+  trader: viem.Address
+  tradeRoute: viem.Address
+  puppets: viem.Address[]
+
+  puppetsShares: bigint[]
+  traderShares: bigint
+  totalSupply: bigint
+
+  routeTypeKey: viem.Hex
+  tradeRouteKey: viem.Hex
+}
+
+export interface IPositionMirrorOpen extends IPositionMirror<'MirrorPositionOpen'> { }
+export interface IPositionMirrorSettled extends IPositionMirror<'MirrorPositionSettled'> {}
 
 export interface IMirrorPositionListSummary extends IPositionListSummary {
   // routeTypeKey?: viem.Hex

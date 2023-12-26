@@ -90,9 +90,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
       //       })
       //     )
       //   }),
-      // ), ̰
-
-      // rout ̰
+      // ),
 
 
 

@@ -3,12 +3,12 @@ import { $element, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map, startWith, tap } from "@most/core"
+import { awaitPromises, empty, fromPromise, map, startWith, tap } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $ButtonToggle, $Table, $bear, $bull, $icon, $marketLabel, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "gmx-middleware-ui-components"
 import { IMarketCreatedEvent, IPositionListSummary, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
-import { IMirrorPositionListSummary, IPositionMirrorSettled, IPuppetSubscritpion, accountSettledTradeListSummary } from "puppet-middleware-utils"
+import { IMirrorPositionListSummary, IPositionMirrorOpen, IPositionMirrorSettled, IPuppetSubscritpion, accountSettledPositionListSummary, queryLeaderboard } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $labelDisplay } from "../../common/$TextField.js"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $size } from "../../common/$common.js"
@@ -34,7 +34,7 @@ export type ITopSettled = {
 type ITableRow = {
   summary: IMirrorPositionListSummary
   account: viem.Address
-  settledTradeList: IPositionMirrorSettled[]
+  positionList: (IPositionMirrorSettled | IPositionMirrorOpen)[]
 }
 
 export const $TopSettled = (config: ITopSettled) => component((
@@ -64,32 +64,37 @@ export const $TopSettled = (config: ITopSettled) => component((
     const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
     const paging = startWith(requestPage, scrollRequest)
 
-    const dataSource: Stream<TablePageResponse<ITableRow>> =  map(req => {
+
+    const dataSource: Stream<TablePageResponse<ITableRow>> = awaitPromises(map(async req => {
+      const leaderboardQuery = await queryLeaderboard()
+
       const filterStartTime = unixTimestampNow() - params.activityTimeframe
 
-      const flattenMapMap = params.data.mirrorPositionSettled.filter(pos => {
-        if (params.isLong !== null && params.isLong !== pos.isLong) {
+      const flattenMapMap = leaderboardQuery.filter(mp => {
+        if (params.isLong !== null && params.isLong !== mp.position.isLong) {
           return false
         }
 
-        if (params.filterMarketMarketList.length && params.filterMarketMarketList.findIndex(rt => rt.indexToken === pos.indexToken) === -1) {
+        if (params.filterMarketMarketList.length && params.filterMarketMarketList.findIndex(rt => rt.indexToken === mp.position.indexToken) === -1) {
           return false
         }
 
-        return pos.blockTimestamp > filterStartTime
+        return mp.blockTimestamp > filterStartTime
       })
       const tradeListMap = groupArrayMany(flattenMapMap, a => a.routeTypeKey)
       const tradeListEntries = Object.values(tradeListMap)
-      const filterestPosList = tradeListEntries.map(settledTradeList => {
-        return { account: settledTradeList[0].trader, summary: accountSettledTradeListSummary(settledTradeList, params.priceLatestMap), settledTradeList }
+      const filterestPosList: ITableRow[] = tradeListEntries.map(positionList => {
+        const summary = accountSettledPositionListSummary(positionList, params.priceLatestMap)
+
+        return { account: positionList[0].trader, summary, positionList }
       })
 
       return pagingQuery({ ...params.sortBy, ...req }, filterestPosList)
-    }, paging)
+    }, paging))
 
 
     return { ...params, dataSource }
-  }, combineObject({ data: config.processData, sortBy, activityTimeframe, filterMarketMarketList, isLong, pricefeed, priceLatestMap }))
+  }, combineObject({ sortBy, activityTimeframe, filterMarketMarketList, isLong, pricefeed, priceLatestMap }))
 
 
 
@@ -191,7 +196,7 @@ export const $TopSettled = (config: ITopSettled) => component((
               $bodyCallback: map(pos => {
 
                 return $TraderRouteDisplay({
-                  positionParams: pos.settledTradeList[0],
+                  positionParams: pos.positionList[0].position,
                   trader: pos.account,
                   routeTypeKey: "0xa437f95c9cee26945f76bc090c3491ffa4e8feb32fd9f4fefbe32c06a7184ff3",
                   subscriptionList: config.subscriptionList,
@@ -270,7 +275,7 @@ export const $TopSettled = (config: ITopSettled) => component((
                         $container: $row(style({ position: 'relative',  width: `180px`, height: `80px`, margin: '-16px 0' })),
                         tickCount: 50,
                         pricefeedMap: params.pricefeed,
-                        positionList: pos.settledTradeList,
+                        positionList: pos.positionList,
                         activityTimeframe: params.activityTimeframe,
                       })({})
                       : empty()

@@ -4,7 +4,7 @@ import { colorAlpha, pallete, theme } from "@aelea/ui-components-theme"
 import { IToken, LAB_CHAIN } from "@gambitdao/gbc-middleware"
 import { $anchor, $calendar, $caretDblDown, $ethScan } from "gmx-middleware-ui-components"
 import { getAccountExplorerUrl, getTxExplorerUrl, shortenAddress } from "gmx-middleware-utils"
-import { Address } from "viem"
+import { IPositionUiFees } from "viem"
 import { $berryByToken } from "../../components/$common.js"
 import { $trash } from "./$icons.js"
 
@@ -114,12 +114,12 @@ export const $iconCircular = ($iconPath: $Branch<SVGPathElement>, size = '32px')
 
 
 
-export const $accountRef = (id: Address) => $anchor(attr({ href: getAccountExplorerUrl(LAB_CHAIN, id) }))(
+export const $accountRef = (id: IPositionUiFees) => $anchor(attr({ href: getAccountExplorerUrl(LAB_CHAIN, id) }))(
   $text(style({}))(`${shortenAddress(id)}`)
 )
 
 
-export const $accountIconLink = (address: Address) => $anchor(attr({ href: getAccountExplorerUrl(LAB_CHAIN, address) }))(
+export const $accountIconLink = (address: IPositionUiFees) => $anchor(attr({ href: getAccountExplorerUrl(LAB_CHAIN, address) }))(
   $icon({ $content: $ethScan, width: '16px', viewBox: '0 0 24 24', svgOps: style({ margin: '3px 4px 0 0' }) }),
   $text(style({}))(`${shortenAddress(address)} `),
 )

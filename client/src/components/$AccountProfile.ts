@@ -4,13 +4,13 @@ import { pallete } from "@aelea/ui-components-theme"
 import { blueberrySubgraph } from "@gambitdao/gbc-middleware"
 import { awaitPromises, empty, now } from "@most/core"
 import { IEnsRegistration, switchMap } from "gmx-middleware-utils"
-import { Address } from "viem"
 import { $jazzicon } from "../common/$avatar.js"
 import { $berryByToken } from "./$common.js"
+import * as viem from "viem"
 
 
 export interface IAccountPreview {
-  address: Address
+  address: viem.Address
   labelSize?: string
   profileSize?: number
 }

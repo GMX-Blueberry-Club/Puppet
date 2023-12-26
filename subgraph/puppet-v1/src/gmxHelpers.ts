@@ -170,7 +170,7 @@ export function _storeDefaultPricefeed(tokenAddress: string, event: ethereum.Eve
 export const uniqueEventId = (ev: ethereum.Event): string => ev.transaction.hash.toHex() + ':' + ev.logIndex.toString()
 
 
-export function _storeERC20Transfer(token: string, event: ethereum.Event, from: Bytes, to: Bytes amount: BigInt, amountUsd: BigInt): void {
+export function _storeERC20Transfer(token: string, event: ethereum.Event, from: Bytes, to: Bytes, amount: BigInt, amountUsd: BigInt): void {
   const id = uniqueEventId(event)
 
   const transfer = new erc20.Transfer(id)
