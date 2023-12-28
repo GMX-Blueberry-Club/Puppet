@@ -7,12 +7,12 @@ import { Stream } from "@most/types"
 import { $Baseline, $bear, $bull, $infoTooltipLabel, IMarker } from "gmx-middleware-ui-components"
 import { filterNull, parseReadableNumber, readableFixedUSD30, readableUnitAmount } from "gmx-middleware-utils"
 import { BaselineData, ChartOptions, DeepPartial, MouseEventParams, Time } from "lightweight-charts"
-import { IPositionMirrorSettled, IPositionMirrorOpen } from "puppet-middleware-utils"
+import { IMirrorPositionSettled, IMirrorPositionOpen } from "puppet-middleware-utils"
 import { IPerformanceTimeline, performanceTimeline } from "./$ProfilePerformanceGraph.js"
 
 
 export interface ITradeCardPreview extends Omit<IPerformanceTimeline, 'positionList'> {
-  position: IPositionMirrorSettled | IPositionMirrorOpen,
+  position: IMirrorPositionSettled | IMirrorPositionOpen,
   $container?: NodeComposeFn<$Node>,
   chartConfig?: DeepPartial<ChartOptions>
   latestPrice: Stream<bigint>

@@ -1,6 +1,6 @@
 import { Address, log, store } from "@graphprotocol/graph-ts"
 import { EventLog1 } from "../generated/EventEmitter/EventEmitter"
-import { PositionLink, PositionOpen, PriceCandle, PriceCandleLatest } from "../generated/schema"
+import { PositionLink, PositionOpen, PriceCandle, PriceCandleSeed } from "../generated/schema"
 import * as dto from "./dto"
 import { IntervalUnixTime, ZERO_BI } from "./utils/const"
 import { getAddressItem, getBytes32Item, getUintItem } from "./utils/datastore"
@@ -132,11 +132,11 @@ function onOraclePriceUpdate(event: EventLog1): void {
     const nextTimeSlot = nextSlot * interval
     const latestId = `${token.toHex()}:${interval}`
 
-    let latest = PriceCandleLatest.load(latestId)
+    let latest = PriceCandleSeed.load(latestId)
     
     // initialize latest price
     if (latest === null) {
-      latest = new PriceCandleLatest(latestId)
+      latest = new PriceCandleSeed(latestId)
       latest.timestamp = nextTimeSlot
       latest.token = token
       latest.interval = interval

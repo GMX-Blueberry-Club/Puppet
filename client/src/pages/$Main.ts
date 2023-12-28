@@ -64,7 +64,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   // }, zipState({ process: gmxProcess.store, block: block })))
 
   const syncBlock: Stream<bigint | null> = mergeArray([
-    recoverWith(() => now(null), block),
+    // recoverWith(() => now(null), block),
     syncProcessData,
   ])
 
@@ -248,7 +248,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                     fadeIn($Leaderboard({
                       subscriptionList,
                       route: leaderboardRoute,
-                      processData
                     })({
                       routeChange: linkClickTether(
                         tap(console.log)

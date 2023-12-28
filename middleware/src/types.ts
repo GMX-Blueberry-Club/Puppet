@@ -38,9 +38,8 @@ export interface IMirrorPositionLink extends ILogTypeId<'MirrorPositionLink'> {
 }
 
 
-export interface IPositionMirror<TypeName extends 'MirrorPositionOpen' | 'MirrorPositionSettled' = 'MirrorPositionOpen' | 'MirrorPositionSettled'> extends ILogTxType<TypeName> {
+export interface IMirrorPosition<TypeName extends 'MirrorPositionOpen' | 'MirrorPositionSettled' = 'MirrorPositionOpen' | 'MirrorPositionSettled'> extends ILogTxType<TypeName> {
   link: IMirrorPositionLink
-
   position: IPosition<TypeName extends 'MirrorPositionOpen' ? 'PositionOpen' : 'PositionSettled'>
 
   trader: viem.Address
@@ -55,8 +54,39 @@ export interface IPositionMirror<TypeName extends 'MirrorPositionOpen' | 'Mirror
   tradeRouteKey: viem.Hex
 }
 
-export interface IPositionMirrorOpen extends IPositionMirror<'MirrorPositionOpen'> { }
-export interface IPositionMirrorSettled extends IPositionMirror<'MirrorPositionSettled'> {}
+export interface IMirrorPositionOpen extends IMirrorPosition<'MirrorPositionOpen'> { }
+export interface IMirrorPositionSettled extends IMirrorPosition<'MirrorPositionSettled'> {}
+
+export interface ISubscribeTradeRoute extends ILogTxType<'SubscribeTradeRoute'> {
+  puppetTradeRoute: IPuppetTradeRoute
+  allowance: bigint
+  subscriptionExpiry: bigint
+  trader: viem.Address
+  puppet: viem.Address
+  route: viem.Address
+  routeTypeKey: viem.Hex
+  subscribe: boolean
+}
+
+export interface IPuppetPositionOpen extends ILogTxType<'PuppetPositionOpen'> {
+  position: IMirrorPositionOpen
+  puppetTradeRoute: IPuppetTradeRoute
+}
+
+export interface IPuppetPositionSettled extends ILogTxType<'PuppetPositionSettled'> {
+  position: IMirrorPositionSettled
+  puppetTradeRoute: IPuppetTradeRoute
+}
+
+export interface IPuppetTradeRoute extends ILogTypeId<'PuppetTradeRoute'> {
+  routeTypeKey: viem.Hex
+  puppet: viem.Address
+  trader: viem.Address
+
+  puppetPositionSettledList: IPuppetPositionSettled[]
+  puppetPositionOpenList: IPuppetPositionOpen[]
+  subscriptionList: ISubscribeTradeRoute[]
+}
 
 export interface IMirrorPositionListSummary extends IPositionListSummary {
   // routeTypeKey?: viem.Hex

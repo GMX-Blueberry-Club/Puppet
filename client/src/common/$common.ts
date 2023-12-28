@@ -21,7 +21,7 @@ import {
   readablePercentage,
   streamOf, switchMap
 } from "gmx-middleware-utils"
-import { getMpSlotPnL, getParticiapntMpPortion, getPuppetSubscriptionKey, getRouteTypeKey, IPositionMirror, IPositionMirrorOpen, IPuppetSubscritpion, IPuppetSubscritpionParams } from "puppet-middleware-utils"
+import { getMpSlotPnL, getParticiapntMpPortion, getPuppetSubscriptionKey, getRouteTypeKey, IMirrorPosition, IMirrorPositionOpen, IPuppetSubscritpion, IPuppetSubscritpionParams } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile.js"
 import { $Popover } from "../components/$Popover.js"
@@ -63,7 +63,7 @@ export const $routeIntent = (isLong: boolean, indexToken: viem.Address) => {
   )
 }
 
-export const $entry = (mp: IPositionMirror) => {
+export const $entry = (mp: IMirrorPosition) => {
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'center', placeContent: 'center', fontSize: '.85rem' }))(
     $routeIntent(mp.position.isLong, mp.position.indexToken),
     $text(readableFixedUSD30(getEntryPrice(mp.position.sizeInUsd, mp.position.sizeInTokens, mp.position.indexToken))),
@@ -130,7 +130,7 @@ export const $tokenIcon = (indexToken: viem.Address, IIcon: { width: string } = 
   })
 }
 
-export const $sizeAndLiquidation = (mp: IPositionMirrorOpen, markPrice: Stream<IOraclePrice>, puppet?: viem.Address) => {
+export const $sizeAndLiquidation = (mp: IMirrorPositionOpen, markPrice: Stream<bigint>, puppet?: viem.Address) => {
   const sizeInUsd = getParticiapntMpPortion(mp, mp.position.sizeInUsd, puppet)
   const collateralInToken = getParticiapntMpPortion(mp, mp.position.collateralAmount, puppet)
   const collateralUsd = getTokenUsd(mp.position.link.increaseList[0].collateralTokenPriceMin, collateralInToken)
@@ -167,7 +167,7 @@ export const $puppets = (puppets: readonly viem.Address[], click: Tether<INode, 
   )
 }
 
-export const $openPnl = (latestPrice: Stream<IOraclePrice>, mp: IPositionMirrorOpen, account?: viem.Address) => {
+export const $openPnl = (latestPrice: Stream<bigint>, mp: IMirrorPositionOpen, account?: viem.Address) => {
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
     style({ flexDirection: 'row-reverse' })(
       $infoTooltipLabel(
@@ -229,7 +229,7 @@ export const $PnlPercentageValue = (pnl: Stream<bigint> | bigint, collateral: bi
   )
 }
 
-export const $positionSlotPnl = (mp: IPositionMirrorOpen, positionMarkPrice: Stream<IOraclePrice> | IOraclePrice, account?: viem.Address) => {
+export const $positionSlotPnl = (mp: IMirrorPositionOpen, positionMarkPrice: Stream<bigint> | IOraclePrice, account?: viem.Address) => {
   const value = isStream(positionMarkPrice)
     ? map((price) => {
       const pnl = getMpSlotPnL(mp, price, account)
@@ -240,7 +240,7 @@ export const $positionSlotPnl = (mp: IPositionMirrorOpen, positionMarkPrice: Str
   return $pnlValue(value)
 }
 
-export const $positionSlotRoi = (pos: IPositionMirrorOpen, positionMarkPrice: IOraclePrice | Stream<IOraclePrice>, account?: viem.Address) => {
+export const $positionSlotRoi = (pos: IMirrorPositionOpen, positionMarkPrice: bigint | Stream<bigint>, account?: viem.Address) => {
   const lstIncrease = lst(pos.position.link.increaseList)
   const collateralUsd = getTokenUsd(lstIncrease.collateralTokenPriceMin, pos.position.maxCollateralToken)
     
@@ -251,9 +251,9 @@ export const $positionSlotRoi = (pos: IPositionMirrorOpen, positionMarkPrice: IO
   return $text(roi)
 }
 
-export function $liquidationSeparator(isLong: boolean, sizeUsd: bigint, sizeInTokens: bigint, collateralAmount: bigint, markPrice: Stream<IOraclePrice>) {
+export function $liquidationSeparator(isLong: boolean, sizeUsd: bigint, sizeInTokens: bigint, collateralAmount: bigint, markPrice: Stream<bigint>) {
   const liqWeight = map(price => {
-    const collateralUsd = getTokenUsd(price.max, collateralAmount)
+    const collateralUsd = getTokenUsd(price, collateralAmount)
     const liquidationPrice = getRoughLiquidationPrice(isLong, sizeUsd, sizeInTokens, collateralUsd, collateralAmount)
 
     return liquidationWeight(isLong, liquidationPrice, price)

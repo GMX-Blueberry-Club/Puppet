@@ -3,12 +3,12 @@ import { $element, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, empty, fromPromise, map, startWith, tap } from "@most/core"
+import { awaitPromises, empty, map, now, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $ButtonToggle, $Table, $bear, $bull, $icon, $marketLabel, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "gmx-middleware-ui-components"
-import { IMarketCreatedEvent, IPositionListSummary, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
-import { IMirrorPositionListSummary, IPositionMirrorOpen, IPositionMirrorSettled, IPuppetSubscritpion, accountSettledPositionListSummary, queryLeaderboard } from "puppet-middleware-utils"
+import { IMarketCreatedEvent, IPricefeedMap, IPricetickListMap, TEMP_MARKET_LIST, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, IPuppetSubscritpion, accountSettledPositionListSummary, extractPricefeedFromPositionList, queryLeaderboard, queryLatestTokenPriceFeed, queryLatestPriceTicks } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $labelDisplay } from "../../common/$TextField.js"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $size } from "../../common/$common.js"
@@ -16,17 +16,15 @@ import { $card, $responsiveFlex } from "../../common/elements/$common.js"
 import { $DropMultiSelect } from "../../components/form/$Dropdown.js"
 import { $tableHeader } from "../../components/table/$TableColumn.js"
 import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceGraph.js"
-import { IGmxProcessState } from "../../data/process/process.js"
 import { rootStoreScope } from "../../data/store/store.js"
+import { subgraphClient } from "../../data/subgraph/client"
 import * as storage from "../../utils/storage/storeScope.js"
 import { $seperator2 } from "../common.js"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity.js"
-import { $ButtonPrimaryCtx } from "../../components/form/$Button"
 
 
 export type ITopSettled = {
   route: router.Route
-  processData: Stream<IGmxProcessState>
   subscriptionList: Stream<IPuppetSubscritpion[]>
 }
 
@@ -34,7 +32,8 @@ export type ITopSettled = {
 type ITableRow = {
   summary: IMirrorPositionListSummary
   account: viem.Address
-  positionList: (IPositionMirrorSettled | IPositionMirrorOpen)[]
+  positionList: (IMirrorPositionSettled | IMirrorPositionOpen)[]
+  pricefeedMap: IPricetickListMap
 }
 
 export const $TopSettled = (config: ITopSettled) => component((
@@ -50,15 +49,14 @@ export const $TopSettled = (config: ITopSettled) => component((
   [openFilterPopover, openFilterPopoverTether]: Behavior<any>,
 ) => {
 
-  const marketList = map(pd => Object.values(pd.marketMap).filter(market => market.indexToken !== GMX.ADDRESS_ZERO), config.processData)
+  const marketList = now(TEMP_MARKET_LIST)
 
   const exploreStore = storage.createStoreScope(rootStoreScope, 'topSettled' as const)
   const sortBy = storage.replayWrite(exploreStore, { direction: 'desc', selector: 'pnl' } as ISortBy, sortByChange, 'sortBy')
   const filterMarketMarketList = storage.replayWrite(exploreStore, [], changeMarket, 'filterMarketMarketList')
   const isLong = storage.replayWrite(exploreStore, null, switchIsLong, 'isLong')
   const activityTimeframe = storage.replayWrite(exploreStore, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe, 'activityTimeframe')
-  const pricefeed = map(pd => pd.pricefeed, config.processData)
-  const priceLatestMap = map(pd => pd.latestPrice, config.processData)
+
 
   const pageParms = map(params => {
     const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
@@ -66,11 +64,15 @@ export const $TopSettled = (config: ITopSettled) => component((
 
 
     const dataSource: Stream<TablePageResponse<ITableRow>> = awaitPromises(map(async req => {
-      const leaderboardQuery = await queryLeaderboard()
+      const latestPriceMapQuery = queryLatestPriceTicks(subgraphClient, { interval: GMX.TIME_INTERVAL_MAP.HR6, token: GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN })
+      const mpListQuery = queryLeaderboard(subgraphClient)
+      const mpList = await mpListQuery
+      const pricefeedMap = await latestPriceMapQuery
+      // const latestPriceMap = groupArrayMany(pricefeed, a => a.token)
+      // const priceMap = extractPricefeedFromPositionList(mpList, latestPriceMap)
 
       const filterStartTime = unixTimestampNow() - params.activityTimeframe
-
-      const flattenMapMap = leaderboardQuery.filter(mp => {
+      const filteredList = mpList.filter(mp => {
         if (params.isLong !== null && params.isLong !== mp.position.isLong) {
           return false
         }
@@ -79,14 +81,18 @@ export const $TopSettled = (config: ITopSettled) => component((
           return false
         }
 
+        if (mp.__typename === 'MirrorPositionOpen') {
+          return true
+        }
+
         return mp.blockTimestamp > filterStartTime
       })
-      const tradeListMap = groupArrayMany(flattenMapMap, a => a.routeTypeKey)
+      const tradeListMap = groupArrayMany(filteredList, a => a.routeTypeKey)
       const tradeListEntries = Object.values(tradeListMap)
       const filterestPosList: ITableRow[] = tradeListEntries.map(positionList => {
-        const summary = accountSettledPositionListSummary(positionList, params.priceLatestMap)
+        const summary = accountSettledPositionListSummary(positionList)
 
-        return { account: positionList[0].trader, summary, positionList }
+        return { account: positionList[0].trader, summary, positionList, pricefeedMap }
       })
 
       return pagingQuery({ ...params.sortBy, ...req }, filterestPosList)
@@ -94,7 +100,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
 
     return { ...params, dataSource }
-  }, combineObject({ sortBy, activityTimeframe, filterMarketMarketList, isLong, pricefeed, priceLatestMap }))
+  }, combineObject({ sortBy, activityTimeframe, filterMarketMarketList, isLong }))
 
 
 
@@ -274,7 +280,7 @@ export const $TopSettled = (config: ITopSettled) => component((
                       ? $ProfilePerformanceGraph({
                         $container: $row(style({ position: 'relative',  width: `180px`, height: `80px`, margin: '-16px 0' })),
                         tickCount: 50,
-                        pricefeedMap: params.pricefeed,
+                        pricefeedMap: pos.pricefeedMap,
                         positionList: pos.positionList,
                         activityTimeframe: params.activityTimeframe,
                       })({})

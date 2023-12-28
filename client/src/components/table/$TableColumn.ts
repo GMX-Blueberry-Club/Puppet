@@ -1,18 +1,14 @@
-import { O, Op, Tether } from "@aelea/core"
+import { O, Tether } from "@aelea/core"
 import { $text, INode, style } from "@aelea/dom"
-import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { map } from "@most/core"
 import { Stream } from "@most/types"
-import { $Link, TableColumn } from "gmx-middleware-ui-components"
-import { IOraclePrice, getBasisPoints, readableDate, readablePercentage, timeSince } from "gmx-middleware-utils"
-import { IMirrorPositionListSummary, IPositionMirrorSettled, IPositionMirrorOpen, getParticiapntMpPortion, IPositionMirror } from "puppet-middleware-utils"
+import { TableColumn } from "gmx-middleware-ui-components"
+import { IPricetickMap, getBasisPoints, readableDate, readablePercentage, timeSince } from "gmx-middleware-utils"
+import { IMirrorPosition, IMirrorPositionOpen, IMirrorPositionSettled, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from 'viem'
-import { $profileDisplay } from "../$AccountProfile.js"
 import { $entry, $openPnl, $pnlValue, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
 import { $txnIconLink } from "../../common/elements/$common.js"
-import { IGmxProcessState, latestTokenPrice } from "../../data/process/process.js"
-import { IProfileActiveTab } from "../../pages/$Profile.js"
 import { $seperator2 } from "../../pages/common.js"
 
 
@@ -22,16 +18,17 @@ export const $tableHeader = (primaryLabel: string, secondaryLabel: string) => $c
 )
 
 
-export const slotSizeColumn = <T extends IPositionMirrorOpen>(processData: Stream<IGmxProcessState>, puppet?: viem.Address): TableColumn<T> => ({
+export const slotSizeColumn = <T extends IMirrorPositionOpen>(priceMap: Stream<IPricetickMap>, puppet?: viem.Address): TableColumn<T> => ({
   $head: $tableHeader('Size', 'Leverage'),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $bodyCallback: map(mp => {
-    const positionMarkPrice = latestTokenPrice(processData, mp.indexToken)
-    return $sizeAndLiquidation(mp, positionMarkPrice, puppet)
+    const latestPrice = map(pm => pm[mp.position.indexToken].price, priceMap)
+
+    return $sizeAndLiquidation(mp, latestPrice, puppet)
   })
 })
 
-export const settledSizeColumn = (puppet?: viem.Address): TableColumn<IPositionMirror> => ({
+export const settledSizeColumn = (puppet?: viem.Address): TableColumn<IMirrorPosition> => ({
   $head: $tableHeader('Size', 'Leverage'),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $bodyCallback: map(mp => {
@@ -47,7 +44,7 @@ export const settledSizeColumn = (puppet?: viem.Address): TableColumn<IPositionM
 
 
 
-export const entryColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorOpen> = {
+export const entryColumn: TableColumn<IMirrorPositionSettled | IMirrorPositionOpen> = {
   $head: $text('Entry'),
   $bodyCallback: map(pos => {
     return $entry(pos)
@@ -62,16 +59,17 @@ export const puppetsColumn = <T extends {puppets: readonly `0x${string}`[]}>(cli
   })
 })
 
-export const pnlSlotColumn = <T extends IPositionMirrorOpen>(latestPrice: Stream<IOraclePrice>, puppet?: viem.Address): TableColumn<T> => ({
+export const pnlSlotColumn = <T extends IMirrorPositionOpen>(priceMap: Stream<IPricetickMap>, puppet?: viem.Address): TableColumn<T> => ({
   $head: $tableHeader('PnL', 'ROI'),
   gridTemplate: '90px',
   columnOp: style({ placeContent: 'flex-end' }),
   $bodyCallback: map(pos => {
+    const latestPrice = map(pm => pm[pos.position.indexToken].price, priceMap)
     return $openPnl(latestPrice, pos, puppet)
   })
 })
 
-export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IPositionMirrorSettled> => ({
+export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IMirrorPositionSettled> => ({
   $head: $tableHeader('PnL $', 'ROI %'),
   gridTemplate: '90px',
   columnOp: style({ placeContent: 'flex-end' }),
@@ -89,12 +87,11 @@ export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IPositionMi
 
 
 
-export const positionTimeColumn: TableColumn<IPositionMirrorSettled | IPositionMirrorOpen>  = {
+export const positionTimeColumn: TableColumn<IMirrorPositionSettled | IMirrorPositionOpen>  = {
   $head: $text('Timestamp'),
   gridTemplate: 'minmax(110px, 120px)',
   $bodyCallback: map((pos) => {
-
-    const timestamp = 'settlement' in pos ? pos.blockTimestamp : pos.blockTimestamp
+    const timestamp = Number(pos.blockTimestamp)
 
     return $column(layoutSheet.spacingTiny)(
       $text(readableDate(timestamp)),

@@ -3,13 +3,11 @@ import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { Stream } from "@most/types"
-import * as GMX from 'gmx-middleware-const'
-import { IPriceLatestMap, IPricefeedMap, readableFixedUSD30, readableLeverage, readableNumber, readableUSD, switchMap } from "gmx-middleware-utils"
-import { IPositionMirrorSettled, accountSettledPositionListSummary } from "puppet-middleware-utils"
+import {  readableFixedUSD30, readableLeverage, switchMap } from "gmx-middleware-utils"
+import { IMirrorPosition, IMirrorPositionSettled, accountSettledPositionListSummary } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile.js"
 import { $heading2 } from "../../common/$text.js"
-import { IGmxProcessState } from "../../data/process/process.js"
 import { $metricLabel, $metricRow } from "./profileUtils.js"
 
 
@@ -17,21 +15,18 @@ import { $metricLabel, $metricRow } from "./profileUtils.js"
 export interface IAccountSummary {
   route: router.Route
   address: viem.Address
-  settledTradeList: Stream<IPositionMirrorSettled[]>
-  priceLatestMap: Stream<IPriceLatestMap>
+  settledTradeList: Stream<IMirrorPosition[]>
 }
 
 
 export const $TraderProfileSummary = (config: IAccountSummary) => component((
 
 ) => {
-
-
   return [
 
     $column(layoutSheet.spacing, style({ minHeight: '90px' }))(
       switchMap(params => {
-        const metrics = accountSettledPositionListSummary(params.settledTradeList, params.priceLatestMap)
+        const metrics = accountSettledPositionListSummary(params.settledTradeList)
 
         return $node(style({ display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column', gap: screenUtils.isDesktopScreen ? '76px' : '26px', zIndex: 10, placeContent: 'center', alignItems: 'center', padding: '0 8px' }))(
           $row(
@@ -66,7 +61,7 @@ export const $TraderProfileSummary = (config: IAccountSummary) => component((
             )
           ),
         )
-      }, combineObject({ settledTradeList: config.settledTradeList, priceLatestMap: config.priceLatestMap })),
+      }, combineObject({ settledTradeList: config.settledTradeList })),
     ),
     {
     }
@@ -80,7 +75,7 @@ export const $PuppetProfileSummary = (config: IAccountSummary) => component(() =
 
     $column(layoutSheet.spacing, style({ minHeight: '90px' }))(
       switchMap(params => {
-        const metrics = accountSettledPositionListSummary(params.settledTradeList, params.priceLatestMap, config.address)
+        const metrics = accountSettledPositionListSummary(params.settledTradeList, config.address)
 
         return $node(style({ display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column', gap: screenUtils.isDesktopScreen ? '76px' : '26px', zIndex: 10, placeContent: 'center', alignItems: 'center', padding: '0 8px' }))(
           $row(
@@ -111,7 +106,7 @@ export const $PuppetProfileSummary = (config: IAccountSummary) => component(() =
             )
           ),
         )
-      }, combineObject({ settledTradeList: config.settledTradeList, priceLatestMap: config.priceLatestMap })),
+      }, combineObject({ settledTradeList: config.settledTradeList })),
     ),
     {
     }

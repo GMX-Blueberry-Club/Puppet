@@ -25,7 +25,7 @@ import {
   resolveAddress
 } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
-import { IPositionMirrorOpen } from "puppet-middleware-utils"
+import { IMirrorPositionOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $Popover } from "../$Popover.js"
 import { $heading2 } from "../../common/$text.js"
@@ -46,7 +46,7 @@ export enum ITradeFocusMode {
 
 interface IPositionAdjustmentHistory {
   chain: ISupportedChain
-  openPositionList: Stream<IPositionMirrorOpen[]>
+  openPositionList: Stream<IMirrorPositionOpen[]>
 
   priceMap: Stream<IPriceLatestMap>
   pricefeed: Stream<IPriceCandle[]>
@@ -74,7 +74,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
 
   [approveTrading, approveTradingTether]: Behavior<PointerEvent, true>,
   [clickApproveprimaryToken, clickApproveprimaryTokenTether]: Behavior<IWalletClient, { wallet: IWalletClient, route: viem.Address, primaryToken: viem.Address }>,
-  [clickResetPosition, clickResetPositionTether]: Behavior<any, IPositionMirrorOpen | null>,
+  [clickResetPosition, clickResetPositionTether]: Behavior<any, IMirrorPositionOpen | null>,
   [clickProposeTrade, clickProposeTradeTether]: Behavior<IWalletClient>,
 
 ) => {

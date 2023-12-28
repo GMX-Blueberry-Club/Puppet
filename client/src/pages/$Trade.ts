@@ -17,7 +17,7 @@ import * as GMX from "gmx-middleware-const"
 import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $target } from "gmx-middleware-ui-components"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
-import { IPositionMirrorOpen, getAccountMirrorPositionOpenList, queryLatestPriceMap, queryPriceFeed, getRouteTypeKey, getTradeRouteKey } from "puppet-middleware-utils"
+import { IMirrorPositionOpen, queryTraderPositionOpen, queryLatestPriceTicks, queryLatestTokenPriceFeed, getRouteTypeKey, getTradeRouteKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $midContainer } from "../common/$common.js"
 import { $caretDown } from "../common/elements/$icons.js"
@@ -37,6 +37,7 @@ import * as storage from "../utils/storage/storeScope.js"
 import { walletLink } from "../wallet/index.js"
 import { estimatedGasPrice, gasPrice, wallet } from "../wallet/walletLink.js"
 import { $seperator2 } from "./common.js"
+import { subgraphClient } from "../data/subgraph/client"
 
 
 
@@ -88,7 +89,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
   [enableTrading, enableTradingTether]: Behavior<boolean>,
 
-  [switchPosition, switchPositionTether]: Behavior<IPositionMirrorOpen>,
+  [switchPosition, switchPositionTether]: Behavior<IMirrorPositionOpen>,
   [requestTrade, requestTradeTether]: Behavior<IRequestTrade>,
 
   // [focusPriceAxisPoint, focusPriceAxisPointTether]: Behavior<Coordinate | null>,
@@ -105,7 +106,7 @@ export const $Trade = (config: ITradeComponent) => component((
   
   [chartVisibleLogicalRangeChange, chartVisibleLogicalRangeChangeTether]: Behavior<LogicalRange | null>,
 
-  [clickResetPosition, clickResetPositionTether]: Behavior<IPositionMirrorOpen | null>,
+  [clickResetPosition, clickResetPositionTether]: Behavior<IMirrorPositionOpen | null>,
 
 ) => {
 
@@ -165,7 +166,7 @@ export const $Trade = (config: ITradeComponent) => component((
   ])
 
   
-  const priceMap = fromPromise(queryLatestPriceMap())
+  const priceMap = fromPromise(queryLatestPriceTicks(subgraphClient))
 
   const market = replayLatest(multicast(mergeArray([
     map(params => {
@@ -341,7 +342,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const openPositionList = multicast(replayLatest(awaitPromises(map(async params => {
     if (params.wallet === null) return []
 
-    const filtered = await getAccountMirrorPositionOpenList(params.wallet.account.address)
+    const filtered = await queryTraderPositionOpen(subgraphClient, { trader: params.wallet.account.address })
 
     return filtered
   }, combineObject({ wallet })))))
@@ -358,7 +359,7 @@ export const $Trade = (config: ITradeComponent) => component((
   }, zipState({ positionParams, marketPrice }))))
 
 
-  const position: Stream<IPositionMirrorOpen | null> = replayLatest(multicast(mergeArray([
+  const position: Stream<IMirrorPositionOpen | null> = replayLatest(multicast(mergeArray([
     map((params) => {
       const existingSlot = params.openPositionList.find(slot => slot.position.key === params.positionParams.key)
 
@@ -659,7 +660,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   const pricefeed = replayLatest(multicast(awaitPromises(map(async params => {
-    const www = await queryPriceFeed(params.indexToken, params.chartInterval)
+    const www = await queryLatestTokenPriceFeed(subgraphClient, params.indexToken, params.chartInterval)
 
     return www
   }, combineObject({ chartInterval, indexToken })))))

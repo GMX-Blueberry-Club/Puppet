@@ -107,6 +107,12 @@ importers:
       '@most/types':
         specifier: ^1.1.0
         version: 1.1.0
+      '@urql/core':
+        specifier: 4.2.2
+        version: 4.2.2(graphql@16.8.1)
+      '@urql/exchange-graphcache':
+        specifier: 6.4.0
+        version: 6.4.0
       '@wagmi/core':
         specifier: ^1.4.12
         version: 1.4.12(react@18.2.0)(typescript@5.3.3)(viem@1.20.0)
@@ -146,12 +152,6 @@ importers:
       gmx-middleware-utils:
         specifier: workspace:*
         version: link:../gmx-middleware/utils
-      graphql:
-        specifier: ^16.8.1
-        version: 16.8.1
-      graphql-request:
-        specifier: ^6.1.0
-        version: 6.1.0(graphql@16.8.1)
       lightweight-charts:
         specifier: ^4.1.1
         version: 4.1.1
@@ -276,15 +276,12 @@ importers:
       gmx-middleware-const:
         specifier: workspace:*
         version: link:../const
-      graphql:
-        specifier: ^16.8.1
-        version: 16.8.1
       isomorphic-fetch:
         specifier: ^3.0.0
         version: 3.0.0
       isomorphic-ws:
         specifier: ^5.0.0
-        version: 5.0.0(ws@8.14.2)
+        version: 5.0.0(ws@8.16.0)
       viem:
         specifier: ^1.20.0
         version: 1.20.0(typescript@5.3.3)
@@ -312,6 +309,9 @@ importers:
       '@types/isomorphic-fetch':
         specifier: ^0.0.37
         version: 0.0.37
+      '@urql/core':
+        specifier: 4.2.2
+        version: 4.2.2(graphql@16.8.1)
       abitype:
         specifier: ^0.10.3
         version: 0.10.3(typescript@5.3.3)
@@ -741,7 +741,6 @@ packages:
     requiresBuild: true
     dependencies:
       '@babel/types': 7.23.0
-    dev: false
 
   /@babel/plugin-bugfix-safari-id-destructuring-collision-in-function-expression@7.22.15(@babel/core@7.23.0):
     resolution: {integrity: sha512-FB9iYlz7rURmRJyXRKEnalYPPdn87H5no108cyuQQyMwlpJ2SJtpIUBI27kdTin956pz+LPypkPVPUTlxOmrsg==}
@@ -1520,7 +1519,7 @@ packages:
     engines: {node: '>=6.9.0'}
     dependencies:
       '@babel/code-frame': 7.22.13
-      '@babel/parser': 7.23.0
+      '@babel/parser': 7.23.6
       '@babel/types': 7.23.0
 
   /@babel/traverse@7.23.0:
@@ -2346,14 +2345,6 @@ packages:
     resolution: {integrity: sha512-YfKLT2w+ItXD/VPYQiAKtINQONVsAOkcqVFMHlhUy0fcEBVWuFBT53hJNI0/l5ujQa4TSxtzrKW/7EABAdgI8g==}
     dependencies:
       assemblyscript: 0.19.10
-    dev: false
-
-  /@graphql-typed-document-node/core@3.2.0(graphql@16.8.1):
-    resolution: {integrity: sha512-mB9oAsNCm9aM3/SOv4YtBMqZbYj10R7dkq8byBqxGY/ncFwhf2oQzMV+LCRlWoDSEBJ3COiR1yeDvMtsoOsuFQ==}
-    peerDependencies:
-      graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
-    dependencies:
-      graphql: 16.8.1
     dev: false
 
   /@humanwhocodes/config-array@0.11.11:
@@ -3771,6 +3762,16 @@ packages:
     resolution: {integrity: sha512-TP1kheq9bnrEdnVbJqh0g0ZY/wfdpPeAzjiiDK+Tm+Pbi0O1Xdu6+fUJ/wJo5QpHZzkIyya4/AecG63e6scFqQ==}
     dependencies:
       '@0no-co/graphql.web': 1.0.4(graphql@16.8.1)
+      wonka: 6.3.4
+    transitivePeerDependencies:
+      - graphql
+    dev: false
+
+  /@urql/exchange-graphcache@6.4.0:
+    resolution: {integrity: sha512-VgcPdDNR3hSJDuf+mj0OZWzOzQccA8vT8xphxtO1MoJlgv1A4VhjLd75pjVvGz29ZHN90jEbdyBKJz6GShT7qA==}
+    dependencies:
+      '@0no-co/graphql.web': 1.0.4(graphql@16.8.1)
+      '@urql/core': 4.2.2(graphql@16.8.1)
       wonka: 6.3.4
     transitivePeerDependencies:
       - graphql
@@ -7081,18 +7082,6 @@ packages:
       graphql: 16.8.1
     dev: false
 
-  /graphql-request@6.1.0(graphql@16.8.1):
-    resolution: {integrity: sha512-p+XPfS4q7aIpKVcgmnZKhMNqhltk20hfXtkaIkTfjjmiKMJ5xrt5c743cL03y/K7y1rg3WrIC49xGiEQ4mxdNw==}
-    peerDependencies:
-      graphql: 14 - 16
-    dependencies:
-      '@graphql-typed-document-node/core': 3.2.0(graphql@16.8.1)
-      cross-fetch: 3.1.8
-      graphql: 16.8.1
-    transitivePeerDependencies:
-      - encoding
-    dev: false
-
   /graphql@15.5.0:
     resolution: {integrity: sha512-OmaM7y0kaK31NKG31q4YbD2beNYa6jBBKtMFT6gLYJljHLJr42IqJ8KX08u3Li/0ifzTU5HjmoOOrwa5BRLeDA==}
     engines: {node: '>= 10.x'}
@@ -7717,12 +7706,12 @@ packages:
       ws: 7.5.9
     dev: false
 
-  /isomorphic-ws@5.0.0(ws@8.14.2):
+  /isomorphic-ws@5.0.0(ws@8.16.0):
     resolution: {integrity: sha512-muId7Zzn9ywDsyXgTIafTry2sV3nySZeUDe6YedVd1Hvuuep5AsIlqK+XefWpYTyJG5e503F2xIuT2lcU6rCSw==}
     peerDependencies:
       ws: '*'
     dependencies:
-      ws: 8.14.2(bufferutil@4.0.7)(utf-8-validate@5.0.10)
+      ws: 8.16.0
     dev: false
 
   /isows@1.0.3(ws@8.13.0):
@@ -11011,6 +11000,19 @@ packages:
     dependencies:
       bufferutil: 4.0.7
       utf-8-validate: 5.0.10
+    dev: false
+
+  /ws@8.16.0:
+    resolution: {integrity: sha512-HS0c//TP7Ina87TfiPUz1rQzMhHrl/SG2guqRcTOIUYD2q8uhUdNHZYJUaQ8aTGPzCh+c6oawMKW35nFl1dxyQ==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
     dev: false
 
   /xtend@4.0.2:

@@ -1,54 +1,129 @@
-import { querySubgraph, schema as gmxSchema, groupArrayByKey, groupArrayByKeyMap, IOraclePrice, IPriceMinMax, IPriceCandle, IPriceLatestMap } from "gmx-middleware-utils"
+import { Client } from '@urql/core'
+import * as GMX from "gmx-middleware-const"
+import { IPriceCandle, IPricetickListMap, IPricetickMap, ISchema, schema as gmxSchema, groupArrayByKey, groupArrayByKeyMap, groupArrayManyMap, periodicRun, querySubgraph } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { schema } from "./schema.js"
-import * as GMX from "gmx-middleware-const"
+import { Stream } from '@most/types'
+import { map } from '@most/core'
 
-const subgraphUrl = 'https://api.studio.thegraph.com/query/112/puppet/v0.0.36'
 
+interface IQueryTraderPositionOpen {
+  trader: viem.Address
+  blockTimestamp_gte?: number
+}
 
-export async function getAccountMirrorPositionOpenList(trader: viem.Address) {
-  const res = querySubgraph({
-    url: subgraphUrl,
+interface IQueryPuppetTradeRoute {
+  puppet: viem.Address
+}
+
+export async function queryTraderPositionOpen(client: Client, filter: IQueryTraderPositionOpen) {
+  const res = querySubgraph(client, {
     schema: schema.mirrorPositionOpen,
-    filter: { trader },
+    filter,
+  })
+  
+  return res
+}
+
+export async function getTraderPositionSettled(client: Client, filter: IQueryTraderPositionOpen) {
+  const res = querySubgraph(client, {
+    schema: schema.mirrorPositionSettled,
+    filter,
   })
   
   return res
 }
 
 
-export async function queryLatestCandleList() {
-  const res = await querySubgraph({
-    url: subgraphUrl,
-    schema: gmxSchema.priceCandleLatest,
-    filter: { interval: GMX.TIME_INTERVAL_MAP.MIN5 },
+export async function queryPuppetPositionOpen(client: Client, filter: IQueryTraderPositionOpen) {
+  const res = querySubgraph(client, {
+    schema: schema.puppetPositionOpen,
+    filter,
   })
-
+  
   return res
 }
 
-export async function queryLatestPriceMap() {
-  const res = await querySubgraph({
-    url: subgraphUrl,
-    schema: gmxSchema.priceCandleLatest,
-    filter: { interval: GMX.TIME_INTERVAL_MAP.MIN5 },
+export async function queryPuppetTradeRoute(client: Client, filter: IQueryPuppetTradeRoute) {
+  const res = querySubgraph(client, {
+    schema: schema.puppetTradeRoute,
+    filter,
   })
-  const map: IPriceLatestMap = groupArrayByKeyMap(res, x => viem.getAddress(x.token), x => ({ max: x.h, min: x.l }))
+  
+  return res
+}
+
+
+interface IQueryPriceCandle {
+  interval: GMX.IntervalTime
+  token?: viem.Address
+}
+
+export function streamCandleSeedMap(
+  client: Client,
+  filter: IQueryPriceCandle = { interval: GMX.TIME_INTERVAL_MAP.MIN5 }
+): Stream<IPricetickMap> {
+  return periodicRun({
+    interval: 5000,
+    actionOp: map(async count => {
+      const res = await  querySubgraph(client, {
+        schema: gmxSchema.priceCandleSeed,
+        filter,
+      })
+
+      const mapCandles = groupArrayByKeyMap(res, x => x.token, x => ({ timestamp: x.timestamp, price: x.c, token: x.token }))
+
+      return mapCandles
+    }),
+  })
+}
+
+export async function queryLatestPriceTicks(client: Client, filter: IQueryPriceCandle = { interval: GMX.TIME_INTERVAL_MAP.MIN5 }) {
+  const latestSeedSchema: ISchema<{ id: string, timestamp: number; c: bigint; __typename: 'PriceCandle', token: viem.Address} > = {
+    id: 'string',
+    timestamp: 'int',
+    token: 'address',
+    c: 'int',
+    __typename: 'PriceCandleLatest',
+  }
+
+  const latestSeedQuery = querySubgraph(client, {
+    schema: latestSeedSchema,
+    filter,
+  })
+
+  const candleSchema: ISchema<{ id: string, timestamp: number; c: bigint; __typename: 'PriceCandle', token: viem.Address} > = {
+    id: 'string',
+    timestamp: 'int',
+    token: 'address',
+    c: 'int',
+    __typename: 'PriceCandle',
+  }
+
+  const candleListQuery = querySubgraph(client, {
+    schema: candleSchema,
+    filter,
+    // orderBy: 'timestamp',
+    orderDirection: 'desc',
+  })
+
+  const [latestSeed, candleList] = await Promise.all([latestSeedQuery, candleListQuery])
+  const all = [...candleList, ...latestSeed]
+
+  const map: IPricetickListMap = groupArrayManyMap(all, x => viem.getAddress(x.token), x => ({ timestamp: x.timestamp, price: x.c, token: x.token }))
 
   return map
 }
 
-export async function queryPriceFeed(token: viem.Address, interval: GMX.IntervalTime) {
-  const queryFeed = querySubgraph({
-    url: subgraphUrl,
+export async function queryLatestTokenPriceFeed(client: Client, filter: IQueryPriceCandle = { interval: GMX.TIME_INTERVAL_MAP.MIN5 }) {
+  const queryFeed = querySubgraph(client, {
     schema: gmxSchema.priceCandle,
-    filter: { token, interval },
+    filter,
   })
 
-  const queryLatest = querySubgraph({
-    url: subgraphUrl,
-    schema: gmxSchema.priceCandleLatest,
-    filter: { interval: GMX.TIME_INTERVAL_MAP.MIN5, token },
+  const queryLatest = querySubgraph(client, {
+    schema: gmxSchema.priceCandleSeed,
+    filter: { interval: GMX.TIME_INTERVAL_MAP.MIN5, token: filter.token },
   })
 
   const [feed, latest] = await Promise.all([queryFeed, queryLatest])
@@ -57,21 +132,19 @@ export async function queryPriceFeed(token: viem.Address, interval: GMX.Interval
   return list 
 }
 
-
-export async function queryLeaderboard() {
-  const settledTradeListQuery = querySubgraph({
-    url: subgraphUrl,
+export async function queryLeaderboard(client: Client) {
+  const settledTradeListQuery = querySubgraph(client, {
     schema: schema.mirrorPositionSettled,
     filter: {
       // blockTimestamp_gt: 0,
     }
   })
-  const settledTradeOpenQuery = querySubgraph({
-    url: subgraphUrl,
+  const settledTradeOpenQuery = querySubgraph(client, {
     schema: schema.mirrorPositionOpen,
   })
 
   const [settledTradeList, settledTradeOpen] = await Promise.all([settledTradeListQuery, settledTradeOpenQuery])
-
-  return [...settledTradeList, ...settledTradeOpen].sort((a, b) => a.blockTimestamp - b.blockTimestamp)
+  const sortedList = [...settledTradeList, ...settledTradeOpen].sort((a, b) => Number(a.blockTimestamp - b.blockTimestamp))
+  
+  return sortedList
 }

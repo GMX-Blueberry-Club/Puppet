@@ -24,7 +24,7 @@ import {
   timeSince,
   unixTimestampNow
 } from "gmx-middleware-utils"
-import { IPositionMirrorOpen } from "puppet-middleware-utils"
+import { IMirrorPositionOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { connectContract } from "../../logic/common.js"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
@@ -42,7 +42,7 @@ export enum ITradeFocusMode {
 interface IPositionAdjustmentHistory {
   chain: ISupportedChain
   wallet: Stream<IWalletClient>
-  openPositionList: Stream<IPositionMirrorOpen[]>
+  openPositionList: Stream<IMirrorPositionOpen[]>
 
   pricefeed: Stream<IPriceCandle[]>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams

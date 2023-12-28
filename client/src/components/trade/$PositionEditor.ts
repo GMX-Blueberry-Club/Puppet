@@ -66,7 +66,7 @@ import * as trade from "../../logic/trade.js"
 import { account, ISupportedChain } from "../../wallet/walletLink.js"
 import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown.js"
-import { IPositionMirrorOpen } from "puppet-middleware-utils"
+import { IMirrorPositionOpen } from "puppet-middleware-utils"
 
 
 
@@ -80,7 +80,7 @@ export interface ITradeParams {
   route: viem.Address | null
   routeTypeKey: viem.Hex
 
-  position: IPositionMirrorOpen | null
+  position: IMirrorPositionOpen | null
   netPositionValueUsd: bigint
   isTradingEnabled: boolean
   isPrimaryApproved: boolean
@@ -149,7 +149,7 @@ export interface IPositionEditorAbstractParams {
 
 
 interface IPositionEditorConfig extends IPositionEditorAbstractParams {
-  openPositionList: Stream<IPositionMirrorOpen[]>
+  openPositionList: Stream<IMirrorPositionOpen[]>
 
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>

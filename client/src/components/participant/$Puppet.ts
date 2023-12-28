@@ -3,18 +3,18 @@ import { $node, $text, MOTION_NO_WOBBLE, component, motion, style } from "@aelea
 import * as router from '@aelea/router'
 import { $NumberTicker, $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { map, multicast, now, skipRepeatsWith, startWith } from "@most/core"
+import { awaitPromises, fromPromise, map, multicast, now, skipRepeatsWith, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $Link, $arrowRight, $icon, $infoTooltipLabel, IMarker, ScrollRequest } from "gmx-middleware-ui-components"
-import { filterNull, getMappedValue, groupArrayMany, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IPricetickListMap, filterNull, getMappedValue, groupArrayMany, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
-import { IPuppetSubscritpion, accountSettledPositionListSummary } from "puppet-middleware-utils"
+import { IMirrorPositionOpen, IMirrorPositionSettled, IPuppetSubscritpion, IPuppetTradeRoute, accountSettledPositionListSummary, queryLatestPriceTicks, queryPuppetTradeRoute } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
 import { $card, $card2 } from "../../common/elements/$common.js"
-import { IGmxProcessState } from "../../data/process/process.js"
+import { subgraphClient } from "../../data/subgraph/client"
 import { $seperator2 } from "../../pages/common.js"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../../pages/components/$LastActivity.js"
 import { $ProfilePerformanceGraph, performanceTimeline } from "../trade/$ProfilePerformanceGraph.js"
@@ -24,13 +24,19 @@ import { $PuppetProfileSummary } from "./$Summary"
 export interface ITraderProfile {
   route: router.Route
   address: viem.Address
-  processData: Stream<IGmxProcessState>
   activityTimeframe: Stream<GMX.IntervalTime>
   subscriptionList: Stream<IPuppetSubscritpion[]>
+  priceTickMap: Stream<IPricetickListMap>
+}
+
+export interface ITraderPortfolio extends ITraderProfile {
+  puppetTradeRouteList: Stream<IPuppetTradeRoute[]>
+  settledTradeList: Stream<IMirrorPositionSettled[]>
+  openTradeList: Stream<IMirrorPositionOpen[]>
 }
 
 
-export const $PuppetPortfolio = (config: ITraderProfile) => component((
+export const $PuppetPortfolio = (config: ITraderPortfolio) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
@@ -40,50 +46,15 @@ export const $PuppetPortfolio = (config: ITraderProfile) => component((
 ) => {
   
 
-  const openTrades = map(processData => {
-    const list = Object.values(processData.mirrorPositionSlot)
-      .filter(pos => pos.puppets.indexOf(config.address) > -1)
-      .reverse()
-    return list
-  }, config.processData)
-
-  const settledTrades = map(processData => {
-    const tradeList = processData.mirrorPositionSettled
-      .filter(pos => pos.puppets.indexOf(config.address) > -1)
-      .reverse()
-    return tradeList
-  }, config.processData)
-
-  const routeMap = map(data => data.routeMap, config.processData)
-  const pricefeedMap = map(data => data.pricefeed, config.processData)
-  const priceLatestMap = map(data => data.latestPrice, config.processData)
-
-
-  const subscribedRoutes = map(data => data.subscription.filter(s => s.puppet === config.address), config.processData)
-
-  const routeTradeGroupMap = map(params => {
-    const allTrades = [...params.openTrades, ...params.settledTrades]
-    const tradeRouteMap = groupArrayMany(allTrades, t => t.routeTypeKey)
-    const subscribeRouteMap = groupArrayMany(params.subscribedRoutes, s => s.routeTypeKey)
-
-    return { ...params, tradeRouteMap, subscribeRouteMap, allTrades }
-  }, combineObject({ settledTrades, openTrades, subscribedRoutes, activityTimeframe: config.activityTimeframe, routeMap, priceLatestMap, pricefeedMap }))
-
-
-  
-
   return [
 
     $column(layoutSheet.spacingBig)(
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
         $card2(style({ padding: 0, height: screenUtils.isDesktopScreen ? '200px' : '200px', position: 'relative', margin: screenUtils.isDesktopScreen ? `-36px -36px 0` : `-12px -12px 0px` }))(
           switchMap(params => {
-            const filterStartTime = unixTimestampNow() - params.activityTimeframe
-            // const traderPos = Object.values(params.processData.mirrorPositionSettled[config.address] || {}).flat().filter(pos => pos.blockTimestamp > filterStartTime)
-            // const openList = Object.values(params.processData.mirrorPositionSlot).filter(pos => pos.trader === config.address).filter(pos => pos.blockTimestamp > filterStartTime)
-            const allPositions = [...params.openTrades, ...params.settledTrades]
+            const allPositions = [...params.settledTradeList, ...params.openTradeList]
             const $container = $column(style({ width: '100%', padding: 0, height: '200px' }))
-            const timeline = performanceTimeline({ puppet: config.address, positionList: allPositions, pricefeedMap: params.pricefeedMap, tickCount: 100, activityTimeframe: params.activityTimeframe })
+            const timeline = performanceTimeline({ puppet: config.address, positionList: allPositions, pricefeedMap: params.priceTickMap, tickCount: 100, activityTimeframe: params.activityTimeframe })
             const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
 
 
@@ -103,12 +74,12 @@ export const $PuppetPortfolio = (config: ITraderProfile) => component((
 
             const markerList = allPositions.map((pos): IMarker => {
               const isSettled = 'settlement' in pos
-              const position = pos.realisedPnl > 0n ? 'aboveBar' as const : 'belowBar' as const
-              const time = pos.blockTimestamp as Time
+              const position = pos.position.realisedPnlUsd > 0n ? 'aboveBar' as const : 'belowBar' as const
+              const time = Number(pos.blockTimestamp) as Time
 
               return {
                 position, time,
-                text: readableFixedUSD30(pos.realisedPnl),
+                text: readableFixedUSD30(pos.position.realisedPnlUsd),
                 color: colorAlpha(pallete.message, .25),
                 size: 0.1,
                 shape: !isSettled ? 'arrowUp' as const : 'circle' as const,
@@ -193,28 +164,32 @@ export const $PuppetPortfolio = (config: ITraderProfile) => component((
             //   positionList: allPositions,
             //   // trader: config.address,
             // })({ })
-          }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe, openTrades, settledTrades, pricefeedMap })),
+          }, combineObject({ 
+            tradeRouteList: config.puppetTradeRouteList,
+            activityTimeframe: config.activityTimeframe,
+            openTradeList: config.openTradeList,
+            settledTradeList: config.settledTradeList,
+            priceTickMap: config.priceTickMap
+          })),
         ),
 
         $column(layoutSheet.spacing)(
           $heading3('Trade Routes'),
           switchMap(params => {
 
-            if (params.subscribedRoutes.length === 0) {
+            if (params.puppetTradeRouteList.length === 0) {
               return $text('No active trade routes')
             }
 
-            const group = Object.entries(params.subscribeRouteMap)
+
+            const tradeRouteList = Object.entries(groupArrayMany(params.puppetTradeRouteList, x => x.routeTypeKey)) as [viem.Address, IPuppetTradeRoute[]][]
 
             return $column(layoutSheet.spacingBig, style({ width: '100%' }))(
-              ...group.map(([key, list]) => {
-
-                const route = getMappedValue(params.routeMap, key)
-                const routeTrades = params.tradeRouteMap[key as viem.Hex]
-                const traderTrades = groupArrayMany(routeTrades, s => s.trader)
+              ...tradeRouteList.map(([routeTypeKey, traderPuppetTradeRouteList]) => {
+                const fstPosition = traderPuppetTradeRouteList[0].puppetPositionSettledList[0].position.position
 
                 return $column(layoutSheet.spacing)(
-                  $route(route),
+                  $route(fstPosition),
 
                   // $RouteDepositInfo({
                   //   routeDescription: route,
@@ -226,7 +201,7 @@ export const $PuppetPortfolio = (config: ITraderProfile) => component((
                       $seperator2,
 
                       $column(layoutSheet.spacing, style({ flex: 1 }))( 
-                        ...list.map(sub => {
+                        ...traderPuppetTradeRouteList.map(puppetTradeRoute => {
 
                             
                           // if (params.settledTrades.length === 0) {
@@ -245,20 +220,24 @@ export const $PuppetPortfolio = (config: ITraderProfile) => component((
                           //   )
                           // }
 
-                          const traderTradeList = traderTrades[sub.trader]
-                          const summary = accountSettledPositionListSummary(traderTradeList, params.priceLatestMap, config.address)
+                          const traderTradeList = [
+                            ...puppetTradeRoute.puppetPositionSettledList.map(x => x.position),
+                            ...puppetTradeRoute.puppetPositionOpenList.map(x => x.position)
+                          ]
+
+                          const summary = accountSettledPositionListSummary(traderTradeList, puppetTradeRoute.puppet)
 
                           return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: '10px 0' }))(
                             $TraderDisplay({
                               route: config.route,
-                              trader: sub.trader,
+                              trader: puppetTradeRoute.trader,
                             })({
                               clickTrader: changeRouteTether(),
                               modifySubscribeList: modifySubscriberTether(),
                             }),
                             $TraderRouteDisplay({
-                              positionParams: route,
-                              trader: sub.trader,
+                              positionParams: fstPosition,
+                              trader: puppetTradeRoute.trader,
                               routeTypeKey: "0xa437f95c9cee26945f76bc090c3491ffa4e8feb32fd9f4fefbe32c06a7184ff3",
                               subscriptionList: config.subscriptionList,
                             })({
@@ -269,7 +248,7 @@ export const $PuppetPortfolio = (config: ITraderProfile) => component((
                             $ProfilePerformanceGraph({
                               puppet: config.address,
                               $container: $column(style({ width: '100%', padding: 0, height: '75px', position: 'relative', margin: '-16px 0' })),
-                              pricefeedMap: params.pricefeedMap,
+                              pricefeedMap: params.priceTickMap,
                               positionList: traderTradeList,
                               tickCount: 100,
                               activityTimeframe: params.activityTimeframe
@@ -285,7 +264,7 @@ export const $PuppetPortfolio = (config: ITraderProfile) => component((
                 )
               })
             )
-          }, routeTradeGroupMap),
+          }, combineObject({ puppetTradeRouteList: config.puppetTradeRouteList, priceTickMap: config.priceTickMap, activityTimeframe: config.activityTimeframe })),
         ),
       ),
     ),
@@ -303,18 +282,26 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
   [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
 ) => {
 
-  const settledTradeList = replayLatest(map(params => {
-    const list = params.processData.mirrorPositionSettled.filter(pos => pos.trader === config.address).reverse()
-    return list
-  }, combineObject({ processData: config.processData, activityTimeframe: config.activityTimeframe })))
-  const priceLatestMap = map(data => data.latestPrice, config.processData)
+  const puppetTradeRouteList = awaitPromises(map(activityTimeframe => {
+    return queryPuppetTradeRoute(subgraphClient, { puppet: config.address })
+  }, config.activityTimeframe))
+
+  const settledTradeList = map(trList => {
+    const tradeList = trList.flatMap(p => p.puppetPositionSettledList.map(x => x.position))
+    return tradeList
+  }, puppetTradeRouteList)
+
+  const openTradeList = map(trList => {
+    const tradeList = trList.flatMap(p => p.puppetPositionOpenList.map(x => x.position))
+    return tradeList
+  }, puppetTradeRouteList)
 
 
   return [
 
     $column(layoutSheet.spacingBig)(
       $PuppetProfileSummary({
-        settledTradeList, priceLatestMap,
+        settledTradeList,
         address: config.address,
         route: config.route,
       })({}),
@@ -339,7 +326,13 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
             changeActivityTimeframe: changeActivityTimeframeTether()
           })
         ),
-        $PuppetPortfolio({ ...config })({
+        $PuppetPortfolio({
+          openTradeList, puppetTradeRouteList, settledTradeList, priceTickMap: config.priceTickMap,
+          activityTimeframe: config.activityTimeframe,
+          address: config.address,
+          route: config.route,
+          subscriptionList: config.subscriptionList,
+        })({
           changeRoute: changeRouteTether(),
           changeActivityTimeframe: changeActivityTimeframeTether(),
           modifySubscriber: modifySubscriberTether()

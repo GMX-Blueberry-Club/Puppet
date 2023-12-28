@@ -2,12 +2,12 @@ import { Behavior, combineObject, replayLatest } from "@aelea/core"
 import { $node, $text, MOTION_NO_WOBBLE, component, motion, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $NumberTicker, $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
+import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, constant, empty, join, map, mergeArray, multicast, now, skipRepeatsWith, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
-import { $Baseline, $ButtonToggle, $Link, $alertTooltip, $arrowRight, $defaulButtonToggleContainer, $icon, $infoTooltipLabel, IMarker } from "gmx-middleware-ui-components"
+import { $Baseline, $ButtonToggle, $defaulButtonToggleContainer, $icon, $infoTooltipLabel, IMarker } from "gmx-middleware-ui-components"
 import {
-  IRequestAccountTradeListApi,
   filterNull,
   getMappedValue,
   getTokenUsd,
@@ -18,36 +18,31 @@ import {
   readableTokenAmountLabel,
   readableUnitAmount,
   switchMap,
-  tokenAmountLabel,
   unixTimestampNow
 } from "gmx-middleware-utils"
+import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
+import * as PUPPET from "puppet-middleware-const"
 import { IPuppetSubscritpion, IPuppetSubscritpionParams, accountSettledPositionListSummary, getParticiapntMpPortion, getPuppetDepositAccountKey, getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-utils"
-import { $PuppetPortfolio } from "../components/participant/$Puppet"
+import * as viem from "viem"
+import { $TraderDisplay, $pnlValue, $route } from "../common/$common"
+import { $puppetLogo } from "../common/$icons"
+import { $heading2 } from "../common/$text"
+import { $card, $card2, $responsiveFlex } from "../common/elements/$common"
+import { $caretDown } from "../common/elements/$icons"
+import { $Popover } from "../components/$Popover"
+import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
+import { $TraderPortfolio } from "../components/participant/$Trader"
+import { $AssetDepositEditor } from "../components/portfolio/$AssetDepositEditor.js"
+import { $AssetWithdrawEditor } from "../components/portfolio/$AssetWithdrawEditor"
+import { $RouteSubscriptionEditor } from "../components/portfolio/$RouteSubscriptionEditor.js"
+import { $ProfilePerformanceGraph, performanceTimeline } from "../components/trade/$ProfilePerformanceGraph"
 import { IGmxProcessState } from "../data/process/process.js"
 import * as store from "../data/store/store.js"
-import { ROUTE_DESCRIPTIN_MAP } from "../logic/utils.js"
+import { connectContract } from "../logic/common"
 import * as storage from "../utils/storage/storeScope.js"
 import { IWalletClient } from "../wallet/walletLink.js"
-import { $TraderProfileSummary } from "../components/participant/$Summary"
-import { $TraderPortfolio, $TraderProfile } from "../components/participant/$Trader"
-import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "./components/$LastActivity"
-import { $Popover } from "../components/$Popover"
-import { connectContract } from "../logic/common"
-import { $card, $card2, $responsiveFlex } from "../common/elements/$common"
-import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
-import { $AssetDepositEditor } from "../components/portfolio/$AssetDepositEditor.js"
-import * as PUPPET from "puppet-middleware-const"
-import * as viem from "viem"
 import { $seperator2 } from "./common"
-import { $heading2, $heading3 } from "../common/$text"
-import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
-import { $ProfilePerformanceGraph, performanceTimeline } from "../components/trade/$ProfilePerformanceGraph"
-import { $route, $TraderDisplay, $TraderRouteDisplay, $pnlValue } from "../common/$common"
-import { $RouteSubscriptionEditor } from "../components/portfolio/$RouteSubscriptionEditor.js"
-import { $caretDown } from "../common/elements/$icons"
-import { $puppetLogo } from "../common/$icons"
-import { $AssetWithdrawEditor } from "../components/portfolio/$AssetWithdrawEditor"
+import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "./components/$LastActivity"
 
 
 

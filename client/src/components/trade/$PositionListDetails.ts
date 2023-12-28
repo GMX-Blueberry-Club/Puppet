@@ -17,7 +17,7 @@ import {
   filterNull,
   switchMap
 } from "gmx-middleware-utils"
-import { IPositionMirrorOpen } from "puppet-middleware-utils"
+import { IMirrorPositionOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $entry, $openPnl, $sizeAndLiquidation } from "../../common/$common.js"
 import { $seperator2 } from "../../pages/common"
@@ -36,7 +36,7 @@ export enum ITradeFocusMode {
 interface IPositionDetailsPanel {
   chain: ISupportedChain
   wallet: Stream<IWalletClient>
-  openPositionList: Stream<IPositionMirrorOpen[]>
+  openPositionList: Stream<IMirrorPositionOpen[]>
   priceMap: Stream<IPriceLatestMap>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>
@@ -61,8 +61,8 @@ export type IRequestTrade = IRequestTradeParams & {
 // 
 
 export const $PositionListDetails = (config: IPositionDetailsPanel) => component((
-  [switchPosition, switchPositionTether]: Behavior<any, IPositionMirrorOpen>,
-  [clickClose, clickCloseTeter]: Behavior<any, IPositionMirrorOpen>,
+  [switchPosition, switchPositionTether]: Behavior<any, IMirrorPositionOpen>,
+  [clickClose, clickCloseTeter]: Behavior<any, IMirrorPositionOpen>,
 
   [changeMarket, changeMarketTether]: Behavior<IMarket>,
   [switchIsLong, switchIsLongTether]: Behavior<boolean>,

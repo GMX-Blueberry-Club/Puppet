@@ -1,14 +1,13 @@
-import { IPositionDecrease, IPositionFeeUpdate, IPositionIncrease, IPositionLink, IPositionSettled } from "gmx-middleware-utils"
-import { ISchema } from "gmx-middleware-utils/src/subgraph"
+import { IPositionDecrease, IPositionFeeUpdate, IPositionIncrease, IPositionLink, IPositionSettled, ISchema } from "gmx-middleware-utils"
 
 
 
 const positionIncrease: ISchema<IPositionIncrease> = {
   id: 'string',
 
-  account: 'string',
-  market: 'string',
-  collateralToken: 'string',
+  account: 'address',
+  market: 'address',
+  collateralToken: 'address',
 
   sizeInTokens: 'uint256',
   sizeInUsd: 'uint256',
@@ -44,9 +43,9 @@ const positionIncrease: ISchema<IPositionIncrease> = {
 const positionDecrease: ISchema<IPositionDecrease> = {
   id: 'string',
 
-  account: 'string',
-  market: 'string',
-  collateralToken: 'string',
+  account: 'address',
+  market: 'address',
+  collateralToken: 'address',
 
   sizeInTokens: 'uint256',
   sizeInUsd: 'uint256',
@@ -88,13 +87,14 @@ const positionFeeUpdate: ISchema<IPositionFeeUpdate> = {
   positionKey: 'uint256',
   referralCode: 'string',
 
-  market: 'string',
-  collateralToken: 'string',
-  affiliate: 'string',
-  trader: 'string',
-  uiFeeReceiver: 'string',
+  market: 'address',
+  collateralToken: 'address',
+  affiliate: 'address',
+  trader: 'address',
+  uiFeeReceiver: 'address',
 
-  collateralTokenPrice: 'uint256',
+  collateralTokenPriceMin: 'uint256',
+  collateralTokenPriceMax: 'uint256',
   tradeSizeUsd: 'uint256',
   totalRebateFactor: 'uint256',
   traderDiscountFactor: 'uint256',
@@ -135,9 +135,9 @@ const positionLink: ISchema<IPositionLink> = {
   id: 'string',
   key: 'uint256',
 
-  account: 'string',
-  market: 'string',
-  collateralToken: 'string',
+  account: 'address',
+  market: 'address',
+  collateralToken: 'address',
 
   isLong: 'bool',
 
@@ -157,20 +157,25 @@ const positionSettled: ISchema<IPositionSettled> = {
 
   key: 'uint256',
 
-  account: 'string',
-  market: 'string',
-  collateralToken: 'string',
+  account: 'address',
+  market: 'address',
+  collateralToken: 'address',
+  indexToken: 'address',
 
   sizeInUsd: 'uint256',
-  sizeInToken: 'uint256',
+  sizeInTokens: 'uint256',
   collateralAmount: 'uint256',
   realisedPnlUsd: 'uint256',
 
   cumulativeSizeUsd: 'uint256',
   cumulativeSizeToken: 'uint256',
+  cumulativeCollateralToken: 'uint256',
+  cumulativeCollateralUsd: 'uint256',
 
   maxSizeUsd: 'uint256',
   maxSizeToken: 'uint256',
+  maxCollateralToken: 'uint256',
+  maxCollateralUsd: 'uint256',
 
   isLong: 'bool',
 

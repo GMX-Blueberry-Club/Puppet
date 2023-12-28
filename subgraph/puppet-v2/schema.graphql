@@ -232,7 +232,7 @@ type PositionSettled @entity(immutable: true) {
   logIndex: BigInt!
 }
 
-type PriceCandleLatest @entity {
+type PriceCandleSeed @entity {
   id: ID!
   token: Bytes!
   interval: Int!
@@ -424,8 +424,8 @@ type PuppetTradeRoute @entity(immutable: true) {
   puppet: Bytes! # address
   trader: Bytes! # address
 
-  puppetPositionSettledList: [PuppetPositionSettled!] @derivedFrom(field: "puppetTradeRoute")
   puppetPositionOpenList: [PuppetPositionOpen!] @derivedFrom(field: "puppetTradeRoute")
+  puppetPositionSettledList: [PuppetPositionSettled!] @derivedFrom(field: "puppetTradeRoute")
   subscriptionList: [SubscribeTradeRoute!] @derivedFrom(field: "puppetTradeRoute")
 }
 
@@ -437,6 +437,7 @@ type AdjustPosition @entity(immutable: true) {
   requestKey: Bytes! # bytes32
   routeTypeKey: Bytes! # bytes32
   positionKey: Bytes! # bytes32
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!

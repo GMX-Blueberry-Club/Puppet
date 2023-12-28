@@ -1,4 +1,4 @@
-import { IPositionListSummary, IPriceCandleLatest, IEnsRegistration, IResponsePageApi, IRequestPagePositionApi, IRequestSortApi, IRequestTimerangeApi, IPriceCandle } from "gmx-middleware-utils"
+import { IPositionListSummary, IPriceCandleSeed, IEnsRegistration, IResponsePageApi, IRequestPagePositionApi, IRequestSortApi, IRequestTimerangeApi, IPriceCandle } from "gmx-middleware-utils"
 import * as GMX from "gmx-middleware-const"
 import { IPositionUiFees } from "viem"
 
@@ -504,10 +504,10 @@ export interface MintPrivate extends MintRuleConfig {
 export type MintRule = MintPublic | MintHolder | MintPrivate
 
 
-export interface IRequestLeaderboardApi extends IRequestPagePositionApi, IPriceCandleLatest, IRequestSortApi<keyof IBlueberryLadder> {
+export interface IRequestLeaderboardApi extends IRequestPagePositionApi, IPriceCandleSeed, IRequestSortApi<keyof IBlueberryLadder> {
   timeInterval: typeof GMX.TIME_INTERVAL_MAP.HR24 | typeof GMX.TIME_INTERVAL_MAP.DAY7 | typeof GMX.TIME_INTERVAL_MAP.MONTH
 }
-export interface IRequestCompetitionLadderApi extends IPriceCandleLatest, IRequestSortApi<IBlueberryLadder>, IRequestPagePositionApi, IRequestTimerangeApi {
+export interface IRequestCompetitionLadderApi extends IPriceCandleSeed, IRequestSortApi<IBlueberryLadder>, IRequestPagePositionApi, IRequestTimerangeApi {
   referralCode: string
   maxCollateral: bigint
   account: IPositionUiFees | null

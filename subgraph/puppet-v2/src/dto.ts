@@ -1,6 +1,6 @@
 import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts"
 import { EventLog } from "../generated/EventEmitter/EventEmitter"
-import { MarketCreated, PositionDecrease, PositionFeeUpdate, PositionIncrease, PositionLink, PositionOpen, PositionSettled, PriceCandle, PriceCandleLatest } from "../generated/schema"
+import { MarketCreated, PositionDecrease, PositionFeeUpdate, PositionIncrease, PositionLink, PositionOpen, PositionSettled, PriceCandle } from "../generated/schema"
 import { getAddressItem, getBoolItem, getBytes32Item, getIntItem, getUintItem } from "./utils/datastore"
 import { getIdFromEvent } from "./utils/gmxHelpers"
 import { IntervalUnixTime, MARKET_TOKEN_MAP, ZERO_BI } from "./utils/const"

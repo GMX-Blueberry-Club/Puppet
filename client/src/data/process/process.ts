@@ -18,7 +18,7 @@ import {
   getMappedValue,
   importGlobal
 } from "gmx-middleware-utils"
-import { IMirrorPositionRequest, IPositionMirrorOpen, IPositionMirrorSettled, IPuppetSubscritpion, getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-utils"
+import { IMirrorPositionRequest, IMirrorPositionOpen, IMirrorPositionSettled, IPuppetSubscritpion, getPuppetSubscriptionKey, getRouteTypeKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { IProcessEnvironmentMode, IProcessedStore, IProcessedStoreConfig, defineProcess, validateConfig } from "../../utils/indexer/processor.js"
@@ -51,8 +51,8 @@ export interface IGmxProcessState {
   routeMap: Record<viem.Hex, ITradeRoute>
   
   mirrorPositionRequest: Record<viem.Hex, IMirrorPositionRequest>
-  mirrorPositionSlot: Record<viem.Hex, IPositionMirrorOpen>
-  mirrorPositionSettled: IPositionMirrorSettled[]
+  mirrorPositionSlot: Record<viem.Hex, IMirrorPositionOpen>
+  mirrorPositionSettled: IMirrorPositionSettled[]
   subscription: IPuppetSubscritpion[]
 
   // mirrorPositionSlotV2: Record<viem.Hex, IPositionMirrorSlotV2>

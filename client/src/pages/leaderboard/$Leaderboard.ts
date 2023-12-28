@@ -19,7 +19,6 @@ import { pallete } from "@aelea/ui-components-theme"
 
 export type ILeaderboard = {
   route: router.Route
-  processData: Stream<IGmxProcessState>
   subscriptionList: Stream<IPuppetSubscritpion[]>
 }
 
