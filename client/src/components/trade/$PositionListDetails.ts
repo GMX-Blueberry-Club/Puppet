@@ -12,12 +12,13 @@ import { Stream } from "@most/types"
 import {
   IMarket,
   IPriceLatestMap,
+  IPriceOracleMap,
   StateStream,
   TEMP_MARKET_TOKEN_MARKET_MAP,
   filterNull,
   switchMap
 } from "gmx-middleware-utils"
-import { IMirrorPositionOpen } from "puppet-middleware-utils"
+import { IMirrorPositionOpen, latestPriceMap } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $entry, $openPnl, $sizeAndLiquidation } from "../../common/$common.js"
 import { $seperator2 } from "../../pages/common"
@@ -37,7 +38,6 @@ interface IPositionDetailsPanel {
   chain: ISupportedChain
   wallet: Stream<IWalletClient>
   openPositionList: Stream<IMirrorPositionOpen[]>
-  priceMap: Stream<IPriceLatestMap>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>
   $container: NodeComposeFn<$Node>
@@ -52,13 +52,6 @@ export type IRequestTrade = IRequestTradeParams & {
   swapRoute: string[]
   request: Promise<viem.TransactionReceipt>
 }
-
-
-// setting up a limit orders clicking on the chart
-// optional, setting up multiple on single tx
-// open/adjust position in a single trade box
-// faster pricefeed by subscribing to multiple sources
-// 
 
 export const $PositionListDetails = (config: IPositionDetailsPanel) => component((
   [switchPosition, switchPositionTether]: Behavior<any, IMirrorPositionOpen>,
@@ -83,14 +76,6 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
   } = config.tradeState
 
 
-
-
-
-
-
-
-
-
   return [
     config.$container(
       switchMap(posList => {
@@ -98,7 +83,7 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
 
           ...posList.map(mp => {
 
-            const positionMarkPrice = map(pm => pm[mp.position.indexToken], config.priceMap)
+            const positionMarkPrice = map(pm => pm[mp.position.indexToken].min, latestPriceMap)
             // const cumulativeFee = vault.read('cumulativeFundingRates', pos.collateralToken)
             // const pnl = map(params => {
             //   const delta = getPnL(pos.isLong, pos.averagePrice, params.positionMarkPrice.min, pos.size)

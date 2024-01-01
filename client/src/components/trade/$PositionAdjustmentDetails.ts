@@ -8,8 +8,8 @@ import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
 import { $alert, $alertTooltip, $anchor, $infoLabeledValue, $infoTooltipLabel } from "gmx-middleware-ui-components"
 import {
+  IPriceOracleMap,
   IPriceCandle,
-  IPriceLatestMap,
   OrderType,
   StateStream,
   abs,
@@ -25,11 +25,10 @@ import {
   resolveAddress
 } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
-import { IMirrorPositionOpen } from "puppet-middleware-utils"
+import { IMirrorPositionOpen, latestPriceMap } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $Popover } from "../$Popover.js"
 import { $heading2 } from "../../common/$text.js"
-import { IGmxProcessState } from "../../data/process/process"
 import { connectContract, wagmiWriteContract } from "../../logic/common.js"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary } from "../form/$Button.js"
@@ -47,12 +46,9 @@ export enum ITradeFocusMode {
 interface IPositionAdjustmentHistory {
   chain: ISupportedChain
   openPositionList: Stream<IMirrorPositionOpen[]>
-
-  priceMap: Stream<IPriceLatestMap>
   pricefeed: Stream<IPriceCandle[]>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>
-
   $container: NodeComposeFn<$Node>
 }
 
@@ -106,10 +102,6 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
 
   const requestTrade: Stream<IRequestTrade> = multicast(snapshot((params, req) => {
 
-    if (!params.route) {
-      throw new Error('Route is not defined')
-    }
-
     const resolvedPrimaryAddress = resolveAddress(config.chain, req.primaryToken)
     const from = req.isIncrease ? resolvedPrimaryAddress : req.isLong ? req.market.indexToken : req.collateralToken
     const to = req.isIncrease ? req.isLong ? req.market.indexToken : req.collateralToken : resolvedPrimaryAddress
@@ -149,30 +141,8 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
       : req.focusPrice ? OrderType.LimitDecrease : OrderType.MarketDecrease
 
 
-    const request = params.route === GMX.ADDRESS_ZERO
+    const request = params.route
       ? wagmiWriteContract({
-        ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
-        value: totalWntAmount,
-        functionName: 'registerRouteAccountAndRequestPosition',
-        args: [
-          {
-            acceptablePrice,
-            collateralDelta: abs(0n),
-            sizeDelta: abs(req.sizeDeltaUsd),
-          },
-          {
-            amount: req.collateralDelta,
-            path: req.collateralDelta ? [req.collateralToken] : [],
-            minOut: 0n,
-          },
-          executionFeeAfterBuffer,
-          req.collateralToken,
-          req.indexToken,
-          req.isLong,
-          '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e5831000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000004bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075',
-        ]
-      })
-      : wagmiWriteContract({
         ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
         value: totalWntAmount,
         functionName: 'requestPosition',
@@ -187,9 +157,28 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
             path: req.collateralDelta ? [req.collateralToken] : [],
             minOut: 0n,
           },
-          '0xa437f95c9cee26945f76bc090c3491ffa4e8feb32fd9f4fefbe32c06a7184ff3',
+          params.routeTypeKey,
           executionFeeAfterBuffer,
           req.isIncrease
+        ]
+      })
+      : wagmiWriteContract({
+        ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
+        value: totalWntAmount,
+        functionName: 'registerRouteAccountAndRequestPosition',
+        args: [
+          {
+            acceptablePrice,
+            collateralDelta: req.collateralDelta,
+            sizeDelta: abs(req.sizeDeltaUsd),
+          },
+          {
+            amount: req.collateralDelta,
+            path: req.collateralDelta ? [req.collateralToken] : [],
+            minOut: 0n,
+          },
+          executionFeeAfterBuffer,
+          params.routeTypeKey,
         ]
       })
 
@@ -350,7 +339,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
     }
 
     return price.min
-  }, config.priceMap)
+  }, latestPriceMap)
 
   const executionFeeAfterBuffer = map(params => {
     const executionFeeAfterBuffer = params.executionFee * (params.executionFeeBuffer + GMX.BASIS_POINTS_DIVISOR) / GMX.BASIS_POINTS_DIVISOR // params.executionFee
@@ -430,6 +419,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
           })
         ),
         switchLatest(map(params => {
+          const isTokenEnabled = params.isPrimaryApproved
           const $primary = !params.isTradingEnabled
             ? $Popover({
               open: constant(
@@ -468,16 +458,8 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
             })({
               overlayClick: dismissEnableTradingOverlayTether(constant(false))
             })
-            : params.route && !params.isPrimaryApproved
+            : isTokenEnabled
               ? $ButtonPrimaryCtx({
-                request: requestApproveSpend,
-                $content: $text(`Approve ${params.primaryDescription.symbol}`)
-              })({
-                click: clickApproveprimaryTokenTether(
-                  map(wallet => ({ wallet, route: params.route, primaryToken: params.primaryToken }))
-                )
-              })
-              : $ButtonPrimaryCtx({
                 request: map(req => req.request, requestTrade),
                 disabled: map(params => {
                   const newLocal = params.disableButtonValidation || params.sizeDelta === 0n && params.collateralDelta === 0n
@@ -505,8 +487,18 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
               })({
                 click: clickProposeTradeTether()
               })
+              : $ButtonPrimaryCtx({
+                request: requestApproveSpend,
+                $content: $text(`Approve ${params.primaryDescription.symbol}`)
+              })({
+                click: clickApproveprimaryTokenTether(
+                  map(wallet => ({ wallet, route: params.route, primaryToken: params.primaryToken }))
+                )
+              })
 
-          return $primary
+          return $row(
+            $primary
+          )
         }, combineObject({ isPrimaryApproved, route, isTradingEnabled, primaryToken, primaryDescription })))
       ),
       

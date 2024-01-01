@@ -1,29 +1,11 @@
-import { O, combineObject } from "@aelea/core"
+import { O } from "@aelea/core"
 import { $Node, $text, NodeComposeFn, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import {
-  map,
-  now
-} from "@most/core"
+import { map, now } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
-import {
-  $Table,
-  $infoLabel,
-  $txHashRef
-} from "gmx-middleware-ui-components"
-import {
-  IPositionDecrease,
-  IPositionIncrease,
-  IPriceCandle,
-  StateStream,
-  getTokenUsd,
-  readableDate,
-  readableFixedUSD30,
-  switchMap,
-  timeSince,
-  unixTimestampNow
-} from "gmx-middleware-utils"
+import { $Table, $infoLabel, $txHashRef } from "gmx-middleware-ui-components"
+import { IPositionDecrease, IPositionIncrease, IPriceCandle, StateStream, getTokenUsd, readableDate, readableFixedUSD30, switchMap, timeSince, unixTimestampNow } from "gmx-middleware-utils"
 import { IMirrorPositionOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { connectContract } from "../../logic/common.js"
@@ -88,15 +70,10 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
 
 
   const dataSource = switchMap(pos => {
-    console.log('pos', pos)
     return pos
-      ? now([...pos.position.link.increaseList, ...pos.position.link.decreaseList].sort((a, b) => b.blockTimestamp - a.blockTimestamp ))
+      ? now([...pos.position.link.increaseList, ...pos.position.link.decreaseList].sort((a, b) => Number(b.blockTimestamp - a.blockTimestamp) ))
       : now([])
   }, position)
-
-  
-
-
 
 
   return [
@@ -111,12 +88,9 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
       // $container: $defaultTableContainer(screenUtils.isDesktopScreen ? style({ flex: '1 1 0', minHeight: '100px' }) : style({})),
       scrollConfig: {
         insertAscending: true,
-        $emptyMessage: switchMap(params => {
-          return $row(layoutSheet.spacingSmall, style({ placeContent: 'center' }))(
-            // $route(params),
-            $infoLabel(`No active position`),
-          )
-        }, combineObject({ isIncrease, isLong, collateralToken, indexToken }))
+        $emptyMessage: style({ alignSelf: 'center' })(
+          $infoLabel(`No active position`)
+        )
       },
       columns: [
         {
@@ -125,8 +99,7 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
 
           $bodyCallback: map((req) => {
             const isKeeperReq = 'slippage' in req
-
-            const timestamp = isKeeperReq ? unixTimestampNow() : req.blockTimestamp
+            const timestamp = isKeeperReq ? unixTimestampNow() : Number(req.blockTimestamp)
 
             return $column(layoutSheet.spacingTiny, style({ fontSize: '.85rem' }))(
               $text(timeSince(timestamp) + ' ago'),
@@ -138,12 +111,11 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
           $head: $text('Action'),
           columnOp: O(style({ flex: 1 })),
           $bodyCallback: map((pos) => {
-            const $requestRow = $row(style({ alignItems: 'center' }))
 
             if ('key' in pos) {
               const direction = pos.__typename === 'PositionIncrease' ? '↑' : '↓'
               return $row(layoutSheet.spacingSmall)(
-                $txHashRef(pos.transactionHash, w3p.chain.id, $text(`${direction} ${readableFixedUSD30(pos.price)}`))
+                $txHashRef(pos.transactionHash, config.chain.id, $text(`${direction} ${readableFixedUSD30(pos.executionPrice)}`))
               )
             }
 
@@ -202,8 +174,8 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
           $bodyCallback: map((req) => {
             const isKeeperReq = 'request' in req
             const delta = isKeeperReq
-              ? req.isIncrease
-                ? req.collateralDeltaUsd : -req.collateralDeltaUsd : getTokenUsd(req["collateralTokenPrice.min"], req.collateralAmount)
+              ? req.__typename === 'PositionIncrease'
+                ? req.collateralAmount : -req.collateralAmount : getTokenUsd(req.collateralTokenPriceMin, req.collateralAmount)
 
             return $text(readableFixedUSD30(delta))
           })
@@ -214,7 +186,7 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
           $bodyCallback: map((req) => {
             const isKeeperReq = 'request' in req
             const delta = isKeeperReq
-              ? req.isIncrease
+              ? req.__typename === 'PositionIncrease'
                 ? req.sizeDeltaUsd : -req.sizeDeltaUsd : req.sizeDeltaUsd
 
             return $text(readableFixedUSD30(delta))

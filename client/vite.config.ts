@@ -39,7 +39,7 @@ const pwaOptions: Partial<VitePWAOptions> = {
     theme_color: SITE_CONFIG.THEME_BACKGROUND,
     background_color: SITE_CONFIG.THEME_BACKGROUND,
     lang:"en",
-    start_url: '/app/leaderboard/settled',
+    start_url: '/app/leaderboard',
     display:"standalone",
     orientation: "any",
     categories:[ "Copy Trading", "Decentralized Perpetual Exchange", "DeFi" ],

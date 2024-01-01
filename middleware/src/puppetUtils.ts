@@ -1,29 +1,29 @@
-import { IPricetickListMap, factor, getPositionPnlUsd, hashData, lst } from "gmx-middleware-utils"
+import { factor, getPositionPnlUsd, hashData, lst } from "gmx-middleware-utils"
 import * as viem from "viem"
-import { IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled } from "./types.js"
+import { IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen } from "./types.js"
 
 
-export function extractPricefeedFromPositionList(
-  positionList: (IMirrorPositionOpen | IMirrorPositionSettled)[]
-): IPricetickListMap {
-  const pricefeedMap: IPricetickListMap = {}
+// export function extractPricefeedFromPositionList(
+//   positionList: (IMirrorPositionOpen | IMirrorPositionSettled)[]
+// ): IPricetickListMap {
+//   const pricefeedMap: IPricetickListMap = {}
 
-  for (const mp of positionList) {
-    const indexToken = mp.position.indexToken
+//   for (const mp of positionList) {
+//     const indexToken = mp.position.indexToken
 
-    const adjustmentList = [...mp.position.link.increaseList, ...mp.position.link.decreaseList]
-    for (const update of adjustmentList) {
-      pricefeedMap[indexToken] ??= []
-      pricefeedMap[indexToken].push({ 
-        timestamp: Number(update.blockTimestamp),
-        price: update.indexTokenPriceMin,
-        token: indexToken
-      })
-    }
-  }
+//     const adjustmentList = [...mp.position.link.increaseList, ...mp.position.link.decreaseList]
+//     for (const update of adjustmentList) {
+//       pricefeedMap[indexToken] ??= []
+//       pricefeedMap[indexToken].push({ 
+//         timestamp: Number(update.blockTimestamp),
+//         price: update.indexTokenPriceMin,
+//         token: indexToken
+//       })
+//     }
+//   }
 
-  return pricefeedMap
-}
+//   return pricefeedMap
+// }
 
 export function accountSettledPositionListSummary<T extends IMirrorPosition>(
   tradeList: T[],

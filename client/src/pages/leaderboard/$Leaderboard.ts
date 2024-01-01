@@ -1,19 +1,11 @@
 import { Behavior } from "@aelea/core"
-import { $node, $text, component, style } from "@aelea/dom"
+import { component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
-import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { empty, map, mergeArray, multicast, now, switchLatest } from "@most/core"
+import { $column, layoutSheet } from "@aelea/ui-components"
+import { map, mergeArray } from "@most/core"
 import { Stream } from "@most/types"
-import { $ButtonToggle, $defaulButtonToggleContainer } from "gmx-middleware-ui-components"
-import { IPuppetRouteTrades, IPuppetSubscritpion } from "puppet-middleware-utils"
-import { IGmxProcessState } from "../../data/process/process.js"
-import { $card } from "../../common/elements/$common.js"
-import { wallet } from "../../wallet/walletLink.js"
-import { $TopOpen } from "./$TopOpen.js"
+import { IPuppetSubscritpion } from "puppet-middleware-utils"
 import { $TopSettled } from "./$TopSettled.js"
-import * as GMX from "gmx-middleware-const"
-import { $LastAtivity } from "../components/$LastActivity.js"
-import { pallete } from "@aelea/ui-components-theme"
 
 
 
@@ -45,7 +37,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
   const options: IRouteOption[] = [
     {
       label: 'Aggregated',
-      url: '/app/leaderboard/settled'
+      url: '/app/leaderboard'
     },
     {
       label: 'Open',

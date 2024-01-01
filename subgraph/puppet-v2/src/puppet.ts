@@ -18,8 +18,7 @@ import {
   PuppetPositionOpen,
   PuppetPositionSettled,
   PuppetTradeRoute,
-  RequestOpenMirrorPosition,
-  RouteOpenRef,
+  RequestMirrorPosition,
   SetRouteType,
   SharesIncrease,
   SubscribeTradeRoute,
@@ -27,82 +26,30 @@ import {
   AdjustPosition,
   MirrorPositionLink,
 } from "../generated/schema"
-import { ZERO_BI } from "./utils/const"
+import { MARKET_TOKEN_MAP, ZERO_BI } from "./utils/const"
 import { getIdFromEvent } from "./utils/gmxHelpers"
 
 export function handleOpenPosition(event: OpenPositionEvent): void {
-  const entity = new RequestOpenMirrorPosition(event.params.requestKey)
+  const requestOpenMirrorPosition = new RequestMirrorPosition(event.params.requestKey)
 
-  entity.puppets = Value.fromAddressArray(event.params.puppets).toBytesArray()
-  entity.trader = event.params.trader
-  entity.route = event.params.route
-  entity.isIncrease = event.params.isIncrease
-  entity.requestKey = event.params.requestKey
-  entity.routeTypeKey = event.params.routeTypeKey
-  entity.positionKey = event.params.positionKey
+  requestOpenMirrorPosition.puppets = Value.fromAddressArray(event.params.puppets).toBytesArray()
+  requestOpenMirrorPosition.trader = event.params.trader
+  requestOpenMirrorPosition.route = event.params.route
+  requestOpenMirrorPosition.isIncrease = event.params.isIncrease
+  requestOpenMirrorPosition.requestKey = event.params.requestKey
+  requestOpenMirrorPosition.routeTypeKey = event.params.routeTypeKey
+  requestOpenMirrorPosition.positionKey = event.params.positionKey
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
+  requestOpenMirrorPosition.blockNumber = event.block.number
+  requestOpenMirrorPosition.blockTimestamp = event.block.timestamp
+  requestOpenMirrorPosition.transactionHash = event.transaction.hash
 
-  entity.save()
-
-  if (MirrorPositionOpen.load(event.params.positionKey.toHex())) {
-    log.error("MirrorPositionOpen already exists", [])
-    return 
-  }
-
-  const mirrorPositionLink = new MirrorPositionLink(entity.requestKey)
-  const mirrorPositionOpen = new MirrorPositionOpen(entity.positionKey.toHex())
-
-  mirrorPositionOpen.link = mirrorPositionLink.id
-  mirrorPositionOpen.position = entity.positionKey.toHex()
-
-  mirrorPositionOpen.trader = entity.trader
-  mirrorPositionOpen.tradeRoute = entity.route
-  mirrorPositionOpen.puppets = entity.puppets
-
-  mirrorPositionOpen.puppetsShares = []
-  mirrorPositionOpen.traderShares = ZERO_BI
-  mirrorPositionOpen.totalSupply = ZERO_BI
-
-  mirrorPositionOpen.routeTypeKey = entity.routeTypeKey
-  mirrorPositionOpen.tradeRouteKey = entity.trader.concat(entity.routeTypeKey)
-
-  mirrorPositionOpen.blockNumber = event.block.number
-  mirrorPositionOpen.blockTimestamp = event.block.timestamp
-  mirrorPositionOpen.transactionHash = event.transaction.hash
-
-  for (let i = 0; i < mirrorPositionOpen.puppets.length; i++) {
-    const puppet = mirrorPositionOpen.puppets[i]
-    const puppetTradeRouteKey = puppet.concat(mirrorPositionOpen.trader).concat(mirrorPositionOpen.routeTypeKey)
-    const puppetPositionOpen = new PuppetPositionOpen(puppetTradeRouteKey)
-
-    puppetPositionOpen.position = mirrorPositionOpen.id
-    puppetPositionOpen.puppetTradeRoute = puppetTradeRouteKey
-
-    puppetPositionOpen.blockNumber = event.block.number
-    puppetPositionOpen.blockTimestamp = event.block.timestamp
-    puppetPositionOpen.transactionHash = event.transaction.hash
-
-    puppetPositionOpen.save()
-  }
-
-  const routeOpenRef = new RouteOpenRef(event.params.route.toHex())
-
-  routeOpenRef.mirrorPositionOpen = mirrorPositionOpen.id
-
-  mirrorPositionLink.save()
-  mirrorPositionOpen.save()
-  routeOpenRef.save()
+  requestOpenMirrorPosition.save()
 }
 
 
 export function handleExecutePosition(event: ExecutePositionEvent): void {
-  const executePosition = new ExecutePosition(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-
+  const executePosition = new ExecutePosition(event.params.requestKey)
   executePosition.performanceFeePaid = event.params.performanceFeePaid
   executePosition.route = event.params.route
   executePosition.requestKey = event.params.requestKey
@@ -115,59 +62,108 @@ export function handleExecutePosition(event: ExecutePositionEvent): void {
 
   executePosition.save()
 
-  if (executePosition.isIncrease) {
+  if (!event.params.isExecuted) {
     return
   }
 
-  const routeOpenRef = RouteOpenRef.load(executePosition.route.toHex())
+  if (event.params.isIncrease) {
+    const requestMirrorPosition = RequestMirrorPosition.load(executePosition.requestKey)
 
-  if (routeOpenRef === null)  {
-    log.error("RouteOpenRef not found", [])
-    return
-  }
+    if (requestMirrorPosition !== null) {
+      let mirrorPositionOpen = MirrorPositionOpen.load(executePosition.route.toHex())
 
-  if (routeOpenRef.mirrorPositionOpen === null) {
-    log.error("RouteOpenRef.MirrorPositionOpen not found", [])
-    return
-  }
+      if (mirrorPositionOpen !== null) {
+        log.error("MirrorPositionOpen already exists", [])
+        return
+      }
 
-  const mirrorPositionOpen = MirrorPositionOpen.load(routeOpenRef.mirrorPositionOpen)
+      const mirrorPositionLink = new MirrorPositionLink(executePosition.requestKey)
+      mirrorPositionOpen = new MirrorPositionOpen(executePosition.route.toHex())
 
-  if (mirrorPositionOpen === null) {
-    log.error("MirrorPositionOpen not found", [])
-    return
-  }
+      mirrorPositionOpen.position = executePosition.id.toHex()
 
-  if (mirrorPositionOpen.position && PositionOpen.load(mirrorPositionOpen.position) !== null) {
-    return
-  }
+      mirrorPositionOpen.trader = requestMirrorPosition.trader
+      mirrorPositionOpen.tradeRoute = requestMirrorPosition.route
+      mirrorPositionOpen.puppets = requestMirrorPosition.puppets
 
+      mirrorPositionOpen.puppetsShares = []
+      mirrorPositionOpen.traderShares = ZERO_BI
+      mirrorPositionOpen.totalSupply = ZERO_BI
 
-  const settledMirrorPosition = new MirrorPositionSettled(getIdFromEvent(event))
+      mirrorPositionOpen.routeTypeKey = requestMirrorPosition.routeTypeKey
+      mirrorPositionOpen.tradeRouteKey = requestMirrorPosition.trader.concat(requestMirrorPosition.routeTypeKey)
 
-  for (let i = 0; i < mirrorPositionOpen.puppets.length; i++) {
-    const puppet = mirrorPositionOpen.puppets[i]
-    const puppetPositionSettled = new PuppetPositionSettled(settledMirrorPosition.id.concatI32(i))
-    const puppetTradeRouteKey = puppet.concat(mirrorPositionOpen.trader).concat(mirrorPositionOpen.routeTypeKey)
+      mirrorPositionOpen.blockNumber = event.block.number
+      mirrorPositionOpen.blockTimestamp = event.block.timestamp
+      mirrorPositionOpen.transactionHash = event.transaction.hash
 
-    puppetPositionSettled.position = settledMirrorPosition.id
-    puppetPositionSettled.puppetTradeRoute = puppetTradeRouteKey
+      for (let i = 0; i < mirrorPositionOpen.puppets.length; i++) {
+        const puppet = mirrorPositionOpen.puppets[i]
+        const puppetTradeRouteKey = puppet.concat(mirrorPositionOpen.trader).concat(mirrorPositionOpen.routeTypeKey)
+        const puppetPositionOpen = new PuppetPositionOpen(puppetTradeRouteKey)
+
+        puppetPositionOpen.position = mirrorPositionOpen.id
+        puppetPositionOpen.puppetTradeRoute = puppetTradeRouteKey
+
+        puppetPositionOpen.blockNumber = event.block.number
+        puppetPositionOpen.blockTimestamp = event.block.timestamp
+        puppetPositionOpen.transactionHash = event.transaction.hash
+
+        puppetPositionOpen.save()
+      }
+
+      mirrorPositionLink.save()
+      mirrorPositionOpen.save()
+
+      return
+    }
+  } else {
+    const mirrorPositionOpen = MirrorPositionOpen.load(executePosition.route.toHex()) 
+
+    if (mirrorPositionOpen === null) {
+      log.error("MirrorPositionOpen not found", [])
+      return
+    }
+
+    if (PositionOpen.load(mirrorPositionOpen.position) !== null) {
+      log.error("PositionOpen exists", [])
+      return
+    }
+
+    const settledMirrorPosition = new MirrorPositionSettled(executePosition.id)
+
+    for (let i = 0; i < mirrorPositionOpen.puppets.length; i++) {
+      const puppet = mirrorPositionOpen.puppets[i]
+      const puppetPositionSettled = new PuppetPositionSettled(settledMirrorPosition.id.concatI32(i))
+      const puppetTradeRouteKey = puppet.concat(mirrorPositionOpen.trader).concat(mirrorPositionOpen.routeTypeKey)
+
+      puppetPositionSettled.position = settledMirrorPosition.id
+      puppetPositionSettled.puppetTradeRoute = puppetTradeRouteKey
     
-    puppetPositionSettled.blockNumber = event.block.number
-    puppetPositionSettled.blockTimestamp = event.block.timestamp
-    puppetPositionSettled.transactionHash = event.transaction.hash
+      puppetPositionSettled.blockNumber = event.block.number
+      puppetPositionSettled.blockTimestamp = event.block.timestamp
+      puppetPositionSettled.transactionHash = event.transaction.hash
 
-    puppetPositionSettled.save()
-    store.remove("PuppetPositionOpen", puppetTradeRouteKey.toHex())
+      puppetPositionSettled.save()
+      store.remove("PuppetPositionOpen", puppetTradeRouteKey.toHex())
+    }
+
+    settledMirrorPosition.merge([mirrorPositionOpen])
+    settledMirrorPosition.save()
+
+    store.remove("MirrorPositionOpen", mirrorPositionOpen.id)
   }
 
-  settledMirrorPosition.merge([mirrorPositionOpen])
-  settledMirrorPosition.save()
-
-  store.remove("MirrorPositionOpen", routeOpenRef.mirrorPositionOpen)
-  store.remove("RouteOpenRef", executePosition.route.toHexString())
 }
 
+
+// function onIncreaseMirrorPosition(executePosition: ExecutePosition): void {
+
+// }
+
+// function onDecreaseMirrorPosition(executePosition: ExecutePosition): void {
+
+// }
 
 export function handleSetRouteType(event: SetRouteTypeEvent): void {
   const entity = new SetRouteType(
@@ -177,7 +173,6 @@ export function handleSetRouteType(event: SetRouteTypeEvent): void {
   entity.collateral = event.params.collateral
   entity.index = event.params.index
   entity.isLong = event.params.isLong
-
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
   entity.transactionHash = event.transaction.hash
@@ -193,13 +188,14 @@ export function handleSharesIncrease(event: SharesIncreaseEvent): void {
   entity.puppetsShares = event.params.puppetsShares
   entity.traderShares = event.params.traderShares
   entity.totalSupply = event.params.totalSupply
-  entity.positionKey = event.params.positionKey
+  entity.requestKey = event.params.requestKey
+  entity.route = event.params.route
 
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
   entity.transactionHash = event.transaction.hash
 
-  const openPosition = MirrorPositionOpen.load(entity.positionKey.toHex())
+  const openPosition = MirrorPositionOpen.load(entity.route.toHex())
 
   if (openPosition === null) {
     log.error("MirrorPositionOpen not found", [])
@@ -291,7 +287,7 @@ export function handleAdjustPosition(event: AdjustPositionEvent): void {
   entity.isIncrease = event.params.isIncrease
   entity.requestKey = event.params.requestKey
   entity.routeTypeKey = event.params.routeTypeKey
-  entity.positionKey = event.params.positionKey
+  entity.route = event.params.route
 
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp

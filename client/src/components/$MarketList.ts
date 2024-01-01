@@ -2,53 +2,48 @@ import { Op, combineObject } from '@aelea/core'
 import { $Node, $text, NodeComposeFn, component, style } from '@aelea/dom'
 import { $column } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { fromPromise, map } from "@most/core"
+import { fromPromise, map, take } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
 import { $Table, $defaultTableRowContainer, $marketSmallLabel } from 'gmx-middleware-ui-components'
-import { IMarket, IMarketFees, IMarketPrice, IMarketUsageInfo, getBorrowingFactorPerInterval, getFundingFactorPerInterval, readableFactorPercentage } from 'gmx-middleware-utils'
-import { IGmxProcessState } from '../data/process/process'
+import { IMarket, IMarketFees, IMarketPrice, IMarketUsageInfo, IOraclePrice, getBorrowingFactorPerInterval, getFundingFactorPerInterval, readableFactorPercentage } from 'gmx-middleware-utils'
 import { contractReader } from '../logic/common'
 import { getMarketPoolUsage } from '../logic/tradeV2'
 import { ISupportedChain } from '../wallet/walletLink'
-
+import * as viem from 'viem'
+import { latestPriceMap } from 'puppet-middleware-utils'
 
 interface IMarketList {
   $container?: NodeComposeFn<$Node>
-  processData: Stream<IGmxProcessState>
   chain: ISupportedChain
-
+  marketList: Stream<IMarket[]>
   $rowCallback?: Op<{ market: IMarket, price: IMarketPrice }, NodeComposeFn<$Node>>
 }
 
 export const $MarketInfoList = ({
   $container = $column,
-  processData,
   chain,
+  marketList,
   $rowCallback
 }: IMarketList) => component((
-  // [changeMarket, changeMarketTether]: Behavior<INode, IMarket>,
 ) => {
   const gmxContractMap = GMX.CONTRACT[chain.id]
   const v2Reader = contractReader(gmxContractMap.ReaderV2)
 
-
-
   const marketParamList = map(params => {
-    const data = Object
-      .values(params.processData.marketMap)
+    const data = params.marketList
       .filter(market => market.indexToken !== GMX.ADDRESS_ZERO)
       .map(market => {
-        const longTokenPrice = params.processData.latestPrice[market.longToken]
-        const shortTokenPrice = params.processData.latestPrice[market.shortToken]
-        const indexTokenPrice = params.processData.latestPrice[market.indexToken]
+        const longTokenPrice = params.latestPriceMap[market.longToken]
+        const shortTokenPrice = params.latestPriceMap[market.shortToken]
+        const indexTokenPrice = params.latestPriceMap[market.indexToken]
 
         const price = { longTokenPrice, shortTokenPrice, indexTokenPrice }
 
-        return { market, processData: params.processData, price }
+        return { market, price }
       })
     return data
-  }, combineObject({ processData }))
+  }, combineObject({ marketList, latestPriceMap: take(1, latestPriceMap) }))
 
 
   return [
@@ -75,7 +70,7 @@ export const $MarketInfoList = ({
               const usage: Stream<IMarketUsageInfo> = fromPromise(getMarketPoolUsage(chain, params.market))
 
               const fundingFactorPerInterval  = map(marketParams => {
-                return getFundingFactorPerInterval(params.price, marketParams.usage, marketParams.fees, GMX.TIME_INTERVAL_MAP.MIN60)
+                return getFundingFactorPerInterval(marketParams.usage, marketParams.fees, GMX.TIME_INTERVAL_MAP.MIN60)
               }, combineObject({ usage, fees }))
 
               return $text(map(fr => readableFactorPercentage(fr), fundingFactorPerInterval))

@@ -18,8 +18,8 @@ export interface IButtonToggle<T> {
 
 export const $defaulButtonToggleBtn = $row(style({
   placeContent: 'center', fontWeight: 'bold',
-  borderRadius: '442px', padding: '8px 14px', alignItems: 'center', border: '1px solid transparent',
-  cursor: 'pointer', margin: '-1px'
+  borderRadius: '442px', padding: '10px 16px', alignItems: 'center', border: '1px solid transparent',
+  cursor: 'pointer', margin: '-2px'
 }))
 
 export const $defaulButtonToggleContainer = $row(style({

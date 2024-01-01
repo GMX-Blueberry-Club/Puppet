@@ -16,11 +16,11 @@ export const CONTRACT = {
       abi: puppet,
     },
     Datastore: {
-      address: "0x803f3e2ab48DD93ac62bf1d0DB5F434E7B915158",
+      address: "0x7288699A7323Da69efD0Ed50b9c36d983006456B",
       abi: datastore,
     },
     Orchestrator: {
-      address: "0x8992D776Ad36a92f29c6B3AB8DAd2c0520075364",
+      address: "0x92100ed7c156887D173880572718971E9d7B585E",
       abi: orchestrator,
     },
     OrchestratorReader: {
@@ -39,7 +39,7 @@ export const CONTRACT = {
       abi: route,
     },
     RouteFactory: {
-      address: "0x747DCa007d3Fe4B86aE5Cf7558F3Be88C8F0F723",
+      address: "0xC45e80332fd2aF686A190e01AEBf8ddd6eEd7f36",
       abi: routeFactory,
     },
   },

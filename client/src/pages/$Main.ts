@@ -15,7 +15,6 @@ import { $midContainer } from "../common/$common.js"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount.js"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu.js'
 import { $RouteSubscriptionDrawer } from "../components/portfolio/$RouteSubscriptionDrawer.js"
-import { gmxProcess } from "../data/process/process.js"
 import { contractReader } from "../logic/common.js"
 import { fadeIn } from "../transitions/enter.js"
 import { processLogs, queryLogs } from "../utils/indexer/processor.js"
@@ -51,7 +50,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
 ) => {
 
-
   // const initialSync = filterNull(map(params => {
   //   const refreshThreshold = SW_DEV ? 150 : 50
   //   const blockDelta = params.block  - params.process.blockNumber
@@ -68,38 +66,38 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
     syncProcessData,
   ])
 
-  const syncProcessEvent = multicast(switchMap(params => {
-    if (params.syncBlock === null) {
-      return now(params.store)
-    }
+  // const syncProcessEvent = multicast(switchMap(params => {
+  //   if (params.syncBlock === null) {
+  //     return now(params.store)
+  //   }
 
-    const refreshThreshold = import.meta.env.DEV ? 50 : 50
-    const blockDelta = params.syncBlock - params.store.blockNumber
+  //   const refreshThreshold = import.meta.env.DEV ? 50 : 50
+  //   const blockDelta = params.syncBlock - params.store.blockNumber
 
-    if (refreshThreshold < blockDelta) {
-      const syncParams = { ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlock }
-      const storedBatch = queryLogs(syncParams, params.store)
+  //   if (refreshThreshold < blockDelta) {
+  //     const syncParams = { ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlock }
+  //     const storedBatch = queryLogs(syncParams, params.store)
       
-      // return processLogs(syncParams, params.store, storedBatch)
-      return mergeArray([
-        processLogs(syncParams, params.store, storedBatch),
-        now(params.store)
-      ])
-    }
+  //     // return processLogs(syncParams, params.store, storedBatch)
+  //     return mergeArray([
+  //       processLogs(syncParams, params.store, storedBatch),
+  //       now(params.store)
+  //     ])
+  //   }
 
-    return now(params.store)
-  }, combineObject({ publicClient, store: gmxProcess.store, syncBlock })))
-
-
-
-  const process = replayLatest(multicast(syncProcessEvent))
-  const processData = map(p => p.state, process)
+  //   return now(params.store)
+  // }, combineObject({ publicClient, store: gmxProcess.store, syncBlock })))
 
 
-  const isBlockSyncing = skipRepeats(mergeArray([
-    map(() => true, syncBlock),
-    map(() => false, process)
-  ]))
+
+  // const process = replayLatest(multicast(syncProcessEvent))
+  // const processData = map(p => p.state, process)
+
+
+  // const isBlockSyncing = skipRepeats(mergeArray([
+  //   map(() => true, syncBlock),
+  //   map(() => false, process)
+  // ]))
 
   const changes = merge(locationChange, multicast(routeChanges))
   const fragmentsChange = map(() => {
@@ -260,7 +258,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                   $midContainer(
                     fadeIn($Profile({
                       route: profileRoute,
-                      processData,
                       subscriptionList
                     })({
                       modifySubscriber: modifySubscriberTether(),
@@ -297,7 +294,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 router.match(tradeRoute)(
                   $Trade({
                     chain: chainEvent,
-                    processData,
                     referralCode: BLUEBERRY_REFFERAL_CODE,
                     parentRoute: tradeRoute
                   })({
@@ -310,60 +306,60 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
             }, chain)
           ),
 
-          $row(layoutSheet.spacing, style({ position: 'absolute', zIndex: 100, right: '10px', bottom: '10px' }))(
+          // $row(layoutSheet.spacing, style({ position: 'absolute', zIndex: 100, right: '10px', bottom: '10px' }))(
 
-            $row(
-              switchMap(isSyncing => {
-                if (isSyncing) return $spinner
+          //   $row(
+          //     switchMap(isSyncing => {
+          //       if (isSyncing) return $spinner
 
-                return $Tooltip({
-                // $dropContainer: $defaultDropContainer,
-                  $content: $text(map(params => {
-                    const deltaBlock = params.blockChange - params.process.blockNumber
-                    return `${readableUnitAmount(Number(deltaBlock))} blocks behind`
-                  }, combineObject({ process, blockChange }) )),
-                  $anchor: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
-                    $node(style({ width: '5px', height: '5px', borderRadius: '50px', backgroundColor: 'red' }))(),
-                    $text(map(process => readableUnitAmount(Number(process.blockNumber)), process )),
-                  ),
-                })({})
-              }, isBlockSyncing)
-            ),
+          //       return $Tooltip({
+          //       // $dropContainer: $defaultDropContainer,
+          //         $content: $text(map(params => {
+          //           const deltaBlock = params.blockChange - params.process.blockNumber
+          //           return `${readableUnitAmount(Number(deltaBlock))} blocks behind`
+          //         }, combineObject({ process, blockChange }) )),
+          //         $anchor: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+          //           $node(style({ width: '5px', height: '5px', borderRadius: '50px', backgroundColor: 'red' }))(),
+          //           $text(map(process => readableUnitAmount(Number(process.blockNumber)), process )),
+          //         ),
+          //       })({})
+          //     }, isBlockSyncing)
+          //   ),
             
-            switchMap(params => {
-              const refreshThreshold = import.meta.env.DEV ? 150 : 50
-              const blockDelta = params.syncBlock ? params.syncBlock - params.process.blockNumber : null
+          //   switchMap(params => {
+          //     const refreshThreshold = import.meta.env.DEV ? 150 : 50
+          //     const blockDelta = params.syncBlock ? params.syncBlock - params.process.blockNumber : null
 
-              if (blockDelta === null || blockDelta < refreshThreshold) return empty()
+          //     if (blockDelta === null || blockDelta < refreshThreshold) return empty()
 
-              return fadeIn($row(style({ position: 'fixed', bottom: '18px', left: `50%` }))(
-                style({ transform: 'translateX(-50%)' })(
-                  $column(layoutSheet.spacingTiny, style({
-                    backgroundColor: pallete.horizon,
-                    border: `1px solid`,
-                    padding: '20px',
-                    animation: `borderRotate var(--d) linear infinite forwards`,
-                    borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
-                  }))(
-                    $text(`Syncing blocks of data: ${readableUnitAmount(Number(blockDelta))}`),
-                    $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(
-                      params.process.state.blockMetrics.timestamp === 0n
-                        ? `Indexing for the first time, this may take a minute or two.`
-                        : `${timeSince(Number(params.process.state.blockMetrics.timestamp))} old data is displayed`
-                    ),
-                  )
-                )
-              ))
-            }, combineObject({ syncBlock, process })),
+          //     return fadeIn($row(style({ position: 'fixed', bottom: '18px', left: `50%` }))(
+          //       style({ transform: 'translateX(-50%)' })(
+          //         $column(layoutSheet.spacingTiny, style({
+          //           backgroundColor: pallete.horizon,
+          //           border: `1px solid`,
+          //           padding: '20px',
+          //           animation: `borderRotate var(--d) linear infinite forwards`,
+          //           borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
+          //         }))(
+          //           $text(`Syncing blocks of data: ${readableUnitAmount(Number(blockDelta))}`),
+          //           $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(
+          //             params.process.state.blockMetrics.timestamp === 0n
+          //               ? `Indexing for the first time, this may take a minute or two.`
+          //               : `${timeSince(Number(params.process.state.blockMetrics.timestamp))} old data is displayed`
+          //           ),
+          //         )
+          //       )
+          //     ))
+          //   }, combineObject({ syncBlock, process })),
    
-          ),
+          // ),
                         
           $column(style({ maxWidth: '1000px', margin: '0 auto', width: '100%', zIndex: 10 }))(
             $RouteSubscriptionDrawer({
               modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetSubscritpion[]),
               modifySubscriber,
               subscriptionList,
-              processData
+              processData: empty() as any
             })({
               modifySubscriptionList: modifySubscriptionListTether()
               // clickClose: clickCloseSubscPanelTether(),
@@ -390,13 +386,13 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
         )
       ),
 
-      router.match(adminRoute)(
-        $rootContainer(style({ overflowY: 'auto', height: '100vh' }))(
-          $midContainer(
-            $Admin({})
-          )
-        ),
-      ),
+      // router.match(adminRoute)(
+      //   $rootContainer(style({ overflowY: 'auto', height: '100vh' }))(
+      //     $midContainer(
+      //       $Admin({})
+      //     )
+      //   ),
+      // ),
 
     )
 

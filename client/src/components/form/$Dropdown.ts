@@ -127,7 +127,7 @@ export function $Dropdown<T>({
             ),
           )
 
-          const $container = (selector.$container || $defaultSelectContainer)(
+          const $dropContainer = (selector.$container || $defaultSelectContainer)(
             contentIntersectionTether(
               observer.intersection()
             ),
@@ -141,14 +141,14 @@ export function $Dropdown<T>({
           return dropBehavior(
             $Select({
               ...selector,
-              $container,
+              $container: $dropContainer,
               $$option: O(selector.$$option, map($option)),
             })({
               select: selectTether()
             })
           )
 
-        }, delay(100, isOpen)))
+        }, isOpen))
       ),
 
       {

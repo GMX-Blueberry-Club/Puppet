@@ -1,36 +1,32 @@
-import { Behavior, combineObject, replayLatest } from "@aelea/core"
-import { $Node, $node, $text, MOTION_NO_WOBBLE, NodeComposeFn, component, motion, style } from "@aelea/dom"
-import { $NumberTicker, $column, $row } from "@aelea/ui-components"
+import { Behavior } from "@aelea/core"
+import { $Node, NodeComposeFn, component, style } from "@aelea/dom"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { empty, map, multicast, now, skipRepeatsWith, startWith } from "@most/core"
+import { now, skipRepeatsWith } from "@most/core"
 import * as GMX from 'gmx-middleware-const'
-import { $Baseline, $infoTooltipLabel, IMarker } from "gmx-middleware-ui-components"
+import { TIME_INTERVAL_MAP } from "gmx-middleware-const"
+import { $Baseline, IMarker } from "gmx-middleware-ui-components"
 import {
-  IPriceCandle,
-  IPriceIntervalIdentity,
   IPositionDecrease,
   IPositionIncrease,
+  IPriceTickListMap,
+  IPricetick,
   createTimeline,
-  filterNull,
   formatFixed,
-  getPnL,
   getPositionPnlUsd,
-  parseReadableNumber,
-  readableFixedUSD30,
-  readableUnitAmount,
-  unixTimestampNow,
-  getMappedValue,
-  IPricefeedMap,
-  IPricetickListMap,
-  IPricetickMap,
-  IPriceTick
+  unixTimestampNow
 } from "gmx-middleware-utils"
 import { BaselineData, ChartOptions, DeepPartial, LineType, MouseEventParams, Time } from "lightweight-charts"
-import { IMirrorPositionSettled, IMirrorPositionOpen, getParticiapntMpPortion } from "puppet-middleware-utils"
+import { IMirrorPositionOpen, IMirrorPositionSettled, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { IGmxProcessState, PRICEFEED_INTERVAL } from "../../data/process/process.js"
-import { LAST_ACTIVITY_LABEL_MAP } from "../../pages/components/$LastActivity"
-import { Stream } from "@most/types"
+
+
+export const PRICEFEED_INTERVAL = [
+  TIME_INTERVAL_MAP.MIN5,
+  TIME_INTERVAL_MAP.MIN15,
+  TIME_INTERVAL_MAP.MIN60,
+  TIME_INTERVAL_MAP.HR4,
+  TIME_INTERVAL_MAP.HR24,
+] as const
 
 type IPerformanceTickUpdateTick = {
   update: IPositionIncrease | IPositionDecrease
@@ -47,7 +43,7 @@ type ITimelinePositionOpen = IPerformanceTickUpdateTick & {
 export interface IPerformanceTimeline {
   puppet?: viem.Address
   positionList: (IMirrorPositionSettled | IMirrorPositionOpen)[]
-  pricefeedMap: IPricetickListMap
+  pricefeedMap: IPriceTickListMap
   tickCount: number
   activityTimeframe: GMX.IntervalTime
   chartConfig?: DeepPartial<ChartOptions>
@@ -67,7 +63,7 @@ function findClosest<T extends readonly number[]> (arr: T, chosen: number): T[nu
 }
 
 
-function getTime(item: IPerformanceTickUpdateTick | IPriceTick): number {
+function getTime(item: IPerformanceTickUpdateTick | IPricetick): number {
   return item.timestamp
 }
 
@@ -227,21 +223,6 @@ export function performanceTimeline(config: IPerformanceTimeline) {
   return data
 }
 
-
-
-function getClosestpricefeedCandle(pricefeed: Record<IPriceIntervalIdentity, Record<string, IPriceCandle>>, tickerId: IPriceIntervalIdentity, intervalSlot: number, offset: number) {
-  if (offset > 50) {
-    throw new Error('No recent pricefeed data found')
-  }
-
-  const price = pricefeed[tickerId][intervalSlot] || pricefeed[tickerId][intervalSlot + offset]
-
-  if (!price) {
-    return getClosestpricefeedCandle(pricefeed, tickerId, intervalSlot, offset + 1)
-  }
-
-  return price
-}
 
 export const $ProfilePerformanceGraph = (config: IPerformanceTimeline & { $container: NodeComposeFn<$Node> }) => component((
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,

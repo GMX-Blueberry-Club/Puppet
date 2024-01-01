@@ -2,7 +2,10 @@ import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts"
 import { BASIS_POINTS_DIVISOR, ZERO_BI } from "./const"
 
 
-
+export function getPositionKey(account: Bytes, market: Bytes, collateralToken: Bytes, isLong: boolean): Bytes {
+  const key = account.concat(market).concat(collateralToken).concat(isLong ? Bytes.fromI32(1) : Bytes.fromI32(0))
+  return key
+}
 
 
 export function negate(n: BigInt): BigInt {

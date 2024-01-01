@@ -1,5 +1,5 @@
 import { replayLatest } from "@aelea/core"
-import { constant, multicast } from "@most/core"
+import { constant, multicast, startWith } from "@most/core"
 import { disposeNone } from "@most/disposable"
 import { Stream } from "@most/types"
 import { switchMap } from "gmx-middleware-utils"
@@ -34,9 +34,21 @@ export function set<TResult, TKey extends string, TName extends string, TOptions
   data: TResult,
   key: TKey | IDbParams<TName, TOptions>['name'] = params.name,
 ): Stream<TResult> {
-  return constant(data, write(params, store => {
-    return store.put(data, key)
-  }))
+  return switchMap(db => {
+    return {
+      run(sink, scheduler) {
+        const store = db.transaction(params.name, 'readwrite').objectStore(params.name)
+        console.log('store', store)
+        store.put(data, key)
+        sink.event(scheduler.currentTime(), data)
+
+        return disposeNone()
+      }
+    }
+  }, params.db)
+  // return constant(data, write(params, store => {
+  //   return store.put(data, key)
+  // }))
 }
 
 
@@ -65,9 +77,16 @@ export function openDb<TName extends string, TOptions extends IDbStoreConfig>(
   options?: TOptions,
   version = 1,
 ): IDbParams<TName, TOptions> {
+  let storedDb: IDBDatabase | null = null
 
   const db: Stream<IDBDatabase> = {
     run(sink, scheduler) {
+
+      if (storedDb !== null) {
+        const time = scheduler.currentTime()
+        sink.event(time, storedDb)
+        return disposeNone()
+      }
       const openDbRequest = indexedDB.open(dbName, version)
 
       openDbRequest.onupgradeneeded = event => {
@@ -79,6 +98,8 @@ export function openDb<TName extends string, TOptions extends IDbStoreConfig>(
       }
   
       openDbRequest.onsuccess = () => {
+        storedDb = openDbRequest.result
+
         const time = scheduler.currentTime()
         sink.event(time, openDbRequest.result)
         sink.end(time)
@@ -149,7 +170,7 @@ export function request<TResult>(req: IDBRequest<any> | IDBTransaction): Stream<
   return {
     run(sink, scheduler) {
 
-      req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error(`${req.db.name}: Unknown error`))
+      req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error(`${err.type}: Unknown error`))
 
       if (req instanceof IDBTransaction) {
         req.oncomplete = () => sink.event(scheduler.currentTime(), null)
@@ -158,7 +179,6 @@ export function request<TResult>(req: IDBRequest<any> | IDBTransaction): Stream<
 
       req.onsuccess = () => {
         const time = scheduler.currentTime()
-
         sink.event(scheduler.currentTime(), req.result)
         sink.end(time)
       }
@@ -183,7 +203,7 @@ function cursorStep(req: IDBRequest<IDBCursorWithValue | null>): Stream<IDBCurso
         sink.event(time, req.result)
       }
 
-      req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error(`${req.db.name}: Unknown error`))
+      req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error(`${err.type}: Unknown error`))
 
       return disposeNone()
     }

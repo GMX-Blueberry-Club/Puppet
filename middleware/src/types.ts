@@ -29,12 +29,12 @@ export interface ISharesIncrease extends ILogTxType<'SharesIncrease'> {
   puppetsShares: bigint[]
   traderShares: bigint
   totalSupply: bigint
-  positionKey: viem.Hex
+  route: viem.Address
+  requestKey: viem.Hex
 }
 
 export interface IMirrorPositionLink extends ILogTypeId<'MirrorPositionLink'> {
   shareIncreaseList: ISharesIncrease[]
-  executeList: IExecutePosition[]
 }
 
 
@@ -93,6 +93,13 @@ export interface IMirrorPositionListSummary extends IPositionListSummary {
   puppets: viem.Address[]
   // account: viem.Address
   // tradeList: (IPositionMirrorSlot | IPositionMirrorSettled)[]
+}
+
+export interface ISetRouteType extends ILogTypeId<'SetRouteType'> {
+  routeTypeKey: viem.Hex
+  collateral: viem.Address
+  index: viem.Address
+  isLong: boolean
 }
 
 

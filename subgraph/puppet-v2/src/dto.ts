@@ -1,9 +1,9 @@
-import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts"
+import { Bytes, ethereum } from "@graphprotocol/graph-ts"
 import { EventLog } from "../generated/EventEmitter/EventEmitter"
-import { MarketCreated, PositionDecrease, PositionFeeUpdate, PositionIncrease, PositionLink, PositionOpen, PositionSettled, PriceCandle } from "../generated/schema"
+import { MarketCreated, OrderCreated, OrderStatus, PositionDecrease, PositionFeeUpdate, PositionIncrease, PositionOpen, PositionSettled } from "../generated/schema"
+import { MARKET_TOKEN_MAP, OrderExecutionStatus, ZERO_BI } from "./utils/const"
 import { getAddressItem, getBoolItem, getBytes32Item, getIntItem, getUintItem } from "./utils/datastore"
 import { getIdFromEvent } from "./utils/gmxHelpers"
-import { IntervalUnixTime, MARKET_TOKEN_MAP, ZERO_BI } from "./utils/const"
 
 
 
@@ -20,47 +20,111 @@ export function createMarketCreated<T extends EventLog>(event: T): MarketCreated
   return dto
 }
 
-export function createPositionIncrease<T extends EventLog>(event: T): PositionIncrease {
+export function createOrderStatus<T extends EventLog>(event: T, order: OrderCreated, statusType: OrderExecutionStatus, message: string = ""): OrderStatus {
+  const orderStatus = new OrderStatus(order.key)
+  orderStatus.orderType = order.orderType
+  orderStatus.order = order.id
+  orderStatus.statusType = statusType
+  orderStatus.message = message
+
+  orderStatus.blockNumber = event.block.number
+  orderStatus.blockTimestamp = event.block.timestamp
+  orderStatus.transactionHash = event.transaction.hash
+  orderStatus.logIndex = event.logIndex
+
+  return orderStatus
+}
+
+export function createPositionIncrease<T extends EventLog>(event: T, orderStatus: OrderStatus): PositionIncrease {
   const eventId = getIdFromEvent(event)
-  const dto = new PositionIncrease(eventId)
+  const positionIncrease = new PositionIncrease(eventId)
+
+  positionIncrease.order = orderStatus.id
+
+  positionIncrease.account = getAddressItem(event.params.eventData, 0)
+  positionIncrease.market = getAddressItem(event.params.eventData, 1)
+  positionIncrease.collateralToken = getAddressItem(event.params.eventData, 2)
+
+  positionIncrease.sizeInUsd = getUintItem(event.params.eventData, 0)
+  positionIncrease.sizeInTokens = getUintItem(event.params.eventData, 1)
+  positionIncrease.collateralAmount = getUintItem(event.params.eventData, 2)
+  positionIncrease.borrowingFactor = getUintItem(event.params.eventData, 3)
+  positionIncrease.fundingFeeAmountPerSize = getUintItem(event.params.eventData, 4)
+  positionIncrease.longTokenClaimableFundingAmountPerSize = getUintItem(event.params.eventData, 5)
+  positionIncrease.shortTokenClaimableFundingAmountPerSize = getUintItem(event.params.eventData, 6)
+  positionIncrease.executionPrice = getUintItem(event.params.eventData, 7)
+  positionIncrease.indexTokenPriceMax = getUintItem(event.params.eventData, 8)
+  positionIncrease.indexTokenPriceMin = getUintItem(event.params.eventData, 9)
+  positionIncrease.collateralTokenPriceMax = getUintItem(event.params.eventData, 10)
+  positionIncrease.collateralTokenPriceMin = getUintItem(event.params.eventData, 11)
+  positionIncrease.sizeDeltaUsd = getUintItem(event.params.eventData, 12)
+  positionIncrease.sizeDeltaInTokens = getUintItem(event.params.eventData, 13)
+  positionIncrease.orderType = getUintItem(event.params.eventData, 14).toI32()
+
+  positionIncrease.collateralDeltaAmount = getIntItem(event.params.eventData, 0)
+  positionIncrease.priceImpactUsd = getIntItem(event.params.eventData, 1)
+  positionIncrease.priceImpactAmount = getIntItem(event.params.eventData, 2)
+
+  positionIncrease.isLong = getBoolItem(event.params.eventData, 0)
+
+  positionIncrease.orderKey = getBytes32Item(event.params.eventData, 0)
+  positionIncrease.positionKey = getBytes32Item(event.params.eventData, 1)
+
+  positionIncrease.blockNumber = event.block.number
+  positionIncrease.blockTimestamp = event.block.timestamp
+  positionIncrease.transactionHash = event.transaction.hash
+  // dto.transactionIndex = event.transaction.index
+  positionIncrease.logIndex = event.logIndex
 
 
-  dto.account = getAddressItem(event.params.eventData, 0)
-  dto.market = getAddressItem(event.params.eventData, 1)
-  dto.collateralToken = getAddressItem(event.params.eventData, 2)
+  return positionIncrease
+}
 
-  dto.sizeInUsd = getUintItem(event.params.eventData, 0)
-  dto.sizeInTokens = getUintItem(event.params.eventData, 1)
-  dto.collateralAmount = getUintItem(event.params.eventData, 2)
-  dto.borrowingFactor = getUintItem(event.params.eventData, 3)
-  dto.fundingFeeAmountPerSize = getUintItem(event.params.eventData, 4)
-  dto.longTokenClaimableFundingAmountPerSize = getUintItem(event.params.eventData, 5)
-  dto.shortTokenClaimableFundingAmountPerSize = getUintItem(event.params.eventData, 6)
-  dto.executionPrice = getUintItem(event.params.eventData, 7)
-  dto.indexTokenPriceMax = getUintItem(event.params.eventData, 8)
-  dto.indexTokenPriceMin = getUintItem(event.params.eventData, 9)
-  dto.collateralTokenPriceMax = getUintItem(event.params.eventData, 10)
-  dto.collateralTokenPriceMin = getUintItem(event.params.eventData, 11)
-  dto.sizeDeltaUsd = getUintItem(event.params.eventData, 12)
-  dto.sizeDeltaInTokens = getUintItem(event.params.eventData, 13)
-  dto.orderType = getUintItem(event.params.eventData, 14)
+export function createPositionDecrease<T extends EventLog>(event: T, orderStatus: OrderStatus): PositionDecrease {
+  const eventId = getIdFromEvent(event)
+  const positionDecrease = new PositionDecrease(eventId)
 
-  dto.collateralDeltaAmount = getIntItem(event.params.eventData, 0)
-  dto.priceImpactUsd = getIntItem(event.params.eventData, 1)
-  dto.priceImpactAmount = getIntItem(event.params.eventData, 2)
+  positionDecrease.order = orderStatus.id
 
-  dto.isLong = getBoolItem(event.params.eventData, 0)
+  positionDecrease.account = getAddressItem(event.params.eventData, 0)
+  positionDecrease.market = getAddressItem(event.params.eventData, 1)
+  positionDecrease.collateralToken = getAddressItem(event.params.eventData, 2)
 
-  dto.orderKey = getBytes32Item(event.params.eventData, 0)
-  dto.positionKey = getBytes32Item(event.params.eventData, 1)
+  positionDecrease.sizeInUsd = getUintItem(event.params.eventData, 0)
+  positionDecrease.sizeInTokens = getUintItem(event.params.eventData, 1)
+  positionDecrease.collateralAmount = getUintItem(event.params.eventData, 2)
+  positionDecrease.borrowingFactor = getUintItem(event.params.eventData, 3)
+  positionDecrease.fundingFeeAmountPerSize = getUintItem(event.params.eventData, 4)
+  positionDecrease.longTokenClaimableFundingAmountPerSize = getUintItem(event.params.eventData, 5)
+  positionDecrease.shortTokenClaimableFundingAmountPerSize = getUintItem(event.params.eventData, 6)
+  positionDecrease.executionPrice = getUintItem(event.params.eventData, 7)
+  positionDecrease.indexTokenPriceMax = getUintItem(event.params.eventData, 8)
+  positionDecrease.indexTokenPriceMin = getUintItem(event.params.eventData, 9)
+  positionDecrease.collateralTokenPriceMax = getUintItem(event.params.eventData, 10)
+  positionDecrease.collateralTokenPriceMin = getUintItem(event.params.eventData, 11)
+  positionDecrease.sizeDeltaUsd = getUintItem(event.params.eventData, 12)
+  positionDecrease.sizeDeltaInTokens = getUintItem(event.params.eventData, 13)
+  positionDecrease.collateralDeltaAmount = getUintItem(event.params.eventData, 14)
+  positionDecrease.valuesPriceImpactDiffUsd = getUintItem(event.params.eventData, 15)
+  positionDecrease.orderType = getUintItem(event.params.eventData, 16).toI32()
 
-  dto.blockNumber = event.block.number
-  dto.blockTimestamp = event.block.timestamp
-  dto.transactionHash = event.transaction.hash
-  dto.transactionIndex = event.transaction.index
-  dto.logIndex = event.logIndex
+  positionDecrease.priceImpactUsd = getIntItem(event.params.eventData, 0)
+  positionDecrease.basePnlUsd = getIntItem(event.params.eventData, 1)
+  positionDecrease.uncappedBasePnlUsd = getIntItem(event.params.eventData, 2)
 
-  return dto
+  positionDecrease.isLong = getBoolItem(event.params.eventData, 0)
+
+  positionDecrease.orderKey = getBytes32Item(event.params.eventData, 0)
+  positionDecrease.positionKey = getBytes32Item(event.params.eventData, 1)
+
+  positionDecrease.blockNumber = event.block.number
+  positionDecrease.blockTimestamp = event.block.timestamp
+  positionDecrease.transactionHash = event.transaction.hash
+  // dto.transactionIndex = event.transaction.index
+  positionDecrease.logIndex = event.logIndex
+
+
+  return positionDecrease
 }
 
 export function createPositionFeeUpdate<T extends EventLog>(event: T): PositionFeeUpdate {
@@ -111,80 +175,17 @@ export function createPositionFeeUpdate<T extends EventLog>(event: T): PositionF
   dto.blockNumber = event.block.number
   dto.blockTimestamp = event.block.timestamp
   dto.transactionHash = event.transaction.hash
-  dto.transactionIndex = event.transaction.index
+  // dto.transactionIndex = event.transaction.index
   dto.logIndex = event.logIndex
 
   return dto
 }
 
-export function createPositionDecrease<T extends EventLog>(event: T): PositionDecrease {
-  const eventId = getIdFromEvent(event)
-  const dto = new PositionDecrease(eventId)
-
-  dto.account = getAddressItem(event.params.eventData, 0)
-  dto.market = getAddressItem(event.params.eventData, 1)
-  dto.collateralToken = getAddressItem(event.params.eventData, 2)
-
-  dto.sizeInUsd = getUintItem(event.params.eventData, 0)
-  dto.sizeInTokens = getUintItem(event.params.eventData, 1)
-  dto.collateralAmount = getUintItem(event.params.eventData, 2)
-  dto.borrowingFactor = getUintItem(event.params.eventData, 3)
-  dto.fundingFeeAmountPerSize = getUintItem(event.params.eventData, 4)
-  dto.longTokenClaimableFundingAmountPerSize = getUintItem(event.params.eventData, 5)
-  dto.shortTokenClaimableFundingAmountPerSize = getUintItem(event.params.eventData, 6)
-  dto.executionPrice = getUintItem(event.params.eventData, 7)
-  dto.indexTokenPriceMax = getUintItem(event.params.eventData, 8)
-  dto.indexTokenPriceMin = getUintItem(event.params.eventData, 9)
-  dto.collateralTokenPriceMax = getUintItem(event.params.eventData, 10)
-  dto.collateralTokenPriceMin = getUintItem(event.params.eventData, 11)
-  dto.sizeDeltaUsd = getUintItem(event.params.eventData, 12)
-  dto.sizeDeltaInTokens = getUintItem(event.params.eventData, 13)
-  dto.collateralDeltaAmount = getUintItem(event.params.eventData, 14)
-  dto.valuesPriceImpactDiffUsd = getUintItem(event.params.eventData, 15)
-  dto.orderType = getUintItem(event.params.eventData, 16)
-
-  dto.priceImpactUsd = getIntItem(event.params.eventData, 0)
-  dto.basePnlUsd = getIntItem(event.params.eventData, 1)
-  dto.uncappedBasePnlUsd = getIntItem(event.params.eventData, 2)
-
-  dto.isLong = getBoolItem(event.params.eventData, 0)
-
-  dto.orderKey = getBytes32Item(event.params.eventData, 0)
-  dto.positionKey = getBytes32Item(event.params.eventData, 1)
-
-  dto.blockNumber = event.block.number
-  dto.blockTimestamp = event.block.timestamp
-  dto.transactionHash = event.transaction.hash
-  dto.transactionIndex = event.transaction.index
-  dto.logIndex = event.logIndex
-
-  return dto
-}
-
-export function createPositionLink<T extends EventLog>(event: T, openSlot: PositionOpen): PositionLink {
-  const dto = new PositionLink(openSlot.link)
-  dto.key = openSlot.key
-
-  dto.account = openSlot.account
-  dto.market = openSlot.market
-  dto.collateralToken = openSlot.collateralToken
-
-  dto.isLong = openSlot.isLong
-
-  dto.blockNumber = event.block.number
-  dto.blockTimestamp = event.block.timestamp
-  dto.transactionHash = event.transaction.hash
-  dto.transactionIndex = event.transaction.index
-  dto.logIndex = event.logIndex
-
-  return dto
-}
-
-export function initPositionOpen(positionIncrease: PositionIncrease): PositionOpen {
+export function initPositionOpen(event: ethereum.Event, positionIncrease: PositionIncrease): PositionOpen {
   const dto = new PositionOpen(positionIncrease.positionKey.toHex())
 
-  dto.key = positionIncrease.positionKey
   dto.link = positionIncrease.orderKey
+  dto.key = positionIncrease.positionKey
 
   dto.account = positionIncrease.account
   dto.market = positionIncrease.market
@@ -205,15 +206,14 @@ export function initPositionOpen(positionIncrease: PositionIncrease): PositionOp
 
   dto.realisedPnlUsd = ZERO_BI
   
-  dto.blockNumber = positionIncrease.blockNumber
-  dto.blockTimestamp = positionIncrease.blockTimestamp
-  dto.transactionHash = positionIncrease.transactionHash
-  dto.transactionIndex = positionIncrease.transactionIndex
-  dto.logIndex = positionIncrease.logIndex
+  dto.blockNumber = event.block.number
+  dto.blockTimestamp = event.block.timestamp
+  dto.transactionHash = event.block.hash
+  // dto.transactionIndex = orderCreated.transactionIndex
+  dto.logIndex = event.logIndex
 
   return dto
 }
-
 
 export function createPositionSettled<T extends EventLog>(event: T, openPosition: PositionOpen): PositionSettled {
   const dto = new PositionSettled(getIdFromEvent(event))
@@ -248,7 +248,7 @@ export function createPositionSettled<T extends EventLog>(event: T, openPosition
   dto.blockNumber = event.block.number
   dto.blockTimestamp = event.block.timestamp
   dto.transactionHash = event.transaction.hash
-  dto.transactionIndex = event.transaction.index
+  // dto.transactionIndex = event.transaction.index
   dto.logIndex = event.logIndex
 
   return dto

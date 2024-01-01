@@ -9,8 +9,7 @@ import {
   multicast, now,
   skipRepeats,
   snapshot,
-  switchLatest,
-  zip
+  switchLatest
 } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
@@ -38,19 +37,19 @@ import {
   IMarketInfo,
   IMarketPrice,
   IOraclePrice,
-  IPositionOpen,
+  IPriceOracleMap,
   ITokenDescription,
-  lst,
   parseBps,
   parseFixed, parseReadableNumber,
   readableFixedUSD30,
   readableNumber,
-  readableTokenValueUsd,
   readableTokenUsd,
+  readableTokenValueUsd,
   readableUnitAmount,
   resolveAddress,
-  StateStream, switchMap
+  StateStream, switchMap, TEMP_MARKET_LIST
 } from "gmx-middleware-utils"
+import { IMirrorPositionOpen, ISetRouteType, latestPriceMap } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $MarketInfoList } from "../$MarketList"
 import { $Popover } from "../$Popover"
@@ -60,13 +59,11 @@ import { $heading2 } from "../../common/$text.js"
 import { $TextField } from "../../common/$TextField"
 import { boxShadow } from "../../common/elements/$common"
 import { $caretDown } from "../../common/elements/$icons.js"
-import { IGmxProcessState, latestTokenPrice } from "../../data/process/process.js"
 import { connectContract } from "../../logic/common.js"
 import * as trade from "../../logic/trade.js"
 import { account, ISupportedChain } from "../../wallet/walletLink.js"
 import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown.js"
-import { IMirrorPositionOpen } from "puppet-middleware-utils"
 
 
 
@@ -79,6 +76,7 @@ export interface ITradeParams {
   marketList: IMarket[]
   route: viem.Address | null
   routeTypeKey: viem.Hex
+  routeTypeList: ISetRouteType[]
 
   position: IMirrorPositionOpen | null
   netPositionValueUsd: bigint
@@ -87,7 +85,7 @@ export interface ITradeParams {
 
 
   marketPrice: IMarketPrice
-  collateralPrice: IOraclePrice
+  collateralPrice: bigint
   primaryPrice: bigint
   indexPrice: bigint
 
@@ -144,17 +142,15 @@ export interface IPositionEditorAbstractParams {
   // tokenStableMap: Partial<Record<number, viem.Address[]>>
   parentRoute: Route
   chain: ISupportedChain
-  processData: Stream<IGmxProcessState>
 }
 
 
 interface IPositionEditorConfig extends IPositionEditorAbstractParams {
   openPositionList: Stream<IMirrorPositionOpen[]>
-
+  marketList: Stream<IMarket[]>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>
   resetAdjustments: Stream<null>
-
   $container: NodeComposeFn<$Node>
 }
 
@@ -174,7 +170,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   [inputPrimaryAmount, inputPrimaryAmountTether]: Behavior<INode, bigint>,
   [inputSizeDeltaUsd, inputSizeDeltaTetherUsd]: Behavior<INode, bigint>,
 
-  [changeInputToken, changeInputTokenTether]: Behavior<viem.Address, viem.Address>,
+  [changePrimaryToken, changePrimaryTokenTether]: Behavior<viem.Address, viem.Address>,
   [changeMarket, changeMarketTether]: Behavior<any, IMarket>,
   [clickChooseMarketPopover, clickChooseMarketPopoverTether]: Behavior<any>,
   [changeIsUsdCollateralToken, changeIsUsdCollateralTokenTether]: Behavior<boolean>,
@@ -201,7 +197,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
     primaryDescription, primaryPrice, indexPrice,
 
     isPrimaryApproved, isTradingEnabled, liquidationPrice, marginFeeUsd, route,
-    position, walletBalance, marketList, netPositionValueUsd, fundingRateFactor, priceImpactUsd, routeTypeKey, stableFundingRateFactor
+    position, walletBalance, netPositionValueUsd, fundingRateFactor, priceImpactUsd, routeTypeKey, stableFundingRateFactor
   } = config.tradeState
 
 
@@ -470,69 +466,68 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
           ),
           $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
 
-            switchLatest(map(params => {
-              const walletAddress = params.account.address
-              if (!config.chain.id || !walletAddress) return empty()
+            $Dropdown({
+              $container: $row(style({ position: 'relative', alignSelf: 'center' })),
+              $selection: switchLatest(map(token => {
+                const tokenDesc = token === GMX.ADDRESS_ZERO
+                  ? getNativeTokenDescription(config.chain)
+                  : getTokenDescription(resolveAddress(config.chain, token))
 
-              return $Dropdown({
-                $container: $row(style({ position: 'relative', alignSelf: 'center' })),
-                $selection: switchLatest(map(token => {
-                  const tokenDesc = token === GMX.ADDRESS_ZERO
-                    ? getNativeTokenDescription(config.chain)
-                    : getTokenDescription(resolveAddress(config.chain, token))
+                return $ButtonSecondary({
+                  $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
+                    $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '34px', svgOps: style({ paddingRight: '4px' }), viewBox: '0 0 32 32' }),
+                    $heading2(tokenDesc.symbol),
+                    $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' }),
+                  ),
+                  $container: $defaultMiniButtonSecondary(style({ borderColor: colorAlpha(pallete.foreground, .2), backgroundColor: 'transparent' })),
+                })({})
+              }, primaryToken)),
+              // $selection: switchLatest(map(option => {
+              //   return $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
+              //     $icon({
+              //       $content: $tokenIconMap[option.symbol],
+              //       svgOps: styleBehavior(map(isIncrease => ({ fill: isIncrease ? pallete.message : pallete.indeterminate }), config.tradeConfig.isIncrease)),
+              //       width: '34px', viewBox: '0 0 32 32'
+              //     }),
+              //     // $text(option.symbol),
+              //     $icon({ $content: $caretDown, width: '14px', svgOps: style({ marginTop: '3px' }), viewBox: '0 0 32 32' }),
+              //   )
+              // }, config.tradeState.inputTokenDescription)),
+              selector: {
+                value: config.tradeConfig.primaryToken,
+                $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0, left: 'auto' })),
+                $$option: snapshot((w3p, option) => {
+                  const token = resolveAddress(config.chain, option)
+                  const balanceAmount = w3p ? trade.getWalletErc20Balance(config.chain, option, w3p.address) : now(0n)
+                  const tokenDesc = option === GMX.ADDRESS_ZERO ? getNativeTokenDescription(config.chain) : getTokenDescription(option)
 
-                  return $ButtonSecondary({
-                    $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
-                      $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '34px', svgOps: style({ paddingRight: '4px' }), viewBox: '0 0 32 32' }),
-                      $heading2(tokenDesc.symbol),
-                      $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' }),
-                    ),
-                    $container: $defaultMiniButtonSecondary(style({ borderColor: colorAlpha(pallete.foreground, .2), backgroundColor: 'transparent' })),
-                  })({})
-                }, primaryToken)),
-                // $selection: switchLatest(map(option => {
-                //   return $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
-                //     $icon({
-                //       $content: $tokenIconMap[option.symbol],
-                //       svgOps: styleBehavior(map(isIncrease => ({ fill: isIncrease ? pallete.message : pallete.indeterminate }), config.tradeConfig.isIncrease)),
-                //       width: '34px', viewBox: '0 0 32 32'
-                //     }),
-                //     // $text(option.symbol),
-                //     $icon({ $content: $caretDown, width: '14px', svgOps: style({ marginTop: '3px' }), viewBox: '0 0 32 32' }),
-                //   )
-                // }, config.tradeState.inputTokenDescription)),
-                selector: {
-                  value: config.tradeConfig.primaryToken,
-                  $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0, left: 'auto' })),
-                  $$option: map(option => {
-                    const token = resolveAddress(config.chain, option)
-                    const balanceAmount = trade.getWalletErc20Balance(config.chain, option, walletAddress)
-                    const price = latestTokenPrice(config.processData, token)
-                    const tokenDesc = option === GMX.ADDRESS_ZERO ? getNativeTokenDescription(config.chain) : getTokenDescription(option)
+                  return $row(style({ placeContent: 'space-between', flex: 1 }))(
+                    $tokenLabelFromSummary(tokenDesc),
+                    $column(style({ alignItems: 'flex-end' }))(
+                      $text(style({ whiteSpace: 'nowrap' }))(map(bn => readableUnitAmount(formatFixed(bn, tokenDesc.decimals)) + ` ${tokenDesc.symbol}`, balanceAmount)),
+                      $text(
+                        map(params => {
+                          const price = params.latestPriceMap[token]
 
-                    return $row(style({ placeContent: 'space-between', flex: 1 }))(
-                      $tokenLabelFromSummary(tokenDesc),
-                      $column(style({ alignItems: 'flex-end' }))(
-                        $text(style({ whiteSpace: 'nowrap' }))(map(bn => readableUnitAmount(formatFixed(bn, tokenDesc.decimals)) + ` ${tokenDesc.symbol}`, balanceAmount)),
-                        $text(
-                          map(params => {
-                            return readableTokenUsd(params.price.min, params.balanceAmount)
-                          }, combineObject({ balanceAmount, price }))
-                        ),
-                      )
+                          return readableTokenUsd(price.min, params.balanceAmount)
+                        }, combineObject({ balanceAmount, latestPriceMap }))
+                      ),
                     )
-                  }),
-                  list: [
-                    ...params.market.indexToken === getNativeTokenAddress(config.chain) ? [GMX.ADDRESS_ZERO] : [],
-                    params.market.longToken,
-                    params.market.shortToken,
-                    // ...params.markets.map(m => m.indexToken)
-                  ],
-                }
-              })({
-                select: changeInputTokenTether()
-              })
-            }, combineObject({ account, market }))),
+                  )
+                }, account),
+                list: [
+                  GMX.ADDRESS_ZERO,
+                  ...TEMP_MARKET_LIST.map(m => m.indexToken),
+                  TEMP_MARKET_LIST[0].shortToken,
+                  // params.market.longToken,
+                  // params.market.shortToken,
+                  // ...params.markets.map(m => m.indexToken)
+                ],
+              }
+            })({
+              select: changePrimaryTokenTether()
+            }),
+
 
             $ButtonSecondary({
               $content: $text('Max'),
@@ -738,8 +733,8 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
             $Popover({
               open: constant(
                 $MarketInfoList({
+                  marketList: config.marketList,
                   chain: config.chain,
-                  processData: config.processData,
                   $rowCallback: map(params => {
                     return $defaultTableRowContainer(style({ borderTop: `1px solid ${colorAlpha(pallete.foreground, .20)}` }))(
                       changeMarketTether(
@@ -909,7 +904,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
     {
       switchIsLong,
-      changeInputToken,
+      changePrimaryToken,
       changeMarket,
       switchFocusMode: mergeArray([
         // constant(ITradeFocusMode.collateral, clickPrimary),

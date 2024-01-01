@@ -7,18 +7,17 @@ import { awaitPromises, empty, fromPromise, map, multicast, now, skipRepeatsWith
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $Link, $Table, $arrowRight, $icon, $infoTooltipLabel, IMarker, ScrollRequest } from "gmx-middleware-ui-components"
-import { filterNull, getMappedValue, pagingQuery, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap, unixTimestampNow } from "gmx-middleware-utils"
-import { IPuppetSubscritpion, getTraderPositionSettled, queryLatestPriceTicks, queryTraderPositionOpen, streamCandleSeedMap } from "puppet-middleware-utils"
+import { filterNull, getMappedValue, pagingQuery, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap } from "gmx-middleware-utils"
+import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
+import { IPuppetSubscritpion, getTraderPositionSettled, queryTraderPositionOpen, streamCandleSeedMap } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $heading3 } from "../../common/$text.js"
 import { $card, $card2 } from "../../common/elements/$common.js"
-import { IGmxProcessState } from "../../data/process/process.js"
+import { subgraphClient } from "../../data/subgraph/client"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../../pages/components/$LastActivity.js"
 import { entryColumn, pnlSlotColumn, positionTimeColumn, puppetsColumn, settledPnlColumn, settledSizeColumn, slotSizeColumn } from "../table/$TableColumn.js"
 import { performanceTimeline } from "../trade/$ProfilePerformanceGraph.js"
 import { $TraderProfileSummary } from "./$Summary"
-import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
-import { subgraphClient } from "../../data/subgraph/client"
 
 
 
@@ -40,8 +39,6 @@ export const $TraderPortfolio = (config: ITraderProfile) => component((
 
 ) => {
 
-  const latestPriceMap = streamCandleSeedMap(subgraphClient)
-
   const settledTradeList = awaitPromises(map(async params => {
     const positionList = await getTraderPositionSettled(subgraphClient, { trader: config.address, blockTimestamp_gte: params.activityTimeframe })
     return positionList
@@ -51,8 +48,6 @@ export const $TraderPortfolio = (config: ITraderProfile) => component((
     const positionList = await queryTraderPositionOpen(subgraphClient, { trader: config.address })
     return positionList
   }, combineObject({ activityTimeframe: config.activityTimeframe })))
-
-  const pricefeedMap = fromPromise(queryLatestPriceTicks(subgraphClient))
 
 
 
@@ -270,7 +265,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
               }),
               $text(style({ color: pallete.message }))(`Leaderboard`)
             ),
-            url: `/app/leaderboard/settled`,
+            url: `/app/leaderboard`,
             route: config.route,
           })({
             click: changeRouteTether()

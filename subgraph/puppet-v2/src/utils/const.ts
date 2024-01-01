@@ -34,7 +34,11 @@ MARKET_TOKEN_MAP.set(Address.fromHexString("0xB686BcB112660343E6d15BDb65297e110C
 MARKET_TOKEN_MAP.set(Address.fromHexString("0xe2fEDb9e6139a182B98e7C2688ccFa3e9A53c665").toHex(), Address.fromHexString("0x0000000000000000000000000000000000000000"))
 MARKET_TOKEN_MAP.set(Address.fromHexString("0x0CCB4fAa6f1F1B30911619f1184082aB4E25813c").toHex(), Address.fromHexString("0xc14e065b0067dE91534e032868f5Ac6ecf2c6868"))
 
-
+export enum OrderExecutionStatus {
+  EXECUTED = 0,
+  CANCELLED = 1,
+  FROZEN = 2,
+}
 export enum TokenDecimals {
   USDC = 6,
   USDT = 6,

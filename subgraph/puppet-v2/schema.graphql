@@ -8,31 +8,117 @@ type MarketCreated @entity(immutable: true) {
   salt: Bytes!
 }
 
-type PositionLink @entity(immutable: true) {
+
+type OrderCreated @entity(immutable: true) {
   id: Bytes!
   key: Bytes!
 
-  # indexToken: Bytes!
   account: Bytes!
+  receiver: Bytes!
+  callbackContract: Bytes!
+  uiFeeReceiver: Bytes!
   market: Bytes!
-  collateralToken: Bytes!
+  initialCollateralToken: Bytes!
+
+  swapPath: [Bytes!]!
+
+  orderType: Int!
+  decreasePositionSwapType: BigInt!
+  sizeDeltaUsd: BigInt!
+  initialCollateralDeltaAmount: BigInt!
+  triggerPrice: BigInt!
+  acceptablePrice: BigInt!
+  executionFee: BigInt!
+  callbackGasLimit: BigInt!
+  minOutputAmount: BigInt!
+  updatedAtBlock: BigInt!
 
   isLong: Boolean!
+  shouldUnwrapNativeToken: Boolean!
+  isFrozen: Boolean!
+}
 
-  increaseList: [PositionIncrease!] @derivedFrom(field: "link")
-  decreaseList: [PositionDecrease!] @derivedFrom(field: "link")
-  feeUpdateList: [PositionFeeUpdate!] @derivedFrom(field: "link")
+# type OrderExecuted @entity(immutable: true) {
+#   link: PositionLink!
+
+#   id: Bytes!
+#   key: Bytes!
+#   account: Bytes!
+#   secondaryorderType: Int!
+# }
+
+# type OrderUpdated @entity(immutable: true) {
+#   link: PositionLink!
+
+#   id: Bytes!
+#   key: Bytes!
+#   account: Bytes!
+#   sizeDeltaUsd: BigInt!
+#   acceptablePrice: BigInt!
+#   triggerPrice: BigInt!
+#   minOutputAmount: BigInt!
+# }
+
+type OrderSizeDeltaAutoUpdated @entity(immutable: true) {
+  id: Bytes!
+  key: Bytes!
+  sizeDeltaUsd: BigInt!
+  nextSizeDeltaUsd: BigInt!
+}
+
+type OrderCollateralDeltaAmountAutoUpdated @entity(immutable: true) {
+  id: Bytes!
+  key: Bytes!
+  collateralDeltaAmount: BigInt!
+  nextCollateralDeltaAmount: BigInt!
+}
+
+type OrderCancelled @entity(immutable: true) {
+  link: PositionLink!
+
+  id: Bytes!
+  key: Bytes!
+  account: Bytes!
+  reason: String!
+  reasonBytes: Bytes!
+}
+
+type OrderFrozen @entity(immutable: true) {
+  link: PositionLink!
+
+  id: Bytes!
+  key: Bytes!
+  account: Bytes!
+  reason: String!
+  reasonBytes: Bytes!
+}
+
+type OrderStatus @entity(immutable: true) {
+  id: Bytes!
+  order: OrderCreated!
+  orderType: Int!
+  statusType: Int!
+  message: String!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
-  transactionIndex: BigInt!
   logIndex: BigInt!
+}
+
+type PositionLink @entity(immutable: true) {
+  id: Bytes!
+  key: Bytes!
+
+  increaseList: [PositionIncrease!] @derivedFrom(field: "link")
+  decreaseList: [PositionDecrease!] @derivedFrom(field: "link")
+  feeUpdateList: [PositionFeeUpdate!] @derivedFrom(field: "link")
 }
 
 type PositionIncrease @entity(immutable: true) {
   id: Bytes!
   link: PositionLink!
+  order: OrderStatus!
 
   account: Bytes!
   market: Bytes!
@@ -52,7 +138,7 @@ type PositionIncrease @entity(immutable: true) {
   collateralTokenPriceMin: BigInt!
   sizeDeltaUsd: BigInt!
   sizeDeltaInTokens: BigInt!
-  orderType: BigInt!
+  orderType: Int!
 
   collateralDeltaAmount: BigInt!
   priceImpactUsd: BigInt!
@@ -66,13 +152,14 @@ type PositionIncrease @entity(immutable: true) {
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
-  transactionIndex: BigInt!
+  # transactionIndex: BigInt!
   logIndex: BigInt!
 }
 
 type PositionDecrease @entity(immutable: true) {
   id: Bytes!
   link: PositionLink!
+  order: OrderStatus!
 
   account: Bytes!
   market: Bytes!
@@ -94,7 +181,7 @@ type PositionDecrease @entity(immutable: true) {
   sizeDeltaInTokens: BigInt!
   collateralDeltaAmount: BigInt!
   valuesPriceImpactDiffUsd: BigInt!
-  orderType: BigInt!
+  orderType: Int!
 
   priceImpactUsd: BigInt!
   basePnlUsd: BigInt!
@@ -108,7 +195,7 @@ type PositionDecrease @entity(immutable: true) {
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
-  transactionIndex: BigInt!
+  # transactionIndex: BigInt!
   logIndex: BigInt!
 }
 
@@ -160,7 +247,7 @@ type PositionFeeUpdate @entity(immutable: true) {
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
-  transactionIndex: BigInt!
+  # transactionIndex: BigInt!
   logIndex: BigInt!
 }
 
@@ -194,7 +281,7 @@ type PositionOpen @entity {
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
-  transactionIndex: BigInt!
+  # transactionIndex: BigInt!
   logIndex: BigInt!
 }
 
@@ -228,7 +315,7 @@ type PositionSettled @entity(immutable: true) {
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
-  transactionIndex: BigInt!
+  # transactionIndex: BigInt!
   logIndex: BigInt!
 }
 
@@ -257,19 +344,13 @@ type PriceCandle @entity(immutable: true) {
 type MirrorPositionLink @entity(immutable: true) {
   id: Bytes!
   shareIncreaseList: [SharesIncrease!] @derivedFrom(field: "link")
-  executeList: [ExecutePosition!] @derivedFrom(field: "link")
-}
-
-type RouteOpenRef @entity {
-  id: ID!
-  mirrorPositionOpen: MirrorPositionOpen!
 }
 
 type MirrorPositionOpen @entity {
   id: ID!
   link: MirrorPositionLink!
 
-  position: PositionOpen
+  position: PositionOpen!
 
   trader: Bytes!
   tradeRoute: Bytes!
@@ -311,7 +392,6 @@ type MirrorPositionSettled @entity(immutable: true) {
 
 type ExecutePosition @entity(immutable: true) {
   id: Bytes!
-  link: MirrorPositionLink!
   performanceFeePaid: BigInt! # uint256
   route: Bytes! # address
   requestKey: Bytes! # bytes32
@@ -323,7 +403,7 @@ type ExecutePosition @entity(immutable: true) {
   transactionHash: Bytes!
 }
 
-type RequestOpenMirrorPosition @entity(immutable: true) {
+type RequestMirrorPosition @entity(immutable: true) {
   id: Bytes!
   puppets: [Bytes!]! # address[]
   trader: Bytes! # address
@@ -354,7 +434,8 @@ type SharesIncrease @entity(immutable: true) {
   puppetsShares: [BigInt!]! # uint256[]
   traderShares: BigInt! # uint256
   totalSupply: BigInt! # uint256
-  positionKey: Bytes! # bytes32
+  requestKey: Bytes! # bytes32
+  route: Bytes! # address
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!

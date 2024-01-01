@@ -1,5 +1,5 @@
 import { schema as gmxSchema, ISchema } from "gmx-middleware-utils"
-import { IExecutePosition, IMirrorPositionLink, IMirrorPositionOpen, IMirrorPositionSettled, IPuppetPositionOpen, IPuppetPositionSettled, IPuppetTradeRoute, ISharesIncrease, ISubscribeTradeRoute } from "./types.js"
+import { IExecutePosition, IMirrorPositionLink, IMirrorPositionOpen, IMirrorPositionSettled, IPuppetPositionOpen, IPuppetPositionSettled, IPuppetTradeRoute, ISharesIncrease, ISubscribeTradeRoute, ISetRouteType } from "./types.js"
 
 
 const executePosition: ISchema<Omit<IExecutePosition, 'link'>> = {
@@ -23,8 +23,9 @@ const sharesIncrease: ISchema<Omit<ISharesIncrease, 'link'>> = {
   puppetsShares: 'uint[]',
   traderShares: 'uint',
   totalSupply: 'uint',
+  route: 'address',
 
-  positionKey: 'string',
+  requestKey: 'string',
 
   blockTimestamp: 'uint',
   transactionHash: 'string',
@@ -36,7 +37,6 @@ const sharesIncrease: ISchema<Omit<ISharesIncrease, 'link'>> = {
 const mirrorPositionLink: ISchema<IMirrorPositionLink> = {
   id: 'string',
   shareIncreaseList: sharesIncrease,
-  executeList: executePosition,
 
   __typename: 'MirrorPositionLink',
 }
@@ -137,6 +137,16 @@ const puppetTradeRoute: ISchema<IPuppetTradeRoute> = {
   __typename: 'PuppetTradeRoute',
 }
 
+const setRouteType: ISchema<ISetRouteType> = {
+  id: 'string',
+  collateral: 'address',
+  index: 'address',
+  isLong: 'bool',
+  routeTypeKey: 'string',
+
+  __typename: 'SetRouteType',
+}
+
 
 
 
@@ -149,6 +159,6 @@ export const schema = {
 
   puppetTradeRoute, puppetPositionSettled, puppetPositionOpen,
 
-  subscribeTradeRoute
+  subscribeTradeRoute, setRouteType
 }
 

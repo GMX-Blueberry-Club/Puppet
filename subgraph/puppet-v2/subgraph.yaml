@@ -8,7 +8,7 @@ dataSources:
     source:
       address: "0xC8ee91A54287DB53897056e12D9819156D3822Fb"
       abi: EventEmitter
-      startBlock: 157115561
+      startBlock: 164892446
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -25,17 +25,17 @@ dataSources:
         #   handler: handleEventLog
         - event: EventLog1(address,string,indexed string,indexed bytes32,(((string,address)[],(string,address[])[]),((string,uint256)[],(string,uint256[])[]),((string,int256)[],(string,int256[])[]),((string,bool)[],(string,bool[])[]),((string,bytes32)[],(string,bytes32[])[]),((string,bytes)[],(string,bytes[])[]),((string,string)[],(string,string[])[])))
           handler: handleEventLog1
-        # - event: EventLog2(address,string,indexed string,indexed bytes32,indexed bytes32,(((string,address)[],(string,address[])[]),((string,uint256)[],(string,uint256[])[]),((string,int256)[],(string,int256[])[]),((string,bool)[],(string,bool[])[]),((string,bytes32)[],(string,bytes32[])[]),((string,bytes)[],(string,bytes[])[]),((string,string)[],(string,string[])[])))
-        #   handler: handleEventLog2
+        - event: EventLog2(address,string,indexed string,indexed bytes32,indexed bytes32,(((string,address)[],(string,address[])[]),((string,uint256)[],(string,uint256[])[]),((string,int256)[],(string,int256[])[]),((string,bool)[],(string,bool[])[]),((string,bytes32)[],(string,bytes32[])[]),((string,bytes)[],(string,bytes[])[]),((string,string)[],(string,string[])[])))
+          handler: handleEventLog2
       file: ./src/event-emitter.ts
 
   - kind: ethereum
     name: Orchestrator
     network: arbitrum-one
     source:
-      address: "0x8992D776Ad36a92f29c6B3AB8DAd2c0520075364"
+      address: "0x92100ed7c156887D173880572718971E9d7B585E"
       abi: Orchestrator
-      startBlock: 157115561
+      startBlock: 164892446
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -114,13 +114,13 @@ dataSources:
         #   handler: handleSetFees
         # - event: SetFeesRecipient(address)
         #   handler: handleSetFeesRecipient
-        - event: SetRouteType(bytes32,address,address,bool)
+        - event: SetRouteType(bytes32,address,address,bool,bytes)
           handler: handleSetRouteType
         # - event: SetThrottleLimit(indexed address,bytes32,uint256)
         #   handler: handleSetThrottleLimit
-        - event: SharesIncrease(uint256[],uint256,uint256,bytes32)
+        - event: SharesIncrease(uint256[],uint256,uint256,address,bytes32)
           handler: handleSharesIncrease
-        - event: SubscribeRoute(uint256,uint256,indexed address,indexed address,indexed address,bytes32,bool)
+        - event: SubscribeRoute(uint256,uint256,indexed address,indexed address,indexed address,bool,bytes32)
           handler: handleSubscribeRoute
         # - event: TransferRouteFunds(uint256,address,indexed address,indexed address)
         #   handler: handleTransferRouteFunds

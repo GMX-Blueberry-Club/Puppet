@@ -1,11 +1,12 @@
+import { map, multicast } from '@most/core'
+import { Stream } from '@most/types'
 import { Client } from '@urql/core'
 import * as GMX from "gmx-middleware-const"
-import { IPriceCandle, IPricetickListMap, IPricetickMap, ISchema, schema as gmxSchema, groupArrayByKey, groupArrayByKeyMap, groupArrayManyMap, periodicRun, querySubgraph } from "gmx-middleware-utils"
+import { IPriceOracleMap, IPriceCandle, IPricetick, ISchema, schema as gmxSchema, groupArrayManyMap, periodicRun, querySignedPrices, querySubgraph, IPriceTickListMap } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { schema } from "./schema.js"
-import { Stream } from '@most/types'
-import { map } from '@most/core'
-
+import { replayLatest } from '@aelea/core'
+viem.parseTransaction
 
 interface IQueryTraderPositionOpen {
   trader: viem.Address
@@ -59,32 +60,13 @@ interface IQueryPriceCandle {
   token?: viem.Address
 }
 
-export function streamCandleSeedMap(
-  client: Client,
-  filter: IQueryPriceCandle = { interval: GMX.TIME_INTERVAL_MAP.MIN5 }
-): Stream<IPricetickMap> {
-  return periodicRun({
-    interval: 5000,
-    actionOp: map(async count => {
-      const res = await  querySubgraph(client, {
-        schema: gmxSchema.priceCandleSeed,
-        filter,
-      })
-
-      const mapCandles = groupArrayByKeyMap(res, x => x.token, x => ({ timestamp: x.timestamp, price: x.c, token: x.token }))
-
-      return mapCandles
-    }),
-  })
-}
-
-export async function queryLatestPriceTicks(client: Client, filter: IQueryPriceCandle = { interval: GMX.TIME_INTERVAL_MAP.MIN5 }) {
+export async function queryLatestPriceTicks(client: Client, filter: IQueryPriceCandle = { interval: GMX.TIME_INTERVAL_MAP.MIN5 }): Promise<IPriceTickListMap> {
   const latestSeedSchema: ISchema<{ id: string, timestamp: number; c: bigint; __typename: 'PriceCandle', token: viem.Address} > = {
     id: 'string',
     timestamp: 'int',
     token: 'address',
     c: 'int',
-    __typename: 'PriceCandleLatest',
+    __typename: 'PriceCandleSeed',
   }
 
   const latestSeedQuery = querySubgraph(client, {
@@ -110,10 +92,18 @@ export async function queryLatestPriceTicks(client: Client, filter: IQueryPriceC
   const [latestSeed, candleList] = await Promise.all([latestSeedQuery, candleListQuery])
   const all = [...candleList, ...latestSeed]
 
-  const map: IPricetickListMap = groupArrayManyMap(all, x => viem.getAddress(x.token), x => ({ timestamp: x.timestamp, price: x.c, token: x.token }))
+  const map: IPriceTickListMap = groupArrayManyMap(all, x => viem.getAddress(x.token), x => ({ timestamp: x.timestamp, price: x.c }))
 
   return map
 }
+
+export const latestPriceMap: Stream<IPriceOracleMap> = replayLatest(multicast(periodicRun({
+  startImmediate: true,
+  interval: 2500,
+  actionOp: map(async count => {
+    return querySignedPrices()
+  }),
+})))
 
 export async function queryLatestTokenPriceFeed(client: Client, filter: IQueryPriceCandle = { interval: GMX.TIME_INTERVAL_MAP.MIN5 }) {
   const queryFeed = querySubgraph(client, {
@@ -147,4 +137,12 @@ export async function queryLeaderboard(client: Client) {
   const sortedList = [...settledTradeList, ...settledTradeOpen].sort((a, b) => Number(a.blockTimestamp - b.blockTimestamp))
   
   return sortedList
+}
+
+export async function queryRouteTypeList(client: Client) {
+  const query = querySubgraph(client, {
+    schema: schema.setRouteType,
+  })
+
+  return query
 }

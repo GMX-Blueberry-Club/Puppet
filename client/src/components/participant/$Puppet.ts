@@ -3,13 +3,13 @@ import { $node, $text, MOTION_NO_WOBBLE, component, motion, style } from "@aelea
 import * as router from '@aelea/router'
 import { $NumberTicker, $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, fromPromise, map, multicast, now, skipRepeatsWith, startWith } from "@most/core"
+import { awaitPromises, map, multicast, now, skipRepeatsWith, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $Link, $arrowRight, $icon, $infoTooltipLabel, IMarker, ScrollRequest } from "gmx-middleware-ui-components"
-import { IPricetickListMap, filterNull, getMappedValue, groupArrayMany, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IPriceTickListMap, filterNull, getMappedValue, groupArrayMany, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap } from "gmx-middleware-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
-import { IMirrorPositionOpen, IMirrorPositionSettled, IPuppetSubscritpion, IPuppetTradeRoute, accountSettledPositionListSummary, queryLatestPriceTicks, queryPuppetTradeRoute } from "puppet-middleware-utils"
+import { IMirrorPositionOpen, IMirrorPositionSettled, IPuppetSubscritpion, IPuppetTradeRoute, accountSettledPositionListSummary, queryPuppetTradeRoute } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
@@ -26,7 +26,7 @@ export interface ITraderProfile {
   address: viem.Address
   activityTimeframe: Stream<GMX.IntervalTime>
   subscriptionList: Stream<IPuppetSubscritpion[]>
-  priceTickMap: Stream<IPricetickListMap>
+  priceTickMap: Stream<IPriceTickListMap>
 }
 
 export interface ITraderPortfolio extends ITraderProfile {

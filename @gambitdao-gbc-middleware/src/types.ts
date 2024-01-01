@@ -1,6 +1,5 @@
 import { IPositionListSummary, IPriceCandleSeed, IEnsRegistration, IResponsePageApi, IRequestPagePositionApi, IRequestSortApi, IRequestTimerangeApi, IPriceCandle } from "gmx-middleware-utils"
 import * as GMX from "gmx-middleware-const"
-import { IPositionUiFees } from "viem"
 
 export type IPrice = {
   priceUsd: bigint
@@ -76,7 +75,7 @@ export type ILabItemOwnership = {
 }
 
 export interface IOwner {
-  id: IPositionUiFees
+  id: string
   balance: bigint
 
   ownedTokens: IToken[]
@@ -481,7 +480,7 @@ export interface LabItemSale {
 
 
 export interface MintRuleConfig extends MintAccountRule {
-  contractAddress: IPositionUiFees
+  contractAddress: string
 }
 
 
@@ -497,8 +496,8 @@ export interface MintPrivate extends MintRuleConfig {
   type: SaleType.Whitelist
 
   nonce: bigint // uint120
-  addressList: IPositionUiFees[]
-  signatureList: IPositionUiFees[][]
+  addressList: string[]
+  signatureList: string[][]
 }
 
 export type MintRule = MintPublic | MintHolder | MintPrivate
@@ -510,6 +509,6 @@ export interface IRequestLeaderboardApi extends IRequestPagePositionApi, IPriceC
 export interface IRequestCompetitionLadderApi extends IPriceCandleSeed, IRequestSortApi<IBlueberryLadder>, IRequestPagePositionApi, IRequestTimerangeApi {
   referralCode: string
   maxCollateral: bigint
-  account: IPositionUiFees | null
+  account: string | null
   metric: 'roi' | 'pnl'
 }
