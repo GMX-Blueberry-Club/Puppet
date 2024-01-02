@@ -49,8 +49,8 @@ import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "./components/$LastActivit
 export interface IProfile {
   wallet: IWalletClient
   route: router.Route
-  processData: Stream<IGmxProcessState>
-  subscriptionList: Stream<IPuppetSubscritpion[]>
+  // processData: Stream<IGmxProcessState>
+  // subscriptionList: Stream<IPuppetSubscritpion[]>
 }
 
 enum IProfileMode {

@@ -100,6 +100,7 @@ export interface ISetRouteType extends ILogTypeId<'SetRouteType'> {
   collateral: viem.Address
   index: viem.Address
   isLong: boolean
+  // data: viem.Hex
 }
 
 

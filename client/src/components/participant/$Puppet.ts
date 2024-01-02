@@ -25,7 +25,7 @@ export interface ITraderProfile {
   route: router.Route
   address: viem.Address
   activityTimeframe: Stream<GMX.IntervalTime>
-  subscriptionList: Stream<IPuppetSubscritpion[]>
+  // subscriptionList: Stream<IPuppetSubscritpion[]>
   priceTickMap: Stream<IPriceTickListMap>
 }
 
@@ -239,7 +239,7 @@ export const $PuppetPortfolio = (config: ITraderPortfolio) => component((
                               positionParams: fstPosition,
                               trader: puppetTradeRoute.trader,
                               routeTypeKey: "0xa437f95c9cee26945f76bc090c3491ffa4e8feb32fd9f4fefbe32c06a7184ff3",
-                              subscriptionList: config.subscriptionList,
+                              // subscriptionList: config.subscriptionList,
                             })({
                               modifySubscribeList: modifySubscriberTether()
                             }),

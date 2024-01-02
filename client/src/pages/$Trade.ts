@@ -19,7 +19,7 @@ import {
 } from "gmx-middleware-utils"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
-import { IMirrorPositionOpen, getRouteTypeKey, getTradeRouteKey, latestPriceMap, queryLatestTokenPriceFeed, queryRouteTypeList, queryTraderPositionOpen } from "puppet-middleware-utils"
+import { IMirrorPositionOpen, getTradeRouteKey, latestPriceMap, queryLatestTokenPriceFeed, queryRouteTypeList, queryTraderPositionOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $midContainer } from "../common/$common.js"
 import { $caretDown } from "../common/elements/$icons.js"
@@ -118,20 +118,9 @@ export const $Trade = (config: ITradeComponent) => component((
   const gmxContractMap = GMX.CONTRACT[config.chain.id]
   const puppetContractMap = PUPPET.CONTRACT[config.chain.id]
 
-
-  // const vaultReader = contractReader(vaultConfig)
-  
-  const vault = connectContract(gmxContractMap.Vault)
-  const usdg = connectContract(gmxContractMap.USDG)
-
   const v2Reader = contractReader(gmxContractMap.ReaderV2)
-  const orchestratorReader = contractReader(puppetContractMap.OrchestratorReader) 
-  const datastoreReader = contractReader(gmxContractMap.Datastore) 
-  const referralStorage = connectContract(gmxContractMap.ReferralStorage)
-  const positionRouter = connectContract(gmxContractMap.PositionRouter)
-  const orchestrator = connectContract(puppetContractMap.Orchestrator)
-  const router = connectContract(GMX.CONTRACT[config.chain.id].Router)
-  const client = wagmi.getPublicClient()
+  const datastoreReader = contractReader(puppetContractMap.Datastore) 
+
   // client.watchContractEvent({
   //   eventName: 'EventLog2',
   //   strict: true,
@@ -294,15 +283,13 @@ export const $Trade = (config: ITradeComponent) => component((
       return now(null)
     }
 
-    const routeKey = getTradeRouteKey(w3p.account.address, params.routeTypeKey)
-    const storedRouteKey = storage.get(tradingStore, GMX.ADDRESS_ZERO as viem.Address, routeKey)
+    const routeKey = getTradeRouteKey(w3p.account.address, params.collateralToken, params.indexToken, params.isLong)
+    const storedRouteKey = storage.get(tradingStore, null, routeKey)
     const fallbackGetRoute = switchMap(address => {
-      const routeAddressArgs = [w3p.account.address, params.collateralToken, params.indexToken, params.isLong, '0x00000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e5831000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583100000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab100000000000000000000000000000000000000000000000000000000000000004bd5869a01440a9ac6d7bf7aa7004f402b52b845f20e2cec925101e13d84d075'] as const
-
-      if (address === GMX.ADDRESS_ZERO) {
+      if (address === null) {
         return switchMap(res => {
-          return address === GMX.ADDRESS_ZERO ? now(null) : indexDB.set(tradingStore, res, routeKey)
-        }, orchestratorReader('routeAddress', ...routeAddressArgs))
+          return res === GMX.ADDRESS_ZERO ? now(null) : indexDB.set(tradingStore, res, routeKey)
+        }, datastoreReader('getAddress', routeKey))
         // }, orchestratorReader('routeAddress', routeKey))
       }
 
@@ -310,7 +297,7 @@ export const $Trade = (config: ITradeComponent) => component((
     }, storedRouteKey)
 
     return fallbackGetRoute
-  }, combineObject({ wallet, collateralToken, indexToken, isLong, routeTypeKey }))))
+  }, combineObject({ wallet, collateralToken, indexToken, isLong }))))
 
 
 
@@ -359,11 +346,6 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
 
-  const stableFundingRateFactor = replayLatest(multicast(vault.read('stableFundingRateFactor')))
-  const fundingRateFactor = replayLatest(multicast(vault.read('fundingRateFactor')))
-
-  const inputTokenWeight = vault.read('tokenWeights', primaryToken)
-  const inputTokenDebtUsd = vault.read('usdgAmounts', primaryToken)
 
   const primaryDescription = combineArray((chain, token) => {
     if (token === GMX.ADDRESS_ZERO) {
@@ -701,8 +683,6 @@ export const $Trade = (config: ITradeComponent) => component((
     averagePrice,
     liquidationPrice,
 
-    stableFundingRateFactor,
-    fundingRateFactor,
     // collateralTokenPoolInfo,
   }
 

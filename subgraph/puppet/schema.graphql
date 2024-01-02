@@ -1,13 +1,4 @@
 
-type MarketCreated @entity(immutable: true) {
-  id: Bytes!
-  indexToken: Bytes!
-  longToken: Bytes!
-  shortToken: Bytes!
-  marketToken: Bytes!
-  salt: Bytes!
-}
-
 
 type OrderCreated @entity(immutable: true) {
   id: Bytes!
@@ -523,6 +514,16 @@ type AdjustPosition @entity(immutable: true) {
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
+
+type MarketCreated @entity(immutable: true) {
+  id: Bytes!
+  indexToken: Bytes!
+  longToken: Bytes!
+  shortToken: Bytes!
+  marketToken: Bytes!
+  salt: Bytes!
+}
+
 
 # type OwnershipTransferred @entity(immutable: true) {
 #   id: Bytes!

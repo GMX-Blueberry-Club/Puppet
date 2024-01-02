@@ -30,21 +30,21 @@ import { MARKET_TOKEN_MAP, ZERO_BI } from "./utils/const"
 import { getIdFromEvent } from "./utils/gmxHelpers"
 
 export function handleOpenPosition(event: OpenPositionEvent): void {
-  const requestOpenMirrorPosition = new RequestMirrorPosition(event.params.requestKey)
+  const requestMirrorPosition = new RequestMirrorPosition(event.params.requestKey)
 
-  requestOpenMirrorPosition.puppets = Value.fromAddressArray(event.params.puppets).toBytesArray()
-  requestOpenMirrorPosition.trader = event.params.trader
-  requestOpenMirrorPosition.route = event.params.route
-  requestOpenMirrorPosition.isIncrease = event.params.isIncrease
-  requestOpenMirrorPosition.requestKey = event.params.requestKey
-  requestOpenMirrorPosition.routeTypeKey = event.params.routeTypeKey
-  requestOpenMirrorPosition.positionKey = event.params.positionKey
+  requestMirrorPosition.puppets = Value.fromAddressArray(event.params.puppets).toBytesArray()
+  requestMirrorPosition.trader = event.params.trader
+  requestMirrorPosition.route = event.params.route
+  requestMirrorPosition.isIncrease = event.params.isIncrease
+  requestMirrorPosition.requestKey = event.params.requestKey
+  requestMirrorPosition.routeTypeKey = event.params.routeTypeKey
+  requestMirrorPosition.positionKey = event.params.positionKey
 
-  requestOpenMirrorPosition.blockNumber = event.block.number
-  requestOpenMirrorPosition.blockTimestamp = event.block.timestamp
-  requestOpenMirrorPosition.transactionHash = event.transaction.hash
+  requestMirrorPosition.blockNumber = event.block.number
+  requestMirrorPosition.blockTimestamp = event.block.timestamp
+  requestMirrorPosition.transactionHash = event.transaction.hash
 
-  requestOpenMirrorPosition.save()
+  requestMirrorPosition.save()
 }
 
 
@@ -80,7 +80,8 @@ export function handleExecutePosition(event: ExecutePositionEvent): void {
       const mirrorPositionLink = new MirrorPositionLink(executePosition.requestKey)
       mirrorPositionOpen = new MirrorPositionOpen(executePosition.route.toHex())
 
-      mirrorPositionOpen.position = executePosition.id.toHex()
+      mirrorPositionOpen.link = executePosition.requestKey
+      mirrorPositionOpen.position = requestMirrorPosition.positionKey.toHex()
 
       mirrorPositionOpen.trader = requestMirrorPosition.trader
       mirrorPositionOpen.tradeRoute = requestMirrorPosition.route

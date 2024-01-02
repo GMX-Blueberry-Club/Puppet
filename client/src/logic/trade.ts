@@ -1,32 +1,21 @@
 
-import { combineObject, replayLatest } from "@aelea/core"
+import { replayLatest } from "@aelea/core"
 import { http, observer } from "@aelea/ui-components"
-import { empty, fromPromise, map, mergeArray, multicast, now, scan, skip, snapshot } from "@most/core"
+import { empty, fromPromise, map, mergeArray, multicast, now, scan, skip } from "@most/core"
 import { Stream } from "@most/types"
 import { fetchBalance, readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
 import {
-  IAbstractPositionIdentity, IPositionUiFees, IPriceInterval, IRequestPricefeedApi, ITokenDescription, ITokenSymbol,
+  IPriceCandleDto, IRequestPricefeedApi, ITokenDescription, ITokenSymbol,
   filterNull, getDenominator, getMappedValue, getTokenDescription, parseFixed, periodicRun, resolveAddress
 } from "gmx-middleware-utils"
 import * as viem from "viem"
-import {  } from "viem"
-import { arbitrum, avalanche } from "viem/chains"
+import { } from "viem"
 import { ISupportedChain } from "../wallet/walletLink.js"
-import { connectContract } from "./common.js"
 
 
-export type IPositionGetter = IAbstractPositionIdentity & {
-  size: bigint
-  sizeUsd: bigint
-  collateral: bigint
-  collateralUsd: bigint
-  realisedPnl: bigint
-  averagePrice: bigint
-  entryFundingRate: bigint
-  lastIncreasedTime: bigint
-}
+
 
 
 export interface ITokenPoolInfo {
@@ -170,102 +159,6 @@ export function getWalletErc20Balance(chain: ISupportedChain, token: viem.Addres
 
 
 
-
-export function connectTrade(chain: ISupportedChain) {
-
-  const contract = GMX.CONTRACT[chain.id]
-  const positionRouter = connectContract(contract.PositionRouter)
-  const pricefeed = connectContract(contract.VaultPriceFeed)
-  const router = connectContract(contract.Router)
-  const vault = connectContract(contract.Vault)
-
-
-
-
-  const positionIncreaseEvent = vault.listen('IncreasePosition')
-  const positionDecreaseEvent = vault.listen('DecreasePosition')
-  const positionCloseEvent = vault.listen('ClosePosition')
-  const positionLiquidateEvent = vault.listen('LiquidatePosition')
-
-
-  // const getTokenFundingRate = (token: Stream<viem.Address>) => {
-  //   const reservedAmounts = vault.read('reservedAmounts', token)
-  //   const poolAmounts = vault.read('poolAmounts', token)
-
-  //   return map(params => {
-  //     return div(params.fundingRateFactor * params.reservedAmounts, params.poolAmounts)
-  //   }, combineObject({ fundingRateFactor: getFundingRateFactor(token), poolAmounts, reservedAmounts, token }))
-  // }
-
-  // const getFundingRateFactor = () => {
-  //   const stableFundingRateFactor = vault.read('stableFundingRateFactor')
-  //   const fundingRateFactor = vault.read('fundingRateFactor')
-
-  //   return map((params) => {
-  //     return params.isLong ? params.stableFundingRateFactor : params.fundingRateFactor
-  //   }, combineObject({  stableFundingRateFactor, fundingRateFactor }))
-  // }
-
-
-  const getTokenPoolInfo = (chain: ISupportedChain, token: Stream<viem.Address>): Stream<ITokenPoolInfo> => {
-    const cumulativeRate = vault.read('cumulativeFundingRates', token)
-    const reservedAmount = vault.read('reservedAmounts', token)
-    const poolAmounts = vault.read('poolAmounts', token)
-    const usdgAmounts = vault.read('usdgAmounts', token)
-    const maxUsdgAmounts = vault.read('maxUsdgAmounts', token)
-    const tokenWeights = vault.read('tokenWeights', token)
-
-    const dataRead = combineObject({ maxUsdgAmounts, cumulativeRate, usdgAmounts, tokenWeights, reservedAmount, poolAmounts })
-    return dataRead
-  }
-
-
-
-  const positionSettled = (keyEvent: Stream<string | null>) => filterNull(snapshot((key, posSettled) => {
-    // console.log(posSettled)
-    if (key !== posSettled.args.key) {
-      return null
-    }
-
-    const obj = 'markPrice' in posSettled
-      ? { ...posSettled }
-      : { ...posSettled }
-    return obj
-  }, keyEvent, mergeArray([positionLiquidateEvent, positionCloseEvent])))
-
-
-
-  return {
-    positionSettled,
-    // getTokenFundingRate,
-    // getFundingRateFactor,
-    getTokenPoolInfo,
-    // getAvailableLiquidityUsd,
-
-    // contract readers
-    router, vault, pricefeed, positionRouter,
-  }
-}
-
-// const getAvailableLiquidityUsd = (indexToken: Stream<viem.Address>, collateralToken: Stream<viem.Address>) => {
-//   const globalShortSizes = vault.read('globalShortSizes', indexToken)
-//   const guaranteedUsd = vault.read('guaranteedUsd', indexToken)
-//   const maxGlobalShortSizes = positionRouter.read('maxGlobalShortSizes', indexToken)
-//   const maxGlobalLongSizes = positionRouter.read('maxGlobalLongSizes', indexToken)
-
-
-//   return map(params => {
-//     const collateralTokenDescription = getTokenDescription(params.collateralToken)
-//     const isUsd = collateralTokenDescription.isUsd
-
-//     const vaultSize = isUsd ? params.globalShortSizes : params.guaranteedUsd
-//     const globalMaxSize = isUsd ? params.maxGlobalShortSizes : params.maxGlobalLongSizes
-
-//     return globalMaxSize - vaultSize
-//   }, combineObject({ collateralToken, maxGlobalShortSizes, maxGlobalLongSizes, indexToken, globalShortSizes, guaranteedUsd }))
-// }
-
-
 export const exchangesWebsocketPriceSource = (token: viem.Address) => {
   const existingToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION_MAP, token)
 
@@ -297,21 +190,9 @@ export async function getGmxIOPriceMap(url: string): Promise<{ [key in viem.Addr
   }, {})
 }
 
-export async function getGmxIoOrders(network: typeof arbitrum | typeof avalanche, account: string): Promise<{ [key in viem.Address]: bigint }> {
-  const res = await fetch(GMX_URL_CHAIN[network.id] + `/orders_indices?account=${account}`)
-  const json = await res.json()
-
-  // @ts-ignore
-  return Object.keys(json).reduce((seed, key) => {
-    // @ts-ignore
-    seed[key] = json[key]
-    return seed
-  }, {})
-}
 
 
-
-export const getGmxIoPricefeed = async (queryParams: IRequestPricefeedApi): Promise<IPriceInterval[]> => {
+export const getGmxIoPricefeed = async (queryParams: IRequestPricefeedApi): Promise<IPriceCandleDto[]> => {
   const tokenDesc = getTokenDescription(queryParams.tokenAddress)
   const intervalLabel = getMappedValue(gmxIoPricefeedIntervalLabel, queryParams.interval)
   const symbol = derievedSymbolMapping[tokenDesc.symbol] || tokenDesc.symbol
@@ -322,55 +203,4 @@ export const getGmxIoPricefeed = async (queryParams: IRequestPricefeedApi): Prom
     })
   return res
 }
-
-
-
-// export const positionUpdateEvent = vault.listen('UpdatePosition')
-// const positionUpdateEvent = switchLatest(vaultReader.read(map(async vault => {
-//   const chain = vault.chainId
-
-//   if (!chain) {
-//     throw new Error('no chain detected')
-//   }
-
-//   const newLocal = vaultReader.listen('UpdatePosition')
-
-//   if (chain === CHAIN.ARBITRUM) {
-//     const tempContract = new Contract(vault.address, ["event UpdatePosition(bytes32,uint256,uint256,uint256,uint256,uint256,int256)"], vault.provider)
-//     const topicId = id("UpdatePosition(bytes32,uint256,uint256,uint256,uint256,uint256,int256)")
-
-//     const filter = { address: vault.address, topics: [topicId] }
-//     const listener = listen(tempContract, filter)
-
-
-//     const updateEvent: typeof newLocal = map((ev) => {
-//       const { data, topics } = ev.__event
-//       const abi = ["event UpdatePosition(bytes32,uint256,uint256,uint256,uint256,uint256,int256)"]
-//       const iface = new Interface(abi)
-//       const [key, size, collateral, averagePrice, entryFundingRate, reserveAmount, realisedPnl] = iface.parseLog({
-//         data,
-//         topics
-//       }).args
-
-//       return {
-//         key,
-//         id: key,
-//         markPrice: 0n,
-//         timestamp: unixTimestampNow(),
-//         lastIncreasedTime: BigInt(unixTimestampNow()),
-//         size: size,
-//         collateral: collateral,
-//         averagePrice: averagePrice,
-//         entryFundingRate: entryFundingRate,
-//         reserveAmount: reserveAmount,
-//         realisedPnl: realisedPnl
-//       }
-//     }, listener) as any
-
-//     return updateEvent
-//   }
-
-//   return newLocal
-// })))
-
 

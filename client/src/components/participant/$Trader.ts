@@ -9,7 +9,7 @@ import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $Link, $Table, $arrowRight, $icon, $infoTooltipLabel, IMarker, ScrollRequest } from "gmx-middleware-ui-components"
 import { filterNull, getMappedValue, pagingQuery, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap } from "gmx-middleware-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
-import { IPuppetSubscritpion, getTraderPositionSettled, queryTraderPositionOpen, streamCandleSeedMap } from "puppet-middleware-utils"
+import { IPuppetSubscritpion, getTraderPositionSettled, queryLatestPriceTicks, queryTraderPositionOpen } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $heading3 } from "../../common/$text.js"
 import { $card, $card2 } from "../../common/elements/$common.js"
@@ -49,6 +49,7 @@ export const $TraderPortfolio = (config: ITraderProfile) => component((
     return positionList
   }, combineObject({ activityTimeframe: config.activityTimeframe })))
 
+  const pricefeedMap = fromPromise(queryLatestPriceTicks(subgraphClient, { interval: GMX.TIME_INTERVAL_MAP.MIN5 }))
 
 
   return [
@@ -190,8 +191,8 @@ export const $TraderPortfolio = (config: ITraderProfile) => component((
                   ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
                   entryColumn,
                   puppetsColumn(changeRouteTether),
-                  slotSizeColumn(latestPriceMap),
-                  pnlSlotColumn(latestPriceMap),
+                  slotSizeColumn(),
+                  pnlSlotColumn(),
                 ],
               })({
                 // scrollIndex: changePageIndexTether()

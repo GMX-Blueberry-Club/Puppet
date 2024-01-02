@@ -31,6 +31,8 @@ import { IProfileActiveTab } from "../pages/$Profile.js"
 import { $seperator2 } from "../pages/common.js"
 import { wallet } from "../wallet/walletLink.js"
 import { $caretDown } from "./elements/$icons"
+import { contractReader } from "../logic/common"
+import * as PUPPET from "puppet-middleware-const"
 
 
 export const $midContainer = $column(
@@ -324,7 +326,7 @@ interface ITraderDisplay {
 interface ITraderRouteDisplay {
   trader: viem.Address
   routeTypeKey: viem.Hex
-  subscriptionList: Stream<IPuppetSubscritpion[]>
+  // subscriptionList: Stream<IPuppetSubscritpion[]>
   positionParams: IAbstractPositionParams
 }
 
@@ -336,6 +338,8 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
   [modifySubscribeList, modifySubscribeListTether]: Behavior<IPuppetSubscritpionParams>,
 ) => {
 
+  const puppetContractMap = PUPPET.CONTRACT[config.chain.id]
+  const datastoreReader = contractReader(puppetContractMap.Datastore) 
 
 
   return [

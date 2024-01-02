@@ -76,7 +76,6 @@ export interface ITradeParams {
   marketList: IMarket[]
   route: viem.Address | null
   routeTypeKey: viem.Hex
-  routeTypeList: ISetRouteType[]
 
   position: IMirrorPositionOpen | null
   netPositionValueUsd: bigint
@@ -104,9 +103,6 @@ export interface ITradeParams {
 
   averagePrice: bigint | null
   liquidationPrice: bigint | null
-
-  stableFundingRateFactor: bigint
-  fundingRateFactor: bigint
 
   // collateralTokenPoolInfo: trade.ITokenPoolInfo
 }
@@ -197,7 +193,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
     primaryDescription, primaryPrice, indexPrice,
 
     isPrimaryApproved, isTradingEnabled, liquidationPrice, marginFeeUsd, route,
-    position, walletBalance, netPositionValueUsd, fundingRateFactor, priceImpactUsd, routeTypeKey, stableFundingRateFactor
+    position, walletBalance, netPositionValueUsd, fundingRateFactor, priceImpactUsd, routeTypeKey
   } = config.tradeState
 
 
@@ -445,7 +441,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 map(params => {
                   const newLocal = formatFixed(params.walletBalance, params.primaryDescription.decimals)
                   const newLocal_1 = readableNumber({})(newLocal)
-                  
+
                   return newLocal_1 + ' ' + params.primaryDescription.symbol
                 }, combineObject({ primaryToken, walletBalance, primaryDescription }))
               ),

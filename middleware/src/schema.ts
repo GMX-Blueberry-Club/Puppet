@@ -143,6 +143,7 @@ const setRouteType: ISchema<ISetRouteType> = {
   index: 'address',
   isLong: 'bool',
   routeTypeKey: 'string',
+  // data: 'string',
 
   __typename: 'SetRouteType',
 }

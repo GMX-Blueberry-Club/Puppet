@@ -24,7 +24,7 @@ export enum IProfileActiveTab {
 export interface IProfile {
   route: router.Route
   // processData: Stream<IGmxProcessState>
-  subscriptionList: Stream<IPuppetSubscritpion[]>
+  // subscriptionList: Stream<IPuppetSubscritpion[]>
 }
 
 const $title = $text(style({ fontWeight: 'bold', fontSize: '1.35em' }))
@@ -110,7 +110,7 @@ export const $Profile = (config: IProfile) => component((
               $PuppetProfile({ 
                 address, activityTimeframe, priceTickMap,
                 route: config.route,
-                subscriptionList: config.subscriptionList,
+                // subscriptionList: config.subscriptionList,
               })({
                 changeRoute: changeRouteTether(),
                 changeActivityTimeframe: changeActivityTimeframeTether(),

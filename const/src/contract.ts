@@ -8,6 +8,7 @@ import orchestrator from './abi/orchestrator.js'
 import orchestratorReader from './abi/orchestratorReader.js'
 import routeFactory from './abi/routeFactory.js'
 import datastore from './abi/datastore.js'
+import commonHelper from './abi/commonHelper.js'
 
 export const CONTRACT = {
   [arbitrum.id]: {
@@ -18,6 +19,10 @@ export const CONTRACT = {
     Datastore: {
       address: "0x7288699A7323Da69efD0Ed50b9c36d983006456B",
       abi: datastore,
+    },
+    CommonHelper: {
+      address: "0x32b0373B53eC9e16eAFda86b41a6aCf3B2a39f14",
+      abi: commonHelper,
     },
     Orchestrator: {
       address: "0x92100ed7c156887D173880572718971E9d7B585E",

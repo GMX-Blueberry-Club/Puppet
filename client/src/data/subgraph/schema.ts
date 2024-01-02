@@ -135,18 +135,9 @@ const positionLink: ISchema<IPositionLink> = {
   id: 'string',
   key: 'uint256',
 
-  account: 'address',
-  market: 'address',
-  collateralToken: 'address',
-
-  isLong: 'bool',
-
   increaseList: positionIncrease,
   decreaseList: positionDecrease,
   feeUpdateList: positionFeeUpdate,
-
-  blockTimestamp: 'uint256',
-  transactionHash: 'string',
   
   __typename: 'PositionLink',
 }

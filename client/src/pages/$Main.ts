@@ -45,7 +45,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   [routeChanges, linkClickTether]: Behavior<any, string>,
   [modifySubscriptionList, modifySubscriptionListTether]: Behavior<IPuppetSubscritpion[]>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
-  [syncProcessData, syncProcessDataTether]: Behavior<bigint>,
+  // [syncProcessData, syncProcessDataTether]: Behavior<bigint>,
   [clickUpdateVersion, clickUpdateVersionTether]: Behavior<any, bigint>,
 
 ) => {
@@ -61,10 +61,10 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   //   return params.block
   // }, zipState({ process: gmxProcess.store, block: block })))
 
-  const syncBlock: Stream<bigint | null> = mergeArray([
-    // recoverWith(() => now(null), block),
-    syncProcessData,
-  ])
+  // const syncBlock: Stream<bigint | null> = mergeArray([
+  //   recoverWith(() => now(null), block),
+  //   syncProcessData,
+  // ])
 
   // const syncProcessEvent = multicast(switchMap(params => {
   //   if (params.syncBlock === null) {
@@ -160,15 +160,15 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   const isDesktopScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
 
   
-  const subscriptionList: Stream<IPuppetSubscritpion[]> = replayLatest(multicast(switchLatest(map(w3p => {
-    if (!w3p) {
-      return now([])
-    }
+  // const subscriptionList: Stream<IPuppetSubscritpion[]> = replayLatest(multicast(switchLatest(map(w3p => {
+  //   if (!w3p) {
+  //     return now([])
+  //   }
 
-    return map(data => {
-      return data.subscription.filter(s => s.puppet === w3p.account.address)
-    }, processData)
-  }, wallet))))
+  //   return map(data => {
+  //     return data.subscription.filter(s => s.puppet === w3p.account.address)
+  //   }, processData)
+  // }, wallet))))
   
 
   return [
@@ -231,9 +231,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                       return $midContainer(
                         $Wallet({
                           route: walletRoute,
-                          processData,
                           wallet: wallet,
-                          subscriptionList
                         })({
                           modifySubscriber: modifySubscriberTether(),
                           changeRoute: linkClickTether(),
@@ -244,7 +242,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 router.match(leaderboardRoute)(
                   $midContainer(
                     fadeIn($Leaderboard({
-                      subscriptionList,
+                      // subscriptionList,
                       route: leaderboardRoute,
                     })({
                       routeChange: linkClickTether(
@@ -258,7 +256,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                   $midContainer(
                     fadeIn($Profile({
                       route: profileRoute,
-                      subscriptionList
+                      // subscriptionList
                     })({
                       modifySubscriber: modifySubscriberTether(),
                       changeRoute: linkClickTether(),
@@ -358,7 +356,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
             $RouteSubscriptionDrawer({
               modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetSubscritpion[]),
               modifySubscriber,
-              subscriptionList,
+              // subscriptionList,
               processData: empty() as any
             })({
               modifySubscriptionList: modifySubscriptionListTether()

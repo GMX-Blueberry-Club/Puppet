@@ -1,4 +1,4 @@
-import { factor, getPositionPnlUsd, hashData, lst } from "gmx-middleware-utils"
+import { factor, getPositionPnlUsd, lst } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen } from "./types.js"
 
@@ -137,46 +137,4 @@ export function getPortion(supply: bigint, share: bigint, amount: bigint): bigin
     return amount * share / supply
   }
 }
-
-export function hashNamedValue(name: string, value: viem.Hex): viem.Hex {
-  return hashData(
-    ["string", "bytes"],
-    [name, value]
-  )
-}
-
-
-
-export function getRouteTypeKey(collateralToken: viem.Address, indexToken: viem.Address, isLong: boolean, data: viem.Hex): viem.Hex {
-  return hashData(
-    ["address", "address", "bool", "bytes"],
-    [collateralToken, indexToken, isLong, data ]
-  )
-}
-
-
-export function getTradeRouteKey(trader: viem.Address, tradeRouteTypeKey: viem.Hex): viem.Hex {
-  return hashData(
-    ["address", "bytes"],
-    [trader, tradeRouteTypeKey]
-  )
-}
-
-export function getPuppetSubscriptionKey(puppet: viem.Address, trader: viem.Address, routeTypeKey: viem.Hex): viem.Hex {
-  return hashData(
-    ["address", "address", "bytes32"],
-    [puppet, trader, routeTypeKey]
-  )
-}
-
-
-export function getPuppetDepositAccountKey(puppet: viem.Address, asset: viem.Address): viem.Hex {
-  return hashData(
-    ["string", "address", "address"],
-    ["PUPPET_DEPOSIT_ACCOUNT", puppet, asset]
-  )
-}
-
-
-
 

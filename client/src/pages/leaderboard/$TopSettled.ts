@@ -25,7 +25,7 @@ import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivi
 
 export type ITopSettled = {
   route: router.Route
-  subscriptionList: Stream<IPuppetSubscritpion[]>
+  // subscriptionList: Stream<IPuppetSubscritpion[]>
 }
 
 

@@ -26,13 +26,12 @@ import { $AssetDepositEditor } from "./$AssetDepositEditor.js"
 
 
 interface IRouteSubscribeDrawer {
-  subscriptionList: Stream<IPuppetSubscritpion[]>
+  // subscriptionList: Stream<IPuppetSubscritpion[]>
   modifySubscriber: Stream<IPuppetSubscritpion>
   modifySubscriptionList: Stream<IPuppetSubscritpion[]>
-  processData: Stream<IGmxProcessState>
 }
 
-export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => component((
+export const $RouteSubscriptionDrawer = ({ modifySubscriptionList }: IRouteSubscribeDrawer) => component((
   [requestChangeSubscription, requestChangeSubscriptionTether]: Behavior<IWalletClient, Promise<viem.TransactionReceipt>>,
   [clickClose, clickCloseTether]: Behavior<any>,
   [clickRemoveSubsc, clickRemoveSubscTether]: Behavior<any, IPuppetSubscritpion >,
@@ -41,8 +40,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
 ) => {
 
   const HARD_CODED_USDC = GMX.ARBITRUM_ADDRESS.USDC
-  const { subscriptionList, modifySubscriptionList } = config
-  const openIfEmpty = skipRepeats(map(l => l.length > 0, config.modifySubscriptionList))
+  const openIfEmpty = skipRepeats(map(l => l.length > 0, modifySubscriptionList))
   const tradeRouteList = map(data => Object.values(data.routeMap), config.processData)
 
   const account = map(w3p => w3p?.account.address || null, wallet)

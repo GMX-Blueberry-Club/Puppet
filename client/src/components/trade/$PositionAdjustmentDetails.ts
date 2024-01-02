@@ -88,7 +88,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
   } = config.tradeConfig
   const {
     availableIndexLiquidityUsd, averagePrice, collateralDescription,
-    collateralPrice, stableFundingRateFactor, fundingRateFactor, executionFee,
+    collateralPrice, fundingRateFactor, executionFee,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
     isTradingEnabled, liquidationPrice, marginFeeUsd, route, netPositionValueUsd,
     position, walletBalance, marketList, priceImpactUsd, adjustmentFeeUsd, routeTypeKey

@@ -4,8 +4,8 @@ import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { map } from "@most/core"
 import { Stream } from "@most/types"
 import { TableColumn } from "gmx-middleware-ui-components"
-import { ILatestSignedPriceMap, getBasisPoints, readableDate, readablePercentage, timeSince } from "gmx-middleware-utils"
-import { IMirrorPosition, IMirrorPositionOpen, IMirrorPositionSettled, getParticiapntMpPortion } from "puppet-middleware-utils"
+import { IPriceOracleMap, getBasisPoints, readableDate, readablePercentage, timeSince } from "gmx-middleware-utils"
+import { IMirrorPosition, IMirrorPositionOpen, IMirrorPositionSettled, getParticiapntMpPortion, latestPriceMap } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $entry, $openPnl, $pnlValue, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
 import { $txnIconLink } from "../../common/elements/$common.js"
@@ -18,11 +18,11 @@ export const $tableHeader = (primaryLabel: string, secondaryLabel: string) => $c
 )
 
 
-export const slotSizeColumn = <T extends IMirrorPositionOpen>(priceMap: Stream<ILatestSignedPriceMap>, puppet?: viem.Address): TableColumn<T> => ({
+export const slotSizeColumn = <T extends IMirrorPositionOpen>(puppet?: viem.Address): TableColumn<T> => ({
   $head: $tableHeader('Size', 'Leverage'),
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $bodyCallback: map(mp => {
-    const latestPrice = map(pm => pm[mp.position.indexToken].price, priceMap)
+    const latestPrice = map(pm => pm[mp.position.indexToken].min, latestPriceMap)
 
     return $sizeAndLiquidation(mp, latestPrice, puppet)
   })
@@ -59,12 +59,12 @@ export const puppetsColumn = <T extends {puppets: readonly `0x${string}`[]}>(cli
   })
 })
 
-export const pnlSlotColumn = <T extends IMirrorPositionOpen>(priceMap: Stream<ILatestSignedPriceMap>, puppet?: viem.Address): TableColumn<T> => ({
+export const pnlSlotColumn = <T extends IMirrorPositionOpen>(puppet?: viem.Address): TableColumn<T> => ({
   $head: $tableHeader('PnL', 'ROI'),
   gridTemplate: '90px',
   columnOp: style({ placeContent: 'flex-end' }),
   $bodyCallback: map(pos => {
-    const latestPrice = map(pm => pm[pos.position.indexToken].price, priceMap)
+    const latestPrice = map(pm => pm[pos.position.indexToken].max, latestPriceMap)
     return $openPnl(latestPrice, pos, puppet)
   })
 })

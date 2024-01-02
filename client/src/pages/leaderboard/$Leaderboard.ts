@@ -11,7 +11,7 @@ import { $TopSettled } from "./$TopSettled.js"
 
 export type ILeaderboard = {
   route: router.Route
-  subscriptionList: Stream<IPuppetSubscritpion[]>
+  // subscriptionList: Stream<IPuppetSubscritpion[]>
 }
 
 type IRouteOption = {
@@ -26,8 +26,8 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
 ) => {
 
-  const settledRoute = config.route.create({ fragment: 'settled', title: 'Leaderboard' })
-  const topOpenRoute = config.route.create({ fragment: 'open', title: 'Leaderboard' })
+  // const settledRoute = config.route.create({ fragment: 'settled', title: 'Leaderboard' })
+  // const topOpenRoute = config.route.create({ fragment: 'open', title: 'Leaderboard' })
 
   const routeChangeState = map(url => {
     history.pushState(null, '', url)
@@ -58,7 +58,8 @@ export const $Leaderboard = (config: ILeaderboard) => component((
     )(
 
       $TopSettled({
-        ...config,
+        route: config.route,
+
       })({
         routeChange: routeChangeTether(),
         modifySubscriber: modifySubscriberTether()
