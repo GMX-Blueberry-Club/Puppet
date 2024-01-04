@@ -11,9 +11,7 @@
     "gmx-middleware"
   ],
   "scripts": {
-    "build": "cd client && bun run build",
-    "dev:client": "pnpm --filter 'client' run dev",
-    "dev:contracts": "pnpm --filter 'contracts' dev"
+    "build": "cd gmx-middleware && bun run build && cd ../client && bun run build"
   },
   "devDependencies": {
     "@types/node": "^20.10.4",
@@ -22,9 +20,5 @@
     "concurrently": "^8.2.2",
     "eslint": "^8.56.0",
     "typescript": "^5.3.3"
-  },
-  "engines": {
-    "node": "18.x",
-    "pnpm": "8.x"
   }
 }

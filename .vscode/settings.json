@@ -1,10 +1,9 @@
 {
-  "npm.packageManager": "pnpm",
+  "npm.packageManager": "bun",
   "typescript.format.enable": false,
   "search.exclude": {
     "**/.dist": true,
     "**/node_modules": true,
-    "**/pnpm-lock.yaml": true,
     "**/generated": true,
     "**/tsconfig.tsbuildinfo": true
   },
