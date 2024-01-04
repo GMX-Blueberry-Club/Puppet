@@ -2,11 +2,10 @@ import { map, multicast } from '@most/core'
 import { Stream } from '@most/types'
 import { Client } from '@urql/core'
 import * as GMX from "gmx-middleware-const"
-import { IPriceOracleMap, IPriceCandle, IPricetick, ISchema, schema as gmxSchema, groupArrayManyMap, periodicRun, querySignedPrices, querySubgraph, IPriceTickListMap } from "gmx-middleware-utils"
+import { IPriceOracleMap, IPriceCandle, ISchema, schema as gmxSchema, groupArrayManyMap, periodicRun, querySignedPrices, querySubgraph, IPriceTickListMap } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { schema } from "./schema.js"
 import { replayLatest } from '@aelea/core'
-viem.parseTransaction
 
 interface IQueryTraderPositionOpen {
   trader: viem.Address
