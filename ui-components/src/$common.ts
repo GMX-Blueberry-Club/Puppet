@@ -8,6 +8,7 @@ import { CHAIN } from "gmx-middleware-const"
 import { getTokenDescription, getTxExplorerUrl, IMarket, ITokenDescription, shortenTxAddress, switchMap } from "gmx-middleware-utils"
 import { $alertIcon, $arrowRight, $caretDblDown, $info, $tokenIconMap } from "./$icons.js"
 import { $defaultDropContainer, $Tooltip } from "./$Tooltip.js"
+import { Chain } from "viem"
 
 
 export const $anchor = $element('a')(
@@ -79,7 +80,7 @@ export const $infoTooltip = (text: string | $Node) => {
 }
 
 
-export const $txHashRef = (txHash: string, chain: CHAIN, label?: $Node) => {
+export const $txHashRef = (txHash: string, chain: Chain, label?: $Node) => {
   const href = getTxExplorerUrl(chain, txHash)
 
   return $anchor(attr({ href }))(label ?? $text(shortenTxAddress(txHash)))

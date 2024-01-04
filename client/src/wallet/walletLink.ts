@@ -84,7 +84,7 @@ export const wallet = awaitPromises(map(async params => {
 
   const clientAvaialble = await getWalletClient({ chainId: params.chain.id })
 
-  return clientAvaialble
+  return clientAvaialble as IWalletClient
 }, combineObject({ chain, account })))
 
 export const nativeBalance = awaitPromises(map(params => {

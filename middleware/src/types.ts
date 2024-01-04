@@ -1,4 +1,4 @@
-import { ILogTxType, ILogTypeId, IPosition, IPositionLink, IPositionListSummary, IPositionSettled } from "gmx-middleware-utils"
+import { ILogTxType, ILogTypeId, IPosition, IPositionListSummary } from "gmx-middleware-utils"
 import * as viem from "viem"
 
 
@@ -6,7 +6,7 @@ import * as viem from "viem"
 export interface IMirrorPositionRequest {
   puppets: readonly viem.Address[]
   trader: viem.Address
-  route: viem.Address
+  tradeRoute: viem.Address
   routeTypeKey: viem.Hex
   positionKey: viem.Hex
   isIncrease: boolean;
@@ -18,7 +18,7 @@ export interface IMirrorPositionRequest {
 export interface IExecutePosition extends ILogTxType<'ExecutePosition'> {
   link: IMirrorPositionLink
   performanceFeePaid: bigint
-  route: viem.Address
+  tradeRoute: viem.Address
   requestKey: viem.Hex
   isExecuted: boolean
   isIncrease: boolean
@@ -29,7 +29,7 @@ export interface ISharesIncrease extends ILogTxType<'SharesIncrease'> {
   puppetsShares: bigint[]
   traderShares: bigint
   totalSupply: bigint
-  route: viem.Address
+  tradeRoute: viem.Address
   requestKey: viem.Hex
 }
 
@@ -44,6 +44,7 @@ export interface IMirrorPosition<TypeName extends 'MirrorPositionOpen' | 'Mirror
 
   trader: viem.Address
   tradeRoute: viem.Address
+
   puppets: viem.Address[]
 
   puppetsShares: bigint[]
@@ -57,15 +58,17 @@ export interface IMirrorPosition<TypeName extends 'MirrorPositionOpen' | 'Mirror
 export interface IMirrorPositionOpen extends IMirrorPosition<'MirrorPositionOpen'> { }
 export interface IMirrorPositionSettled extends IMirrorPosition<'MirrorPositionSettled'> {}
 
-export interface ISubscribeTradeRoute extends ILogTxType<'SubscribeTradeRoute'> {
-  puppetTradeRoute: IPuppetTradeRoute
+export interface ISubscribeTradeRouteDto {
   allowance: bigint
   subscriptionExpiry: bigint
   trader: viem.Address
   puppet: viem.Address
-  route: viem.Address
+  tradeRoute: viem.Address
   routeTypeKey: viem.Hex
   subscribe: boolean
+}
+export interface ISubscribeTradeRoute extends ISubscribeTradeRouteDto, ILogTxType<'SubscribeTradeRoute'> {
+  // puppetTradeRoute: IPuppetTradeRoute
 }
 
 export interface IPuppetPositionOpen extends ILogTxType<'PuppetPositionOpen'> {
@@ -82,7 +85,11 @@ export interface IPuppetTradeRoute extends ILogTypeId<'PuppetTradeRoute'> {
   routeTypeKey: viem.Hex
   puppet: viem.Address
   trader: viem.Address
+  tradeRoute: viem.Address
 
+  // openList: IPuppetPositionSettled[]
+  // settledList: IPuppetPositionOpen[]
+  // subscribeList: ISubscribeTradeRoute[]
   puppetPositionSettledList: IPuppetPositionSettled[]
   puppetPositionOpenList: IPuppetPositionOpen[]
   subscriptionList: ISubscribeTradeRoute[]
@@ -97,8 +104,8 @@ export interface IMirrorPositionListSummary extends IPositionListSummary {
 
 export interface ISetRouteType extends ILogTypeId<'SetRouteType'> {
   routeTypeKey: viem.Hex
-  collateral: viem.Address
-  index: viem.Address
+  collateralToken: viem.Address
+  indexToken: viem.Address
   isLong: boolean
   // data: viem.Hex
 }
@@ -110,11 +117,6 @@ export type IPuppetSubscritpionParams = {
   subscriptionExpiry: bigint
   routeTypeKey: viem.Hex
   trader: viem.Address
-}
-
-export type IPuppetSubscritpion = IPuppetSubscritpionParams & {
-  puppet: viem.Address
-  puppetSubscriptionKey: viem.Hex
 }
 
 

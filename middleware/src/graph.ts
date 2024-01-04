@@ -58,6 +58,7 @@ export async function queryPuppetTradeRoute(client: Client, filter: IQueryPuppet
 interface IQueryPriceCandle {
   interval: GMX.IntervalTime
   token?: viem.Address
+  timestamp_gte?: number
 }
 
 export async function queryLatestPriceTicks(client: Client, filter: IQueryPriceCandle = { interval: GMX.TIME_INTERVAL_MAP.MIN5 }): Promise<IPriceTickListMap> {

@@ -2,7 +2,7 @@ import { Behavior, O } from '@aelea/core'
 import { $Node, $node, INode, NodeComposeFn, component, nodeEvent, style, styleBehavior } from '@aelea/dom'
 import { $column, observer } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { constant, empty, filter, map, merge, switchLatest, until, zip } from "@most/core"
+import { constant, empty, filter, map, merge, multicast, switchLatest, until, zip } from "@most/core"
 import { Stream } from "@most/types"
 
 
@@ -25,6 +25,8 @@ export const $Popover = ({ open, dismiss = empty(), margin = 10, padding = 76, $
   [targetIntersection, targetIntersectionTether]: Behavior<INode, IntersectionObserverEntry[]>,
   [popoverContentDimension, popoverContentDimensionTether]: Behavior<INode, ResizeObserverEntry[]>,
 ) => {
+
+  const openMulticast = multicast(open)
 
   const contentOps = $container(
     popoverContentDimensionTether(
@@ -113,7 +115,7 @@ export const $Popover = ({ open, dismiss = empty(), margin = 10, padding = 76, $
   const $popover = switchLatest(
     map(content => {
       return until(dismissEvent, $overlay(contentOps(content)))
-    }, open)
+    }, openMulticast)
   )
 
 
@@ -128,7 +130,7 @@ export const $Popover = ({ open, dismiss = empty(), margin = 10, padding = 76, $
     ),
     styleBehavior(
       merge(
-        constant({ zIndex: 100000, position: 'relative' }, open),
+        constant({ zIndex: 100000, position: 'relative' }, openMulticast),
         constant(null, dismissEvent)
       )
     )

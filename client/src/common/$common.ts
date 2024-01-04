@@ -1,11 +1,10 @@
-import { Behavior, combineObject, isStream, O, Tether } from "@aelea/core"
+import { Behavior, isStream, O, Tether } from "@aelea/core"
 import { $text, component, INode, nodeEvent, style, styleInline } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $icon, $row, $seperator, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
-import * as GMX from 'gmx-middleware-const'
 import { TOKEN_SYMBOL } from "gmx-middleware-const"
 import { $bear, $bull, $infoLabel, $infoTooltipLabel, $Link, $tokenIconMap } from "gmx-middleware-ui-components"
 import {
@@ -19,20 +18,22 @@ import {
   readableFixedUSD30,
   readableLeverage,
   readablePercentage,
-  streamOf, switchMap
+  streamOf, switchMap, unixTimestampNow
 } from "gmx-middleware-utils"
-import { getMpSlotPnL, getParticiapntMpPortion, getPuppetSubscriptionKey, getRouteTypeKey, IMirrorPosition, IMirrorPositionOpen, IPuppetSubscritpion, IPuppetSubscritpionParams } from "puppet-middleware-utils"
+import * as PUPPET from "puppet-middleware-const"
+import { getMpSlotPnL, getParticiapntMpPortion, IMirrorPosition, IMirrorPositionOpen, IPuppetSubscritpionParams } from "puppet-middleware-utils"
 import * as viem from "viem"
+import { arbitrum } from "viem/chains"
 import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile.js"
 import { $Popover } from "../components/$Popover.js"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button.js"
-import { $RouteSubscriptionEditor } from "../components/portfolio/$RouteSubscriptionEditor.js"
+import { $RouteSubscriptionEditor, IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor.js"
+import { contractReader } from "../logic/common"
+import { getPuppetSubscriptionExpiry } from "../logic/subscriptionLogic"
 import { IProfileActiveTab } from "../pages/$Profile.js"
 import { $seperator2 } from "../pages/common.js"
-import { wallet } from "../wallet/walletLink.js"
 import { $caretDown } from "./elements/$icons"
-import { contractReader } from "../logic/common"
-import * as PUPPET from "puppet-middleware-const"
+import { wallet } from "../wallet/walletLink"
 
 
 export const $midContainer = $column(
@@ -326,6 +327,8 @@ interface ITraderDisplay {
 interface ITraderRouteDisplay {
   trader: viem.Address
   routeTypeKey: viem.Hex
+  tradeRoute: viem.Hex
+  // routeKey: viem.Address
   // subscriptionList: Stream<IPuppetSubscritpion[]>
   positionParams: IAbstractPositionParams
 }
@@ -335,11 +338,8 @@ interface ITraderRouteDisplay {
 export const $TraderDisplay =  (config: ITraderDisplay) => component((
   [clickTrader, clickTraderTether]: Behavior<any, viem.Address>,
   [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, IPuppetSubscritpionParams>,
-  [modifySubscribeList, modifySubscribeListTether]: Behavior<IPuppetSubscritpionParams>,
+  [modifySubscribeList, modifySubscribeListTether]: Behavior<IChangeSubscription>,
 ) => {
-
-  const puppetContractMap = PUPPET.CONTRACT[config.chain.id]
-  const datastoreReader = contractReader(puppetContractMap.Datastore) 
 
 
   return [
@@ -358,52 +358,36 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
 })
 
 export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
-  [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, IPuppetSubscritpionParams>,
-  [modifySubscribeList, modifySubscribeListTether]: Behavior<IPuppetSubscritpionParams>,
+  [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, bigint>,
+  [modifySubscribeList, modifySubscribeListTether]: Behavior<IChangeSubscription>,
 ) => {
+
+  const puppetSubscriptionExpiry = switchMap(w3p => {
+    return w3p ? getPuppetSubscriptionExpiry(w3p.account.address, config.positionParams.collateralToken, config.positionParams.indexToken, config.positionParams.isLong) : now(0n)
+  }, wallet)
 
   return [
     $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-      switchMap(params => {
-        const w3p = params.wallet
-        const account = w3p?.account.address || GMX.ADDRESS_ZERO
-
-        const routeTypeKey = getRouteTypeKey(GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, GMX.ARBITRUM_ADDRESS.NATIVE_TOKEN, true, '0x')
-        const puppetSubscriptionKey = getPuppetSubscriptionKey(account, config.trader, routeTypeKey)
-        const existingSubscription = params.subscriptionList.find(x => x.puppetSubscriptionKey === puppetSubscriptionKey)
-        const routeSubscription: IPuppetSubscritpion = {
-          routeTypeKey: config.routeTypeKey,
-          trader: config.trader,
-          puppet: account,
-          allowance: existingSubscription?.allowance || 0n,
-          subscriptionExpiry: existingSubscription?.subscriptionExpiry || 0n,
-          puppetSubscriptionKey,
-          subscribe: existingSubscription?.subscribe || false
-        }
-
-
-        return $Popover({
-          open: constant(
-            $RouteSubscriptionEditor({ routeSubscription })({
-              modifySubscribeList: modifySubscribeListTether()
-            }),
-            popRouteSubscriptionEditor
-          ),
-          dismiss: modifySubscribeList,
-          $target: $row(layoutSheet.spacing)(
-            $ButtonSecondary({
-              $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
-                $route(config.positionParams, screenUtils.isDesktopScreen),
-                // $icon({ $content: $puppetLogo, fill: pallete.message, width: '24px', viewBox: `0 0 32 32` }),
-                $icon({ $content: $caretDown, width: '14px', svgOps: style({ marginRight: '-4px' }), viewBox: '0 0 32 32' }),
-              ),
-              $container: $defaultMiniButtonSecondary(style({ borderRadius: '16px' })) 
-            })({
-              click: popRouteSubscriptionEditorTether()
-            }),
-          )
-        })({})
-      }, combineObject({ subscriptionList: config.subscriptionList, wallet }))
+      $Popover({
+        open: map((expiry) => {
+          return  $RouteSubscriptionEditor({ expiry, trader: config.trader, tradeRoute: config.tradeRoute, routeTypeKey: config.routeTypeKey })({
+            modifySubscribeList: modifySubscribeListTether()
+          }) 
+        }, popRouteSubscriptionEditor),
+        dismiss: modifySubscribeList,
+        $target: switchMap(expiry => {
+          return $ButtonSecondary({
+            $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+              $route(config.positionParams, screenUtils.isDesktopScreen),
+              // $icon({ $content: $puppetLogo, fill: pallete.message, width: '24px', viewBox: `0 0 32 32` }),
+              $icon({ $content: $caretDown, width: '14px', svgOps: style({ marginRight: '-4px' }), viewBox: '0 0 32 32' }),
+            ),
+            $container: $defaultMiniButtonSecondary(style({ borderRadius: '16px', borderColor: Number(expiry) > unixTimestampNow() ? pallete.primary : '' })) 
+          })({
+            click: popRouteSubscriptionEditorTether(constant(expiry))
+          })
+        }, puppetSubscriptionExpiry)
+      })({})
     ),
 
 

@@ -1,16 +1,33 @@
 
-import { replayLatest } from "@aelea/core"
-import { http, observer } from "@aelea/ui-components"
-import { empty, fromPromise, map, mergeArray, multicast, now, scan, skip } from "@most/core"
-import { Stream } from "@most/types"
-import { fetchBalance, readContract } from "@wagmi/core"
-import { erc20Abi } from "abitype/abis"
-import * as GMX from "gmx-middleware-const"
+import { now } from "@most/core"
 import {
-  IPriceCandleDto, IRequestPricefeedApi, ITokenDescription, ITokenSymbol,
-  filterNull, getDenominator, getMappedValue, getTokenDescription, parseFixed, periodicRun, resolveAddress
+  switchMap
 } from "gmx-middleware-utils"
+import * as PUPPET from "puppet-middleware-const"
+import { getPuppetSubscriptionExpiryKey, getTradeRouteKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { } from "viem"
-import { ISupportedChain } from "../wallet/walletLink.js"
+import { arbitrum } from "viem/chains"
+import { wallet } from "../wallet/walletLink.js"
+import { contractReader } from "./common"
 
+export function getPuppetSubscriptionExpiry(
+  puppet: viem.Address,
+  collateralToken: viem.Address,
+  indexToken: viem.Address,
+  isLong: boolean,
+  chainId = arbitrum.id
+) {
+  const puppetContractMap = PUPPET.CONTRACT[chainId]
+  const datastoreReader = contractReader(puppetContractMap.Datastore) 
+  
+  return switchMap(w3p => {
+    if (!w3p) {
+      return now(0n)
+    }
+
+    const routeKey = getTradeRouteKey(puppet, collateralToken, indexToken, isLong)
+
+    return w3p ? datastoreReader('getUint', getPuppetSubscriptionExpiryKey(w3p.account.address, routeKey)) : now(0n)
+  }, wallet)
+}

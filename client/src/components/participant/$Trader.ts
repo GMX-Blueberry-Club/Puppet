@@ -3,18 +3,19 @@ import { $node, $text, MOTION_NO_WOBBLE, component, motion, style } from "@aelea
 import * as router from '@aelea/router'
 import { $NumberTicker, $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, empty, fromPromise, map, multicast, now, skipRepeatsWith, startWith } from "@most/core"
+import { awaitPromises, empty, map, multicast, now, skipRepeatsWith, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $Link, $Table, $arrowRight, $icon, $infoTooltipLabel, IMarker, ScrollRequest } from "gmx-middleware-ui-components"
-import { filterNull, getMappedValue, pagingQuery, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap } from "gmx-middleware-utils"
+import { IPriceTickListMap, filterNull, getMappedValue, pagingQuery, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap } from "gmx-middleware-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
-import { IPuppetSubscritpion, getTraderPositionSettled, queryLatestPriceTicks, queryTraderPositionOpen } from "puppet-middleware-utils"
+import { getTraderPositionSettled, queryTraderPositionOpen } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $heading3 } from "../../common/$text.js"
 import { $card, $card2 } from "../../common/elements/$common.js"
 import { subgraphClient } from "../../data/subgraph/client"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../../pages/components/$LastActivity.js"
+import { IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor"
 import { entryColumn, pnlSlotColumn, positionTimeColumn, puppetsColumn, settledPnlColumn, settledSizeColumn, slotSizeColumn } from "../table/$TableColumn.js"
 import { performanceTimeline } from "../trade/$ProfilePerformanceGraph.js"
 import { $TraderProfileSummary } from "./$Summary"
@@ -25,6 +26,7 @@ export interface ITraderProfile {
   route: router.Route
   address: viem.Address
   activityTimeframe: Stream<GMX.IntervalTime>
+  priceTickMap: Stream<IPriceTickListMap>
 }
 
 
@@ -32,7 +34,7 @@ export interface ITraderProfile {
 
 export const $TraderPortfolio = (config: ITraderProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<any, string>,
-  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams>
@@ -49,11 +51,9 @@ export const $TraderPortfolio = (config: ITraderProfile) => component((
     return positionList
   }, combineObject({ activityTimeframe: config.activityTimeframe })))
 
-  const pricefeedMap = fromPromise(queryLatestPriceTicks(subgraphClient, { interval: GMX.TIME_INTERVAL_MAP.MIN5 }))
 
 
   return [
-
     $column(layoutSheet.spacingBig)(
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
         $card2(style({ padding: 0, height: screenUtils.isDesktopScreen ? '200px' : '200px', position: 'relative', margin: screenUtils.isDesktopScreen ? `-36px -36px 0` : `-12px -12px 0px` }))(
@@ -61,7 +61,7 @@ export const $TraderPortfolio = (config: ITraderProfile) => component((
             const allPositions = [...params.settledTradeList, ...params.openTrades]
 
             const $container = $column(style({ width: '100%', padding: 0, height: '200px' }))
-            const timeline = performanceTimeline({ positionList: allPositions, pricefeedMap: params.pricefeedMap, tickCount: 100, activityTimeframe: params.activityTimeframe })
+            const timeline = performanceTimeline({ positionList: allPositions, pricefeedMap: params.priceTickMap, tickCount: 100, activityTimeframe: params.activityTimeframe })
             const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
 
 
@@ -171,7 +171,7 @@ export const $TraderPortfolio = (config: ITraderProfile) => component((
             //   positionList: allPositions,
             //   // trader: config.address,
             // })({ })
-          }, combineObject({ settledTradeList, openTrades, activityTimeframe: config.activityTimeframe, pricefeedMap })),
+          }, combineObject({ settledTradeList, openTrades, activityTimeframe: config.activityTimeframe, priceTickMap: config.priceTickMap })),
         ),
         $column(layoutSheet.spacingBig)(
 
@@ -236,7 +236,7 @@ export const $TraderPortfolio = (config: ITraderProfile) => component((
 
 export const $TraderProfile = (config: ITraderProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<any, string>,
-  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
 

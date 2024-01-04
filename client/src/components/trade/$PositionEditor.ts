@@ -74,7 +74,7 @@ export enum ITradeFocusMode {
 
 export interface ITradeParams {
   marketList: IMarket[]
-  route: viem.Address | null
+  tradeRoute: viem.Address | null
   routeTypeKey: viem.Hex
 
   position: IMirrorPositionOpen | null
@@ -134,8 +134,7 @@ export interface ITradeConfig {
 
 export interface IPositionEditorAbstractParams {
   referralCode: viem.Hex
-  // tokenIndexMap: Partial<Record<number, viem.Address[]>>
-  // tokenStableMap: Partial<Record<number, viem.Address[]>>
+  routeTypeList: Stream<ISetRouteType[]>
   parentRoute: Route
   chain: ISupportedChain
 }
@@ -192,8 +191,8 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
     indexDescription, marketPrice,
     primaryDescription, primaryPrice, indexPrice,
 
-    isPrimaryApproved, isTradingEnabled, liquidationPrice, marginFeeUsd, route,
-    position, walletBalance, netPositionValueUsd, fundingRateFactor, priceImpactUsd, routeTypeKey
+    isPrimaryApproved, isTradingEnabled, liquidationPrice, marginFeeUsd, tradeRoute,
+    position, walletBalance, netPositionValueUsd, priceImpactUsd, routeTypeKey
   } = config.tradeState
 
 

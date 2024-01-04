@@ -4,7 +4,6 @@ import { $column, $icon, $row, layoutSheet, observer, screenUtils } from "@aelea
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, constant, debounce, empty, fromPromise, map, mergeArray, multicast, now, scan, skipRepeats, snapshot, switchLatest, zip } from "@most/core"
 import { Stream } from "@most/types"
-import * as wagmi from "@wagmi/core"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
@@ -19,7 +18,7 @@ import {
 } from "gmx-middleware-utils"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
-import { IMirrorPositionOpen, getTradeRouteKey, latestPriceMap, queryLatestTokenPriceFeed, queryRouteTypeList, queryTraderPositionOpen } from "puppet-middleware-utils"
+import { IMirrorPositionOpen, getRouteAddressKey, getTradeRouteKey, latestPriceMap, queryLatestTokenPriceFeed, queryTraderPositionOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $midContainer } from "../common/$common.js"
 import { $caretDown } from "../common/elements/$icons.js"
@@ -31,7 +30,7 @@ import { $PositionEditor, IPositionEditorAbstractParams, ITradeConfig, ITradeFoc
 import { $PositionListDetails, IRequestTrade } from "../components/trade/$PositionListDetails.js"
 import { rootStoreScope } from "../data/store/store.js"
 import { subgraphClient } from "../data/subgraph/client"
-import { connectContract, contractReader, listenContract } from "../logic/common.js"
+import { contractReader, listenContract } from "../logic/common.js"
 import * as trade from "../logic/trade.js"
 import { exchangesWebsocketPriceSource } from "../logic/trade.js"
 import { getExecuteGasFee, getFullMarketInfo } from "../logic/tradeV2.js"
@@ -112,7 +111,6 @@ export const $Trade = (config: ITradeComponent) => component((
 
 ) => {
   
-  const routeTypeList = fromPromise(queryRouteTypeList(subgraphClient))
   const marketList = now(TEMP_MARKET_LIST)
   const chainId = config.chain.id
   const gmxContractMap = GMX.CONTRACT[config.chain.id]
@@ -260,14 +258,14 @@ export const $Trade = (config: ITradeComponent) => component((
   // }, combineObject({ market, marketPrice }))))
 
   const routeTypeKey = replayLatest(multicast(map(params => {
-    const getRouteTypeKeyArgs = params.routeTypeList.find(srt => srt.collateral === params.collateralToken && srt.index === params.indexToken && srt.isLong === params.isLong)
+    const getRouteTypeKeyArgs = params.routeTypeList.find(srt => srt.collateralToken === params.collateralToken && srt.indexToken === params.indexToken && srt.isLong === params.isLong)
     if (!getRouteTypeKeyArgs) {
       throw new Error(`Route type not found for ${params.collateralToken} ${params.indexToken} ${params.isLong}`)
     }
 
     
     return getRouteTypeKeyArgs.routeTypeKey
-  }, combineObject({ collateralToken, indexToken, isLong, routeTypeList }))))
+  }, combineObject({ collateralToken, indexToken, isLong, routeTypeList: config.routeTypeList }))))
 
   const marketInfo: Stream<IMarketInfo> = replayLatest(multicast(switchMap(params => {
     const query = getFullMarketInfo(config.chain, params.market, params.marketPrice)
@@ -277,20 +275,21 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ market, marketPrice }))))
 
 
-  const route = replayLatest(multicast(switchMap(params => {
+  const tradeRoute = replayLatest(multicast(switchMap(params => {
     const w3p = params.wallet
     if (w3p === null) {
       return now(null)
     }
 
     const routeKey = getTradeRouteKey(w3p.account.address, params.collateralToken, params.indexToken, params.isLong)
-    const storedRouteKey = storage.get(tradingStore, null, routeKey)
+    const routeAddressKey = getRouteAddressKey(routeKey)
+
+    const storedRouteKey = storage.get(tradingStore, null, routeAddressKey)
     const fallbackGetRoute = switchMap(address => {
       if (address === null) {
         return switchMap(res => {
-          return res === GMX.ADDRESS_ZERO ? now(null) : indexDB.set(tradingStore, res, routeKey)
-        }, datastoreReader('getAddress', routeKey))
-        // }, orchestratorReader('routeAddress', routeKey))
+          return res === GMX.ADDRESS_ZERO ? now(null) : indexDB.set(tradingStore, res, routeAddressKey)
+        }, datastoreReader('getAddress', routeAddressKey))
       }
 
       return now(address)
@@ -302,11 +301,11 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   const positionParams = map(params => {
-    const address = params.route || GMX.ADDRESS_ZERO
+    const address = params.tradeRoute || GMX.ADDRESS_ZERO
     const key = getPositionKey(address, params.market.marketToken, params.collateralToken, params.isLong)
 
     return { ...params, key, account: address }
-  }, combineObject({ route, market, collateralToken, isLong, isUsdCollateralToken }))
+  }, combineObject({ tradeRoute, market, collateralToken, isLong, isUsdCollateralToken }))
 
   // const positionKeyArgs = skipRepeatsWith((prev, next) => prev.key === next.key, _positionKeyArgs)
 
@@ -586,7 +585,7 @@ export const $Trade = (config: ITradeComponent) => component((
         return false
       }
 
-    }, collateralDeltaUsd, combineObject({ wallet, primaryToken, isIncrease, route }))))
+    }, collateralDeltaUsd, combineObject({ wallet, primaryToken, isIncrease, tradeRoute }))))
   ])
 
   const availableIndexLiquidityUsd =  map(params => {
@@ -653,7 +652,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const tradeState: StateStream<ITradeParams> = {
     marketList,
-    route,
+    tradeRoute,
     routeTypeKey,
 
     position,
@@ -690,6 +689,7 @@ export const $Trade = (config: ITradeComponent) => component((
     openPositionList,
     tradeConfig,
     marketList,
+    routeTypeList: config.routeTypeList,
     chain: config.chain,
     parentRoute: config.parentRoute,
     referralCode: config.referralCode,

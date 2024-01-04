@@ -3,8 +3,7 @@ import { component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, layoutSheet } from "@aelea/ui-components"
 import { map, mergeArray } from "@most/core"
-import { Stream } from "@most/types"
-import { IPuppetSubscritpion } from "puppet-middleware-utils"
+import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor"
 import { $TopSettled } from "./$TopSettled.js"
 
 
@@ -22,7 +21,7 @@ type IRouteOption = {
 export const $Leaderboard = (config: ILeaderboard) => component((
   [changeTab, changeTabTether]: Behavior<IRouteOption, string>,
   [routeChange, routeChangeTether]: Behavior<string, string>,
-  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
 
 ) => {
 

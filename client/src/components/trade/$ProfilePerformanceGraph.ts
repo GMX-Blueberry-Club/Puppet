@@ -3,7 +3,6 @@ import { $Node, NodeComposeFn, component, style } from "@aelea/dom"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { now, skipRepeatsWith } from "@most/core"
 import * as GMX from 'gmx-middleware-const'
-import { TIME_INTERVAL_MAP } from "gmx-middleware-const"
 import { $Baseline, IMarker } from "gmx-middleware-ui-components"
 import {
   IPositionDecrease,
@@ -11,6 +10,7 @@ import {
   IPriceTickListMap,
   IPricetick,
   createTimeline,
+  findClosest,
   formatFixed,
   getPositionPnlUsd,
   unixTimestampNow
@@ -20,13 +20,6 @@ import { IMirrorPositionOpen, IMirrorPositionSettled, getParticiapntMpPortion } 
 import * as viem from "viem"
 
 
-export const PRICEFEED_INTERVAL = [
-  TIME_INTERVAL_MAP.MIN5,
-  TIME_INTERVAL_MAP.MIN15,
-  TIME_INTERVAL_MAP.MIN60,
-  TIME_INTERVAL_MAP.HR4,
-  TIME_INTERVAL_MAP.HR24,
-] as const
 
 type IPerformanceTickUpdateTick = {
   update: IPositionIncrease | IPositionDecrease
@@ -57,10 +50,6 @@ interface IGraphPnLTick {
   positionOpen: Record<viem.Hex, ITimelinePositionOpen>
 }
 
-
-function findClosest<T extends readonly number[]> (arr: T, chosen: number): T[number] {
-  return arr.reduce((a, b) => b - chosen < chosen - a ? b : a)
-}
 
 
 function getTime(item: IPerformanceTickUpdateTick | IPricetick): number {
@@ -134,8 +123,6 @@ function getTime(item: IPerformanceTickUpdateTick | IPricetick): number {
 // }
 
 export function performanceTimeline(config: IPerformanceTimeline) {
-  if (config.positionList.length === 0) return []
-
   const timeNow = unixTimestampNow()
   const startTime = timeNow - config.activityTimeframe
   const updateList: IPerformanceTickUpdateTick[] = config.positionList
@@ -160,7 +147,8 @@ export function performanceTimeline(config: IPerformanceTimeline) {
     // .filter(tick => getTime(tick.update) > startTime)
     // .sort((a, b) => getTime(a.update) - getTime(b.update))
 
-  const interval = findClosest(PRICEFEED_INTERVAL, config.activityTimeframe / config.tickCount)
+
+  const interval = findClosest(GMX.PRICEFEED_INTERVAL, config.activityTimeframe / config.tickCount)
   const uniqueIndexTokenList = [...new Set(config.positionList.map(mp => mp.position.indexToken))]
 
   const initialTick: IGraphPnLTick = {
@@ -171,7 +159,7 @@ export function performanceTimeline(config: IPerformanceTimeline) {
   }
 
 
-  const priceUpdateTicks = uniqueIndexTokenList.flatMap(indexToken => config.pricefeedMap[indexToken] ?? []).filter(x => x.timestamp > startTime)
+  const priceUpdateTicks = uniqueIndexTokenList.flatMap(indexToken => config.pricefeedMap[indexToken] ?? []) //.filter(x => x.timestamp > startTime)
   const source = [...updateList, ...priceUpdateTicks] //.filter(tick => getTime(tick) > startTime)
   // const sortedUpdateList = performanceTickList.sort((a, b) => getTime(a.update) - getTime(b.update))
 
@@ -250,6 +238,7 @@ export const $ProfilePerformanceGraph = (config: IPerformanceTimeline & { $conta
         containerOp: style({  inset: '0px 0px 0px 0px', position: 'absolute' }),
         markers: now(markerList),
         chartConfig: {
+          width: 100,
           leftPriceScale: {
             // autoScale: true,
             ticksVisible: true,

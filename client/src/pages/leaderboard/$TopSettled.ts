@@ -6,14 +6,16 @@ import { pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, empty, map, now, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
+import { PRICEFEED_INTERVAL } from "gmx-middleware-const"
 import { $ButtonToggle, $Table, $bear, $bull, $icon, $marketLabel, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "gmx-middleware-ui-components"
-import { IMarketCreatedEvent, IPriceTickListMap, TEMP_MARKET_LIST, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
-import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, IPuppetSubscritpion, accountSettledPositionListSummary, queryLatestPriceTicks, queryLatestTokenPriceFeed, queryLeaderboard } from "puppet-middleware-utils"
+import { IMarketCreatedEvent, IPriceTickListMap, TEMP_MARKET_LIST, findClosest, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, accountSettledPositionListSummary, queryLatestPriceTicks, queryLeaderboard } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $labelDisplay } from "../../common/$TextField.js"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $size } from "../../common/$common.js"
 import { $card, $responsiveFlex } from "../../common/elements/$common.js"
 import { $DropMultiSelect } from "../../components/form/$Dropdown.js"
+import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor"
 import { $tableHeader } from "../../components/table/$TableColumn.js"
 import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceGraph.js"
 import { rootStoreScope } from "../../data/store/store.js"
@@ -37,7 +39,7 @@ type ITableRow = {
 }
 
 export const $TopSettled = (config: ITopSettled) => component((
-  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
   
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
   [sortByChange, sortByChangeTether]: Behavior<ISortBy>,
@@ -65,7 +67,10 @@ export const $TopSettled = (config: ITopSettled) => component((
 
 
     const dataSource: Stream<TablePageResponse<ITableRow>> = awaitPromises(map(async req => {
-      const priceCandleMapQuery = queryLatestPriceTicks(subgraphClient, { interval: GMX.TIME_INTERVAL_MAP.MIN5 })
+      const interval = findClosest(PRICEFEED_INTERVAL, params.activityTimeframe / 20)
+      const timestamp_gte = unixTimestampNow() - params.activityTimeframe
+
+      const priceCandleMapQuery = queryLatestPriceTicks(subgraphClient, { interval: interval, timestamp_gte: timestamp_gte })
       const mpListQuery = queryLeaderboard(subgraphClient)
       const mpList = await mpListQuery
       const pricefeedMap = await priceCandleMapQuery
@@ -88,7 +93,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
         return mp.blockTimestamp > filterStartTime
       })
-      const tradeListMap = groupArrayMany(filteredList, a => a.routeTypeKey)
+      const tradeListMap = groupArrayMany(filteredList, a => a.tradeRouteKey)
       const tradeListEntries = Object.values(tradeListMap)
       const filterestPosList: ITableRow[] = tradeListEntries.map(positionList => {
         const summary = accountSettledPositionListSummary(positionList)
@@ -203,10 +208,10 @@ export const $TopSettled = (config: ITopSettled) => component((
               $bodyCallback: map(pos => {
 
                 return $TraderRouteDisplay({
-                  positionParams: pos.positionList[0].position,
                   trader: pos.account,
-                  routeTypeKey: "0xa437f95c9cee26945f76bc090c3491ffa4e8feb32fd9f4fefbe32c06a7184ff3",
-                  subscriptionList: config.subscriptionList,
+                  tradeRoute: pos.positionList[0].tradeRoute,
+                  positionParams: pos.positionList[0].position,
+                  routeTypeKey: pos.positionList[0].routeTypeKey,
                 })({
                   modifySubscribeList: modifySubscriberTether()
                 })

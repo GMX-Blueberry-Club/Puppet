@@ -4,13 +4,13 @@ import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
-import { constant, empty, map, merge, mergeArray, multicast, now, recoverWith, skipRepeats, startWith, switchLatest, tap } from '@most/core'
+import { constant, empty, fromPromise, map, merge, mergeArray, multicast, now, recoverWith, skipRepeats, startWith, switchLatest, tap } from '@most/core'
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
 import { ARBITRUM_ADDRESS, AVALANCHE_ADDRESS, CHAIN } from "gmx-middleware-const"
 import { $Tooltip, $alertContainer, $spinner } from "gmx-middleware-ui-components"
 import { filterNull, readableUnitAmount, switchMap, timeSince } from "gmx-middleware-utils"
-import { IPuppetSubscritpion } from "puppet-middleware-utils"
+import { ISubscribeTradeRouteDto, queryRouteTypeList } from "puppet-middleware-utils"
 import { $midContainer } from "../common/$common.js"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount.js"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu.js'
@@ -27,6 +27,8 @@ import { $Wallet } from "./$Wallet.js"
 import { $Leaderboard } from "./leaderboard/$Leaderboard.js"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
 import { newUpdateInvoke } from "../sw/swUtils"
+import { subgraphClient } from "../data/subgraph/client"
+import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor"
 
 const popStateEvent = eventElementTarget('popstate', window)
 const initialLocation = now(document.location)
@@ -43,61 +45,13 @@ interface Website {
 
 export const $Main = ({ baseRoute = '' }: Website) => component((
   [routeChanges, linkClickTether]: Behavior<any, string>,
-  [modifySubscriptionList, modifySubscriptionListTether]: Behavior<IPuppetSubscritpion[]>,
-  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
+  [modifySubscriptionList, modifySubscriptionListTether]: Behavior<IChangeSubscription[]>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
   // [syncProcessData, syncProcessDataTether]: Behavior<bigint>,
   [clickUpdateVersion, clickUpdateVersionTether]: Behavior<any, bigint>,
 
 ) => {
 
-  // const initialSync = filterNull(map(params => {
-  //   const refreshThreshold = SW_DEV ? 150 : 50
-  //   const blockDelta = params.block  - params.process.blockNumber
-
-  //   if (blockDelta < refreshThreshold) {
-  //     return null
-  //   }
-
-  //   return params.block
-  // }, zipState({ process: gmxProcess.store, block: block })))
-
-  // const syncBlock: Stream<bigint | null> = mergeArray([
-  //   recoverWith(() => now(null), block),
-  //   syncProcessData,
-  // ])
-
-  // const syncProcessEvent = multicast(switchMap(params => {
-  //   if (params.syncBlock === null) {
-  //     return now(params.store)
-  //   }
-
-  //   const refreshThreshold = import.meta.env.DEV ? 50 : 50
-  //   const blockDelta = params.syncBlock - params.store.blockNumber
-
-  //   if (refreshThreshold < blockDelta) {
-  //     const syncParams = { ...gmxProcess, publicClient: params.publicClient, syncBlock: params.syncBlock }
-  //     const storedBatch = queryLogs(syncParams, params.store)
-      
-  //     // return processLogs(syncParams, params.store, storedBatch)
-  //     return mergeArray([
-  //       processLogs(syncParams, params.store, storedBatch),
-  //       now(params.store)
-  //     ])
-  //   }
-
-  //   return now(params.store)
-  // }, combineObject({ publicClient, store: gmxProcess.store, syncBlock })))
-
-
-
-  // const process = replayLatest(multicast(syncProcessEvent))
-  // const processData = map(p => p.state, process)
-
-
-  // const isBlockSyncing = skipRepeats(mergeArray([
-  //   map(() => true, syncBlock),
-  //   map(() => false, process)
-  // ]))
 
   const changes = merge(locationChange, multicast(routeChanges))
   const fragmentsChange = map(() => {
@@ -111,32 +65,13 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
   const rootRoute = router.create({ fragment: baseRoute, title: 'Puppet', fragmentsChange })
   const appRoute = rootRoute.create({ fragment: 'app', title: '' })
-  const adminRoute = rootRoute.create({ fragment: 'admin', title: 'Admin Utilities' })
 
   const profileRoute = appRoute.create({ fragment: 'profile' })
   const walletRoute = appRoute.create({ fragment: 'wallet', title: 'Portfolio' })
   const tradeRoute = appRoute.create({ fragment: 'trade' })
-  const positionRoute = appRoute.create({ fragment: /^trade:0x([A-Fa-f0-9]{64})$/i })
   const tradeTermsAndConditions = appRoute.create({ fragment: 'terms-and-conditions' })
 
   const leaderboardRoute = appRoute.create({ fragment: 'leaderboard' })
-
-  const gmxContractMap = GMX.CONTRACT['42161']
-
-  const v2Reader = contractReader(gmxContractMap.ReaderV2)
-
-  // const marketInfo: Stream<IMarketInfo> = switchMap(params => {
-  //   const info = v2Reader('getMarketInfo', gmxContractMap.Datastore.address, params.marketPrice, params.market.marketToken)
-  //   return info
-  // }, combineObject({ market, marketPrice }))
-  
-  // const clientApi = helloRpc(gmxContractMap, {
-  //   marketInfo: now({
-  //     functionName: 'getMarketInfo',
-  //     args: ['0x0000000', {}]
-  //   })
-  // })
-
 
   const $liItem = $element('li')(style({ marginBottom: '14px' }))
   const $rootContainer = $column(
@@ -158,18 +93,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       : style({}),
   )
   const isDesktopScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
+  const routeTypeList = fromPromise(queryRouteTypeList(subgraphClient))
 
-  
-  // const subscriptionList: Stream<IPuppetSubscritpion[]> = replayLatest(multicast(switchLatest(map(w3p => {
-  //   if (!w3p) {
-  //     return now([])
-  //   }
-
-  //   return map(data => {
-  //     return data.subscription.filter(s => s.puppet === w3p.account.address)
-  //   }, processData)
-  // }, wallet))))
-  
 
   return [
     $column(
@@ -230,6 +155,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                     $$display: map(wallet => {
                       return $midContainer(
                         $Wallet({
+                          routeTypeList,
                           route: walletRoute,
                           wallet: wallet,
                         })({
@@ -256,7 +182,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                   $midContainer(
                     fadeIn($Profile({
                       route: profileRoute,
-                      // subscriptionList
                     })({
                       modifySubscriber: modifySubscriberTether(),
                       changeRoute: linkClickTether(),
@@ -291,6 +216,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 ),
                 router.match(tradeRoute)(
                   $Trade({
+                    routeTypeList,
                     chain: chainEvent,
                     referralCode: BLUEBERRY_REFFERAL_CODE,
                     parentRoute: tradeRoute
@@ -354,14 +280,11 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                         
           $column(style({ maxWidth: '1000px', margin: '0 auto', width: '100%', zIndex: 10 }))(
             $RouteSubscriptionDrawer({
-              modifySubscriptionList: replayLatest(modifySubscriptionList, [] as IPuppetSubscritpion[]),
+              routeTypeList,
+              modifySubscriptionList: replayLatest(modifySubscriptionList, []),
               modifySubscriber,
-              // subscriptionList,
-              processData: empty() as any
             })({
               modifySubscriptionList: modifySubscriptionListTether()
-              // clickClose: clickCloseSubscPanelTether(),
-              // changeSubscribeList: modifySubscriberTether()
             })
           )
         )

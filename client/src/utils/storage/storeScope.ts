@@ -42,6 +42,8 @@ export function get<TData, TKey extends string, TName extends string, TOptions e
   scope: IStoreScope<TName, TOptions>, seed: TData, key: TKey | IStoreScope<TName, TOptions>['name'] = scope.name
 ): Stream<TData> {
   return map(res => {
+    console.log('mode', res)
+
     return res === undefined ? seed : res
   }, indexDB.get(scope, key))
 }

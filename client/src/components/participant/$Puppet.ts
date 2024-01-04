@@ -9,7 +9,7 @@ import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $Link, $arrowRight, $icon, $infoTooltipLabel, IMarker, ScrollRequest } from "gmx-middleware-ui-components"
 import { IPriceTickListMap, filterNull, getMappedValue, groupArrayMany, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap } from "gmx-middleware-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
-import { IMirrorPositionOpen, IMirrorPositionSettled, IPuppetSubscritpion, IPuppetTradeRoute, accountSettledPositionListSummary, queryPuppetTradeRoute } from "puppet-middleware-utils"
+import { IMirrorPositionOpen, IMirrorPositionSettled, ISubscribeTradeRouteDto, IPuppetTradeRoute, accountSettledPositionListSummary, queryPuppetTradeRoute } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
@@ -19,6 +19,7 @@ import { $seperator2 } from "../../pages/common.js"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../../pages/components/$LastActivity.js"
 import { $ProfilePerformanceGraph, performanceTimeline } from "../trade/$ProfilePerformanceGraph.js"
 import { $PuppetProfileSummary } from "./$Summary"
+import { IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor"
 
 
 export interface ITraderProfile {
@@ -40,7 +41,7 @@ export const $PuppetPortfolio = (config: ITraderPortfolio) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
-  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams>
 
 ) => {
@@ -238,7 +239,8 @@ export const $PuppetPortfolio = (config: ITraderPortfolio) => component((
                             $TraderRouteDisplay({
                               positionParams: fstPosition,
                               trader: puppetTradeRoute.trader,
-                              routeTypeKey: "0xa437f95c9cee26945f76bc090c3491ffa4e8feb32fd9f4fefbe32c06a7184ff3",
+                              routeTypeKey: routeTypeKey,
+                              tradeRoute: traderTradeList[0].tradeRoute,
                               // subscriptionList: config.subscriptionList,
                             })({
                               modifySubscribeList: modifySubscriberTether()
@@ -279,7 +281,7 @@ export const $PuppetPortfolio = (config: ITraderPortfolio) => component((
 export const $PuppetProfile = (config: ITraderProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
-  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
 ) => {
 
   const puppetTradeRouteList = awaitPromises(map(activityTimeframe => {
@@ -331,7 +333,6 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
           activityTimeframe: config.activityTimeframe,
           address: config.address,
           route: config.route,
-          subscriptionList: config.subscriptionList,
         })({
           changeRoute: changeRouteTether(),
           changeActivityTimeframe: changeActivityTimeframeTether(),

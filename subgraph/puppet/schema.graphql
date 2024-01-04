@@ -345,6 +345,7 @@ type MirrorPositionOpen @entity {
 
   trader: Bytes!
   tradeRoute: Bytes!
+
   puppets: [Bytes!]! # address[]
 
   puppetsShares: [BigInt!]!
@@ -367,6 +368,7 @@ type MirrorPositionSettled @entity(immutable: true) {
 
   trader: Bytes!
   tradeRoute: Bytes!
+
   puppets: [Bytes!]! # address[]
 
   puppetsShares: [BigInt!]!
@@ -384,7 +386,7 @@ type MirrorPositionSettled @entity(immutable: true) {
 type ExecutePosition @entity(immutable: true) {
   id: Bytes!
   performanceFeePaid: BigInt! # uint256
-  route: Bytes! # address
+  tradeRoute: Bytes! # address
   requestKey: Bytes! # bytes32
   isExecuted: Boolean! # bool
   isIncrease: Boolean! # bool
@@ -398,7 +400,7 @@ type RequestMirrorPosition @entity(immutable: true) {
   id: Bytes!
   puppets: [Bytes!]! # address[]
   trader: Bytes! # address
-  route: Bytes! # address
+  tradeRoute: Bytes! # address
   isIncrease: Boolean! # bool
   requestKey: Bytes! # bytes32
   routeTypeKey: Bytes! # bytes32
@@ -411,8 +413,8 @@ type RequestMirrorPosition @entity(immutable: true) {
 type SetRouteType @entity(immutable: true) {
   id: Bytes!
   routeTypeKey: Bytes! # bytes32
-  collateral: Bytes! # address
-  index: Bytes! # address
+  collateralToken: Bytes! # address
+  indexToken: Bytes! # address
   isLong: Boolean! # bool
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -426,7 +428,7 @@ type SharesIncrease @entity(immutable: true) {
   traderShares: BigInt! # uint256
   totalSupply: BigInt! # uint256
   requestKey: Bytes! # bytes32
-  route: Bytes! # address
+  tradeRoute: Bytes! # address
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -439,7 +441,7 @@ type SubscribeTradeRoute @entity(immutable: true) {
   subscriptionExpiry: BigInt! # uint256
   trader: Bytes! # address
   puppet: Bytes! # address
-  route: Bytes! # address
+  tradeRoute: Bytes! # address
   routeTypeKey: Bytes! # bytes32
   subscribe: Boolean! # bool
 
@@ -493,18 +495,20 @@ type PuppetPositionSettled @entity(immutable: true) {
 type PuppetTradeRoute @entity(immutable: true) {
   id: Bytes!
   routeTypeKey: Bytes! # bytes32
+
   puppet: Bytes! # address
   trader: Bytes! # address
+  tradeRoute: Bytes! # address
 
-  puppetPositionOpenList: [PuppetPositionOpen!] @derivedFrom(field: "puppetTradeRoute")
-  puppetPositionSettledList: [PuppetPositionSettled!] @derivedFrom(field: "puppetTradeRoute")
-  subscriptionList: [SubscribeTradeRoute!] @derivedFrom(field: "puppetTradeRoute")
+  openList: [PuppetPositionOpen!] @derivedFrom(field: "puppetTradeRoute")
+  settledList: [PuppetPositionSettled!] @derivedFrom(field: "puppetTradeRoute")
+  subscribeList: [SubscribeTradeRoute!] @derivedFrom(field: "puppetTradeRoute")
 }
 
 type AdjustPosition @entity(immutable: true) {
   id: Bytes!
   trader: Bytes! # address
-  route: Bytes! # address
+  tradeRoute: Bytes! # address
   isIncrease: Boolean! # bool
   requestKey: Bytes! # bytes32
   routeTypeKey: Bytes! # bytes32
@@ -546,7 +550,7 @@ type MarketCreated @entity(immutable: true) {
 # type RegisterRouteAccount @entity(immutable: true) {
 #   id: Bytes!
 #   trader: Bytes! # address
-#   route: Bytes! # address
+#   tradeRoute: Bytes! # address
 #   routeTypeKey: Bytes! # bytes32
 #   blockNumber: BigInt!
 #   blockTimestamp: BigInt!
@@ -558,7 +562,7 @@ type MarketCreated @entity(immutable: true) {
 #   amount: BigInt! # uint256
 #   token: Bytes! # address
 #   receiver: Bytes! # address
-#   route: Bytes! # address
+#   tradeRoute: Bytes! # address
 #   blockNumber: BigInt!
 #   blockTimestamp: BigInt!
 #   transactionHash: Bytes!
@@ -668,7 +672,7 @@ type MarketCreated @entity(immutable: true) {
 
 # type AdjustTargetLeverage @entity(immutable: true) {
 #   id: Bytes!
-#   route: Bytes! # address
+#   tradeRoute: Bytes! # address
 #   requestKey: Bytes! # bytes32
 #   routeKey: Bytes! # bytes32
 #   positionKey: Bytes! # bytes32
@@ -734,7 +738,7 @@ type MarketCreated @entity(immutable: true) {
 
 # type LiquidatePosition @entity(immutable: true) {
 #   id: Bytes!
-#   route: Bytes! # address
+#   tradeRoute: Bytes! # address
 #   routeKey: Bytes! # bytes32
 #   positionKey: Bytes! # bytes32
 #   blockNumber: BigInt!

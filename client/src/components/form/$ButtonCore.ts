@@ -1,4 +1,4 @@
-import { constant, empty, filter, map, merge, mergeArray } from "@most/core"
+import { constant, empty, filter, map, merge, mergeArray, startWith } from "@most/core"
 import { Behavior, O } from '@aelea/core'
 import { $Node, $element, component, nodeEvent, INode, styleBehavior, IBranch, attrBehavior, NodeComposeFn } from '@aelea/dom'
 import { pallete } from '@aelea/ui-components-theme'
@@ -23,7 +23,7 @@ export interface IButtonCore extends Control {
 
 export const $defaultButtonCore = $element('button')(designSheet.btn)
 
-export const $ButtonCore = ({ $content, $container = $defaultButtonCore, disabled = empty() }: IButtonCore) => component((
+export const $ButtonCore = ({ $content, $container = $defaultButtonCore, disabled }: IButtonCore) => component((
   [focusStyle, interactionTether]: Behavior<IBranch, true>,
   [dismissstyle, dismissTether]: Behavior<IBranch, false>,
   [click, clickTether]: Behavior<INode, PointerEvent>
@@ -34,16 +34,13 @@ export const $ButtonCore = ({ $content, $container = $defaultButtonCore, disable
     clickTether(
       nodeEvent('pointerup')
     ),
-    styleBehavior(
-      map(isDisabled => isDisabled ? { opacity: .4, pointerEvents: 'none' } : null, disabled)
-    ),
+    disabled
+      ? styleBehavior(
+        map(isDisabled => {
+          return isDisabled ? { opacity: .4, pointerEvents: 'none' } : null
+        }, startWith(true, disabled))
+      ) : O() as any,
 
-
-    attrBehavior(
-      map(d => {
-        return { disabled: d ? 'true' : null }
-      }, disabled)
-    ),
 
     styleBehavior(
       map(

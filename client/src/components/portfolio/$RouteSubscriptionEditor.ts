@@ -2,61 +2,80 @@
 import { Behavior, combineObject } from "@aelea/core"
 import { $element, $node, $text, attr, component, style, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { constant, map, mergeArray, snapshot, startWith, take } from "@most/core"
+import { empty, map, mergeArray, now, recoverWith, snapshot, take } from "@most/core"
 import { TIME_INTERVAL_MAP } from "gmx-middleware-const"
-import { formatFixed, parseBps, unixTimestampNow } from "gmx-middleware-utils"
-import { IPuppetSubscritpionParams } from "puppet-middleware-utils"
+import { formatFixed, parseBps, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import * as PUPPET from "puppet-middleware-const"
+import { ISubscribeTradeRouteDto, getPuppetAllowancesKey } from "puppet-middleware-utils"
+import * as viem from "viem"
+import { arbitrum } from "viem/chains"
 import { theme } from "../../assignThemeSync.js"
 import { $TextField } from "../../common/$TextField.js"
+import { contractReader } from "../../logic/common"
+import { IWalletClient, wallet } from "../../wallet/walletLink"
 import { $ButtonSecondary } from "../form/$Button.js"
 
 
-
 interface IRouteSubscriptionEditor {
-  routeSubscription?: IPuppetSubscritpionParams
+  // tradeRoute: viem.Address
+  // wallet?: IWalletClient
+  // routeKey: viem.Hex
+  expiry: bigint
+  tradeRoute: viem.Hex
+
+  routeTypeKey: viem.Hex
+  trader: viem.Address
+  // collateralToken: viem.Address
+  // indexToken: viem.Address
+  // isLong: boolean
   // marketList: Stream<IMarketCreatedEvent[]>
+}
+
+export interface IChangeSubscription {
+  expiry: bigint
+  allowance: bigint
+  routeTypeKey: viem.Hex
+  trader: viem.Address
+
+  previousSubscriptionExpiry: bigint
 }
 
 export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => component((
   [inputEndDate, inputEndDateTether]: Behavior<any, bigint>,
   [inputAllowance, inputAllowanceTether]: Behavior<any, bigint>,
-  [clickUnsubscribe, clickUnsubscribeTether]: Behavior<any, false>,
-  [clickSubmit, clickSubmitTether]: Behavior<any>,
+  [clickUnsubscribe, clickUnsubscribeTether]: Behavior<any, IChangeSubscription>,
+  [clickSubmit, clickSubmitTether]: Behavior<any, IChangeSubscription>,
 
   // [switchIsLong, switchIsLongTether]: Behavior<boolean>,
   // [switchisMarketIndexToken, switchisMarketIndexTokenTether]: Behavior<boolean>,
 ) => {
-  const { routeSubscription } = config
 
+  const puppetContractMap = PUPPET.CONTRACT[arbitrum.id]
+  const datastoreReader = contractReader(puppetContractMap.Datastore) 
+  const allowance = mergeArray([
+    switchMap(wallet => {
+      if (wallet == null) return now(0n)
+      const currentAllowance = map(([aa, bb]) => {
+        return aa ? bb : undefined
+      }, datastoreReader('tryGetAddressToUintFor', getPuppetAllowancesKey(wallet.account.address), config.tradeRoute))
+      return currentAllowance
+    }, wallet),
+    inputAllowance
+  ])
 
-  // const collateralToken = replayLatest(switchIsLong, true)
-  // const indexToken = replayLatest(switchIsLong, true)
-  // const isLong = replayLatest(switchIsLong, true)
-  // const isMarketIndexToken = replayLatest(switchisMarketIndexToken, true)
-
-  // const market = mergeArray([
-  //   selectMarket,
-  //   map(params => {
-  //     return params.marketList.find(mkt => mkt.routeTypeKey === config.routeSubscription?.routeTypeKey) || params.marketList[1]
-  //   }, combineObject({ marketList, isLong }))
-  // ])
-
-  const allowance = startWith(config.routeSubscription?.allowance || 500n, inputAllowance)
   
-  // const routeTypeKey = map(params => {
-  //   const collateralToken = params.isMarketIndexToken ? params.market.indexToken : params.market.shortToken
-  //   const routeTypeKeyData = hashData(['address'], [params.market.marketToken])
-    
-  //   return getRouteTypeKey(collateralToken, params.market.indexToken, params.isLong, routeTypeKeyData)
-  // }, combineObject({ indexToken, isLong, collateralToken }))
-  const initEnddate = config.routeSubscription?.subscriptionExpiry ? config.routeSubscription?.subscriptionExpiry : BigInt(unixTimestampNow() + TIME_INTERVAL_MAP.YEAR)
-  const subscriptionExpiry = startWith(initEnddate, inputEndDate)
+  const expiry = mergeArray([
+    now(config.expiry ? config.expiry : BigInt(unixTimestampNow() + TIME_INTERVAL_MAP.YEAR)),
+    inputEndDate
+  ])
   
   const form = combineObject({
     allowance,
-    subscriptionExpiry
+    expiry
   })
 
+
+  const isSubscribed = config.expiry !== 0n
 
   return [
     $column(layoutSheet.spacing, style({ maxWidth: '350px' }))(
@@ -155,14 +174,15 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
 
       $TextField({
         label: 'Allow %',
-        value: take(1, map(x => formatFixed(x, 4) * 100, allowance)),
+        value: map(x => x ? formatFixed(x, 4) * 100 : '', allowance),
         labelWidth: 100,
-        hint: `% allocated per position adjustment. Lower values decrease risk. Helps with easier management if peformance is below expectation`,
+        hint: `% allocated per adjustment. 1-10% is recommended`,
       })({
         change: inputAllowanceTether(
           map(x => parseBps(x / 100))
         )
       }),
+
       $TextField({
         label: 'Expiration',
         $input: $element('input')(
@@ -174,39 +194,45 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
         labelWidth: 100,
         value: map(time => {
           return new Date(Number(time * 1000n)).toISOString().slice(0, 10)
-        }, subscriptionExpiry),
+        }, expiry),
       })({
         change: inputEndDateTether(
           map(x => BigInt(new Date(x).getTime() / 1000))
         )
       }),
 
-
       $node(),
 
-      $row(style({ placeContent: 'flex-end', alignItems: 'center' }))(
-        
-        routeSubscription?.subscribe
-          ? $ButtonSecondary({
-            $content: $text('Unsubscribe'),
-          })({
-            click: clickUnsubscribeTether()
-          })
-          : $ButtonSecondary({
-            $content: $text('Subscribe'),
-          })({
-            click: clickSubmitTether()
-          }),
+      $row(style({ placeContent: 'space-between', alignItems: 'center' }))(
+        $ButtonSecondary({
+          $content: $text('Unsubscribe'),
+          disabled: now(!isSubscribed)
+        })({
+          click: clickUnsubscribeTether(
+            snapshot(params => {
+              return { previousSubscriptionExpiry: config.expiry, routeTypeKey: config.routeTypeKey, trader: config.trader, ...params, expiry: 0n,  }
+            }, form)
+          )
+        }),
+
+        $ButtonSecondary({
+          $content: $text('Subscribe'),
+          disabled: map(params => !params.allowance, form)
+        })({
+          click: clickSubmitTether(
+            snapshot(subsc => {
+              return { previousSubscriptionExpiry: config.expiry, routeTypeKey: config.routeTypeKey, trader: config.trader, ...subsc, subscribe: true,  }
+            }, form)
+          )
+        })
+          
       )
-    
     ),
 
     {
       modifySubscribeList: mergeArray([
-        snapshot(subsc => {
-          return { ...routeSubscription, ...subsc, subscribe: true }
-        }, form, clickSubmit),
-        constant({ ...routeSubscription, subscribe: false }, clickUnsubscribe)
+        clickSubmit,
+        clickUnsubscribe
       ]),
     }
   ]

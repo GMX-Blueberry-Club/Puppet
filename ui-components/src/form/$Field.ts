@@ -1,7 +1,7 @@
-import { $element, component, nodeEvent, IBranch, style, styleBehavior, StyleCSS, NodeComposeFn, $Node } from '@aelea/dom'
+import { $element, component, nodeEvent, IBranch, style, styleBehavior, StyleCSS, NodeComposeFn, $Node, attrBehavior } from '@aelea/dom'
 import { O, Op, combineObject, Behavior } from '@aelea/core'
 import { pallete } from '@aelea/ui-components-theme'
-import { multicast, never, now, startWith, tap } from '@most/core'
+import { mergeArray, multicast, never, now, startWith, tap } from '@most/core'
 import { filter } from '@most/core'
 import { merge } from '@most/core'
 import { empty, map, switchLatest } from "@most/core"
@@ -41,15 +41,17 @@ export const $Field = ({ value = empty(), validation = never, $input = $element(
         })
       ),
 
-      styleBehavior(
+      styleBehavior(mergeArray([
+        startWith({ opacity: '.5' }, map(() => ({ opacity: '' }), value)),
         map(({ focus, alert }) => {
           if (alert) {
             return { borderBottom: `2px solid ${pallete.negative}` }
           }
 
           return focus ? { borderBottom: `2px solid ${pallete.primary}` } : null
-        }, state)
-      ),
+        }, state),
+      ])),
+      
 
       interactionTether(interactionOp),
       dismissTether(dismissOp),

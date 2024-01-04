@@ -3,18 +3,32 @@ import * as viem from "viem"
 
 
 
+export function getPuppetAllowancesKey(puppet: viem.Address): viem.Hex {
+  return hashData(
+    ["string", "address"],
+    ["PUPPET_ALLOWANCES", puppet]
+  )
+}
 
-export function getTradeRouteKey(trader: viem.Address, collateralToken: viem.Address, indexToken: viem.Address, isLong: boolean): viem.Hex {
-  const tradeRouteKey = hashData(
+export function getPuppetSubscriptionExpiryKey(puppet: viem.Address, routeKey: viem.Hex): viem.Hex {
+  return hashData(
+    ["string", "address", "bytes32"],
+    ["PUPPET_SUBSCRIPTION_EXPIRY", puppet, routeKey]
+  )
+}
+
+export function getTradeRouteKey(trader: viem.Address, collateralToken: viem.Address, indexToken: viem.Address, isLong: boolean) {
+  return hashData(
     ["address", "address", "address", "bool"],
     [trader, collateralToken, indexToken, isLong]
   )
-  const routeAddressKey = hashData(
-    ["string", "bytes32"],
-    ["ROUTE_ADDRESS", tradeRouteKey]
-  )
+}
 
-  return routeAddressKey
+export function getRouteAddressKey(routeKey: viem.Hex): viem.Hex {
+  return hashData(
+    ["string", "bytes32"],
+    ["ROUTE_ADDRESS", routeKey]
+  )
 }
 
 export function getRouteTypeKey(collateralToken: viem.Address, indexToken: viem.Address, isLong: boolean, data: viem.Hex): viem.Hex {

@@ -96,7 +96,7 @@ type IIntermediateTx<
   TSuccess extends TransactionReceipt,
 > = {
   $$success?: Op<TSuccess, $Node>
-  chain: CHAIN
+  chain: Chain
   query: Stream<Promise<TSuccess>>
   clean?: Stream<any>
   showTooltip?: boolean

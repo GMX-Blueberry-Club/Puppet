@@ -6,7 +6,7 @@ const executePosition: ISchema<Omit<IExecutePosition, 'link'>> = {
   id: 'string',
 
   performanceFeePaid: 'uint',
-  route: 'address',
+  tradeRoute: 'address',
   requestKey: 'string',
   isExecuted: 'bool',
   isIncrease: 'bool',
@@ -23,7 +23,7 @@ const sharesIncrease: ISchema<Omit<ISharesIncrease, 'link'>> = {
   puppetsShares: 'uint[]',
   traderShares: 'uint',
   totalSupply: 'uint',
-  route: 'address',
+  tradeRoute: 'address',
 
   requestKey: 'string',
 
@@ -106,14 +106,14 @@ const puppetPositionSettled: ISchema<Omit<IPuppetPositionSettled, 'puppetTradeRo
   __typename: 'PuppetPositionSettled',
 }
 
-const subscribeTradeRoute: ISchema<Omit<ISubscribeTradeRoute, 'puppetTradeRoute'>> = {
+const subscribeTradeRoute: ISchema<ISubscribeTradeRoute> = {
   id: 'string',
 
   allowance: 'uint',
   subscriptionExpiry: 'uint',
   trader: 'address',
   puppet: 'address',
-  route: 'address',
+  tradeRoute: 'address',
   routeTypeKey: 'string',
   subscribe: 'bool',
 
@@ -129,6 +129,7 @@ const puppetTradeRoute: ISchema<IPuppetTradeRoute> = {
   routeTypeKey: 'string',
   puppet: 'address',
   trader: 'address',
+  tradeRoute: 'address',
 
   puppetPositionSettledList: puppetPositionSettled,
   puppetPositionOpenList: puppetPositionOpen,
@@ -139,8 +140,8 @@ const puppetTradeRoute: ISchema<IPuppetTradeRoute> = {
 
 const setRouteType: ISchema<ISetRouteType> = {
   id: 'string',
-  collateral: 'address',
-  index: 'address',
+  collateralToken: 'address',
+  indexToken: 'address',
   isLong: 'bool',
   routeTypeKey: 'string',
   // data: 'string',

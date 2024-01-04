@@ -1,4 +1,4 @@
-import { Behavior } from "@aelea/core"
+import { Behavior, combineObject } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, layoutSheet } from "@aelea/ui-components"
@@ -6,14 +6,15 @@ import { fromPromise, map, mergeArray, now } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $ButtonToggle, $defaulButtonToggleContainer } from "gmx-middleware-ui-components"
-import { ETH_ADDRESS_REGEXP } from "gmx-middleware-utils"
-import { IPuppetSubscritpion, queryLatestPriceTicks } from "puppet-middleware-utils"
+import { ETH_ADDRESS_REGEXP, findClosest, switchMap } from "gmx-middleware-utils"
+import { ISubscribeTradeRouteDto, queryLatestPriceTicks } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $PuppetProfile } from "../components/participant/$Puppet.js"
 import { $TraderProfile } from "../components/participant/$Trader.js"
 import * as store from "../data/store/store.js"
 import * as storage from "../utils/storage/storeScope.js"
 import { subgraphClient } from "../data/subgraph/client"
+import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor"
 
 
 export enum IProfileActiveTab {
@@ -39,7 +40,7 @@ type IRouteOption = {
 export const $Profile = (config: IProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [selectProfileMode, selectProfileModeTether]: Behavior<IRouteOption, IRouteOption>,
-  [modifySubscriber, modifySubscriberTether]: Behavior<IPuppetSubscritpion>,
+  [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
   
 ) => {
@@ -49,8 +50,11 @@ export const $Profile = (config: IProfile) => component((
   const puppetRoute = profileAddressRoute.create({ fragment: 'puppet', title: 'Puppet' })
 
   const activityTimeframe = storage.replayWrite(store.activityTimeframe, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
-  const priceTickMap = fromPromise(queryLatestPriceTicks(subgraphClient, { interval: GMX.TIME_INTERVAL_MAP.MIN5 }))
-
+  const priceTickMap = switchMap(params => {
+    const interval = findClosest(GMX.PRICEFEED_INTERVAL, params.activityTimeframe / 20)
+    return fromPromise(queryLatestPriceTicks(subgraphClient, { interval: interval }))
+  }, combineObject({ activityTimeframe: activityTimeframe }))
+  
   const options: IRouteOption[] = [
     {
       label: 'Puppet',
@@ -100,7 +104,7 @@ export const $Profile = (config: IProfile) => component((
 
           return  $column(
             router.match(traderRoute)(
-              $TraderProfile({ ...config, address, activityTimeframe })({
+              $TraderProfile({ priceTickMap, route: config.route, address, activityTimeframe })({
                 modifySubscriber: modifySubscriberTether(),
                 changeRoute: changeRouteTether(),
                 changeActivityTimeframe: changeActivityTimeframeTether(),
