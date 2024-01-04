@@ -5,10 +5,10 @@
     ".dist"
   ],
   "scripts": {
-    "dev": "rimraf .dist && SW_DEV=true vite",
+    "dev": "bun rimraf .dist && bun vite",
     "dev-destroy": "rimraf .dist && DEBUG=vite-plugin-pwa SW_DESTROY=true vite",
-    "build": "vite build",
-    "preview": "vite preview --port=4173"
+    "build": "bun vite build",
+    "preview": "bun vite preview --port=4173"
   },
   "dependencies": {
     "@aelea/core": "^1.3.2",

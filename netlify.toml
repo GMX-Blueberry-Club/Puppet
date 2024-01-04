@@ -1,7 +1,7 @@
 [build]
   publish="./client/.dist/"
   base = "."
-  command = "pnpm run build"
+  command = "bun run build"
 
 [[redirects]]
   from = "/*"
