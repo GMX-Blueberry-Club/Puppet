@@ -6,7 +6,6 @@ import { IntervalUnixTime, OrderExecutionStatus, ZERO_BI } from "./utils/const"
 import { getAddressItem, getAddressItemList, getBoolItem, getBytes32Item, getStringItem, getUintItem } from "./utils/datastore"
 import { getIdFromEvent, getPositionKey } from "./utils/gmxHelpers"
 
-
 export function handleEventLog1(event: EventLog1): void {
   if (event.params.eventName == "OraclePriceUpdate") {
     onOraclePriceUpdate(event)
