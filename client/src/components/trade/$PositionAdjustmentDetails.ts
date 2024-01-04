@@ -75,13 +75,6 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
 
 ) => {
 
-  const gmxContractMap = GMX.CONTRACT[config.chain.id]
-
-  const vault = connectContract(gmxContractMap.Vault)
-  const router = connectContract(gmxContractMap.Router)
-  const positionRouterAddress = GMX.CONTRACT[config.chain.id].PositionRouter.address
-
-
   const { 
     collateralDeltaUsd, collateralToken, collateralDelta, marketInfo, market, isUsdCollateralToken, sizeDelta, focusMode,
     primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, focusPrice, indexToken, executionFeeBuffer
@@ -90,7 +83,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
     availableIndexLiquidityUsd, averagePrice, collateralDescription,
     collateralPrice, executionFee,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
-    isTradingEnabled, liquidationPrice, marginFeeUsd, route, netPositionValueUsd,
+    isTradingEnabled, liquidationPrice, marginFeeUsd, tradeRoute, netPositionValueUsd,
     position, walletBalance, marketList, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
   } = config.tradeState
 
@@ -141,7 +134,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
       : req.focusPrice ? OrderType.LimitDecrease : OrderType.MarketDecrease
 
 
-    const request = params.route
+    const request = params.tradeRoute
       ? wagmiWriteContract({
         ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
         value: totalWntAmount,
@@ -236,7 +229,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
 
 
     return { ...params, ...req, acceptablePrice, request, swapRoute }
-  }, combineObject({ executionFee, indexPrice, route, routeTypeKey }), requestTradeParams))
+  }, combineObject({ executionFee, indexPrice, tradeRoute, routeTypeKey }), requestTradeParams))
 
   const requestTradeRow = map(res => {
     return [res]
@@ -492,14 +485,14 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
                 $content: $text(`Approve ${params.primaryDescription.symbol}`)
               })({
                 click: clickApproveprimaryTokenTether(
-                  map(wallet => ({ wallet, route: params.route, primaryToken: params.primaryToken }))
+                  map(wallet => ({ wallet, route: params.tradeRoute, primaryToken: params.primaryToken }))
                 )
               })
 
           return $row(
             $primary
           )
-        }, combineObject({ isPrimaryApproved, route, isTradingEnabled, primaryToken, primaryDescription })))
+        }, combineObject({ isPrimaryApproved, tradeRoute, isTradingEnabled, primaryToken, primaryDescription })))
       ),
       
     ),

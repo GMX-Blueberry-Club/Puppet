@@ -3,12 +3,10 @@ import { $Node, $text, NodeComposeFn, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { map, now } from "@most/core"
 import { Stream } from "@most/types"
-import * as GMX from "gmx-middleware-const"
 import { $Table, $infoLabel, $txHashRef } from "gmx-middleware-ui-components"
 import { IPositionDecrease, IPositionIncrease, IPriceCandle, StateStream, getTokenUsd, readableDate, readableFixedUSD30, switchMap, timeSince, unixTimestampNow } from "gmx-middleware-utils"
 import { IMirrorPositionOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { connectContract } from "../../logic/common.js"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 
@@ -49,13 +47,6 @@ export type IRequestTrade = IRequestTradeParams & {
 export const $PositionDetails = (config: IPositionAdjustmentHistory) => component((
 ) => {
 
-  const gmxContractMap = GMX.CONTRACT[config.chain.id]
-
-  const vault = connectContract(gmxContractMap.Vault)
-  const router = connectContract(gmxContractMap.Router)
-  const positionRouterAddress = GMX.CONTRACT[config.chain.id].PositionRouter.address
-
-
   const { 
     collateralDeltaUsd, collateralToken, indexToken, collateralDelta, marketInfo, market, isUsdCollateralToken, sizeDelta, focusMode,
     primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, focusPrice
@@ -64,7 +55,7 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
     availableIndexLiquidityUsd, averagePrice, collateralDescription,
     collateralPrice, executionFee,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
-    isTradingEnabled, liquidationPrice, marginFeeUsd, route, netPositionValueUsd,
+    isTradingEnabled, liquidationPrice, marginFeeUsd, tradeRoute, netPositionValueUsd,
     position, walletBalance, marketList, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
   } = config.tradeState
 
@@ -115,7 +106,7 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
             if ('key' in pos) {
               const direction = pos.__typename === 'PositionIncrease' ? '↑' : '↓'
               return $row(layoutSheet.spacingSmall)(
-                $txHashRef(pos.transactionHash, config.chain.id, $text(`${direction} ${readableFixedUSD30(pos.executionPrice)}`))
+                $txHashRef(pos.transactionHash, config.chain, $text(`${direction} ${readableFixedUSD30(pos.executionPrice)}`))
               )
             }
 
