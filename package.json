@@ -2,7 +2,6 @@
   "name": "monorepo",
   "license": "AGPL-3.0",
   "private": true,
-  "packageManager": "pnpm@8.10.2",
   "workspaces": [
     "@gambitdao-gbc-middleware",
     "client",
@@ -12,7 +11,7 @@
     "gmx-middleware"
   ],
   "scripts": {
-    "build": "cd ./client && bun run build",
+    "build": "cd client && bun run build",
     "dev:client": "pnpm --filter 'client' run dev",
     "dev:contracts": "pnpm --filter 'contracts' dev"
   },

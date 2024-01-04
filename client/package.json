@@ -5,9 +5,9 @@
     ".dist"
   ],
   "scripts": {
-    "dev": "bun --bun vite",
+    "dev": "vite --bun",
     "dev-destroy": "bunx rimraf .dist && bunx DEBUG=vite-plugin-pwa SW_DESTROY=true vite",
-    "build": "bun --bun vite build",
+    "build": "vite --bun build",
     "preview": "bun vite preview --port=4173"
   },
   "dependencies": {
