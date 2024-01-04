@@ -4,9 +4,9 @@ import { colorAlpha, pallete, theme } from "@aelea/ui-components-theme"
 import { IToken, LAB_CHAIN } from "@gambitdao/gbc-middleware"
 import { $anchor, $calendar, $caretDblDown, $ethScan } from "gmx-middleware-ui-components"
 import { getAccountExplorerUrl, getTxExplorerUrl, shortenAddress } from "gmx-middleware-utils"
-import { IPositionUiFees } from "viem"
 import { $berryByToken } from "../../components/$common.js"
 import { $trash } from "./$icons.js"
+import * as viem from "viem"
 
 export const $TrashBtn = $ButtonIcon($trash)
 
@@ -114,17 +114,17 @@ export const $iconCircular = ($iconPath: $Branch<SVGPathElement>, size = '32px')
 
 
 
-export const $accountRef = (id: IPositionUiFees) => $anchor(attr({ href: getAccountExplorerUrl(LAB_CHAIN, id) }))(
+export const $accountRef = (id: viem.Address, chain: viem.Chain) => $anchor(attr({ href: getAccountExplorerUrl(chain, id) }))(
   $text(style({}))(`${shortenAddress(id)}`)
 )
 
 
-export const $accountIconLink = (address: IPositionUiFees) => $anchor(attr({ href: getAccountExplorerUrl(LAB_CHAIN, address) }))(
+export const $accountIconLink = (address: viem.Address, chain: viem.Chain) => $anchor(attr({ href: getAccountExplorerUrl(chain, address) }))(
   $icon({ $content: $ethScan, width: '16px', viewBox: '0 0 24 24', svgOps: style({ margin: '3px 4px 0 0' }) }),
   $text(style({}))(`${shortenAddress(address)} `),
 )
 
-export const $txnIconLink = (hash: string) => $anchor(attr({ href: getTxExplorerUrl(LAB_CHAIN, hash) }))(
+export const $txnIconLink = (hash: string, chain: viem.Chain) => $anchor(attr({ href: getTxExplorerUrl(chain, hash) }))(
   $icon({ $content: $ethScan, width: '16px', viewBox: '0 0 24 24' })
 )
 

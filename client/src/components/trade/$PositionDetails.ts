@@ -60,7 +60,7 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
   } = config.tradeState
 
 
-  const dataSource = switchMap(pos => {
+  const dataSource: Stream<(IPositionIncrease | IPositionDecrease)[]> = switchMap(pos => {
     return pos
       ? now([...pos.position.link.increaseList, ...pos.position.link.decreaseList].sort((a, b) => Number(b.blockTimestamp - a.blockTimestamp) ))
       : now([])
@@ -162,11 +162,8 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
           $head: $text('Collateral change'),
           columnOp: O(style({ flex: .7, placeContent: 'flex-end', textAlign: 'right', alignItems: 'center' })),
 
-          $bodyCallback: map((req) => {
-            const isKeeperReq = 'request' in req
-            const delta = isKeeperReq
-              ? req.__typename === 'PositionIncrease'
-                ? req.collateralAmount : -req.collateralAmount : getTokenUsd(req.collateralTokenPriceMin, req.collateralAmount)
+          $bodyCallback: map(req => {
+            const delta = req.__typename === 'PositionIncrease' ? req.collateralAmount : -req.collateralAmount
 
             return $text(readableFixedUSD30(delta))
           })
@@ -175,10 +172,9 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
           $head: $text('Size change'),
           columnOp: O(style({ flex: .7, placeContent: 'flex-end', textAlign: 'right', alignItems: 'center' })),
           $bodyCallback: map((req) => {
-            const isKeeperReq = 'request' in req
-            const delta = isKeeperReq
-              ? req.__typename === 'PositionIncrease'
-                ? req.sizeDeltaUsd : -req.sizeDeltaUsd : req.sizeDeltaUsd
+            
+            const delta = req.__typename === 'PositionIncrease'
+              ? req.sizeDeltaUsd : -req.sizeDeltaUsd
 
             return $text(readableFixedUSD30(delta))
           })

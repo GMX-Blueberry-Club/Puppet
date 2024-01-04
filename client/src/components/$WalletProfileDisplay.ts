@@ -7,7 +7,6 @@ import { awaitPromises, map, mergeArray, now, snapshot, switchLatest } from "@mo
 import { $Link } from "gmx-middleware-ui-components"
 import { account, modal } from "../wallet/walletLink.js"
 import { $disconnectedWalletDisplay, $profileDisplay } from "./$AccountProfile.js"
-import * as router from '@aelea/router'
 
 
 export interface IWalletDisplay {
@@ -32,12 +31,12 @@ export const $WalletProfileDisplay = ({ $container = $row, parentRoute }: IWalle
     )(
       switchLatest(snapshot((_, accountResult) => {
         
-        return accountResult.address
+        return accountResult?.address
           ? $Link({
             route: walletRoute,
             // anchorOp: style({  }),
             url: `/app/wallet`,
-            $content: style({ paddingRight: '16px' })($profileDisplay({ $labelContainer: $column(style({ padding: '0 8px 0 4px' })), address: accountResult.address, $container }))
+            $content: style({ paddingRight: '16px' })($profileDisplay({ $labelContainer: $column(style({ padding: '0 8px 0 4px' })), address: accountResult?.address, $container }))
           })({
             click: routeChangeTether(),
             active: isActiveTether()

@@ -228,36 +228,36 @@ export type AbiInput<
   args: AbiParametersToPrimitiveTypes<ExtractAbiFunction<TAbi, TFunctionName>['inputs']>
 }
 
-export const helloRpc = <
-  TAddress extends Address,
-  TAbi extends viem.Abi,
-  TChannelParamsList extends Record<any, AbiInput<TAbi, any>>,
->(
-  config: ContractParams<TAbi, TAddress>,
-  messages: { [P in keyof TChannelParamsList]: Stream<AbiInput<TAbi, P>> }
-): {[k: string]: Stream<any>}  => {
-  const entriesInMap = Object.entries(config)
-  const outMapEntries = entriesInMap.map(([topic, source]) => {
-    // @ts-ignore
-    return map(body => ({ topic, body }), source)
-  }, {} as any)
+// export const helloRpc = <
+//   TAddress extends Address,
+//   TAbi extends viem.Abi,
+//   TChannelParamsList extends Record<any, AbiInput<TAbi, any>>,
+// >(
+//   config: ContractParams<TAbi, TAddress>,
+//   messages: { [P in keyof TChannelParamsList]: Stream<AbiInput<TAbi, P>> }
+// ): {[k: string]: Stream<any>}  => {
+//   const entriesInMap = Object.entries(config)
+//   const outMapEntries = entriesInMap.map(([topic, source]) => {
+//     // @ts-ignore
+//     return map(body => ({ topic, body }), source)
+//   }, {} as any)
   
-  const wss = http.fromWebsocket<ICommunicationMessage<string, OUT>, ICommunicationMessage<string, IN[keyof IN]>>(`wss://${location.host}/api-ws`, mergeArray(outMapEntries))
-  const multicastConnection = multicast(wss)
+//   const wss = http.fromWebsocket<ICommunicationMessage<string, OUT>, ICommunicationMessage<string, IN[keyof IN]>>(`wss://${location.host}/api-ws`, mergeArray(outMapEntries))
+//   const multicastConnection = multicast(wss)
 
-  const outMap = entriesInMap.reduce((seed, [topic, source]) => {
-    // @ts-ignore
-    seed[topic] = O(
-      filter((data: ICommunicationMessage<string, any>) => {
-        const isMessageValid = typeof data === 'object' && 'body' in data && 'topic' in data
-        return isMessageValid && data.topic === topic
-      }),
-      map(x => x.body)
-    )(multicastConnection)
+//   const outMap = entriesInMap.reduce((seed, [topic, source]) => {
+//     // @ts-ignore
+//     seed[topic] = O(
+//       filter((data: ICommunicationMessage<string, any>) => {
+//         const isMessageValid = typeof data === 'object' && 'body' in data && 'topic' in data
+//         return isMessageValid && data.topic === topic
+//       }),
+//       map(x => x.body)
+//     )(multicastConnection)
 
-    return seed
-  }, {} as any)
+//     return seed
+//   }, {} as any)
  
-  return outMap as any
-}
+//   return outMap as any
+// }
 

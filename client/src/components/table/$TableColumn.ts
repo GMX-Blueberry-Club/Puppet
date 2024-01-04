@@ -8,8 +8,9 @@ import { IPriceOracleMap, getBasisPoints, readableDate, readablePercentage, time
 import { IMirrorPosition, IMirrorPositionOpen, IMirrorPositionSettled, getParticiapntMpPortion, latestPriceMap } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $entry, $openPnl, $pnlValue, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
-import { $txnIconLink } from "../../common/elements/$common.js"
 import { $seperator2 } from "../../pages/common.js"
+import { $txnIconLink } from "../../common/elements/$common"
+import { arbitrum } from "viem/chains"
 
 
 export const $tableHeader = (primaryLabel: string, secondaryLabel: string) => $column(style({ textAlign: 'right' }))(
@@ -97,7 +98,7 @@ export const positionTimeColumn: TableColumn<IMirrorPositionSettled | IMirrorPos
       $text(readableDate(timestamp)),
       $row(layoutSheet.spacingSmall)(
         $text(style({ fontSize: '.85rem' }))(timeSince(timestamp) + ' ago'),
-        $txnIconLink(pos.transactionHash)
+        $txnIconLink(pos.transactionHash, arbitrum)
       )
     )
   })

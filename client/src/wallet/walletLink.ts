@@ -64,7 +64,7 @@ export const chain: Stream<ISupportedChain> = map(getNetworkResult => {
   return defChain
 }, mergeArray([skip(1, networkChange), networkQuery]))
 
-export const account = mergeArray([
+export const account: Stream<GetAccountResult | null> = mergeArray([
   map(() => getAccount(), now(null)),
   accountChange
 ])

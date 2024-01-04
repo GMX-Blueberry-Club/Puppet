@@ -36,8 +36,6 @@ import {
   IMarket,
   IMarketInfo,
   IMarketPrice,
-  IOraclePrice,
-  IPriceOracleMap,
   ITokenDescription,
   parseBps,
   parseFixed, parseReadableNumber,
@@ -59,7 +57,6 @@ import { $heading2 } from "../../common/$text.js"
 import { $TextField } from "../../common/$TextField"
 import { boxShadow } from "../../common/elements/$common"
 import { $caretDown } from "../../common/elements/$icons.js"
-import { connectContract } from "../../logic/common.js"
 import * as trade from "../../logic/trade.js"
 import { account, ISupportedChain } from "../../wallet/walletLink.js"
 import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
@@ -178,7 +175,6 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   [clickPrimary, clickPrimaryTether]: Behavior<any>,
 ) => {
 
-  const pricefeed = connectContract(GMX.CONTRACT[config.chain.id].VaultPriceFeed)
 
   const {
     collateralToken, collateralDelta, collateralDeltaUsd, sizeDelta, focusMode, indexToken,
@@ -493,7 +489,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0, left: 'auto' })),
                 $$option: snapshot((w3p, option) => {
                   const token = resolveAddress(config.chain, option)
-                  const balanceAmount = w3p ? trade.getWalletErc20Balance(config.chain, option, w3p.address) : now(0n)
+                  const balanceAmount = w3p?.address ? trade.getWalletErc20Balance(config.chain, option, w3p.address) : now(0n)
                   const tokenDesc = option === GMX.ADDRESS_ZERO ? getNativeTokenDescription(config.chain) : getTokenDescription(option)
 
                   return $row(style({ placeContent: 'space-between', flex: 1 }))(

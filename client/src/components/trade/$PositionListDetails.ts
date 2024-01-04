@@ -71,7 +71,7 @@ export const $PositionListDetails = (config: IPositionDetailsPanel) => component
     availableIndexLiquidityUsd, averagePrice, collateralDescription,
     collateralPrice, executionFee,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
-    isTradingEnabled, liquidationPrice, marginFeeUsd, route, netPositionValueUsd,
+    isTradingEnabled, liquidationPrice, marginFeeUsd, tradeRoute, netPositionValueUsd,
     walletBalance, marketList, position, priceImpactUsd, adjustmentFeeUsd, 
   } = config.tradeState
 

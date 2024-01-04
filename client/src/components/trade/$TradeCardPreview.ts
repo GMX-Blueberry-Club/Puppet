@@ -12,7 +12,7 @@ import { IPerformanceTimeline, performanceTimeline } from "./$ProfilePerformance
 
 
 export interface ITradeCardPreview extends Omit<IPerformanceTimeline, 'positionList'> {
-  position: IMirrorPositionSettled | IMirrorPositionOpen,
+  mp: IMirrorPositionSettled | IMirrorPositionOpen,
   $container?: NodeComposeFn<$Node>,
   chartConfig?: DeepPartial<ChartOptions>
   latestPrice: Stream<bigint>
@@ -27,7 +27,7 @@ export const $TradeCardPreview = (config: ITradeCardPreview) => component((
 ) => {
 
   const $container = config.$container || $column(style({ height: '80px', minWidth: '100px' }))
-  const timeline = performanceTimeline({ ...config, positionList: [config.position] })
+  const timeline = performanceTimeline({ ...config, positionList: [config.mp] })
   const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
 
   const hoverChartPnl = filterNull(map(params => {
@@ -42,16 +42,17 @@ export const $TradeCardPreview = (config: ITradeCardPreview) => component((
   }, combineObject({ pnlCrossHairTimeChange })))
 
 
+  const allAdjustments = [...config.mp.position.link.increaseList, ...config.mp.position.link.decreaseList]
 
-  const markerList: IMarker[] = config.position.link.updateList.map((pos) => {
+  const markerList = allAdjustments.map((pos): IMarker => {
     const isSettled = 'settlement' in pos
-    const position = pos.realisedPnl > 0n ? 'aboveBar' as const : 'belowBar' as const
+    const position = pos.collateralTokenPriceMax > 0n ? 'aboveBar' as const : 'belowBar' as const
 
     return {
       position,
-      text: readableFixedUSD30(pos.realisedPnl),
+      text: pos.__typename === 'PositionDecrease' ? readableFixedUSD30(pos.basePnlUsd) : '',
       color: colorAlpha(pallete.message, .25),
-      time: pos.blockTimestamp as Time,
+      time: Number(pos.blockTimestamp) as Time,
       size: 0.1,
       shape: !isSettled ? 'arrowUp' as const : 'circle' as const,
     }
@@ -78,7 +79,7 @@ export const $TradeCardPreview = (config: ITradeCardPreview) => component((
               $row(
                 style({ borderRadius: '2px', padding: '4px', backgroundColor: pallete.message, })(
                   $icon({
-                    $content: config.position.isLong ? $bull : $bear,
+                    $content: config.mp.position.isLong ? $bull : $bear,
                     width: '38px',
                     fill: pallete.background,
                     viewBox: '0 0 32 32',
@@ -92,7 +93,7 @@ export const $TradeCardPreview = (config: ITradeCardPreview) => component((
                   //   viewBox: '0 0 32 32',
                   //   width: '18px'
                   // }),
-                  $text(readableFixedUSD30(config.position.averagePrice))
+                  // $text(readableFixedUSD30(config.position.averagePrice))
                 ),
                 // $row(layoutSheet.spacingSmall, style({ color: isSettled ? '' : pallete.indeterminate, fontSize: '.85rem' }))(
                 //   $text(tradeTitle(mirroredPosition)),
@@ -141,7 +142,7 @@ export const $TradeCardPreview = (config: ITradeCardPreview) => component((
 
         $container(
           $row(style({ position: 'absolute', placeContent: 'center',  top: '10px', alignSelf: 'center', zIndex: 11, alignItems: 'center', placeSelf: 'center' }))(
-            !config.position
+            !config.mp
               ? $text(style({ 
                 fontSize: '.85rem', color: pallete.foreground, textAlign: 'center',
               }))('No trades yet')
