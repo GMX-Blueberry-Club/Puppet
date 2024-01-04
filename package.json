@@ -6,9 +6,9 @@
     "@gambitdao-gbc-middleware",
     "client",
     "const",
-    "middleware/*",
+    "middleware",
     "ui-components",
-    "gmx-middleware"
+    "gmx-middleware/*"
   ],
   "scripts": {
     "build": "cd client && bun run build:tsc && bun run build"
