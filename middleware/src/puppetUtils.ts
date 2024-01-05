@@ -1,6 +1,9 @@
-import { factor, getPositionPnlUsd, lst } from "gmx-middleware-utils"
+import { factor, getMappedValue, getPositionPnlUsd, lst } from "gmx-middleware-utils"
 import * as viem from "viem"
-import { IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen } from "./types.js"
+import { IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled } from "./types.js"
+import { Stream } from "@most/types"
+import { combineArray, map } from "@most/core"
+import { latestPriceMap } from "./graph.js"
 
 
 // export function extractPricefeedFromPositionList(
@@ -25,8 +28,8 @@ import { IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen } from
 //   return pricefeedMap
 // }
 
-export function accountSettledPositionListSummary<T extends IMirrorPosition>(
-  tradeList: T[],
+export function accountSettledPositionListSummary(
+  tradeList: (IMirrorPositionSettled | IMirrorPositionOpen)[],
   puppet?: viem.Address,
 ): IMirrorPositionListSummary {
 
@@ -42,8 +45,6 @@ export function accountSettledPositionListSummary<T extends IMirrorPosition>(
 
     fee: 0n,
     lossCount: 0,
-    realisedPnl: 0n,
-    openPnl: 0n,
     pnl: 0n,
     winCount: 0,
   }
@@ -61,11 +62,7 @@ export function accountSettledPositionListSummary<T extends IMirrorPosition>(
     const lstFeeUpdate = lst(next.position.link.feeUpdateList)
 
     const fee = seed.fee + getParticiapntMpPortion(next, lstFeeUpdate.totalCostAmount, puppet)
-    const realisedPnl = seed.pnl + getParticiapntMpPortion(next, next.position.realisedPnlUsd, puppet)
-    const openPnl = next.__typename === 'MirrorPositionSettled' ? seed.openPnl : 0n + seed.openPnl
-    // const openPnl = next.__typename === 'MirrorPositionSettled' ? seed.openPnl : getMpSlotPnL(next, getMappedValue(priceLatestMap, next.position.market), puppet) + seed.openPnl
-    const pnl = realisedPnl + openPnl
-
+    const pnl = seed.pnl + getParticiapntMpPortion(next, next.position.realisedPnlUsd, puppet)
 
     const winCount = seed.winCount + (next.position.realisedPnlUsd > 0n ? 1 : 0)
     const lossCount = seed.lossCount + (next.position.realisedPnlUsd <= 0n ? 1 : 0)
@@ -81,8 +78,6 @@ export function accountSettledPositionListSummary<T extends IMirrorPosition>(
       fee,
       lossCount,
       pnl,
-      openPnl,
-      realisedPnl,
       winCount,
       puppets,
     }
@@ -92,6 +87,23 @@ export function accountSettledPositionListSummary<T extends IMirrorPosition>(
   return summary
 }
 
+export function openPositionListPnl(
+  tradeList: IMirrorPositionOpen[],
+  puppet?: viem.Address,
+): Stream<bigint> {
+
+  const pnlList = tradeList.map(mp => {
+    return map(pm => {
+      const markPrice = pm[mp.position.indexToken].max
+      const pnl = getMpSlotPnL(mp, markPrice, puppet)
+      return pnl
+    }, latestPriceMap)
+  })
+
+  return combineArray((...pl) => {
+    return pl.reduce((seed, next) => seed + next, 0n)
+  }, pnlList)
+}
 
 export function getPuppetShare(shares: readonly bigint[], puppets: readonly viem.Address[], puppet: viem.Address): bigint {
   const idx = puppets.indexOf(puppet)

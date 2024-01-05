@@ -4,7 +4,7 @@ import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { Stream } from "@most/types"
 import {  readableFixedUSD30, readableLeverage, switchMap } from "gmx-middleware-utils"
-import { IMirrorPosition, IMirrorPositionSettled, accountSettledPositionListSummary } from "puppet-middleware-utils"
+import { IMirrorPosition, IMirrorPositionOpen, IMirrorPositionSettled, accountSettledPositionListSummary } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile.js"
 import { $heading2 } from "../../common/$text.js"
@@ -15,23 +15,25 @@ import { $metricLabel, $metricRow } from "./profileUtils.js"
 export interface IAccountSummary {
   route: router.Route
   address: viem.Address
-  settledTradeList: Stream<IMirrorPosition[]>
+  settledPositionList: Stream<IMirrorPositionSettled[]>
+  openPositionList: Stream<IMirrorPositionOpen[]>
 }
 
 
-export const $TraderProfileSummary = (config: IAccountSummary) => component((
+export const $TraderProfileSummary = ({ address, openPositionList, route, settledPositionList }: IAccountSummary) => component((
 
 ) => {
   return [
 
     $column(layoutSheet.spacing, style({ minHeight: '90px' }))(
       switchMap(params => {
-        const metrics = accountSettledPositionListSummary(params.settledTradeList)
+        const allPositions = [...params.settledPositionList, ...params.openPositionList]
+        const metrics = accountSettledPositionListSummary(allPositions)
 
         return $node(style({ display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column', gap: screenUtils.isDesktopScreen ? '76px' : '26px', zIndex: 10, placeContent: 'center', alignItems: 'center', padding: '0 8px' }))(
           $row(
             $profileDisplay({
-              address: config.address,
+              address,
               labelSize: '22px',
               profileSize: screenUtils.isDesktopScreen ? 90 : 90
             })
@@ -61,7 +63,7 @@ export const $TraderProfileSummary = (config: IAccountSummary) => component((
             )
           ),
         )
-      }, combineObject({ settledTradeList: config.settledTradeList })),
+      }, combineObject({ settledPositionList, openPositionList })),
     ),
     {
     }
@@ -106,7 +108,7 @@ export const $PuppetProfileSummary = (config: IAccountSummary) => component(() =
             )
           ),
         )
-      }, combineObject({ settledTradeList: config.settledTradeList })),
+      }, combineObject({ settledTradeList: config.settledPositionList })),
     ),
     {
     }

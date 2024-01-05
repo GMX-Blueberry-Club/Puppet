@@ -1,17 +1,19 @@
 import { Value, log, store } from "@graphprotocol/graph-ts"
 import {
+  AdjustPosition as AdjustPositionEvent,
+  Deposit as DepositEvent,
   ExecutePosition as ExecutePositionEvent,
   OpenPosition as OpenPositionEvent,
   SetRouteType as SetRouteTypeEvent,
   SharesIncrease as SharesIncreaseEvent,
   SubscribeRoute as SubscribeRouteEvent,
   Withdraw as WithdrawEvent,
-  Deposit as DepositEvent,
-  AdjustPosition as AdjustPositionEvent,
 } from "../generated/Orchestrator/Orchestrator"
 import {
+  AdjustPosition,
   Deposit,
   ExecutePosition,
+  MirrorPositionLink,
   MirrorPositionOpen,
   MirrorPositionSettled,
   PositionOpen,
@@ -23,11 +25,8 @@ import {
   SharesIncrease,
   SubscribeTradeRoute,
   Withdraw,
-  AdjustPosition,
-  MirrorPositionLink,
 } from "../generated/schema"
-import { MARKET_TOKEN_MAP, ZERO_BI } from "./utils/const"
-import { getIdFromEvent } from "./utils/gmxHelpers"
+import { ZERO_BI } from "./utils/const"
 
 export function handleOpenPosition(event: OpenPositionEvent): void {
   const requestMirrorPosition = new RequestMirrorPosition(event.params.requestKey)

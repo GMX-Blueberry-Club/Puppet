@@ -2,10 +2,11 @@ import { map, multicast } from '@most/core'
 import { Stream } from '@most/types'
 import { Client } from '@urql/core'
 import * as GMX from "gmx-middleware-const"
-import { IPriceOracleMap, IPriceCandle, ISchema, schema as gmxSchema, groupArrayManyMap, periodicRun, querySignedPrices, querySubgraph, IPriceTickListMap } from "gmx-middleware-utils"
+import { IPriceOracleMap, IPriceCandle, ISchema, schema as gmxSchema, groupArrayManyMap, periodicRun, querySignedPrices, querySubgraph, IPriceTickListMap, findClosest, unixTimestampNow } from "gmx-middleware-utils"
 import * as viem from "viem"
-import { schema } from "./schema.js"
 import { replayLatest } from '@aelea/core'
+import { schema } from './schema.js'
+
 
 interface IQueryTraderPositionOpen {
   trader: viem.Address
@@ -14,9 +15,11 @@ interface IQueryTraderPositionOpen {
 
 interface IQueryPuppetTradeRoute {
   puppet: viem.Address
+  activityTimeframe: GMX.IntervalTime
 }
 
 export async function queryTraderPositionOpen(client: Client, filter: IQueryTraderPositionOpen) {
+
   const res = querySubgraph(client, {
     schema: schema.mirrorPositionOpen,
     filter,
@@ -34,25 +37,25 @@ export async function getTraderPositionSettled(client: Client, filter: IQueryTra
   return res
 }
 
-
-export async function queryPuppetPositionOpen(client: Client, filter: IQueryTraderPositionOpen) {
-  const res = querySubgraph(client, {
-    schema: schema.puppetPositionOpen,
-    filter,
-  })
-  
-  return res
-}
-
 export async function queryPuppetTradeRoute(client: Client, filter: IQueryPuppetTradeRoute) {
+  const timestamp_gte = unixTimestampNow() - filter.activityTimeframe
+
   const res = querySubgraph(client, {
     schema: schema.puppetTradeRoute,
-    filter,
+    filter: {
+      puppet: filter.puppet,
+      timestamp_gte,
+    },
   })
   
   return res
 }
 
+
+interface IQueryLatestPriceTick {
+  token?: viem.Address
+  activityTimeframe: GMX.IntervalTime
+}
 
 interface IQueryPriceCandle {
   interval: GMX.IntervalTime
@@ -60,41 +63,47 @@ interface IQueryPriceCandle {
   timestamp_gte?: number
 }
 
-export async function queryLatestPriceTicks(client: Client, filter: IQueryPriceCandle = { interval: GMX.TIME_INTERVAL_MAP.MIN5 }): Promise<IPriceTickListMap> {
-  const latestSeedSchema: ISchema<{ id: string, timestamp: number; c: bigint; __typename: 'PriceCandle', token: viem.Address} > = {
-    id: 'string',
-    timestamp: 'int',
-    token: 'address',
-    c: 'int',
-    __typename: 'PriceCandleSeed',
-  }
+const latestSeedSchema: ISchema<{ id: string, timestamp: number; c: bigint; __typename: 'PriceCandle', token: viem.Address} > = {
+  id: 'string',
+  timestamp: 'int',
+  token: 'address',
+  c: 'int',
+  __typename: 'PriceCandleSeed',
+}
+const candleSchema: ISchema<{ id: string, timestamp: number; c: bigint; __typename: 'PriceCandle', token: viem.Address} > = {
+  id: 'string',
+  timestamp: 'int',
+  token: 'address',
+  c: 'int',
+  __typename: 'PriceCandle',
+}
+
+export async function queryLatestPriceTick(client: Client, filter: IQueryLatestPriceTick, estTickAmout = 20): Promise<IPriceTickListMap> {
+  const interval = findClosest(GMX.PRICEFEED_INTERVAL, filter.activityTimeframe / estTickAmout)
+  const timestamp_gte = unixTimestampNow() - filter.activityTimeframe
 
   const latestSeedQuery = querySubgraph(client, {
     schema: latestSeedSchema,
-    filter,
+    filter: {
+      token: filter.token,
+    },
   })
-
-  const candleSchema: ISchema<{ id: string, timestamp: number; c: bigint; __typename: 'PriceCandle', token: viem.Address} > = {
-    id: 'string',
-    timestamp: 'int',
-    token: 'address',
-    c: 'int',
-    __typename: 'PriceCandle',
-  }
 
   const candleListQuery = querySubgraph(client, {
     schema: candleSchema,
-    filter,
+    filter: {
+      interval,
+      timestamp_gte,
+    },
     // orderBy: 'timestamp',
     orderDirection: 'desc',
   })
 
   const [latestSeed, candleList] = await Promise.all([latestSeedQuery, candleListQuery])
   const all = [...candleList, ...latestSeed]
+  const mapped: IPriceTickListMap = groupArrayManyMap(all, x => viem.getAddress(x.token), x => ({ timestamp: x.timestamp, price: x.c }))
 
-  const map: IPriceTickListMap = groupArrayManyMap(all, x => viem.getAddress(x.token), x => ({ timestamp: x.timestamp, price: x.c }))
-
-  return map
+  return mapped
 }
 
 export const latestPriceMap: Stream<IPriceOracleMap> = replayLatest(multicast(periodicRun({
@@ -120,6 +129,25 @@ export async function queryLatestTokenPriceFeed(client: Client, filter: IQueryPr
   const list = [...feed, latest[0] as any as IPriceCandle].sort((a, b) => a.timestamp - b.timestamp)
 
   return list 
+}
+
+export async function queryOpenPositionList(client: Client) {
+  const openPositionListQuery = querySubgraph(client, {
+    schema: schema.mirrorPositionOpen,
+  })
+  
+  return openPositionListQuery
+}
+
+export async function querySettledPositionList(client: Client) {
+  const settledPositionListQuery = querySubgraph(client, {
+    schema: schema.mirrorPositionSettled,
+    filter: {
+      // blockTimestamp_gt: 0,
+    }
+  })
+
+  return settledPositionListQuery
 }
 
 export async function queryLeaderboard(client: Client) {

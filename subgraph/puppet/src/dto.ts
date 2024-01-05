@@ -1,4 +1,4 @@
-import { Bytes, ethereum } from "@graphprotocol/graph-ts"
+import { Bytes, ethereum, log } from "@graphprotocol/graph-ts"
 import { EventLog } from "../generated/EventEmitter/EventEmitter"
 import { MarketCreated, OrderCreated, OrderStatus, PositionDecrease, PositionFeeUpdate, PositionIncrease, PositionOpen, PositionSettled } from "../generated/schema"
 import { MARKET_TOKEN_MAP, OrderExecutionStatus, ZERO_BI } from "./utils/const"
@@ -20,8 +20,15 @@ export function createMarketCreated<T extends EventLog>(event: T): MarketCreated
   return dto
 }
 
-export function createOrderStatus<T extends EventLog>(event: T, order: OrderCreated, statusType: OrderExecutionStatus, message: string = ""): OrderStatus {
-  const orderStatus = new OrderStatus(order.key)
+export function createOrderStatus<T extends EventLog>(event: T, order: OrderCreated, orderId: Bytes, statusType: OrderExecutionStatus, message: string = ""): OrderStatus {
+  let uniqueOrderId = orderId
+  const existingOrderStatus = OrderStatus.load(orderId)
+  if (existingOrderStatus) {
+    log.error("OrderStatus already exists for order: {}", [orderId.toHex()])
+    uniqueOrderId = getIdFromEvent(event)
+  }
+
+  const orderStatus = new OrderStatus(uniqueOrderId)
   orderStatus.orderType = order.orderType
   orderStatus.order = order.id
   orderStatus.statusType = statusType

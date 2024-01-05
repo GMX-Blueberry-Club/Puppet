@@ -3,13 +3,13 @@ import { $node, $text, MOTION_NO_WOBBLE, component, motion, style } from "@aelea
 import * as router from '@aelea/router'
 import { $NumberTicker, $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, empty, map, multicast, now, skipRepeatsWith, startWith } from "@most/core"
+import { awaitPromises, empty, fromPromise, map, multicast, now, skipRepeatsWith, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $Link, $Table, $arrowRight, $icon, $infoTooltipLabel, IMarker, ScrollRequest } from "gmx-middleware-ui-components"
-import { IPriceTickListMap, filterNull, getMappedValue, pagingQuery, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap } from "gmx-middleware-utils"
+import { IPriceTickListMap, filterNull, getMappedValue, pagingQuery, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap, zipState } from "gmx-middleware-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
-import { getTraderPositionSettled, queryTraderPositionOpen } from "puppet-middleware-utils"
+import { IMirrorPositionOpen, IMirrorPositionSettled, getTraderPositionSettled, queryTraderPositionOpen } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $heading3 } from "../../common/$text.js"
 import { $card, $card2 } from "../../common/elements/$common.js"
@@ -17,7 +17,7 @@ import { subgraphClient } from "../../data/subgraph/client"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../../pages/components/$LastActivity.js"
 import { IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor"
 import { entryColumn, pnlSlotColumn, positionTimeColumn, puppetsColumn, settledPnlColumn, settledSizeColumn, slotSizeColumn } from "../table/$TableColumn.js"
-import { performanceTimeline } from "../trade/$ProfilePerformanceGraph.js"
+import { getPerformanceTimeline } from "../trade/$ProfilePerformanceGraph.js"
 import { $TraderProfileSummary } from "./$Summary"
 
 
@@ -30,9 +30,14 @@ export interface ITraderProfile {
 }
 
 
+export interface ITraderPortfolio extends ITraderProfile {
+  settledTradeList: Stream<IMirrorPositionSettled[]>
+  openTradeList: Stream<IMirrorPositionOpen[]>
+}
 
 
-export const $TraderPortfolio = (config: ITraderProfile) => component((
+
+export const $TraderPortfolio = (config: ITraderPortfolio) => component((
   [changeRoute, changeRouteTether]: Behavior<any, string>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
@@ -41,29 +46,17 @@ export const $TraderPortfolio = (config: ITraderProfile) => component((
 
 ) => {
 
-  const settledTradeList = awaitPromises(map(async params => {
-    const positionList = await getTraderPositionSettled(subgraphClient, { trader: config.address, blockTimestamp_gte: params.activityTimeframe })
-    return positionList
-  }, combineObject({ activityTimeframe: config.activityTimeframe })))
-
-  const openTrades = awaitPromises(map(async params => {
-    const positionList = await queryTraderPositionOpen(subgraphClient, { trader: config.address })
-    return positionList
-  }, combineObject({ activityTimeframe: config.activityTimeframe })))
-
-
+  const { activityTimeframe, address, priceTickMap, route, settledTradeList, openTradeList } = config
 
   return [
     $column(layoutSheet.spacingBig)(
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
         $card2(style({ padding: 0, height: screenUtils.isDesktopScreen ? '200px' : '200px', position: 'relative', margin: screenUtils.isDesktopScreen ? `-36px -36px 0` : `-12px -12px 0px` }))(
           switchMap(params => {
-            const allPositions = [...params.settledTradeList, ...params.openTrades]
-
+            const allPositions = [...params.settledTradeList, ...params.openTradeList]
+            const timeline = getPerformanceTimeline({ positionList: allPositions, priceTickMap: params.priceTickMap, tickCount: 100, activityTimeframe: params.activityTimeframe })
             const $container = $column(style({ width: '100%', padding: 0, height: '200px' }))
-            const timeline = performanceTimeline({ positionList: allPositions, pricefeedMap: params.priceTickMap, tickCount: 100, activityTimeframe: params.activityTimeframe })
             const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
-
 
             const hoverChartPnl = filterNull(map(params => {
               if (params.pnlCrossHairTimeChange?.point) {
@@ -171,7 +164,7 @@ export const $TraderPortfolio = (config: ITraderProfile) => component((
             //   positionList: allPositions,
             //   // trader: config.address,
             // })({ })
-          }, combineObject({ settledTradeList, openTrades, activityTimeframe: config.activityTimeframe, priceTickMap: config.priceTickMap })),
+          }, zipState({ settledTradeList, openTradeList, activityTimeframe, priceTickMap })),
         ),
         $column(layoutSheet.spacingBig)(
 
@@ -198,7 +191,7 @@ export const $TraderPortfolio = (config: ITraderProfile) => component((
                 // scrollIndex: changePageIndexTether()
               })
             )
-          }, combineObject({ openTrades })),
+          }, combineObject({ openTrades: openTradeList })),
             
           switchMap(params => {
             const paging = startWith({ offset: 0, pageSize: 20 }, scrollRequest)
@@ -238,23 +231,23 @@ export const $TraderProfile = (config: ITraderProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<any, string>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
-  [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
-
 ) => {
 
+  const { activityTimeframe, address, priceTickMap, route } = config
 
   const settledTradeList = awaitPromises(map(async params => {
-    const positionList = await getTraderPositionSettled(subgraphClient, { trader: config.address, blockTimestamp_gte: params.activityTimeframe })
+    const positionList = await getTraderPositionSettled(subgraphClient, { trader: address, blockTimestamp_gte: params.activityTimeframe })
     return positionList
-  }, combineObject({ activityTimeframe: config.activityTimeframe })))
+  }, combineObject({ activityTimeframe })))
+
+  const openTradeList = awaitPromises(map(async params => {
+    return queryTraderPositionOpen(subgraphClient, { trader: address })
+  }, combineObject({ activityTimeframe })))
 
 
   return [
     $column(layoutSheet.spacingBig)(
-      $TraderProfileSummary({
-        address: config.address, settledTradeList,
-        route: config.route,
-      })({}),
+      $TraderProfileSummary({ ...config, settledPositionList: settledTradeList, openPositionList: openTradeList })({}),
 
       $column(layoutSheet.spacingTiny)(
         $row(style({ placeContent: 'space-between', alignItems: 'center' }))(
@@ -275,7 +268,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
             changeActivityTimeframe: changeActivityTimeframeTether()
           })
         ),
-        $TraderPortfolio({ ...config })({
+        $TraderPortfolio({ ...config, openTradeList, settledTradeList })({
           modifySubscriber: modifySubscriberTether(),
           changeRoute: changeRouteTether(),
           changeActivityTimeframe: changeActivityTimeframeTether(),

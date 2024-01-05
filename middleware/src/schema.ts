@@ -131,9 +131,9 @@ const puppetTradeRoute: ISchema<IPuppetTradeRoute> = {
   trader: 'address',
   tradeRoute: 'address',
 
-  puppetPositionSettledList: puppetPositionSettled,
-  puppetPositionOpenList: puppetPositionOpen,
-  subscriptionList: subscribeTradeRoute,
+  settledList: puppetPositionSettled,
+  openList: puppetPositionOpen,
+  subscribeList: subscribeTradeRoute,
 
   __typename: 'PuppetTradeRoute',
 }

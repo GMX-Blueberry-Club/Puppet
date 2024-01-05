@@ -58,7 +58,6 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
       $TopSettled({
         route: config.route,
-
       })({
         routeChange: routeChangeTether(),
         modifySubscriber: modifySubscriberTether()

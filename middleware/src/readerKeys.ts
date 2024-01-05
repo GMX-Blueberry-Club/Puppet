@@ -17,10 +17,10 @@ export function getPuppetSubscriptionExpiryKey(puppet: viem.Address, routeKey: v
   )
 }
 
-export function getTradeRouteKey(trader: viem.Address, collateralToken: viem.Address, indexToken: viem.Address, isLong: boolean) {
+export function getTradeRouteKey(account: viem.Address, collateralToken: viem.Address, indexToken: viem.Address, isLong: boolean) {
   return hashData(
     ["address", "address", "address", "bool"],
-    [trader, collateralToken, indexToken, isLong]
+    [account, collateralToken, indexToken, isLong]
   )
 }
 

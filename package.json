@@ -8,6 +8,7 @@
     "const",
     "middleware",
     "ui-components",
+    "subgraph/*",
     "gmx-middleware/*"
   ],
   "scripts": {

@@ -23,7 +23,7 @@ const cache = offlineExchange({
 
 
 export const subgraphClient = createClient({
-  url: 'https://api.studio.thegraph.com/query/112/puppet/v0.0.60',
+  url: 'https://api.studio.thegraph.com/query/112/puppet/v0.0.63',
   exchanges: [cache, fetchExchange],
   requestPolicy: 'cache-first',
 })

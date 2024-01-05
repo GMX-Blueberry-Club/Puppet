@@ -8,7 +8,7 @@ import { $Baseline, $bear, $bull, $infoTooltipLabel, IMarker } from "gmx-middlew
 import { filterNull, parseReadableNumber, readableFixedUSD30, readableUnitAmount } from "gmx-middleware-utils"
 import { BaselineData, ChartOptions, DeepPartial, MouseEventParams, Time } from "lightweight-charts"
 import { IMirrorPositionSettled, IMirrorPositionOpen } from "puppet-middleware-utils"
-import { IPerformanceTimeline, performanceTimeline } from "./$ProfilePerformanceGraph.js"
+import { IPerformanceTimeline, getPerformanceTimeline } from "./$ProfilePerformanceGraph.js"
 
 
 export interface ITradeCardPreview extends Omit<IPerformanceTimeline, 'positionList'> {
@@ -27,7 +27,7 @@ export const $TradeCardPreview = (config: ITradeCardPreview) => component((
 ) => {
 
   const $container = config.$container || $column(style({ height: '80px', minWidth: '100px' }))
-  const timeline = performanceTimeline({ ...config, positionList: [config.mp] })
+  const timeline = getPerformanceTimeline({ ...config, positionList: [config.mp] })
   const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
 
   const hoverChartPnl = filterNull(map(params => {

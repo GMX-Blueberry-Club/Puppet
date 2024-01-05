@@ -30,10 +30,6 @@ export function handleEventLog1(event: EventLog1): void {
 export function handleEventLog2(event: EventLog2): void {
   if (event.params.eventName == "OrderCreated") {
     onOrderCreated(event)
-  // } else if (event.params.eventName == "OrderExecuted") {
-  //   onOrderExecuted(event)
-  // } else if (event.params.eventName == "OrderUpdated") {
-    // onOrderUpdated(event)
   } else if (event.params.eventName == "OrderCancelled") {
     onOrderCancelled(event)
   } else if (event.params.eventName == "OrderFrozen") {
@@ -74,30 +70,6 @@ function onOrderCreated(event: EventLog2): void {
   orderCreated.save()
 }
 
-// function onOrderExecuted(event: EventLog2): void {
-//   const orderExecuted = new OrderExecuted(getIdFromEvent(event))
-
-//   orderExecuted.key = getBytes32Item(event.params.eventData, 0)
-//   orderExecuted.account = getAddressItem(event.params.eventData, 0)
-//   orderExecuted.secondaryOrderType = getUintItem(event.params.eventData, 0)
-
-//   orderExecuted.save()
-// }
-
-// function onOrderUpdated(event: EventLog2): void {
-//   const orderUpdated = new OrderUpdated(getIdFromEvent(event))
-
-//   orderUpdated.key = getBytes32Item(event.params.eventData, 0)
-
-//   orderUpdated.account = getAddressItem(event.params.eventData, 0)
-
-//   orderUpdated.sizeDeltaUsd = getUintItem(event.params.eventData, 0)
-//   orderUpdated.acceptablePrice = getUintItem(event.params.eventData, 1)
-//   orderUpdated.triggerPrice = getUintItem(event.params.eventData, 2)
-//   orderUpdated.minOutputAmount = getUintItem(event.params.eventData, 3)
-
-//   orderUpdated.save()
-// }
 
 function onOrderSizeDeltaAutoUpdated(event: EventLog1): void {
   const orderSizeDeltaAutoUpdated = new OrderSizeDeltaAutoUpdated(getIdFromEvent(event))
@@ -120,13 +92,6 @@ function onOrderCollateralDeltaAmountAutoUpdated(event: EventLog1): void {
 }
 
 function onOrderCancelled(event: EventLog2): void {
-  // const orderCancelled = new OrderCancelled(getIdFromEvent(event))
-  // orderCancelled.key = getBytes32Item(event.params.eventData, 0)
-  // orderCancelled.account = getAddressItem(event.params.eventData, 0)
-  // orderCancelled.reason = getStringItem(event.params.eventData, 0)
-  // orderCancelled.reasonBytes = getBytesItem(event.params.eventData, 0)
-  // orderCancelled.save()
-
   const orderId = getBytes32Item(event.params.eventData, 0)
   const orderCreated = OrderCreated.load(orderId)
 
@@ -136,7 +101,7 @@ function onOrderCancelled(event: EventLog2): void {
   }
 
   const message = getStringItem(event.params.eventData, 0)
-  const orderStatus = dto.createOrderStatus(event, orderCreated, OrderExecutionStatus.CANCELLED, message)
+  const orderStatus = dto.createOrderStatus(event, orderCreated, orderCreated.key, OrderExecutionStatus.CANCELLED, message)
   orderStatus.save()
 }
 
@@ -157,9 +122,9 @@ function onOrderFrozen(event: EventLog2): void {
   }
 
   const message = getStringItem(event.params.eventData, 0)
-  const orderStatus = dto.createOrderStatus(event, orderCreated, OrderExecutionStatus.FROZEN, message)
+  const uniqueOrderId = orderCreated.key.concatI32(OrderExecutionStatus.FROZEN)
+  const orderStatus = dto.createOrderStatus(event, orderCreated, uniqueOrderId, OrderExecutionStatus.FROZEN, message)
 
-  orderStatus.id = orderStatus.id.concatI32(OrderExecutionStatus.FROZEN)
   orderStatus.save()
 }
 
@@ -172,7 +137,7 @@ function onPositionIncrease (event: EventLog1): void {
     return
   }
 
-  const orderStatus = dto.createOrderStatus(event, orderCreated, OrderExecutionStatus.EXECUTED)
+  const orderStatus = dto.createOrderStatus(event, orderCreated, orderCreated.key, OrderExecutionStatus.EXECUTED)
   const positionIncrease = dto.createPositionIncrease(event, orderStatus)
   
   let openSlot = PositionOpen.load(positionIncrease.positionKey.toHex())
@@ -222,7 +187,7 @@ function onPositionDecrease(event: EventLog1): void {
     return
   }
 
-  const orderStatus = dto.createOrderStatus(event, orderCreated, OrderExecutionStatus.EXECUTED)
+  const orderStatus = dto.createOrderStatus(event, orderCreated, orderCreated.key, OrderExecutionStatus.EXECUTED)
   const positionDecrease = dto.createPositionDecrease(event, orderStatus)
 
   const positionKey = getBytes32Item(event.params.eventData, 1)

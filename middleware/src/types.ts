@@ -87,12 +87,9 @@ export interface IPuppetTradeRoute extends ILogTypeId<'PuppetTradeRoute'> {
   trader: viem.Address
   tradeRoute: viem.Address
 
-  // openList: IPuppetPositionSettled[]
-  // settledList: IPuppetPositionOpen[]
-  // subscribeList: ISubscribeTradeRoute[]
-  puppetPositionSettledList: IPuppetPositionSettled[]
-  puppetPositionOpenList: IPuppetPositionOpen[]
-  subscriptionList: ISubscribeTradeRoute[]
+  openList: IPuppetPositionOpen[]
+  settledList: IPuppetPositionSettled[]
+  subscribeList: ISubscribeTradeRoute[]
 }
 
 export interface IMirrorPositionListSummary extends IPositionListSummary {

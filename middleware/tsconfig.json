@@ -8,9 +8,6 @@
   "references": [
     {
       "path": "../const"
-    },
-    {
-      "path": "../gmx-middleware/utils"
     }
   ]
 }

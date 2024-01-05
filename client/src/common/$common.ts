@@ -337,10 +337,8 @@ interface ITraderRouteDisplay {
 
 export const $TraderDisplay =  (config: ITraderDisplay) => component((
   [clickTrader, clickTraderTether]: Behavior<any, viem.Address>,
-  [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, IPuppetSubscritpionParams>,
   [modifySubscribeList, modifySubscribeListTether]: Behavior<IChangeSubscription>,
 ) => {
-
 
   return [
     $Link({

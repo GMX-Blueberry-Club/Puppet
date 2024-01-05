@@ -3,18 +3,17 @@ import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, layoutSheet } from "@aelea/ui-components"
 import { fromPromise, map, mergeArray, now } from "@most/core"
-import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $ButtonToggle, $defaulButtonToggleContainer } from "gmx-middleware-ui-components"
-import { ETH_ADDRESS_REGEXP, findClosest, switchMap } from "gmx-middleware-utils"
-import { ISubscribeTradeRouteDto, queryLatestPriceTicks } from "puppet-middleware-utils"
+import { ETH_ADDRESS_REGEXP, switchMap } from "gmx-middleware-utils"
 import * as viem from 'viem'
 import { $PuppetProfile } from "../components/participant/$Puppet.js"
 import { $TraderProfile } from "../components/participant/$Trader.js"
-import * as store from "../data/store/store.js"
-import * as storage from "../utils/storage/storeScope.js"
-import { subgraphClient } from "../data/subgraph/client"
 import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor"
+import * as store from "../data/store/store.js"
+import { subgraphClient } from "../data/subgraph/client"
+import * as storage from "../utils/storage/storeScope.js"
+import { queryLatestPriceTick } from "puppet-middleware-utils"
 
 
 export enum IProfileActiveTab {
@@ -45,15 +44,16 @@ export const $Profile = (config: IProfile) => component((
   
 ) => {
 
+  const { route } = config
+
   const profileAddressRoute = config.route.create({ title: 'Profile', fragment: ETH_ADDRESS_REGEXP })
   const traderRoute = profileAddressRoute.create({ fragment: 'trader', title: 'Trader' })
   const puppetRoute = profileAddressRoute.create({ fragment: 'puppet', title: 'Puppet' })
 
   const activityTimeframe = storage.replayWrite(store.activityTimeframe, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
   const priceTickMap = switchMap(params => {
-    const interval = findClosest(GMX.PRICEFEED_INTERVAL, params.activityTimeframe / 20)
-    return fromPromise(queryLatestPriceTicks(subgraphClient, { interval: interval }))
-  }, combineObject({ activityTimeframe: activityTimeframe }))
+    return fromPromise(queryLatestPriceTick(subgraphClient, { activityTimeframe: params.activityTimeframe }, 50))
+  }, combineObject({ activityTimeframe }))
   
   const options: IRouteOption[] = [
     {
@@ -87,35 +87,22 @@ export const $Profile = (config: IProfile) => component((
           })
         })({ select: selectProfileModeTether() }),
       ),
-
-      
-
      
       {
         run(sink, scheduler) {
           const urlFragments = document.location.pathname.split('/')
           const address = viem.getAddress(urlFragments[urlFragments.length - 2])
 
-          // const settledTradeList = map(params => {
-          //   const filterStartTime = unixTimestampNow() - params.activityTimeframe
-          //   const list = params.processData.mirrorPositionSettled.filter(pos => pos.trader === address && pos.blockTimestamp > filterStartTime).reverse()
-          //   return list
-          // }, combineObject({ processData: config.processData, activityTimeframe }))
-
           return  $column(
             router.match(traderRoute)(
-              $TraderProfile({ priceTickMap, route: config.route, address, activityTimeframe })({
+              $TraderProfile({ priceTickMap, route, address, activityTimeframe })({
                 modifySubscriber: modifySubscriberTether(),
                 changeRoute: changeRouteTether(),
                 changeActivityTimeframe: changeActivityTimeframeTether(),
               })
             ),
             router.match(puppetRoute)(
-              $PuppetProfile({ 
-                address, activityTimeframe, priceTickMap,
-                route: config.route,
-                // subscriptionList: config.subscriptionList,
-              })({
+              $PuppetProfile({ address, activityTimeframe, priceTickMap, route })({
                 changeRoute: changeRouteTether(),
                 changeActivityTimeframe: changeActivityTimeframeTether(),
                 modifySubscriber: modifySubscriberTether()

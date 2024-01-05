@@ -6,13 +6,12 @@ import { pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, empty, map, now, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
-import { PRICEFEED_INTERVAL } from "gmx-middleware-const"
 import { $ButtonToggle, $Table, $bear, $bull, $icon, $marketLabel, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "gmx-middleware-ui-components"
-import { IMarketCreatedEvent, IPriceTickListMap, TEMP_MARKET_LIST, findClosest, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
-import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, accountSettledPositionListSummary, queryLatestPriceTicks, queryLeaderboard } from "puppet-middleware-utils"
+import { IMarketCreatedEvent, IPriceTickListMap, TEMP_MARKET_LIST, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, accountSettledPositionListSummary, openPositionListPnl, queryLatestPriceTick, queryOpenPositionList, querySettledPositionList } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $labelDisplay } from "../../common/$TextField.js"
-import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $size } from "../../common/$common.js"
+import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $puppets, $size } from "../../common/$common.js"
 import { $card, $responsiveFlex } from "../../common/elements/$common.js"
 import { $DropMultiSelect } from "../../components/form/$Dropdown.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor"
@@ -27,13 +26,14 @@ import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivi
 
 export type ITopSettled = {
   route: router.Route
-  // subscriptionList: Stream<IPuppetSubscritpion[]>
 }
 
 
 type ITableRow = {
   summary: IMirrorPositionListSummary
   account: viem.Address
+  openPositionList: IMirrorPositionOpen[]
+  settledPositionList: IMirrorPositionSettled[]
   positionList: (IMirrorPositionSettled | IMirrorPositionOpen)[]
   pricefeedMap: IPriceTickListMap
 }
@@ -65,20 +65,17 @@ export const $TopSettled = (config: ITopSettled) => component((
     const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
     const paging = startWith(requestPage, scrollRequest)
 
-
     const dataSource: Stream<TablePageResponse<ITableRow>> = awaitPromises(map(async req => {
-      const interval = findClosest(PRICEFEED_INTERVAL, params.activityTimeframe / 20)
-      const timestamp_gte = unixTimestampNow() - params.activityTimeframe
-
-      const priceCandleMapQuery = queryLatestPriceTicks(subgraphClient, { interval: interval, timestamp_gte: timestamp_gte })
-      const mpListQuery = queryLeaderboard(subgraphClient)
-      const mpList = await mpListQuery
-      const pricefeedMap = await priceCandleMapQuery
-      // const latestPriceMap = groupArrayMany(pricefeed, a => a.token)
-      // const priceMap = extractPricefeedFromPositionList(mpList, latestPriceMap)
-
+      const latestPriceTickQuery = queryLatestPriceTick(subgraphClient, { activityTimeframe: GMX.TIME_INTERVAL_MAP.HR24 })
+      const openPositionListQuery = queryOpenPositionList(subgraphClient)
+      const settledPositionListQuery = querySettledPositionList(subgraphClient)
+      const openPositionList = await openPositionListQuery
+      const settledPositionList = await settledPositionListQuery
+      const pricefeedMap = await latestPriceTickQuery
+      const allPositionList = [...openPositionList, ...settledPositionList]
       const filterStartTime = unixTimestampNow() - params.activityTimeframe
-      const filteredList = mpList.filter(mp => {
+
+      const filteredList = allPositionList.filter(mp => {
         if (params.isLong !== null && params.isLong !== mp.position.isLong) {
           return false
         }
@@ -98,7 +95,7 @@ export const $TopSettled = (config: ITopSettled) => component((
       const filterestPosList: ITableRow[] = tradeListEntries.map(positionList => {
         const summary = accountSettledPositionListSummary(positionList)
 
-        return { account: positionList[0].trader, summary, positionList, pricefeedMap }
+        return { account: positionList[0].trader, summary, openPositionList, settledPositionList, positionList, pricefeedMap }
       })
 
       return pagingQuery({ ...params.sortBy, ...req }, filterestPosList)
@@ -235,17 +232,23 @@ export const $TopSettled = (config: ITopSettled) => component((
             
             ...screenUtils.isDesktopScreen
               ? [
-                
                 {
-                  $head: $text('Win / Loss'),
+                  $head: $text('Puppets'),
                   gridTemplate: '90px',
-                  columnOp: style({ alignItems: 'center', placeContent: 'center' }),
                   $bodyCallback: map((pos: ITableRow) => {
-                    return $row(
-                      $text(`${pos.summary.winCount} / ${pos.summary.lossCount}`)
-                    )
+                    return $puppets(pos.summary.puppets, routeChangeTether)
                   })
                 },
+                // {
+                //   $head: $text('Win / Loss'),
+                //   gridTemplate: '90px',
+                //   columnOp: style({ alignItems: 'center', placeContent: 'center' }),
+                //   $bodyCallback: map((pos: ITableRow) => {
+                //     return $row(
+                //       $text(`${pos.summary.winCount} / ${pos.summary.lossCount}`)
+                //     )
+                //   })
+                // },
               ]
               : [],
             {
@@ -259,17 +262,19 @@ export const $TopSettled = (config: ITopSettled) => component((
                 return $size(pos.summary.size, pos.summary.collateral)
               })
             },
+            
             {
               $head: $tableHeader('PnL $', 'ROI %'),
               gridTemplate: screenUtils.isDesktopScreen ? '120px' : '80px',
               sortBy: 'pnl',
               columnOp: style({ placeContent: 'flex-end' }),
-              $bodyCallback: map(mp => {
+              $bodyCallback: map(tr => {
+                const pnl = map(openPnl => tr.summary.pnl + openPnl, openPositionListPnl(tr.openPositionList))
 
                 return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
-                  $pnlValue(mp.summary.realisedPnl),
+                  $pnlValue(pnl),
                   $seperator2,
-                  $text(style({ fontSize: '.85rem' }))(readablePercentage(getBasisPoints(mp.summary.realisedPnl, mp.summary.collateral))),
+                  $text(style({ fontSize: '.85rem' }))(readablePercentage(getBasisPoints(tr.summary.pnl, tr.summary.collateral))),
                 )
               })
             },
@@ -286,8 +291,9 @@ export const $TopSettled = (config: ITopSettled) => component((
                       ? $ProfilePerformanceGraph({
                         $container: $row(style({ position: 'relative',  width: `180px`, height: `80px`, margin: '-16px 0' })),
                         tickCount: 50,
-                        pricefeedMap: pos.pricefeedMap,
-                        positionList: pos.positionList,
+                        priceTickMap: pos.pricefeedMap,
+                        openPositionList: pos.openPositionList,
+                        settledPositionList: pos.settledPositionList,
                         activityTimeframe: params.activityTimeframe,
                       })({})
                       : empty()

@@ -27,7 +27,6 @@ type IPerformanceTickUpdateTick = {
   timestamp: number
 }
 
-
 type ITimelinePositionOpen = IPerformanceTickUpdateTick & {
   realisedPnl: bigint
   openPnl: bigint
@@ -35,8 +34,9 @@ type ITimelinePositionOpen = IPerformanceTickUpdateTick & {
 
 export interface IPerformanceTimeline {
   puppet?: viem.Address
-  positionList: (IMirrorPositionSettled | IMirrorPositionOpen)[]
-  pricefeedMap: IPriceTickListMap
+  openPositionList: IMirrorPositionOpen[]
+  settledPositionList: IMirrorPositionSettled[]
+  priceTickMap: IPriceTickListMap
   tickCount: number
   activityTimeframe: GMX.IntervalTime
   chartConfig?: DeepPartial<ChartOptions>
@@ -44,7 +44,6 @@ export interface IPerformanceTimeline {
 
 
 interface IGraphPnLTick {
-  time: number
   settledPnl: bigint
   value: number
   positionOpen: Record<viem.Hex, ITimelinePositionOpen>
@@ -57,117 +56,40 @@ function getTime(item: IPerformanceTickUpdateTick | IPricetick): number {
 }
 
 
-// interface MirrorPositionPerformanceTimeline {
-//   mirrorPosition: IPositionMirrorSettled | IPositionMirrorOpen
-//   pricefeed: IPriceCandle[]
-//   puppet?: viem.Address
-//   tickCount: number
-//   activityTimeframe: GMX.IntervalTime
-// }
-
-// export function mirrorPositionPerformanceTimeline(config: MirrorPositionPerformanceTimeline) {
-//   const updateList = [...config.mirrorPosition.position.link.increaseList, ...config.mirrorPosition.position.link.decreaseList]
-//   const interval = findClosest(PRICEFEED_INTERVAL, config.activityTimeframe / config.tickCount)
-
-//   const seed = {
-//     time: Number(config.mirrorPosition.blockTimestamp),
-//     value: 0,
-//     realisedPnl: 0n,
-//     openPnl: 0n,
-//   }
-
-//   return createTimeline({
-//     source: [...updateList, ...config.pricefeed],
-//     // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
-//     interval,
-//     seed,
-//     getTime: next => 'c' in next ? next.timestamp : Number(next.blockTimestamp),
-//     seedMap: (acc, next) => {
-//       if ('c' in next) {
-//         const mp = slot.mp
-//         const tickerId = `${mp.position.indexToken}:${interval}` as const
-//         const tokenPrice = getClosestpricefeedCandle(config.pricefeedMap, tickerId, intervalSlot, 0)
-
-//         const pnl = getPositionPnlUsd(slot.update.isLong, slot.update.sizeInUsd, slot.update.sizeInTokens, tokenPrice.c)
-//         const pnlShare = getParticiapntMpPortion(mp, pnl, config.puppet)
-
-//         const value = formatFixed(pnlAcc + pnlShare, 30)
-
-//         return { ...acc, pendingPnl, value }
-//         return acc
-//       }
-
-//       const key = next.update.positionKey
-
-//       if (next.update.collateralAmount > 0n || next.update.__typename === 'PositionIncrease') {
-//         acc.positionOpen[key] ??= {
-//           openPnl: 0n,
-//           realisedPnl: 0n,
-//           ...next
-//         }
-//         return { ...acc }
-//       }
-      
-//       delete acc.positionOpen[key]
-
-//       const nextSettlePnl = next.update.basePnlUsd
-//       const pnlPortion = getParticiapntMpPortion(next.mp, nextSettlePnl, config.puppet)
-//       const openPnl = Object.values(acc.positionOpen).reduce((a, b) => a + b.openPnl + b.realisedPnl, 0n)
-
-//       const settledPnl = acc.settledPnl + pnlPortion // - position.cumulativeFee
-//       const value = formatFixed(settledPnl + openPnl, 30)
-
-//       return { ...acc, settledPnl, value }
-//     }
-//   })
-// }
-
-export function performanceTimeline(config: IPerformanceTimeline) {
+export function getPerformanceTimeline(config: IPerformanceTimeline) {
   const timeNow = unixTimestampNow()
   const startTime = timeNow - config.activityTimeframe
-  const updateList: IPerformanceTickUpdateTick[] = config.positionList
+  const openAdjustList: IPerformanceTickUpdateTick[] = config.openPositionList
     .flatMap((mp): IPerformanceTickUpdateTick[] => {
-      if (mp.__typename === 'MirrorPositionOpen')  {
-        const tickList = [...mp.position.link.increaseList, ...mp.position.link.decreaseList].filter(update => Number(update.blockTimestamp) > startTime)
+      const tickList = [...mp.position.link.increaseList, ...mp.position.link.decreaseList].filter(update => Number(update.blockTimestamp) > startTime)
 
-        if (tickList.length === 0) {
-          const update = mp.position.link.increaseList[mp.position.link.increaseList.length - 1]
+      if (tickList.length === 0) {
+        const update = mp.position.link.increaseList[mp.position.link.increaseList.length - 1]
 
-          return [{ update, mp, timestamp: startTime }]
-        }
-
-        return tickList.map(update => ({ update, mp, timestamp: Number(update.blockTimestamp) }))
+        return [{ update, mp, timestamp: startTime }]
       }
 
-      const tickList: IPerformanceTickUpdateTick[] = [...mp.position.link.increaseList, ...mp.position.link.decreaseList]
-        .map(update => ({ update, mp, timestamp: Number(update.blockTimestamp) }))
-
-      return tickList
+      return tickList.map(update => ({ update, mp, timestamp: Number(update.blockTimestamp) }))
     })
-    // .filter(tick => getTime(tick.update) > startTime)
-    // .sort((a, b) => getTime(a.update) - getTime(b.update))
 
+  const settledAdjustList: IPerformanceTickUpdateTick[] = config.settledPositionList.flatMap(mp => {
+    return [...mp.position.link.increaseList, ...mp.position.link.decreaseList].map(update => ({ update, mp, timestamp: Number(update.blockTimestamp) }))
+  })
 
   const interval = findClosest(GMX.PRICEFEED_INTERVAL, config.activityTimeframe / config.tickCount)
-  const uniqueIndexTokenList = [...new Set(config.positionList.map(mp => mp.position.indexToken))]
+  const uniqueIndexTokenList = [...new Set([...config.openPositionList.map(mp => mp.position.indexToken), ...config.settledPositionList.map(mp => mp.position.indexToken)])]
 
-  const initialTick: IGraphPnLTick = {
-    time: startTime,
+  const priceUpdateTicks = uniqueIndexTokenList.flatMap(indexToken => config.priceTickMap[indexToken] ?? [])
+  const source = [...openAdjustList, ...settledAdjustList, ...priceUpdateTicks].filter(tick => getTime(tick) > startTime)
+  const seed: IGraphPnLTick = {
     value: 0,
     settledPnl: 0n,
     positionOpen: {}
   }
-
-
-  const priceUpdateTicks = uniqueIndexTokenList.flatMap(indexToken => config.pricefeedMap[indexToken] ?? []) //.filter(x => x.timestamp > startTime)
-  const source = [...updateList, ...priceUpdateTicks] //.filter(tick => getTime(tick) > startTime)
-  // const sortedUpdateList = performanceTickList.sort((a, b) => getTime(a.update) - getTime(b.update))
-
   const data = createTimeline({
     source,
-    // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
     interval,
-    seed: initialTick,
+    seed,
     getTime,
     seedMap: (acc, next) => {
       if ('price' in next) {
@@ -217,26 +139,35 @@ export const $ProfilePerformanceGraph = (config: IPerformanceTimeline & { $conta
 ) => {
 
 
-  const timeline = performanceTimeline(config)
+  const timeline = getPerformanceTimeline(config)
 
-  const markerList = config.positionList.map((pos): IMarker => {
-    const isSettled = 'settlement' in pos
-
+  const openMarkerList = config.openPositionList.map((pos): IMarker => {
     return {
       position: 'inBar',
-      color: isSettled ? colorAlpha(pallete.message, .15) : colorAlpha(pallete.primary, .15),
+      color: colorAlpha(pallete.primary, .15),
       time: Number(pos.blockTimestamp) as Time,
       size: 0.1,
-      shape: isSettled ? 'circle' as const : 'circle' as const,
+      shape: 'circle',
     }
-  }).sort((a, b) => Number(a.time) - Number(b.time))
+  })
+  const settledMarkerList = config.settledPositionList.map((pos): IMarker => {
+    return {
+      position: 'inBar',
+      color: colorAlpha(pallete.message, .15),
+      time: Number(pos.blockTimestamp) as Time,
+      size: 0.1,
+      shape: 'circle',
+    }
+  })
+
+  const allMarkerList = [...settledMarkerList, ...openMarkerList].sort((a, b) => Number(a.time) - Number(b.time))
 
 
   return [
     config.$container(
       $Baseline({
         containerOp: style({  inset: '0px 0px 0px 0px', position: 'absolute' }),
-        markers: now(markerList),
+        markers: now(allMarkerList),
         chartConfig: {
           width: 100,
           leftPriceScale: {
