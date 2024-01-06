@@ -31,6 +31,12 @@
   ],
   "references": [
     {
+      "path": "../gmx-middleware/utils"
+    },
+    {
+      "path": "../gmx-middleware/const"
+    },
+    {
       "path": "../middleware"
     },
     {
