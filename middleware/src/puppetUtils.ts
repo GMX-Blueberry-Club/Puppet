@@ -1,9 +1,9 @@
-import { factor, getMappedValue, getPositionPnlUsd, lst } from "gmx-middleware-utils"
-import * as viem from "viem"
-import { IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled } from "./types.js"
-import { Stream } from "@most/types"
 import { combineArray, map } from "@most/core"
+import { Stream } from "@most/types"
+import { factor, getPositionPnlUsd, lst } from "gmx-middleware-utils"
+import * as viem from "viem"
 import { latestPriceMap } from "./graph.js"
+import { IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled } from "./types.js"
 
 
 // export function extractPricefeedFromPositionList(

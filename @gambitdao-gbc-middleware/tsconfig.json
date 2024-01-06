@@ -6,6 +6,8 @@
     "rootDir": "./src",
   },
   "references": [
-
+    {
+      "path": "../gmx-middleware/utils"
+    }
   ]
 }

@@ -28,7 +28,6 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": [
-    "src", "../gmx-middleware/utils/src/subgraph/query.ts",
   ],
   "references": [
     {
