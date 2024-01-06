@@ -1,34 +1,31 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "types": [
-      "vite-plugin-pwa/client",
-      "vite/client",
-    ],
+    "target": "ES2020",
     "lib": [
+      "ES2020",
       "DOM",
       "DOM.Iterable",
-      "ESNext",
-      "webworker"
+      "WebWorker"
     ],
     "module": "ESNext",
-    "skipLibCheck": true,
     /* Bundler mode */
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
+    "types": [
+      "vite/client",
+      "vite-plugin-pwa/vanillajs",
+      "vite-plugin-pwa/info"
+    ],
+    "allowImportingTsExtensions": true,
     /* Linting */
     "strict": true,
-    // "noUnusedLocals": true,
-    // "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "skipLibCheck": true
   },
-  "include": [
-  ],
   "references": [
     {
       "path": "../gmx-middleware/utils"
@@ -48,5 +45,8 @@
     {
       "path": "../@gambitdao-gbc-middleware"
     },
+  ],
+  "include": [
+    "src"
   ]
 }

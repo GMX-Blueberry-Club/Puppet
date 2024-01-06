@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
-import { ManifestOptions, VitePWA, VitePWAOptions } from 'vite-plugin-pwa'
 import replace from '@rollup/plugin-replace'
+import { defineConfig } from 'vite'
+import { VitePWA } from 'vite-plugin-pwa'
 import { dark } from './src/common/theme.js'
 
 
@@ -18,17 +18,17 @@ const prefixedParentEnv = Object.fromEntries(
   Object.entries(SITE_CONFIG).map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)])
 )
 
-const pwaOptions: Partial<VitePWAOptions> = {
-  workbox: {
-    cleanupOutdatedCaches: false
-  },
-  // selfDestroying: Boolean(process.env.SW_DESTROY),
+const vitePlugin = VitePWA({
+  // workbox: {
+  //   cleanupOutdatedCaches: true
+  // },
   registerType: 'autoUpdate',
   strategies: 'injectManifest',
   injectManifest: {
     maximumFileSizeToCacheInBytes: 15000000,
     globPatterns: ['**/*.{js,html,woff2}']
   },
+  injectRegister: 'auto',
   srcDir: 'src',
   filename: 'sw.ts',
   includeAssets: ['font/*.ttf', './*.png', './*.svg'],
@@ -43,35 +43,12 @@ const pwaOptions: Partial<VitePWAOptions> = {
     display:"standalone",
     orientation: "any",
     categories:[ "Copy Trading", "Decentralized Perpetual Exchange", "DeFi" ],
-
-    // screenshots: [
-    //   {
-    //     src: "video/trade-adjust.mp4",
-    //     sizes: "640x320",
-    //     type: "video/mp4",
-    //     form_factor: "wide",
-    //     label: "Wonder Widgets"
-    //   },
-    //   {
-    //     src: "video/trade-adjust.mp4",
-    //     sizes: "750x1334",
-    //     type: "video/mp4",
-    //     form_factor: "narrow",
-    //     label: "Wonder Widgets"
-    //   }
-    // ],
-    // share_target: { 
-    //   action:"/?utm_medium=PWA&utm_source=share-target&share-target",
-    //   method:"POST",
-    //   enctype:"multipart/form-data", params:{ files:[{ name:"file", accept:["image/*"] }] }
-    // },
     screenshots:[
       { src:"/screenshot/narrow1.png", type:"image/png", sizes:"828x1792", form_factor:"narrow" },
       { src:"/screenshot/narrow2.png", type:"image/png", sizes:"828x1792", form_factor:"narrow" },
 
       { src:"/screenshot/wide1.png", type:"image/png", sizes:"3260x1692", form_factor:"wide" },
       { src:"/screenshot/wide2.png", type:"image/png", sizes:"3260x1692", form_factor:"wide" }
-      
     ],
     icons: [
       {
@@ -86,7 +63,6 @@ const pwaOptions: Partial<VitePWAOptions> = {
       },
     ]
   },
-
   mode: 'development',
   base: '/',
   devOptions: {
@@ -98,7 +74,7 @@ const pwaOptions: Partial<VitePWAOptions> = {
     navigateFallback: 'index.html',
     suppressWarnings: true,
   },
-}
+})
 
 
 // https://vitejs.dev/config/
@@ -109,7 +85,7 @@ export default defineConfig({
   envDir: '../',
   publicDir: 'assets',
   plugins: [
-    VitePWA(pwaOptions),
+    vitePlugin,
     replace({
       include: 'index.html',
       __DATE__: new Date().toISOString(),

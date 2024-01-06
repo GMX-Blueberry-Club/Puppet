@@ -6,20 +6,23 @@ import { registerSW } from "virtual:pwa-register"
 export const newUpdateInvoke: Stream<() => void> = fromCallback(cb => {
   const reloadCb = registerSW({
     immediate: true,
+    onOfflineReady() {
+
+    },
     async onNeedRefresh() {
       // if (import.meta.env.DEV) {
       //   return
       // }
 
-      cb(() => reloadCb(true))
+      // cb(() => reloadCb(true))
 
 
-      // const confirm = window.confirm('new update is pending, click Ok to reload')
+      const confirm = window.confirm('new update is pending, click Ok to reload')
 
-      // if (confirm) {
-      //   await reload(true)
-      //   console.log('Done reloading')
-      // }
+      if (confirm) {
+        await reloadCb(true)
+        console.log('Done reloading')
+      }
 
     // if (reloadSW === 'true') {
     //   setInterval(async () => {
