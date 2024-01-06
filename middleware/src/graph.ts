@@ -44,7 +44,7 @@ export async function queryPuppetTradeRoute(client: Client, filter: IQueryPuppet
     schema: schema.puppetTradeRoute,
     filter: {
       puppet: filter.puppet,
-      timestamp_gte,
+      // timestamp_gte,
     },
   })
   
@@ -82,14 +82,14 @@ export async function queryLatestPriceTick(client: Client, filter: IQueryLatestP
   const interval = findClosest(GMX.PRICEFEED_INTERVAL, filter.activityTimeframe / estTickAmout)
   const timestamp_gte = unixTimestampNow() - filter.activityTimeframe
 
-  const latestSeedQuery = querySubgraph(client, {
-    schema: latestSeedSchema,
-    filter: {
-      token: filter.token,
-    },
-  })
+  // const latestSeedQuery = querySubgraph(client, {
+  //   schema: latestSeedSchema,
+  //   filter: {
+  //     token: filter.token,
+  //   },
+  // })
 
-  const candleListQuery = querySubgraph(client, {
+  const candleListQuery =  querySubgraph(client, {
     schema: candleSchema,
     filter: {
       interval,
@@ -99,9 +99,8 @@ export async function queryLatestPriceTick(client: Client, filter: IQueryLatestP
     orderDirection: 'desc',
   })
 
-  const [latestSeed, candleList] = await Promise.all([latestSeedQuery, candleListQuery])
-  const all = [...candleList, ...latestSeed]
-  const mapped: IPriceTickListMap = groupArrayManyMap(all, x => viem.getAddress(x.token), x => ({ timestamp: x.timestamp, price: x.c }))
+  const candleList = await candleListQuery
+  const mapped: IPriceTickListMap = groupArrayManyMap(candleList, x => viem.getAddress(x.token), x => ({ timestamp: x.timestamp, price: x.c }))
 
   return mapped
 }
@@ -122,7 +121,7 @@ export async function queryLatestTokenPriceFeed(client: Client, filter: IQueryPr
 
   const queryLatest = querySubgraph(client, {
     schema: gmxSchema.priceCandleSeed,
-    filter: { interval: GMX.TIME_INTERVAL_MAP.MIN5, token: filter.token },
+    filter: filter,
   })
 
   const [feed, latest] = await Promise.all([queryFeed, queryLatest])

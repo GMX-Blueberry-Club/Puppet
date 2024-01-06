@@ -54,7 +54,7 @@ export const $TraderPortfolio = (config: ITraderPortfolio) => component((
         $card2(style({ padding: 0, height: screenUtils.isDesktopScreen ? '200px' : '200px', position: 'relative', margin: screenUtils.isDesktopScreen ? `-36px -36px 0` : `-12px -12px 0px` }))(
           switchMap(params => {
             const allPositions = [...params.settledTradeList, ...params.openTradeList]
-            const timeline = getPerformanceTimeline({ positionList: allPositions, priceTickMap: params.priceTickMap, tickCount: 100, activityTimeframe: params.activityTimeframe })
+            const timeline = getPerformanceTimeline({ openPositionList: params.openTradeList, settledPositionList: params.settledTradeList, priceTickMap: params.priceTickMap, tickCount: 100, activityTimeframe: params.activityTimeframe })
             const $container = $column(style({ width: '100%', padding: 0, height: '200px' }))
             const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
 
@@ -154,16 +154,6 @@ export const $TraderPortfolio = (config: ITraderPortfolio) => component((
                 $text(getMappedValue(LAST_ACTIVITY_LABEL_MAP, params.activityTimeframe) )
               )
             )
-
-            // return $ProfilePerformanceCard({
-            //   account: config.address,
-            //   $container: $column(style({ width: '100%', padding: 0, height: '200px' })),
-            //   pricefeed: params.pricefeed,
-            //   tickCount: 100,
-            //   activityTimeframe: params.activityTimeframe,
-            //   positionList: allPositions,
-            //   // trader: config.address,
-            // })({ })
           }, zipState({ settledTradeList, openTradeList, activityTimeframe, priceTickMap })),
         ),
         $column(layoutSheet.spacingBig)(
@@ -218,8 +208,6 @@ export const $TraderPortfolio = (config: ITraderPortfolio) => component((
             
         ),
       ),
-      
-      
     ),
     {
       changeRoute, modifySubscriber, changeActivityTimeframe

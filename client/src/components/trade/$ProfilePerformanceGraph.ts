@@ -80,7 +80,7 @@ export function getPerformanceTimeline(config: IPerformanceTimeline) {
   const uniqueIndexTokenList = [...new Set([...config.openPositionList.map(mp => mp.position.indexToken), ...config.settledPositionList.map(mp => mp.position.indexToken)])]
 
   const priceUpdateTicks = uniqueIndexTokenList.flatMap(indexToken => config.priceTickMap[indexToken] ?? [])
-  const source = [...openAdjustList, ...settledAdjustList, ...priceUpdateTicks].filter(tick => getTime(tick) > startTime)
+  const source = [...openAdjustList, ...settledAdjustList, ...priceUpdateTicks]
   const seed: IGraphPnLTick = {
     value: 0,
     settledPnl: 0n,

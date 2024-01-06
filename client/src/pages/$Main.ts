@@ -43,7 +43,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   [routeChanges, linkClickTether]: Behavior<any, string>,
   [modifySubscriptionList, modifySubscriptionListTether]: Behavior<IChangeSubscription[]>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
-  // [syncProcessData, syncProcessDataTether]: Behavior<bigint>,
   [clickUpdateVersion, clickUpdateVersionTether]: Behavior<any, bigint>,
 
 ) => {
@@ -115,17 +114,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       router.contains(appRoute)(
         $rootContainer(
           $column(style({ flex: 1, position: 'relative' }))(
-            // $node(style({ height: 0 }))(
-            //   $node(style({
-            //     background: pallete.middleground,
-            //     inset: 0,
-            //     height: '400px',
-            //     margin: `0 -50vw 0`,
-            //     display: 'block',
-            //     // position: 'absolute',
-            //     pointerEvents: 'none',
-            //   }))()
-            // ),
             switchMap(chainEvent => {
               return $column(
                 designSheet.customScroll,
@@ -177,7 +165,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 router.contains(profileRoute)(
                   $midContainer(
                     fadeIn($Profile({
-                      route: profileRoute,
+                      route: profileRoute, routeTypeList,
                     })({
                       modifySubscriber: modifySubscriberTether(),
                       changeRoute: linkClickTether(),
@@ -226,54 +214,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
             }, chain)
           ),
 
-          // $row(layoutSheet.spacing, style({ position: 'absolute', zIndex: 100, right: '10px', bottom: '10px' }))(
-
-          //   $row(
-          //     switchMap(isSyncing => {
-          //       if (isSyncing) return $spinner
-
-          //       return $Tooltip({
-          //       // $dropContainer: $defaultDropContainer,
-          //         $content: $text(map(params => {
-          //           const deltaBlock = params.blockChange - params.process.blockNumber
-          //           return `${readableUnitAmount(Number(deltaBlock))} blocks behind`
-          //         }, combineObject({ process, blockChange }) )),
-          //         $anchor: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
-          //           $node(style({ width: '5px', height: '5px', borderRadius: '50px', backgroundColor: 'red' }))(),
-          //           $text(map(process => readableUnitAmount(Number(process.blockNumber)), process )),
-          //         ),
-          //       })({})
-          //     }, isBlockSyncing)
-          //   ),
-            
-          //   switchMap(params => {
-          //     const refreshThreshold = import.meta.env.DEV ? 150 : 50
-          //     const blockDelta = params.syncBlock ? params.syncBlock - params.process.blockNumber : null
-
-          //     if (blockDelta === null || blockDelta < refreshThreshold) return empty()
-
-          //     return fadeIn($row(style({ position: 'fixed', bottom: '18px', left: `50%` }))(
-          //       style({ transform: 'translateX(-50%)' })(
-          //         $column(layoutSheet.spacingTiny, style({
-          //           backgroundColor: pallete.horizon,
-          //           border: `1px solid`,
-          //           padding: '20px',
-          //           animation: `borderRotate var(--d) linear infinite forwards`,
-          //           borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
-          //         }))(
-          //           $text(`Syncing blocks of data: ${readableUnitAmount(Number(blockDelta))}`),
-          //           $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(
-          //             params.process.state.blockMetrics.timestamp === 0n
-          //               ? `Indexing for the first time, this may take a minute or two.`
-          //               : `${timeSince(Number(params.process.state.blockMetrics.timestamp))} old data is displayed`
-          //           ),
-          //         )
-          //       )
-          //     ))
-          //   }, combineObject({ syncBlock, process })),
-   
-          // ),
-                        
           $column(style({ maxWidth: '1000px', margin: '0 auto', width: '100%', zIndex: 10 }))(
             $RouteSubscriptionDrawer({
               routeTypeList,
@@ -302,14 +242,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
           })({ routeChanges: linkClickTether() })
         )
       ),
-
-      // router.match(adminRoute)(
-      //   $rootContainer(style({ overflowY: 'auto', height: '100vh' }))(
-      //     $midContainer(
-      //       $Admin({})
-      //     )
-      //   ),
-      // ),
 
     )
 

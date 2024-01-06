@@ -66,7 +66,7 @@ export const $TopSettled = (config: ITopSettled) => component((
     const paging = startWith(requestPage, scrollRequest)
 
     const dataSource: Stream<TablePageResponse<ITableRow>> = awaitPromises(map(async req => {
-      const latestPriceTickQuery = queryLatestPriceTick(subgraphClient, { activityTimeframe: GMX.TIME_INTERVAL_MAP.HR24 })
+      const latestPriceTickQuery = queryLatestPriceTick(subgraphClient, { activityTimeframe: params.activityTimeframe })
       const openPositionListQuery = queryOpenPositionList(subgraphClient)
       const settledPositionListQuery = querySettledPositionList(subgraphClient)
       const openPositionList = await openPositionListQuery

@@ -85,7 +85,9 @@ export const $Baseline = (config: IBaselineChart) => {
     chartConfig,
     getSeriesApi: api => {
       const series = api.addBaselineSeries(baselineOptions)
-      // api.timeScale().fitContent()
+      setTimeout(() => {
+        api.timeScale().fitContent()
+      }, 50)
       
       return series
     }

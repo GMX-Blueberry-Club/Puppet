@@ -45,13 +45,10 @@ import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "./components/$LastActivit
 
 
 
-export interface IProfile {
+export interface IWallet {
   wallet: IWalletClient
   route: router.Route
   routeTypeList: Stream<ISetRouteType[]>
-  
-  // processData: Stream<IGmxProcessState>
-  // subscriptionList: Stream<IPuppetSubscritpion[]>
 }
 
 enum IProfileMode {
@@ -72,7 +69,7 @@ const optionDisplay = {
 }
 
 
-export const $Wallet = (config: IProfile) => component((
+export const $Wallet = (config: IWallet) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [selectProfileMode, selectProfileModeTether]: Behavior<IProfileMode>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
@@ -140,15 +137,15 @@ export const $Wallet = (config: IProfile) => component((
             $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
               $card2(style({ padding: 0, height: screenUtils.isDesktopScreen ? '200px' : '200px', position: 'relative', margin: screenUtils.isDesktopScreen ? `-36px -36px 0` : `-12px -12px 0px` }))(
                 switchMap(params => {
-                  const openList = params.puppetTradeRouteList.flatMap(route => route.openList.flatMap(pos => pos.position))
-                  const settledList = params.puppetTradeRouteList.flatMap(route => route.settledList.flatMap(pos => pos.position))
+                  const openPositionList = params.puppetTradeRouteList.flatMap(route => route.openList.flatMap(pos => pos.position))
+                  const settledPositionList = params.puppetTradeRouteList.flatMap(route => route.settledList.flatMap(pos => pos.position))
 
-                  const allPositions = [...openList, ...settledList]
+                  const allPositions = [...openPositionList, ...settledPositionList]
                   const $container = $column(style({ width: '100%', padding: 0, height: '200px' }))
-                  const timeline = getPerformanceTimeline({ puppet: config.wallet.account.address, positionList: allPositions, priceTickMap: params.priceTickMap, tickCount: 100, activityTimeframe: params.activityTimeframe })
+                  const timeline = getPerformanceTimeline({ ...params, openPositionList, settledPositionList, puppet: config.wallet.account.address, tickCount: 100 })
                   const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
 
-                  const totalUsedBalance = openList.reduce((acc, pos) => {
+                  const totalUsedBalance = openPositionList.reduce((acc, pos) => {
                     const collateralUsd = getParticiapntMpPortion(pos, pos.position.maxCollateralUsd, config.wallet.account.address)
                     return acc + collateralUsd
                   }, 0n)
@@ -340,15 +337,10 @@ export const $Wallet = (config: IProfile) => component((
 
                   return $column(layoutSheet.spacingBig, style({ width: '100%' }))(
                     ...Object.entries(routeTypeTraderListMap).map(([routeTypeKey, tradeRouteList]) => {
-                      const route = params.routeTypeList.find(route => route.routeTypeKey === routeTypeKey)!
+                      const routeType = params.routeTypeList.find(route => route.routeTypeKey === routeTypeKey)!
 
                       return $column(layoutSheet.spacing)(
-                        $route(route),
-
-                        // $RouteDepositInfo({
-                        //   routeDescription: route,
-                        //   wallet: w3p
-                        // })({}),
+                        $route(routeType),
 
                         $column(style({ paddingLeft: '16px' }))(
                           $row(layoutSheet.spacing)(
@@ -356,10 +348,10 @@ export const $Wallet = (config: IProfile) => component((
 
                             $column(layoutSheet.spacing, style({ flex: 1 }))(
                               ...tradeRouteList.map(tradeRouteDto => {
-                                const puppetSubscriptionKey = getPuppetSubscriptionExpiry(config.wallet.account.address, route.collateralToken, route.indexToken, route.isLong)
-                                const openList = tradeRouteDto.openList.flatMap(pos => pos.position)
-                                const settledList = tradeRouteDto.settledList.flatMap(pos => pos.position)
-                                const allPositions = [...openList, ...settledList]
+                                const puppetSubscriptionKey = getPuppetSubscriptionExpiry(config.wallet.account.address, routeType.collateralToken, routeType.indexToken, routeType.isLong)
+                                const openPositionList = tradeRouteDto.openList.flatMap(pos => pos.position)
+                                const settledPositionList = tradeRouteDto.settledList.flatMap(pos => pos.position)
+                                const allPositions = [...openPositionList, ...settledPositionList]
                                 const summary = accountSettledPositionListSummary(allPositions, config.wallet.account.address)
 
                                 return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: '10px 0' }))(
@@ -394,12 +386,11 @@ export const $Wallet = (config: IProfile) => component((
                                     })({})
                                   }, puppetSubscriptionKey),
 
-
                                   $ProfilePerformanceGraph({
                                     puppet: config.wallet.account.address,
                                     $container: $column(style({ width: '100%', padding: 0, height: '75px', position: 'relative', margin: '-16px 0' })),
                                     priceTickMap: params.priceTickMap,
-                                    positionList: allPositions,
+                                    openPositionList, settledPositionList,
                                     tickCount: 100,
                                     activityTimeframe: params.activityTimeframe
                                   })({}),

@@ -13,7 +13,8 @@ import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionE
 import * as store from "../data/store/store.js"
 import { subgraphClient } from "../data/subgraph/client"
 import * as storage from "../utils/storage/storeScope.js"
-import { queryLatestPriceTick } from "puppet-middleware-utils"
+import { ISetRouteType, queryLatestPriceTick } from "puppet-middleware-utils"
+import { Stream } from "@most/types"
 
 
 export enum IProfileActiveTab {
@@ -23,17 +24,14 @@ export enum IProfileActiveTab {
 
 export interface IProfile {
   route: router.Route
-  // processData: Stream<IGmxProcessState>
-  // subscriptionList: Stream<IPuppetSubscritpion[]>
+  routeTypeList: Stream<ISetRouteType[]>
 }
 
-const $title = $text(style({ fontWeight: 'bold', fontSize: '1.35em' }))
 
 type IRouteOption = {
   label: string
   fragment: string
 }
-
 
 
 export const $Profile = (config: IProfile) => component((
@@ -44,7 +42,7 @@ export const $Profile = (config: IProfile) => component((
   
 ) => {
 
-  const { route } = config
+  const { route, routeTypeList } = config
 
   const profileAddressRoute = config.route.create({ title: 'Profile', fragment: ETH_ADDRESS_REGEXP })
   const traderRoute = profileAddressRoute.create({ fragment: 'trader', title: 'Trader' })
@@ -102,7 +100,7 @@ export const $Profile = (config: IProfile) => component((
               })
             ),
             router.match(puppetRoute)(
-              $PuppetProfile({ address, activityTimeframe, priceTickMap, route })({
+              $PuppetProfile({ ...config, activityTimeframe, address, priceTickMap, route, routeTypeList })({
                 changeRoute: changeRouteTether(),
                 changeActivityTimeframe: changeActivityTimeframeTether(),
                 modifySubscriber: modifySubscriberTether()
