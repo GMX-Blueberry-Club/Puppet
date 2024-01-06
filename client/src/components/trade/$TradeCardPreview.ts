@@ -25,9 +25,10 @@ export const $TradeCardPreview = (config: ITradeCardPreview) => component((
   [accountPreviewClick, accountPreviewClickTether]: Behavior<string, string>,
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
 ) => {
-
+  const openPositionList = config.mp.__typename === 'MirrorPositionOpen' ? [config.mp] : []
+  const settledPositionList = config.mp.__typename === 'MirrorPositionSettled' ? [config.mp] : []
   const $container = config.$container || $column(style({ height: '80px', minWidth: '100px' }))
-  const timeline = getPerformanceTimeline({ ...config, positionList: [config.mp] })
+  const timeline = getPerformanceTimeline({ ...config, openPositionList, settledPositionList })
   const pnlCrossHairTimeChange = replayLatest(multicast(startWith(null, skipRepeatsWith(((xsx, xsy) => xsx.time === xsy.time), crosshairMove))))
 
   const hoverChartPnl = filterNull(map(params => {
