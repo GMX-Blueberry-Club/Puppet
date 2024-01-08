@@ -4,7 +4,7 @@ import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { map, now } from "@most/core"
 import { Stream } from "@most/types"
 import { $Table, $infoLabel, $txHashRef } from "gmx-middleware-ui-components"
-import { IPositionDecrease, IPositionIncrease, IPriceCandle, StateStream, TEMP_INDEX_TOKEN_MARKET_MAP, TEMP_MARKET_TOKEN_MARKET_MAP, adjustForDecimals, expandDecimals, getMappedValue, getTokenAmount, getTokenDescription, getTokenUsd, readableDate, readableFixedUSD30, readableTokenPrice, switchMap, timeSince, unixTimestampNow } from "gmx-middleware-utils"
+import { IPositionDecrease, IPositionIncrease, IPriceCandle, StateStream, TEMP_INDEX_TOKEN_MARKET_MAP, TEMP_MARKET_TOKEN_MARKET_MAP, adjustForDecimals, expandDecimals, getMappedValue, getTokenAmount, getTokenDescription, getTokenUsd, readableDate, readableFixedUSD30, readableTokenPrice, switchMap, getTimeSince, unixTimestampNow } from "gmx-middleware-utils"
 import { IMirrorPositionOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
@@ -95,7 +95,7 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
               const timestamp = isKeeperReq ? unixTimestampNow() : Number(req.blockTimestamp)
 
               return $column(layoutSheet.spacingTiny, style({ fontSize: '.85rem' }))(
-                $text(timeSince(timestamp) + ' ago'),
+                $text(getTimeSince(timestamp)),
                 $text(readableDate(timestamp)),
               )
             })

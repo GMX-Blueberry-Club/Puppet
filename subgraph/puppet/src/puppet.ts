@@ -151,6 +151,11 @@ export function handleExecutePosition(event: ExecutePositionEvent): void {
     settledMirrorPosition.merge([mirrorPositionOpen])
     settledMirrorPosition.position = executePosition.id
     settledMirrorPosition.id = executePosition.id
+
+    settledMirrorPosition.blockNumber = event.block.number
+    settledMirrorPosition.blockTimestamp = event.block.timestamp
+    settledMirrorPosition.transactionHash = event.transaction.hash
+    
     settledMirrorPosition.save()
 
     store.remove("MirrorPositionOpen", mirrorPositionOpen.id)

@@ -4,7 +4,7 @@ import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { map } from "@most/core"
 import { Stream } from "@most/types"
 import { TableColumn } from "gmx-middleware-ui-components"
-import { IPriceOracleMap, getBasisPoints, readableDate, readablePercentage, timeSince } from "gmx-middleware-utils"
+import { IPriceOracleMap, getBasisPoints, readableDate, readablePercentage, getTimeSince, readableFactorPercentage } from "gmx-middleware-utils"
 import { IMirrorPosition, IMirrorPositionOpen, IMirrorPositionSettled, getParticiapntMpPortion, latestPriceMap } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $entry, $openPnl, $pnlValue, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
@@ -34,9 +34,7 @@ export const settledSizeColumn = (puppet?: viem.Address): TableColumn<IMirrorPos
   columnOp: O(layoutSheet.spacingTiny, style({ flex: 1.2, placeContent: 'flex-end' })),
   $bodyCallback: map(mp => {
     const size = getParticiapntMpPortion(mp, mp.position.maxSizeUsd, puppet)
-    const collateral = getParticiapntMpPortion(mp, mp.position.maxCollateralToken, puppet)
-
-    // const collateralUsd = collateral * mp.position.
+    const collateral = getParticiapntMpPortion(mp, mp.position.maxCollateralUsd, puppet)
 
     return $size(size, collateral)
   })
@@ -56,7 +54,7 @@ export const puppetsColumn = <T extends {puppets: readonly `0x${string}`[]}>(cli
   $head: $text('Puppets'),
   gridTemplate: '90px',
   $bodyCallback: map((pos) => {
-    return $puppets(pos.puppets, click)
+    return $puppets(pos.puppets)
   })
 })
 
@@ -77,7 +75,7 @@ export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IMirrorPosi
   $bodyCallback: map(mp => {
     const pnl = getParticiapntMpPortion(mp, mp.position.realisedPnlUsd, puppet)
     const collateral = getParticiapntMpPortion(mp, mp.position.maxCollateralUsd, puppet)
-      
+    
     return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
       $pnlValue(pnl),
       $seperator2,
@@ -97,7 +95,7 @@ export const positionTimeColumn: TableColumn<IMirrorPositionSettled | IMirrorPos
     return $column(layoutSheet.spacingTiny)(
       $text(readableDate(timestamp)),
       $row(layoutSheet.spacingSmall)(
-        $text(style({ fontSize: '.85rem' }))(timeSince(timestamp) + ' ago'),
+        $text(style({ fontSize: '.85rem' }))(getTimeSince(timestamp)),
         $txnIconLink(pos.transactionHash, arbitrum)
       )
     )

@@ -2,7 +2,7 @@ import { Behavior, combineArray, combineObject, replayLatest } from "@aelea/core
 import { $node, $text, component, style, styleBehavior } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, observer, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, constant, debounce, empty, fromPromise, map, mergeArray, multicast, now, scan, skipRepeats, snapshot, switchLatest, zip } from "@most/core"
+import { awaitPromises, constant, debounce, empty, fromPromise, map, mergeArray, multicast, now, recoverWith, scan, skipRepeats, snapshot, switchLatest, zip } from "@most/core"
 import { Stream } from "@most/types"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/abis"
@@ -326,7 +326,7 @@ export const $Trade = (config: ITradeComponent) => component((
       false
     )
 
-    return positionFeeInfo
+    return recoverWith(_ => now(null), positionFeeInfo)
   }, zipState({ positionKeyParams, marketPrice }))))
 
 

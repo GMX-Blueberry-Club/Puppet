@@ -21,7 +21,7 @@ import {
   streamOf, switchMap, unixTimestampNow
 } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
-import { getMpSlotPnL, getParticiapntMpPortion, IMirrorPosition, IMirrorPositionOpen, IPuppetSubscritpionParams } from "puppet-middleware-utils"
+import { getMpSlotPnL, getParticiapntMpPortion, IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen, IPuppetSubscritpionParams } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile.js"
@@ -34,6 +34,7 @@ import { IProfileActiveTab } from "../pages/$Profile.js"
 import { $seperator2 } from "../pages/common.js"
 import { $caretDown } from "./elements/$icons"
 import { wallet } from "../wallet/walletLink"
+import { $puppetLogo } from "./$icons"
 
 
 export const $midContainer = $column(
@@ -146,7 +147,10 @@ export const $sizeAndLiquidation = (mp: IMirrorPositionOpen, markPrice: Stream<b
 }
 
 
-export const $puppets = (puppets: readonly viem.Address[], click: Tether<INode, string>) => {
+export const $puppets = (
+  puppets: readonly viem.Address[],
+  // click: Tether<INode, string>
+) => {
 
   // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
   // const cumulativeFee = tradeReader.vault.read('cumulativeFundingRates', pos.collateralToken)
@@ -157,14 +161,19 @@ export const $puppets = (puppets: readonly viem.Address[], click: Tether<INode, 
                 
   return $row(layoutSheet.spacingSmall, style({ cursor: 'pointer' }))(
     ...puppets.map(address => {
-      return click(nodeEvent('click'), map(() => {
-        const url = `/app/profile/${address}/puppet`
-
-        history.pushState({}, '', url)
-        return url
-      }))(
-        $profileAvatar({ address, profileSize: 30 })
+      return style({ marginRight: '-18px', border: '2px solid black' })(
+        $profileAvatar({ address, profileSize: 25 })
       )
+      // return click(nodeEvent('click'), map(() => {
+      //   const url = `/app/profile/${address}/puppet`
+
+      //   history.pushState({}, '', url)
+      //   return url
+      // }))(
+      //   style({ marginRight: '-18px', border: '2px solid black' })(
+      //     $profileAvatar({ address, profileSize: 25 })
+      //   )
+      // )
     }),
     // $content
   )
@@ -328,6 +337,7 @@ interface ITraderRouteDisplay {
   trader: viem.Address
   routeTypeKey: viem.Hex
   tradeRoute: viem.Hex
+  summary: IMirrorPositionListSummary
   // routeKey: viem.Address
   // subscriptionList: Stream<IPuppetSubscritpion[]>
   positionParams: IAbstractPositionParams
@@ -376,9 +386,17 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
         $target: switchMap(expiry => {
           return $ButtonSecondary({
             $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
-              $route(config.positionParams, screenUtils.isDesktopScreen),
-              // $icon({ $content: $puppetLogo, fill: pallete.message, width: '24px', viewBox: `0 0 32 32` }),
-              $icon({ $content: $caretDown, width: '14px', svgOps: style({ marginRight: '-4px' }), viewBox: '0 0 32 32' }),
+              $route(config.positionParams, false),
+              $puppets(config.summary.puppets),
+
+              // width: 26px;
+              // height: 26px;
+              // background-color: rgb(16, 18, 23);
+              // border-radius: 50%;
+              // margin-right: -18px;
+              // padding: 4px;
+              // border: 1px solid white;
+              $icon({ $content: $puppetLogo, width: '26px', svgOps: style({ backgroundColor: pallete.background, borderRadius: '50%', padding: '4px', border: `1px solid ${pallete.message}`, marginRight: '-18px' }), viewBox: '0 0 32 32' }),
             ),
             $container: $defaultMiniButtonSecondary(style({ borderRadius: '16px', borderColor: Number(expiry) > unixTimestampNow() ? pallete.primary : '' })) 
           })({

@@ -198,11 +198,12 @@ export const $TopSettled = (config: ITopSettled) => component((
           const columns: TableColumn<ITableRow>[] = [
             {
               $head: $text('Trade Route'),
-              gridTemplate: screenUtils.isDesktopScreen ? '144px' : '80px',
+              gridTemplate: screenUtils.isDesktopScreen ? '126px' : '80px',
               // columnOp: style({ placeContent: 'flex-end' }),
               $bodyCallback: map(pos => {
 
                 return $TraderRouteDisplay({
+                  summary: pos.summary,
                   trader: pos.account,
                   tradeRoute: pos.positionList[0].tradeRoute,
                   positionParams: pos.positionList[0].position,
@@ -230,23 +231,23 @@ export const $TopSettled = (config: ITopSettled) => component((
             
             ...screenUtils.isDesktopScreen
               ? [
-                {
-                  $head: $text('Puppets'),
-                  gridTemplate: '90px',
-                  $bodyCallback: map((pos: ITableRow) => {
-                    return $puppets(pos.summary.puppets, routeChangeTether)
-                  })
-                },
                 // {
-                //   $head: $text('Win / Loss'),
+                //   $head: $text('Puppets'),
                 //   gridTemplate: '90px',
-                //   columnOp: style({ alignItems: 'center', placeContent: 'center' }),
                 //   $bodyCallback: map((pos: ITableRow) => {
-                //     return $row(
-                //       $text(`${pos.summary.winCount} / ${pos.summary.lossCount}`)
-                //     )
+                //     return $puppets(pos.summary.puppets, routeChangeTether)
                 //   })
                 // },
+                {
+                  $head: $text('Win / Loss'),
+                  gridTemplate: '90px',
+                  columnOp: style({ alignItems: 'center', placeContent: 'center' }),
+                  $bodyCallback: map((pos: ITableRow) => {
+                    return $row(
+                      $text(`${pos.summary.winCount} / ${pos.summary.lossCount}`)
+                    )
+                  })
+                },
               ]
               : [],
             {

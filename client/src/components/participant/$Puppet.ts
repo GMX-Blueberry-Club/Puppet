@@ -200,6 +200,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
                               trader: puppetTradeRoute.trader,
                               routeTypeKey: routeTypeKey,
                               tradeRoute: puppetTradeRoute.tradeRoute,
+                              summary,
                               // subscriptionList: config.subscriptionList,
                             })({
                               modifySubscribeList: modifySubscriberTether()

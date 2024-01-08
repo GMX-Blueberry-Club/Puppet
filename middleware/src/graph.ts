@@ -1,12 +1,12 @@
+import { replayLatest } from '@aelea/core'
 import { map, multicast } from '@most/core'
 import { Stream } from '@most/types'
 import { Client, createClient, fetchExchange } from '@urql/core'
-import { makeDefaultStorage } from '@urql/exchange-graphcache/default-storage'
 import { offlineExchange } from '@urql/exchange-graphcache'
+import { makeDefaultStorage } from '@urql/exchange-graphcache/default-storage'
 import * as GMX from "gmx-middleware-const"
-import { IPriceOracleMap, IPriceCandle, ISchema, schema as gmxSchema, groupArrayManyMap, periodicRun, querySignedPrices, querySubgraph, IPriceTickListMap, findClosest, unixTimestampNow } from "gmx-middleware-utils"
+import { IPriceCandle, IPriceOracleMap, IPriceTickListMap, ISchema, findClosest, schema as gmxSchema, groupArrayManyMap, periodicRun, querySignedPrices, querySubgraph, unixTimestampNow } from "gmx-middleware-utils"
 import * as viem from "viem"
-import { replayLatest } from '@aelea/core'
 import { schema } from './schema.js'
 
 const storage = makeDefaultStorage({
@@ -26,9 +26,10 @@ const cache = offlineExchange({
   },
 })
 
+export type { Client }
 
 export const subgraphClient = createClient({
-  url: 'https://api.studio.thegraph.com/query/112/puppet/v0.0.65',
+  url: 'https://api.studio.thegraph.com/query/112/puppet/v0.0.66',
   exchanges: [cache, fetchExchange],
   fetchSubscriptions: true,
   requestPolicy: 'cache-first',
@@ -89,13 +90,7 @@ interface IQueryPriceCandle {
   timestamp_gte?: number
 }
 
-const latestSeedSchema: ISchema<{ id: string, timestamp: number; c: bigint; __typename: 'PriceCandle', token: viem.Address} > = {
-  id: 'string',
-  timestamp: 'int',
-  token: 'address',
-  c: 'int',
-  __typename: 'PriceCandleSeed',
-}
+
 const candleSchema: ISchema<{ id: string, timestamp: number; c: bigint; __typename: 'PriceCandle', token: viem.Address} > = {
   id: 'string',
   timestamp: 'int',
@@ -103,15 +98,6 @@ const candleSchema: ISchema<{ id: string, timestamp: number; c: bigint; __typena
   c: 'int',
   __typename: 'PriceCandle',
 }
-
-
-// "_meta": {
-//   "block": {
-//     "number": 166355087,
-//     "timestamp": 1704208919
-//   },
-//   "hasIndexingErrors": false
-// }
 
 interface ISubgraphStatus {
   block: {
@@ -144,25 +130,19 @@ export async function queryLatestPriceTick(filter: IQueryLatestPriceTick, estTic
   const interval = findClosest(GMX.PRICEFEED_INTERVAL, filter.activityTimeframe / estTickAmout)
   const timestamp_gte = unixTimestampNow() - filter.activityTimeframe
 
-  // const latestSeedQuery = querySubgraph(client, {
-  //   schema: latestSeedSchema,
-  //   filter: {
-  //     token: filter.token,
-  //   },
-  // })
-
   const candleListQuery =  querySubgraph(subgraphClient, {
     schema: candleSchema,
     filter: {
       interval,
       timestamp_gte,
     },
-    // orderBy: 'timestamp',
     orderDirection: 'desc',
   })
 
   const candleList = await candleListQuery
-  const mapped: IPriceTickListMap = groupArrayManyMap(candleList, x => viem.getAddress(x.token), x => ({ timestamp: x.timestamp, price: x.c }))
+  const mapped: IPriceTickListMap = groupArrayManyMap(candleList, x => viem.getAddress(x.token), x => {
+    return { timestamp: Number(x.timestamp), price: x.c }
+  })
 
   return mapped
 }

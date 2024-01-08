@@ -4,10 +4,10 @@ import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
-import { constant, empty, fromPromise, map, merge, multicast, now, skipRepeats, startWith, tap } from '@most/core'
+import { constant, empty, fromPromise, map, merge, multicast, now, skipRepeats, startWith, take, tap } from '@most/core'
 import { CHAIN } from "gmx-middleware-const"
 import { $Tooltip, $alertContainer, $infoLabeledValue, $spinner } from "gmx-middleware-ui-components"
-import { filterNull, readableUnitAmount, switchMap, timeSince, unixTimestampNow } from "gmx-middleware-utils"
+import { filterNull, readableUnitAmount, switchMap, getTimeSince, unixTimestampNow, zipState } from "gmx-middleware-utils"
 import { queryRouteTypeList, subgraphStatus } from "puppet-middleware-utils"
 import { $midContainer } from "../common/$common.js"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount.js"
@@ -114,6 +114,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
         $rootContainer(
           $column(style({ flex: 1, position: 'relative' }))(
             switchMap(chainEvent => {
+              const newLocal = take(1, subgraphStatus)
               return $column(
                 designSheet.customScroll,
                 style({
@@ -214,23 +215,27 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                       // $dropContainer: $defaultDropContainer,
                       $content: switchMap(params => {
                         const blocksBehind = Number(params.blockChange) - params.subgraphStatus.block.number
+                        const timeSince = getTimeSince(Number(params.subgraphStatus.block.timestamp))
 
-                        return $column(
-                          params.subgraphStatus.hasIndexingErrors
-                            ? $alertContainer($text('Indexing has experienced errors')) : empty(),
-                          $infoLabeledValue('Latest Time', timeSince(Number(params.subgraphStatus.block.timestamp))),
-                          $infoLabeledValue('blocks behind', readableUnitAmount(blocksBehind)),
+                        return $column(layoutSheet.spacingTiny)(
+                          $text('Subgraph Status'),
+                          $column(
+                            params.subgraphStatus.hasIndexingErrors
+                              ? $alertContainer($text('Indexing has experienced errors')) : empty(),
+                            $infoLabeledValue('Latest Sync', timeSince), 
+                            $infoLabeledValue('blocks behind', readableUnitAmount(blocksBehind)),
+                          )
                         )
                       }, combineObject({ subgraphStatus, blockChange })),
                       $anchor: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
                         $node(
                           style({ width: '8px', height: '8px', borderRadius: '50%', outlineOffset: '4px', backgroundColor: pallete.foreground, outline: `1px solid ${pallete.foreground}`, padding: '6px' }),
-                          styleBehavior(map(process => {
-                            const timestampDelta = unixTimestampNow() - process.block.timestamp
+                          styleBehavior(map(status => {
+                            const timestampDelta = unixTimestampNow() - status.block.timestamp
 
                             const color = timestampDelta > 60 ? pallete.negative : timestampDelta > 10 ? pallete.indeterminate : pallete.positive
                             return { backgroundColor: colorAlpha(color, .25), outlineColor: color }
-                          }, subgraphStatus ))
+                          }, newLocal))
                         )()
                       ),
                     })({}),
