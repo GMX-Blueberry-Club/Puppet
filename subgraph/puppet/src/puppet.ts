@@ -149,6 +149,7 @@ export function handleExecutePosition(event: ExecutePositionEvent): void {
 
     const settledMirrorPosition = new MirrorPositionSettled(executePosition.id)
     settledMirrorPosition.merge([mirrorPositionOpen])
+    settledMirrorPosition.position = executePosition.id
     settledMirrorPosition.id = executePosition.id
     settledMirrorPosition.save()
 

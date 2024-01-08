@@ -224,8 +224,8 @@ export function initPositionOpen(event: ethereum.Event, positionIncrease: Positi
   return dto
 }
 
-export function createPositionSettled<T extends EventLog>(event: T, openPosition: PositionOpen): PositionSettled {
-  const dto = new PositionSettled(getIdFromEvent(event))
+export function createPositionSettled<T extends EventLog>(event: T, openPosition: PositionOpen, id: Bytes): PositionSettled {
+  const dto = new PositionSettled(id)
 
   dto.link = openPosition.link
   dto.key = openPosition.key

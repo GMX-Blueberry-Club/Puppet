@@ -208,7 +208,7 @@ function onPositionDecrease(event: EventLog1): void {
     openPosition.realisedPnlUsd = openPosition.realisedPnlUsd.plus(positionDecrease.basePnlUsd)
     openPosition.save()
   } else {
-    const positionSettled = dto.createPositionSettled(event, openPosition)
+    const positionSettled = dto.createPositionSettled(event, openPosition, orderId)
     openPosition.realisedPnlUsd = openPosition.realisedPnlUsd.plus(positionDecrease.basePnlUsd)
 
     positionSettled.save()

@@ -28,7 +28,7 @@ const cache = offlineExchange({
 
 
 export const subgraphClient = createClient({
-  url: 'https://api.studio.thegraph.com/query/112/puppet/v0.0.64',
+  url: 'https://api.studio.thegraph.com/query/112/puppet/v0.0.65',
   exchanges: [cache, fetchExchange],
   fetchSubscriptions: true,
   requestPolicy: 'cache-first',
@@ -135,7 +135,7 @@ export const subgraphStatus: Stream<ISubgraphStatus> = replayLatest(multicast(pe
         hasIndexingErrors
       }
     }
-  `, {}).toPromise()
+  `, {  }, { requestPolicy: 'network-only' }).toPromise()
     return newLocal.data._meta
   }),
 })))
