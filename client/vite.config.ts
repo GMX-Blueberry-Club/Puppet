@@ -74,16 +74,17 @@ const vitePlugin = VitePWA({
 })
 
 
+const newLocal = replace({
+  // include: 'index.html',
+  ...SITE_CONFIG
+})
 // https://vitejs.dev/config/
 export default defineConfig({
   envDir: '../',
   publicDir: 'assets',
   plugins: [
     vitePlugin,
-    replace({
-      // include: 'index.html',
-      ...SITE_CONFIG
-    }),
+    newLocal,
   ],
   build: {
     outDir: ".dist",

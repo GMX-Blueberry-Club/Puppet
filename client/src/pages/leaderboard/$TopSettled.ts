@@ -273,7 +273,11 @@ export const $TopSettled = (config: ITopSettled) => component((
                 return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
                   $pnlValue(pnl),
                   $seperator2,
-                  $text(style({ fontSize: '.85rem' }))(readablePercentage(getBasisPoints(tr.summary.pnl, tr.summary.collateral))),
+                  $text(style({ fontSize: '.85rem' }))(
+                    map(pnl => {
+                      return readablePercentage(getBasisPoints(pnl, tr.summary.collateral))
+                    }, pnl)
+                  ),
                 )
               })
             },

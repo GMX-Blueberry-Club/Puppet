@@ -44,7 +44,7 @@ export interface IPerformanceTimeline {
 
 
 interface IGraphPnLTick {
-  settledPnl: bigint
+  realisedPnl: bigint
   value: number
   positionOpen: Record<viem.Hex, ITimelinePositionOpen>
 }
@@ -83,7 +83,7 @@ export function getPerformanceTimeline(config: IPerformanceTimeline) {
   const source = [...openAdjustList, ...settledAdjustList, ...priceUpdateTicks]
   const seed: IGraphPnLTick = {
     value: 0,
-    settledPnl: 0n,
+    realisedPnl: 0n,
     positionOpen: {}
   }
   const data = createTimeline({
@@ -101,7 +101,7 @@ export function getPerformanceTimeline(config: IPerformanceTimeline) {
           return pnlAcc + pnlShare
         }, 0n)
 
-        const value = formatFixed(acc.settledPnl + pendingPnl, 30)
+        const value = formatFixed(acc.realisedPnl + pendingPnl, 30)
 
         return { ...acc, pendingPnl, value }
       }
@@ -123,10 +123,10 @@ export function getPerformanceTimeline(config: IPerformanceTimeline) {
       const pnlPortion = getParticiapntMpPortion(next.mp, nextSettlePnl, config.puppet)
       const openPnl = Object.values(acc.positionOpen).reduce((a, b) => a + b.openPnl + b.realisedPnl, 0n)
 
-      const settledPnl = acc.settledPnl + pnlPortion // - position.cumulativeFee
+      const settledPnl = acc.realisedPnl + pnlPortion // - position.cumulativeFee
       const value = formatFixed(settledPnl + openPnl, 30)
 
-      return { ...acc, settledPnl, value }
+      return { ...acc, realisedPnl: settledPnl, value }
     },
   })
     
