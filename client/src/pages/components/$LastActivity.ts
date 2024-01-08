@@ -10,9 +10,9 @@ import { Stream } from "@most/types"
 
 
 export const LAST_ACTIVITY_LABEL_MAP = {
-  [GMX.TIME_INTERVAL_MAP.HR24]: '24h',
-  [GMX.TIME_INTERVAL_MAP.DAY7]: '7d',
-  [GMX.TIME_INTERVAL_MAP.MONTH]: '30d',
+  [GMX.IntervalTime.HR24]: '24h',
+  [GMX.IntervalTime.DAY7]: '7d',
+  [GMX.IntervalTime.MONTH]: '30d',
   // [GMX.TIME_INTERVAL_MAP.YEAR]: '1y',
 }
 

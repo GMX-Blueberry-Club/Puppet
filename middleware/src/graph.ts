@@ -1,12 +1,38 @@
 import { map, multicast } from '@most/core'
 import { Stream } from '@most/types'
-import { Client } from '@urql/core'
+import { Client, createClient, fetchExchange } from '@urql/core'
+import { makeDefaultStorage } from '@urql/exchange-graphcache/default-storage'
+import { offlineExchange } from '@urql/exchange-graphcache'
 import * as GMX from "gmx-middleware-const"
 import { IPriceOracleMap, IPriceCandle, ISchema, schema as gmxSchema, groupArrayManyMap, periodicRun, querySignedPrices, querySubgraph, IPriceTickListMap, findClosest, unixTimestampNow } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { replayLatest } from '@aelea/core'
 import { schema } from './schema.js'
 
+const storage = makeDefaultStorage({
+  idbName: 'graphcache-v3', // The name of the IndexedDB database
+  maxAge: 7, // The maximum age of the persisted data in days
+})
+
+
+const cache = offlineExchange({
+  // schema,
+  storage,
+  updates: {
+    /* ... */
+  },
+  optimistic: {
+    /* ... */
+  },
+})
+
+
+export const subgraphClient = createClient({
+  url: 'https://api.studio.thegraph.com/query/112/puppet/v0.0.64',
+  exchanges: [cache, fetchExchange],
+  fetchSubscriptions: true,
+  requestPolicy: 'cache-first',
+})
 
 interface IQueryTraderPositionOpen {
   trader: viem.Address
@@ -18,9 +44,9 @@ interface IQueryPuppetTradeRoute {
   activityTimeframe: GMX.IntervalTime
 }
 
-export async function queryTraderPositionOpen(client: Client, filter: IQueryTraderPositionOpen) {
+export async function queryTraderPositionOpen(filter: IQueryTraderPositionOpen) {
 
-  const res = querySubgraph(client, {
+  const res = querySubgraph(subgraphClient, {
     schema: schema.mirrorPositionOpen,
     filter,
   })
@@ -28,8 +54,8 @@ export async function queryTraderPositionOpen(client: Client, filter: IQueryTrad
   return res
 }
 
-export async function getTraderPositionSettled(client: Client, filter: IQueryTraderPositionOpen) {
-  const res = querySubgraph(client, {
+export async function getTraderPositionSettled(filter: IQueryTraderPositionOpen) {
+  const res = querySubgraph(subgraphClient, {
     schema: schema.mirrorPositionSettled,
     filter,
   })
@@ -37,10 +63,10 @@ export async function getTraderPositionSettled(client: Client, filter: IQueryTra
   return res
 }
 
-export async function queryPuppetTradeRoute(client: Client, filter: IQueryPuppetTradeRoute) {
+export async function queryPuppetTradeRoute(filter: IQueryPuppetTradeRoute) {
   const timestamp_gte = unixTimestampNow() - filter.activityTimeframe
 
-  const res = querySubgraph(client, {
+  const res = querySubgraph(subgraphClient, {
     schema: schema.puppetTradeRoute,
     filter: {
       puppet: filter.puppet,
@@ -78,7 +104,43 @@ const candleSchema: ISchema<{ id: string, timestamp: number; c: bigint; __typena
   __typename: 'PriceCandle',
 }
 
-export async function queryLatestPriceTick(client: Client, filter: IQueryLatestPriceTick, estTickAmout = 20): Promise<IPriceTickListMap> {
+
+// "_meta": {
+//   "block": {
+//     "number": 166355087,
+//     "timestamp": 1704208919
+//   },
+//   "hasIndexingErrors": false
+// }
+
+interface ISubgraphStatus {
+  block: {
+    number: number
+    timestamp: number
+  }
+  hasIndexingErrors: boolean
+}
+
+export const subgraphStatus: Stream<ISubgraphStatus> = replayLatest(multicast(periodicRun({
+  startImmediate: true,
+  interval: 2500,
+  actionOp: map(async count => {
+    const newLocal = await subgraphClient.query(`
+    {
+      _meta {
+        block {
+          number
+          timestamp
+        }
+        hasIndexingErrors
+      }
+    }
+  `, {}).toPromise()
+    return newLocal.data._meta
+  }),
+})))
+
+export async function queryLatestPriceTick(filter: IQueryLatestPriceTick, estTickAmout = 20): Promise<IPriceTickListMap> {
   const interval = findClosest(GMX.PRICEFEED_INTERVAL, filter.activityTimeframe / estTickAmout)
   const timestamp_gte = unixTimestampNow() - filter.activityTimeframe
 
@@ -89,7 +151,7 @@ export async function queryLatestPriceTick(client: Client, filter: IQueryLatestP
   //   },
   // })
 
-  const candleListQuery =  querySubgraph(client, {
+  const candleListQuery =  querySubgraph(subgraphClient, {
     schema: candleSchema,
     filter: {
       interval,
@@ -109,17 +171,18 @@ export const latestPriceMap: Stream<IPriceOracleMap> = replayLatest(multicast(pe
   startImmediate: true,
   interval: 2500,
   actionOp: map(async count => {
-    return querySignedPrices()
+    const newLocal = await querySignedPrices()
+    return newLocal
   }),
 })))
 
-export async function queryLatestTokenPriceFeed(client: Client, filter: IQueryPriceCandle = { interval: GMX.TIME_INTERVAL_MAP.MIN5 }) {
-  const queryFeed = querySubgraph(client, {
+export async function queryLatestTokenPriceFeed(filter: IQueryPriceCandle = { interval: GMX.IntervalTime.MIN5 }) {
+  const queryFeed = querySubgraph(subgraphClient, {
     schema: gmxSchema.priceCandle,
     filter,
   })
 
-  const queryLatest = querySubgraph(client, {
+  const queryLatest = querySubgraph(subgraphClient, {
     schema: gmxSchema.priceCandleSeed,
     filter: filter,
   })
@@ -130,16 +193,16 @@ export async function queryLatestTokenPriceFeed(client: Client, filter: IQueryPr
   return list 
 }
 
-export async function queryOpenPositionList(client: Client) {
-  const openPositionListQuery = querySubgraph(client, {
+export async function queryOpenPositionList() {
+  const openPositionListQuery = querySubgraph(subgraphClient, {
     schema: schema.mirrorPositionOpen,
   })
   
   return openPositionListQuery
 }
 
-export async function querySettledPositionList(client: Client) {
-  const settledPositionListQuery = querySubgraph(client, {
+export async function querySettledPositionList() {
+  const settledPositionListQuery = querySubgraph(subgraphClient, {
     schema: schema.mirrorPositionSettled,
     filter: {
       // blockTimestamp_gt: 0,
@@ -149,14 +212,14 @@ export async function querySettledPositionList(client: Client) {
   return settledPositionListQuery
 }
 
-export async function queryLeaderboard(client: Client) {
-  const settledTradeListQuery = querySubgraph(client, {
+export async function queryLeaderboard() {
+  const settledTradeListQuery = querySubgraph(subgraphClient, {
     schema: schema.mirrorPositionSettled,
     filter: {
       // blockTimestamp_gt: 0,
     }
   })
-  const settledTradeOpenQuery = querySubgraph(client, {
+  const settledTradeOpenQuery = querySubgraph(subgraphClient, {
     schema: schema.mirrorPositionOpen,
   })
 
@@ -166,8 +229,8 @@ export async function queryLeaderboard(client: Client) {
   return sortedList
 }
 
-export async function queryRouteTypeList(client: Client) {
-  const query = querySubgraph(client, {
+export async function queryRouteTypeList() {
+  const query = querySubgraph(subgraphClient, {
     schema: schema.setRouteType,
   })
 

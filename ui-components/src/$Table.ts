@@ -1,5 +1,5 @@
 import { Behavior, O, Op } from "@aelea/core"
-import { $Node, $svg, attr, component, INode, NodeComposeFn, nodeEvent, style } from '@aelea/dom'
+import { $node, $Node, $svg, attr, component, INode, NodeComposeFn, nodeEvent, style } from '@aelea/dom'
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, now, switchLatest } from "@most/core"
@@ -64,7 +64,7 @@ export const $defaultTableCell = $row(
 export const $defaultTableHeaderCell = $defaultTableCell(
   style({  alignItems: 'center', color: pallete.foreground, })
 )
-export const $defaultTableRowContainer = $row(style({ display: 'grid' }), screenUtils.isDesktopScreen ? layoutSheet.spacing : layoutSheet.spacingSmall)
+export const $defaultTableRowContainer = $node(screenUtils.isDesktopScreen ? layoutSheet.spacing : layoutSheet.spacingSmall)
 
 
 
@@ -79,7 +79,9 @@ export const $Table = <T>({
   $bodyCell = $cell,
   $headerCell = $defaultTableHeaderCell,
 
-  $rowCallback = constant($defaultTableRowContainer),
+  $rowCallback,
+
+  $rowContainer = $defaultTableRowContainer,
 
   sortBy,
   $between = empty(),
@@ -89,11 +91,9 @@ export const $Table = <T>({
   [sortByChange, sortByChangeTether]: Behavior<INode, string>
 ) => {
 
-  const gridTemplateColumns = columns.map(col => col.gridTemplate || '1fr').join(' ')
+  const gridTemplateColumns = style({ display: 'grid', gridTemplateColumns: columns.map(col => col.gridTemplate || '1fr').join(' ') })
 
-  const $header = $headerContainer(
-    style({ gridTemplateColumns })
-  )(
+  const $header = $headerContainer(gridTemplateColumns)(
     ...columns.map(col => {
 
       if (col.sortBy) {
@@ -132,20 +132,23 @@ export const $Table = <T>({
     ...scrollConfig,
     dataSource: map((res) => {
       const $items = (Array.isArray(res) ? res : res.page).map(rowData => {
-
-        const newLocal = $rowCallback(now(rowData))
-        return switchLatest(map($rowContainer => {
-
-          return $rowContainer(
-            style({ gridTemplateColumns, })
-          )(
+        return $rowCallback
+          ? switchLatest(map($rowContainer => {
+            return $rowContainer(gridTemplateColumns)(
+              ...columns.map(col => {
+                return $bodyCell(col.columnOp || O())(
+                  switchLatest(col.$bodyCallback(now(rowData)))
+                )
+              })
+            )
+          }, $rowCallback(now(rowData)))) :
+          $rowContainer(gridTemplateColumns)(
             ...columns.map(col => {
               return $bodyCell(col.columnOp || O())(
                 switchLatest(col.$bodyCallback(now(rowData)))
               )
             })
           )
-        }, newLocal))
       })
 
       if (Array.isArray(res)) {

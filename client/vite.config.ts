@@ -5,23 +5,20 @@ import { dark } from './src/common/theme.js'
 
 
 const SITE_CONFIG = {
-  WEBSITE:  'https://puppet.house',
-  TWITTER_HASH:  'PuppetFinance',
-  APP_NAME:  'Puppet',
-  APP_DESC_SHORT:  'Copy Trading',
-  APP_DESC_LONG:  'Copy Trading Protocol - Matching the best traders with investors',
-  THEME_PRIMARY:  dark.pallete.primary,
-  THEME_BACKGROUND:  dark.pallete.background,
+  __WEBSITE__:  'https://puppet.house',
+  __TWITTER_HASH__:  'PuppetFinance',
+  __APP_NAME__:  'Puppet',
+  __APP_DESC_SHORT__:  'Copy Trading',
+  __APP_DESC_LONG__:  'Copy Trading Protocol - Matching the best traders with investors',
+  __THEME_PRIMARY__:  dark.pallete.primary,
+  __THEME_BACKGROUND__:  dark.pallete.horizon,
 }
 
-const prefixedParentEnv = Object.fromEntries(
-  Object.entries(SITE_CONFIG).map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)])
-)
-
 const vitePlugin = VitePWA({
-  // workbox: {
-  //   cleanupOutdatedCaches: true
-  // },
+  workbox: {
+    cleanupOutdatedCaches: true
+  },
+  outDir: '.dist',
   registerType: 'autoUpdate',
   strategies: 'injectManifest',
   injectManifest: {
@@ -33,11 +30,11 @@ const vitePlugin = VitePWA({
   filename: 'sw.ts',
   includeAssets: ['font/*.ttf', './*.png', './*.svg'],
   manifest: {
-    name: SITE_CONFIG.APP_NAME,
-    short_name: SITE_CONFIG.APP_NAME,
-    description: SITE_CONFIG.APP_DESC_LONG,
-    theme_color: SITE_CONFIG.THEME_BACKGROUND,
-    background_color: SITE_CONFIG.THEME_BACKGROUND,
+    name: SITE_CONFIG.__APP_NAME__,
+    short_name: SITE_CONFIG.__APP_NAME__,
+    description: SITE_CONFIG.__APP_DESC_LONG__,
+    theme_color: SITE_CONFIG.__THEME_BACKGROUND__,
+    background_color: SITE_CONFIG.__THEME_BACKGROUND__,
     lang:"en",
     start_url: '/app/leaderboard',
     display:"standalone",
@@ -79,19 +76,14 @@ const vitePlugin = VitePWA({
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  define: { 
-    ...prefixedParentEnv
-  },
   envDir: '../',
   publicDir: 'assets',
   plugins: [
     vitePlugin,
     replace({
-      include: 'index.html',
-      __DATE__: new Date().toISOString(),
-      SW_DEV: process.env.DEV,
+      // include: 'index.html',
       ...SITE_CONFIG
-    }) as any,
+    }),
   ],
   build: {
     outDir: ".dist",

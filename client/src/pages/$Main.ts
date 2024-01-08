@@ -1,24 +1,23 @@
-import { Behavior, replayLatest } from "@aelea/core"
-import { $element, $node, $text, component, eventElementTarget, style } from "@aelea/dom"
+import { Behavior, combineObject, replayLatest } from "@aelea/core"
+import { $element, $node, $text, component, eventElementTarget, style, styleBehavior } from "@aelea/dom"
 import * as router from '@aelea/router'
-import { $column, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
-import { pallete } from "@aelea/ui-components-theme"
+import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
+import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
-import { constant, fromPromise, map, merge, multicast, now, skipRepeats, startWith, tap } from '@most/core'
+import { constant, empty, fromPromise, map, merge, multicast, now, skipRepeats, startWith, tap } from '@most/core'
 import { CHAIN } from "gmx-middleware-const"
-import { $alertContainer } from "gmx-middleware-ui-components"
-import { filterNull, switchMap } from "gmx-middleware-utils"
-import { queryRouteTypeList } from "puppet-middleware-utils"
+import { $Tooltip, $alertContainer, $infoLabeledValue, $spinner } from "gmx-middleware-ui-components"
+import { filterNull, readableUnitAmount, switchMap, timeSince, unixTimestampNow } from "gmx-middleware-utils"
+import { queryRouteTypeList, subgraphStatus } from "puppet-middleware-utils"
 import { $midContainer } from "../common/$common.js"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount.js"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu.js'
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
 import { $RouteSubscriptionDrawer } from "../components/portfolio/$RouteSubscriptionDrawer.js"
 import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor"
-import { subgraphClient } from "../data/subgraph/client"
 import { newUpdateInvoke } from "../sw/swUtils"
 import { fadeIn } from "../transitions/enter.js"
-import { chain } from "../wallet/walletLink.js"
+import { block, blockChange, chain } from "../wallet/walletLink.js"
 import { $Home } from "./$Home.js"
 import { $Profile } from "./$Profile.js"
 import { $Trade } from "./$Trade.js"
@@ -88,7 +87,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       : style({}),
   )
   const isDesktopScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
-  const routeTypeList = fromPromise(queryRouteTypeList(subgraphClient))
+  const routeTypeList = fromPromise(queryRouteTypeList())
 
 
   return [
@@ -209,6 +208,60 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                   })
                 ),
 
+                $row(layoutSheet.spacing, style({ position: 'absolute', zIndex: 100, right: '10px', bottom: '10px' }))(
+                  $row(
+                    $Tooltip({
+                      // $dropContainer: $defaultDropContainer,
+                      $content: switchMap(params => {
+                        const blocksBehind = Number(params.blockChange) - params.subgraphStatus.block.number
+
+                        return $column(
+                          params.subgraphStatus.hasIndexingErrors
+                            ? $alertContainer($text('Indexing has experienced errors')) : empty(),
+                          $infoLabeledValue('Latest Time', timeSince(Number(params.subgraphStatus.block.timestamp))),
+                          $infoLabeledValue('blocks behind', readableUnitAmount(blocksBehind)),
+                        )
+                      }, combineObject({ subgraphStatus, blockChange })),
+                      $anchor: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+                        $node(
+                          style({ width: '8px', height: '8px', borderRadius: '50%', outlineOffset: '4px', backgroundColor: pallete.foreground, outline: `1px solid ${pallete.foreground}`, padding: '6px' }),
+                          styleBehavior(map(process => {
+                            const timestampDelta = unixTimestampNow() - process.block.timestamp
+
+                            const color = timestampDelta > 60 ? pallete.negative : timestampDelta > 10 ? pallete.indeterminate : pallete.positive
+                            return { backgroundColor: colorAlpha(color, .25), outlineColor: color }
+                          }, subgraphStatus ))
+                        )()
+                      ),
+                    })({}),
+                  ),
+            
+                  // switchMap(params => {
+                  //   const refreshThreshold = import.meta.env.DEV ? 150 : 50
+                  //   const blockDelta = params.syncBlock ? params.syncBlock - params.process.blockNumber : null
+
+                  //   if (blockDelta === null || blockDelta < refreshThreshold) return empty()
+
+                  //   return fadeIn($row(style({ position: 'fixed', bottom: '18px', left: `50%` }))(
+                  //     style({ transform: 'translateX(-50%)' })(
+                  //       $column(layoutSheet.spacingTiny, style({
+                  //         backgroundColor: pallete.horizon,
+                  //         border: `1px solid`,
+                  //         padding: '20px',
+                  //         animation: `borderRotate var(--d) linear infinite forwards`,
+                  //         borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
+                  //       }))(
+                  //         $text(`Syncing blocks of data: ${readableUnitAmount(Number(blockDelta))}`),
+                  //         $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(
+                  //           params.process.state.blockMetrics.timestamp === 0n
+                  //             ? `Indexing for the first time, this may take a minute or two.`
+                  //             : `${timeSince(Number(params.process.state.blockMetrics.timestamp))} old data is displayed`
+                  //         ),
+                  //       )
+                  //     )
+                  //   ))
+                  // }, combineObject({ blockChange, subgraphStatus })),
+                ),
                 
               )
             }, chain)

@@ -2,7 +2,7 @@ import { Behavior, combineObject } from "@aelea/core"
 import { $Node, $node, $text, NodeComposeFn, attr, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, constant, empty, map, mergeArray, multicast, sample, skipRepeats, snapshot, switchLatest } from "@most/core"
+import { awaitPromises, constant, empty, map, mergeArray, multicast, sample, skipRepeats, snapshot, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
@@ -35,10 +35,6 @@ import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary } from "../form/$Bu
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 
 
-export enum ITradeFocusMode {
-  collateral,
-  size,
-}
 
 
 
@@ -147,7 +143,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
           },
           {
             amount: req.collateralDelta,
-            path: req.collateralDelta ? [req.collateralToken] : [],
+            path: req.collateralDelta ? [req.collateralToken] : [req.collateralToken],
             minOut: 0n,
           },
           params.routeTypeKey,
@@ -440,10 +436,10 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
               $target: $row(style({ placeContent: 'flex-end' }))(
                 $ButtonSecondary({
                   $content: $text('Enable Trading'),
-                  disabled: mergeArray([
+                  disabled: startWith(false, mergeArray([
                     dismissEnableTradingOverlay,
                     openEnableTradingPopover
-                  ])
+                  ]))
                 })({
                   click: openEnableTradingPopoverTether()
                 })

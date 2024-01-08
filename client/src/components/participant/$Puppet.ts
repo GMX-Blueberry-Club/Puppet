@@ -14,7 +14,6 @@ import * as viem from "viem"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
 import { $card, $card2 } from "../../common/elements/$common.js"
-import { subgraphClient } from "../../data/subgraph/client"
 import { $seperator2 } from "../../pages/common.js"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../../pages/components/$LastActivity.js"
 import { IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor"
@@ -248,7 +247,7 @@ export const $PuppetProfile = (config: ITraderProfile) => component((
   const { activityTimeframe, address, priceTickMap, route, routeTypeList } = config
 
   const puppetTradeRouteList = awaitPromises(map(params => {
-    return queryPuppetTradeRoute(subgraphClient, { puppet: config.address, activityTimeframe: params.activityTimeframe })
+    return queryPuppetTradeRoute({ puppet: config.address, activityTimeframe: params.activityTimeframe })
   }, combineObject({ activityTimeframe })))
 
   const settledPositionList = map(trList => {

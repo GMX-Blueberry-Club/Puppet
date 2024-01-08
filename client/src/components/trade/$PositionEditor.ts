@@ -42,7 +42,7 @@ import {
   readableFixedUSD30,
   readableNumber,
   readableTokenUsd,
-  readableTokenValueUsd,
+  readableTokenAmountFromUsdAmount,
   readableUnitAmount,
   resolveAddress,
   StateStream, switchMap, TEMP_MARKET_LIST
@@ -57,17 +57,13 @@ import { $heading2 } from "../../common/$text.js"
 import { $TextField } from "../../common/$TextField"
 import { boxShadow } from "../../common/elements/$common"
 import { $caretDown } from "../../common/elements/$icons.js"
-import * as trade from "../../logic/trade.js"
+import * as trade from "../../logic/traderLogic.js"
 import { account, ISupportedChain } from "../../wallet/walletLink.js"
 import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown.js"
+import { ITradeFocusMode } from "../../data/type"
 
 
-
-export enum ITradeFocusMode {
-  collateral,
-  size,
-}
 
 export interface ITradeParams {
   marketList: IMarket[]
@@ -167,7 +163,6 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   [clickChooseMarketPopover, clickChooseMarketPopoverTether]: Behavior<any>,
   [changeIsUsdCollateralToken, changeIsUsdCollateralTokenTether]: Behavior<boolean>,
 
-  [switchIsIncrease, switchisIncreaseTether]: Behavior<boolean, boolean>,
   [slideLeverage, slideLeverageTether]: Behavior<number, bigint>,
   [changeSlippage, changeSlippageTether]: Behavior<string, bigint>,
   [changeExecutionFeeBuffer, changeExecutionFeeBufferTether]: Behavior<string, bigint>,
@@ -769,7 +764,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                       if (value === 0n) {
                         node.element.value = ''
                       } else {
-                        node.element.value = readableTokenValueUsd(params.indexDescription.decimals, params.indexPrice, value)
+                        node.element.value = readableTokenAmountFromUsdAmount(params.indexDescription.decimals, params.indexPrice, value)
                       }
 
                       return null
@@ -905,7 +900,6 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
         slideLeverage,
         // switchMap(ii=> ii ? empty() : clickPrimary, isIncrease)
       ]),
-      switchIsIncrease,
       isUsdCollateralToken: changeIsUsdCollateralToken,
       changeCollateralDeltaUsd: mergeArray([
         inputPrimaryAmount,

@@ -13,7 +13,6 @@ import { IMirrorPositionOpen, IMirrorPositionSettled, getTraderPositionSettled, 
 import * as viem from 'viem'
 import { $heading3 } from "../../common/$text.js"
 import { $card, $card2 } from "../../common/elements/$common.js"
-import { subgraphClient } from "../../data/subgraph/client"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../../pages/components/$LastActivity.js"
 import { IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor"
 import { entryColumn, pnlSlotColumn, positionTimeColumn, puppetsColumn, settledPnlColumn, settledSizeColumn, slotSizeColumn } from "../table/$TableColumn.js"
@@ -224,12 +223,12 @@ export const $TraderProfile = (config: ITraderProfile) => component((
   const { activityTimeframe, address, priceTickMap, route } = config
 
   const settledTradeList = awaitPromises(map(async params => {
-    const positionList = await getTraderPositionSettled(subgraphClient, { trader: address, blockTimestamp_gte: params.activityTimeframe })
+    const positionList = await getTraderPositionSettled({ trader: address, blockTimestamp_gte: params.activityTimeframe })
     return positionList
   }, combineObject({ activityTimeframe })))
 
   const openTradeList = awaitPromises(map(async params => {
-    return queryTraderPositionOpen(subgraphClient, { trader: address })
+    return queryTraderPositionOpen({ trader: address })
   }, combineObject({ activityTimeframe })))
 
 

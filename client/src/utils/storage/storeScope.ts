@@ -1,6 +1,7 @@
-import { continueWith, join, map, multicast } from "@most/core"
+import { continueWith, join, map } from "@most/core"
 import { Stream } from "@most/types"
 import * as indexDB from './indexDB.js'
+import { IDbParams, openDatabase } from "./indexDB.js"
 
 
 // stringify with bigint support
@@ -9,8 +10,6 @@ export function jsonStringify(obj: any) {
 }
 
 const BIG_INT_STR = /^(?:[-+])?\d+n$/
-
-
 export function transformBigints(obj: any) {
   for (const k in obj) {
     if (typeof obj[k] === 'object' && obj[k] !== null) {
@@ -22,43 +21,69 @@ export function transformBigints(obj: any) {
   return obj
 }
 
-
-export interface IStoreScope<TName extends string, TOptions extends indexDB.IDbStoreConfig> extends indexDB.IDbParams<TName, TOptions> {}
-export interface IStoreconfig<TName extends string> {
-  name: TName
+export interface IStoreConfig<TState, TType extends { [P in keyof TState]: TState[P]}> {
+  initialState: TType
+  options?: IDBObjectStoreParameters
 }
 
-export const createStoreScope = <TParentName extends string, TName extends string, TOptions extends indexDB.IDbStoreConfig>(
-  parentScope: IStoreconfig<TParentName>, storeName: TName, options?: TOptions,
-): IStoreScope<`${TParentName}.${TName}`, TOptions> => {
-  const name = `${parentScope.name as TParentName}.${storeName}` as const
-  const dbParams = indexDB.openDb(name, options)
-
-
-  return { ...dbParams, name }
+export interface IStoreDefinition<T, Type extends { [P in keyof T]: T[P]} = any> extends indexDB.IDbStoreParams, IStoreConfig<T, Type> {
 }
 
-export function get<TData, TKey extends string, TName extends string, TOptions extends indexDB.IDbStoreConfig>(
-  scope: IStoreScope<TName, TOptions>, seed: TData, key: TKey | IStoreScope<TName, TOptions>['name'] = scope.name
+export const createStoreDefinition = <T, TDefinition extends { [P in keyof T]: IStoreDefinition<any> }>(
+  dbName: string,
+  dbVersion: number,
+  definitions: TDefinition
+): { [P in keyof TDefinition]: IStoreDefinition<TDefinition[P]['initialState']> } => {
+
+
+  const defs: IDbParams[] = Object.entries(definitions).map(([key, params]: [string, any]): IDbParams => {
+    return {
+      name: key,
+      ...params
+    }
+  })
+
+  const db = openDatabase(dbName, dbVersion, defs)
+
+  return defs.reduce((acc, next) => {
+    return {
+      ...acc,
+      [next.name]: {
+        ...next,
+        db,
+      }
+    }
+  }, {} as any)
+}
+
+
+
+type GetKey<TSchema> = Extract<keyof TSchema, string | number>
+
+export function get<TSchema, TKey extends GetKey<TSchema>, TData extends TSchema[TKey]>(
+  params: IStoreDefinition<TSchema>, key: TKey
 ): Stream<TData> {
   return map(res => {
-    return res === undefined ? seed : res
-  }, indexDB.get(scope, key))
+    return res === undefined
+      ? key === undefined ? params.initialState : params.initialState[key]
+      : res
+  }, indexDB.get(params, key))
 }
 
-export function write<TData, TKey extends string, TName extends string, TOptions extends indexDB.IDbStoreConfig>(
-  scope: IStoreScope<TName, TOptions>, writeEvent: Stream<TData>, key: TKey | IStoreScope<TName, TOptions>['name'] = scope.name
+export function write<TSchema, TKey extends GetKey<TSchema>, TData extends TSchema[TKey]>(
+  params: IStoreDefinition<TSchema>, key: TKey, writeEvent: Stream<TData>
 ): Stream<TData> {
-  return multicast(join(map(data => indexDB.set(scope, data, key), writeEvent)))
+  return join(map(data => {
+    return indexDB.set(params, key, data)
+  }, writeEvent))
 }
 
-export function replayWrite<TData, TKey extends string, TName extends string, TOptions extends indexDB.IDbStoreConfig>(
-  scope: IStoreScope<TName, TOptions>, seed: TData, writeEvent: Stream<TData>, key: TKey | IStoreScope<TName, TOptions>['name'] = scope.name
-): Stream<TData> {
-  const storedValue = get(scope, seed, key)
-  const writeSrc = write(scope, writeEvent, key)
+export function replayWrite<TSchema, TKey extends GetKey<TSchema>, TReturn extends TSchema[TKey]>(
+  params: IStoreDefinition<TSchema>, writeEvent: Stream<TReturn>, key: TKey
+): Stream<TReturn> {
+  const storedValue = get(params, key)
+  const writeSrc = write(params, key, writeEvent)
   return continueWith(() => writeSrc, storedValue)
 }
-
 
 

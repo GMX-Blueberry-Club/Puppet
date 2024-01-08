@@ -70,7 +70,7 @@ export const $MarketInfoList = ({
               const usage: Stream<IMarketUsageInfo> = fromPromise(getMarketPoolUsage(chain, params.market))
 
               const fundingFactorPerInterval  = map(marketParams => {
-                return getFundingFactorPerInterval(marketParams.usage, marketParams.fees, GMX.TIME_INTERVAL_MAP.MIN60)
+                return getFundingFactorPerInterval(marketParams.usage, marketParams.fees, GMX.IntervalTime.MIN60)
               }, combineObject({ usage, fees }))
 
               return $text(map(fr => readableFactorPercentage(fr), fundingFactorPerInterval))
@@ -84,7 +84,7 @@ export const $MarketInfoList = ({
 
 
               const shortBorrowRatePerInterval =  map(fees => {
-                return getBorrowingFactorPerInterval(fees, true, GMX.TIME_INTERVAL_MAP.MIN60)
+                return getBorrowingFactorPerInterval(fees, true, GMX.IntervalTime.MIN60)
               }, marketFees)
 
 
@@ -99,7 +99,7 @@ export const $MarketInfoList = ({
 
 
               const shortBorrowRatePerInterval =  map(marketInfo => {
-                return getBorrowingFactorPerInterval(marketInfo, false, GMX.TIME_INTERVAL_MAP.MIN60)
+                return getBorrowingFactorPerInterval(marketInfo, false, GMX.IntervalTime.MIN60)
               }, marketFees)
 
 

@@ -103,94 +103,10 @@ type PositionLink @entity(immutable: true) {
 
   increaseList: [PositionIncrease!] @derivedFrom(field: "link")
   decreaseList: [PositionDecrease!] @derivedFrom(field: "link")
-  feeUpdateList: [PositionFeeUpdate!] @derivedFrom(field: "link")
+  feeUpdateList: [PositionFeesCollected!] @derivedFrom(field: "link")
 }
 
-type PositionIncrease @entity(immutable: true) {
-  id: Bytes!
-  link: PositionLink!
-  order: OrderStatus!
-
-  account: Bytes!
-  market: Bytes!
-  collateralToken: Bytes!
-
-  sizeInTokens: BigInt!
-  sizeInUsd: BigInt!
-  collateralAmount: BigInt!
-  borrowingFactor: BigInt!
-  fundingFeeAmountPerSize: BigInt!
-  longTokenClaimableFundingAmountPerSize: BigInt!
-  shortTokenClaimableFundingAmountPerSize: BigInt!
-  executionPrice: BigInt!
-  indexTokenPriceMax: BigInt!
-  indexTokenPriceMin: BigInt!
-  collateralTokenPriceMax: BigInt!
-  collateralTokenPriceMin: BigInt!
-  sizeDeltaUsd: BigInt!
-  sizeDeltaInTokens: BigInt!
-  orderType: Int!
-
-  collateralDeltaAmount: BigInt!
-  priceImpactUsd: BigInt!
-  priceImpactAmount: BigInt!
-
-  isLong: Boolean!
-
-  orderKey: Bytes!
-  positionKey: Bytes!
-
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-  # transactionIndex: BigInt!
-  logIndex: BigInt!
-}
-
-type PositionDecrease @entity(immutable: true) {
-  id: Bytes!
-  link: PositionLink!
-  order: OrderStatus!
-
-  account: Bytes!
-  market: Bytes!
-  collateralToken: Bytes!
-
-  sizeInUsd: BigInt!
-  sizeInTokens: BigInt!
-  collateralAmount: BigInt!
-  borrowingFactor: BigInt!
-  fundingFeeAmountPerSize: BigInt!
-  longTokenClaimableFundingAmountPerSize: BigInt!
-  shortTokenClaimableFundingAmountPerSize: BigInt!
-  executionPrice: BigInt!
-  indexTokenPriceMax: BigInt!
-  indexTokenPriceMin: BigInt!
-  collateralTokenPriceMax: BigInt!
-  collateralTokenPriceMin: BigInt!
-  sizeDeltaUsd: BigInt!
-  sizeDeltaInTokens: BigInt!
-  collateralDeltaAmount: BigInt!
-  valuesPriceImpactDiffUsd: BigInt!
-  orderType: Int!
-
-  priceImpactUsd: BigInt!
-  basePnlUsd: BigInt!
-  uncappedBasePnlUsd: BigInt!
-
-  isLong: Boolean!
-
-  orderKey: Bytes!
-  positionKey: Bytes!
-
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-  # transactionIndex: BigInt!
-  logIndex: BigInt!
-}
-
-type PositionFeeUpdate @entity(immutable: true) {
+type PositionFeesCollected @entity(immutable: true) {
   id: Bytes! # bytes32
   link: PositionLink! # bytes32
 
@@ -242,10 +158,149 @@ type PositionFeeUpdate @entity(immutable: true) {
   logIndex: BigInt!
 }
 
+type PositionFeesInfo @entity(immutable: true) {
+  id: Bytes! # bytes32
+  link: PositionLink! # bytes32
+
+  orderKey: Bytes! # bytes32
+  positionKey: Bytes! # bytes32
+  referralCode: Bytes! # bytes32
+
+  market: Bytes! # address
+  collateralToken: Bytes! # address
+  affiliate: Bytes! # address
+  trader: Bytes! # address
+  uiFeeReceiver: Bytes! # address
+
+  collateralTokenPriceMin: BigInt!
+  collateralTokenPriceMax: BigInt!
+  tradeSizeUsd: BigInt!
+  totalRebateFactor: BigInt!
+  traderDiscountFactor: BigInt!
+  totalRebateAmount: BigInt!
+  traderDiscountAmount: BigInt!
+  affiliateRewardAmount: BigInt!
+  fundingFeeAmount: BigInt!
+  claimableLongTokenAmount: BigInt!
+  claimableShortTokenAmount: BigInt!
+  latestFundingFeeAmountPerSize: BigInt!
+  latestLongTokenClaimableFundingAmountPerSize: BigInt!
+  latestShortTokenClaimableFundingAmountPerSize: BigInt!
+  borrowingFeeUsd: BigInt!
+  borrowingFeeAmount: BigInt!
+  borrowingFeeReceiverFactor: BigInt!
+  borrowingFeeAmountForFeeReceiver: BigInt!
+  positionFeeFactor: BigInt!
+  protocolFeeAmount: BigInt!
+  positionFeeReceiverFactor: BigInt!
+  feeReceiverAmount: BigInt!
+  feeAmountForPool: BigInt!
+  positionFeeAmountForPool: BigInt!
+  positionFeeAmount: BigInt!
+  totalCostAmount: BigInt!
+  uiFeeReceiverFactor: BigInt!
+  uiFeeAmount: BigInt!
+
+  isIncrease: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  # transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type PositionIncrease @entity(immutable: true) {
+  id: Bytes!
+  link: PositionLink!
+  order: OrderStatus!
+  feeCollected: PositionFeesCollected! # bytes32
+
+  account: Bytes!
+  market: Bytes!
+  collateralToken: Bytes!
+
+  sizeInTokens: BigInt!
+  sizeInUsd: BigInt!
+  collateralAmount: BigInt!
+  borrowingFactor: BigInt!
+  fundingFeeAmountPerSize: BigInt!
+  longTokenClaimableFundingAmountPerSize: BigInt!
+  shortTokenClaimableFundingAmountPerSize: BigInt!
+  executionPrice: BigInt!
+  indexTokenPriceMax: BigInt!
+  indexTokenPriceMin: BigInt!
+  collateralTokenPriceMax: BigInt!
+  collateralTokenPriceMin: BigInt!
+  sizeDeltaUsd: BigInt!
+  sizeDeltaInTokens: BigInt!
+  orderType: Int!
+
+  collateralDeltaAmount: BigInt!
+  priceImpactUsd: BigInt!
+  priceImpactAmount: BigInt!
+
+  isLong: Boolean!
+
+  orderKey: Bytes!
+  positionKey: Bytes!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  # transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
+type PositionDecrease @entity(immutable: true) {
+  id: Bytes!
+  link: PositionLink!
+  order: OrderStatus!
+  feeCollected: PositionFeesCollected! # bytes32
+
+  account: Bytes!
+  market: Bytes!
+  collateralToken: Bytes!
+
+  sizeInUsd: BigInt!
+  sizeInTokens: BigInt!
+  collateralAmount: BigInt!
+  borrowingFactor: BigInt!
+  fundingFeeAmountPerSize: BigInt!
+  longTokenClaimableFundingAmountPerSize: BigInt!
+  shortTokenClaimableFundingAmountPerSize: BigInt!
+  executionPrice: BigInt!
+  indexTokenPriceMax: BigInt!
+  indexTokenPriceMin: BigInt!
+  collateralTokenPriceMax: BigInt!
+  collateralTokenPriceMin: BigInt!
+  sizeDeltaUsd: BigInt!
+  sizeDeltaInTokens: BigInt!
+  collateralDeltaAmount: BigInt!
+  valuesPriceImpactDiffUsd: BigInt!
+  orderType: Int!
+
+  priceImpactUsd: BigInt!
+  basePnlUsd: BigInt!
+  uncappedBasePnlUsd: BigInt!
+
+  isLong: Boolean!
+
+  orderKey: Bytes!
+  positionKey: Bytes!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  # transactionIndex: BigInt!
+  logIndex: BigInt!
+}
+
 type PositionOpen @entity {
   id: ID! # bytes32
-  link: PositionLink! # bytes32
   key: Bytes! # bytes32
+
+  link: PositionLink! # bytes32
 
   account: Bytes! # address
   market: Bytes! # address
@@ -278,8 +333,9 @@ type PositionOpen @entity {
 
 type PositionSettled @entity(immutable: true) {
   id: Bytes!
-  link: PositionLink! # bytes32
   key: Bytes! # bytes32
+
+  link: PositionLink! # bytes32
 
   account: Bytes! # address
   market: Bytes! # address

@@ -3,7 +3,7 @@ import { Behavior, combineObject } from "@aelea/core"
 import { $element, $node, $text, attr, component, style, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { empty, map, mergeArray, now, recoverWith, snapshot, take } from "@most/core"
-import { TIME_INTERVAL_MAP } from "gmx-middleware-const"
+import { IntervalTime } from "gmx-middleware-const"
 import { formatFixed, parseBps, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { ISubscribeTradeRouteDto, getPuppetAllowancesKey } from "puppet-middleware-utils"
@@ -65,7 +65,7 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
 
   
   const expiry = mergeArray([
-    now(config.expiry ? config.expiry : BigInt(unixTimestampNow() + TIME_INTERVAL_MAP.YEAR)),
+    now(config.expiry ? config.expiry : BigInt(unixTimestampNow() + IntervalTime.YEAR)),
     inputEndDate
   ])
   

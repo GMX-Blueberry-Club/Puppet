@@ -17,11 +17,10 @@ import { $DropMultiSelect } from "../../components/form/$Dropdown.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor"
 import { $tableHeader } from "../../components/table/$TableColumn.js"
 import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceGraph.js"
-import { rootStoreScope } from "../../data/store/store.js"
-import { subgraphClient } from "../../data/subgraph/client"
 import * as storage from "../../utils/storage/storeScope.js"
 import { $seperator2 } from "../common.js"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity.js"
+import * as storeDb from "../../data/store/store.js"
 
 
 export type ITopSettled = {
@@ -53,12 +52,11 @@ export const $TopSettled = (config: ITopSettled) => component((
 
   const marketList = now(TEMP_MARKET_LIST)
 
+  const activityTimeframe = storage.replayWrite(storeDb.store.global, changeActivityTimeframe, 'activityTimeframe')
 
-  const exploreStore = storage.createStoreScope(rootStoreScope, 'topSettled' as const)
-  const sortBy = storage.replayWrite(exploreStore, { direction: 'desc', selector: 'pnl' } as ISortBy, sortByChange, 'sortBy')
-  const filterMarketMarketList = storage.replayWrite(exploreStore, [], changeMarket, 'filterMarketMarketList')
-  const isLong = storage.replayWrite(exploreStore, null, switchIsLong, 'isLong')
-  const activityTimeframe = storage.replayWrite(exploreStore, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe, 'activityTimeframe')
+  const sortBy = storage.replayWrite(storeDb.store.leaderboard, sortByChange, 'sortBy')
+  const filterMarketMarketList = storage.replayWrite(storeDb.store.leaderboard, changeMarket, 'filterMarketMarketList')
+  const isLong = storage.replayWrite(storeDb.store.leaderboard, switchIsLong, 'isLong')
 
 
   const pageParms = map(params => {
@@ -66,9 +64,9 @@ export const $TopSettled = (config: ITopSettled) => component((
     const paging = startWith(requestPage, scrollRequest)
 
     const dataSource: Stream<TablePageResponse<ITableRow>> = awaitPromises(map(async req => {
-      const latestPriceTickQuery = queryLatestPriceTick(subgraphClient, { activityTimeframe: params.activityTimeframe })
-      const openPositionListQuery = queryOpenPositionList(subgraphClient)
-      const settledPositionListQuery = querySettledPositionList(subgraphClient)
+      const latestPriceTickQuery = queryLatestPriceTick({ activityTimeframe: params.activityTimeframe })
+      const openPositionListQuery = queryOpenPositionList()
+      const settledPositionListQuery = querySettledPositionList()
       const openPositionList = await openPositionListQuery
       const settledPositionList = await settledPositionListQuery
       const pricefeedMap = await latestPriceTickQuery

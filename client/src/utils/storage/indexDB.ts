@@ -1,193 +1,141 @@
-import { replayLatest } from "@aelea/core"
-import { constant, multicast, startWith } from "@most/core"
+import { constant, fromPromise, map } from "@most/core"
 import { disposeNone } from "@most/disposable"
 import { Stream } from "@most/types"
 import { switchMap } from "gmx-middleware-utils"
 
-
-export interface IDbStoreConfig<TKeyPath extends undefined | string | string[] = undefined | string | string[]> {
-  autoIncrement?: boolean;
-  keyPath?: TKeyPath;
+export interface IDbParams<TName extends string = string> {
+  name: TName
+  keyPath?: string | string[] | null
+  autoIncrement?: boolean
 }
 
-export interface IDbParams<TName extends string, TOptions extends IDbStoreConfig> {
-  name: TName
-  options?: TOptions
+export interface IDbStoreParams {
+  name: string
+  options?: IDBObjectStoreParameters
   db: Stream<IDBDatabase>
 }
 
-export type UseStore = <T>(
-  txMode: IDBTransactionMode,
-  callback: (store: IDBObjectStore) => T | PromiseLike<T>,
-) => Promise<T>;
 
-
-export function get<TResult, TKey extends string, TName extends string, TOptions extends IDbStoreConfig>(
-  params: IDbParams<TName, TOptions>,
-  key: TKey | IDbParams<TName, TOptions>['name'] = params.name,
-): Stream<TResult | null> {
-  return read(params, store => store.get(key))
-}
-
-export function set<TResult, TKey extends string, TName extends string, TOptions extends IDbStoreConfig>(
-  params: IDbParams<TName, TOptions>,
+export function set<TResult>(
+  params: IDbStoreParams,
+  key: IDBValidKey,
   data: TResult,
-  key: TKey | IDbParams<TName, TOptions>['name'] = params.name,
 ): Stream<TResult> {
-  return switchMap(db => {
-    return {
-      run(sink, scheduler) {
-        const store = db.transaction(params.name, 'readwrite').objectStore(params.name)
-        console.log('store', store)
-        store.put(data, key)
-        sink.event(scheduler.currentTime(), data)
+  return map(db => {
+    const tx = db.transaction(params.name, 'readwrite')
+    const store = tx.objectStore(params.name)
+    const req = store.put(data, key)
 
-        return disposeNone()
-      }
+    req.onerror = err => {
+      throw new Error(`${err.type}: Unknown error`)
     }
+
+    return data
   }, params.db)
-  // return constant(data, write(params, store => {
-  //   return store.put(data, key)
-  // }))
+}
+
+export function get<TResult>(
+  params: IDbStoreParams,
+  key: IDBValidKey | IDBKeyRange,
+): Stream<TResult | null> {
+  return switchMap(db => {
+    const store = db.transaction(params.name, 'readonly').objectStore(params.name)
+    return request(store.get(key))
+  }, params.db)
 }
 
 
-export function add<TResult, TName extends string, TOptions extends IDbStoreConfig>(
-  params: IDbParams<TName, TOptions>,
+export function add<TResult>(
+  params: IDbStoreParams,
   list: TResult[]
 ): Stream<TResult[]> {
-  return constant(list, write(params, store => {
+  return switchMap(db => {
+    const store = db.transaction(params.name, 'readwrite').objectStore(params.name)
     for (const item of list) {
       store.add(item)
     }
-    return store.transaction
-  }))
+
+    return constant(list, request(store.count()))
+  }, params.db)
 }
-
-
-export function getRange<TResult, TName extends string, TOptions extends IDbStoreConfig>(
-  params: IDbParams<TName, TOptions>,
-  key?: IDBValidKey | IDBKeyRange
+export function getRange<TResult>(
+  params: IDbStoreParams,
 ): Stream<TResult[]> {
-  return read(params, store => store.getAll(key))
-}
-
-export function openDb<TName extends string, TOptions extends IDbStoreConfig>(
-  dbName: TName,
-  options?: TOptions,
-  version = 1,
-): IDbParams<TName, TOptions> {
-  let storedDb: IDBDatabase | null = null
-
-  const db: Stream<IDBDatabase> = {
-    run(sink, scheduler) {
-
-      if (storedDb !== null) {
-        const time = scheduler.currentTime()
-        sink.event(time, storedDb)
-        return disposeNone()
-      }
-      const openDbRequest = indexedDB.open(dbName, version)
-
-      openDbRequest.onupgradeneeded = event => {
-        try {
-          openDbRequest.result.createObjectStore(dbName, options)
-        } catch (e) {
-          sink.error(scheduler.currentTime(), e instanceof Error ? e : new Error('Unknown error'))
-        }
-      }
-  
-      openDbRequest.onsuccess = () => {
-        storedDb = openDbRequest.result
-
-        const time = scheduler.currentTime()
-        sink.event(time, openDbRequest.result)
-        sink.end(time)
-      }
-
-      openDbRequest.onerror = (e) => {
-        const target = e.target as IDBRequest<IDbParams<TName, TOptions>>
-        sink.error(scheduler.currentTime(), target.error || new Error('Unknown error'))
-      }
-      openDbRequest.onblocked = () => sink.error(scheduler.currentTime(), new Error('Database transaction blocked'))
-
-      return {
-        dispose() {
-          openDbRequest.onsuccess = openDbRequest.onerror = openDbRequest.onblocked = null
-        },
-      }
-    },
-  }
-
-  return { db, name: dbName, options: options }
-}
-
-export function read<TResult, TName extends string, TOptions extends IDbStoreConfig>(
-  params: IDbParams<TName, TOptions>,
-  actionCb: (store: IDBObjectStore) => IDBRequest<TResult>
-): Stream<TResult> {
   return switchMap(db => {
     const store = db.transaction(params.name, 'readonly').objectStore(params.name)
-    const req = actionCb(store)
-    return request<TResult>(req)
+
+    return request(store.getAll())
   }, params.db)
 }
-export function clear<TResult, TName extends string, TOptions extends IDbStoreConfig>(
-  params: IDbParams<TName, TOptions>
+
+
+export function clear<TResult>(
+  params: IDbStoreParams,
 ): Stream<TResult> {
   return switchMap(db => {
-    const req = db.transaction(params.name, 'readwrite').objectStore(params.name).clear()
-    return request<TResult>(req)
+    const newLocal = db.transaction(params.name, 'readwrite')
+    const store = newLocal.objectStore(params.name)
+
+    return request(store.clear())
   }, params.db)
 }
 
-export function write<TResult, TName extends string, TOptions extends IDbStoreConfig>(
-  params: IDbParams<TName, TOptions>,
-  actionCb: (store: IDBObjectStore) => IDBRequest<any>| IDBTransaction
-): Stream<TResult | null> {
-  return switchMap(db => {
-    const store = db.transaction(params.name, 'readwrite').objectStore(params.name)
-    const req = actionCb(store)
-    return request<TResult>(req)
-  }, params.db)
-}
 
-export function cursor<TName extends string, TOptions extends IDbStoreConfig>(
-  params: IDbParams<TName, TOptions>,
+export function cursor<TName extends string>(
+  params: IDbStoreParams,
   query?: IDBValidKey | IDBKeyRange | null,
   direction?: IDBCursorDirection
 ): Stream<IDBCursorWithValue | null> {
   return switchMap(db => {
-    const store = db.transaction(params.name, 'readonly').objectStore(params.name)
-    const req = cursorStep(store.openCursor(query, direction))
-
-    return req
-  }, params.db) 
+    const store = db.transaction(params.name, 'readwrite').objectStore(params.name)
+    return cursorStep(store.openCursor(query, direction))
+  }, params.db)
 }
 
 
-export function request<TResult>(req: IDBRequest<any> | IDBTransaction): Stream<TResult | null> {
-  return {
-    run(sink, scheduler) {
+export function openDatabase<TName extends string>(
+  name: TName,
+  version: number,
+  storeParamList: IDbParams[]
+): Stream<IDBDatabase> {
+  const openDbRequest = indexedDB.open(name, version)
 
-      req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error(`${err.type}: Unknown error`))
-
-      if (req instanceof IDBTransaction) {
-        req.oncomplete = () => sink.event(scheduler.currentTime(), null)
-        return disposeNone()
+  openDbRequest.onupgradeneeded = event => {
+    const db = openDbRequest.result
+    try {
+      for (const params of storeParamList) {
+        if (db.objectStoreNames.contains(params.name)) {
+          openDbRequest.result.deleteObjectStore(params.name)
+        }
+          
+        openDbRequest.result.createObjectStore(params.name, params)
       }
-
-      req.onsuccess = () => {
-        const time = scheduler.currentTime()
-        sink.event(scheduler.currentTime(), req.result)
-        sink.end(time)
-      }
-
-      return disposeNone()
+    } catch (e) {
+      throw e instanceof Error ? e : new Error('Unknown error')
     }
   }
+
+  return request(openDbRequest)
+  // const requestDb = new Promise<IDBDatabase>((resolve, reject) => {
+  //   openDbRequest.onerror = err => reject(openDbRequest.error || new Error(`${err.type}: Unknown error`))
+  //   openDbRequest.onsuccess = () => {
+  //     resolve(openDbRequest.result)
+  //   }
+  // })
+ 
+
+  // return fromPromise(requestDb)
 }
 
+
+function request<TResult>(req: IDBRequest<any>): Stream<TResult> {
+  return fromPromise(new Promise<TResult>((resolve, reject) => {
+    req.onerror = err => reject(req.error || new Error(`${err.type}: Unknown error`))
+    req.onsuccess = () => {
+      resolve(req.result)
+    }
+  }))
+}
 
 function cursorStep(req: IDBRequest<IDBCursorWithValue | null>): Stream<IDBCursorWithValue | null> {
   return {

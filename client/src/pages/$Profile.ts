@@ -10,11 +10,10 @@ import * as viem from 'viem'
 import { $PuppetProfile } from "../components/participant/$Puppet.js"
 import { $TraderProfile } from "../components/participant/$Trader.js"
 import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor"
-import * as store from "../data/store/store.js"
-import { subgraphClient } from "../data/subgraph/client"
 import * as storage from "../utils/storage/storeScope.js"
 import { ISetRouteType, queryLatestPriceTick } from "puppet-middleware-utils"
 import { Stream } from "@most/types"
+import * as storeDb from "../data/store/store.js"
 
 
 export enum IProfileActiveTab {
@@ -48,9 +47,9 @@ export const $Profile = (config: IProfile) => component((
   const traderRoute = profileAddressRoute.create({ fragment: 'trader', title: 'Trader' })
   const puppetRoute = profileAddressRoute.create({ fragment: 'puppet', title: 'Puppet' })
 
-  const activityTimeframe = storage.replayWrite(store.activityTimeframe, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
+  const activityTimeframe = storage.replayWrite(storeDb.store.global, changeActivityTimeframe, 'activityTimeframe')
   const priceTickMap = switchMap(params => {
-    return fromPromise(queryLatestPriceTick(subgraphClient, { activityTimeframe: params.activityTimeframe }, 50))
+    return fromPromise(queryLatestPriceTick({ activityTimeframe: params.activityTimeframe }, 50))
   }, combineObject({ activityTimeframe }))
   
   const options: IRouteOption[] = [

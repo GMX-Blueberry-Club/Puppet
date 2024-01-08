@@ -130,14 +130,13 @@ export function handleExecutePosition(event: ExecutePositionEvent): void {
       return
     }
 
-    const settledMirrorPosition = new MirrorPositionSettled(executePosition.id)
 
     for (let i = 0; i < mirrorPositionOpen.puppets.length; i++) {
       const puppet = mirrorPositionOpen.puppets[i]
-      const puppetPositionSettled = new PuppetPositionSettled(settledMirrorPosition.id.concatI32(i))
+      const puppetPositionSettled = new PuppetPositionSettled(executePosition.id.concatI32(i))
       const puppetTradeRouteKey = puppet.concat(mirrorPositionOpen.trader).concat(mirrorPositionOpen.routeTypeKey)
 
-      puppetPositionSettled.position = settledMirrorPosition.id
+      puppetPositionSettled.position = executePosition.id
       puppetPositionSettled.puppetTradeRoute = puppetTradeRouteKey
     
       puppetPositionSettled.blockNumber = event.block.number
@@ -148,7 +147,9 @@ export function handleExecutePosition(event: ExecutePositionEvent): void {
       store.remove("PuppetPositionOpen", puppetTradeRouteKey.toHex())
     }
 
+    const settledMirrorPosition = new MirrorPositionSettled(executePosition.id)
     settledMirrorPosition.merge([mirrorPositionOpen])
+    settledMirrorPosition.id = executePosition.id
     settledMirrorPosition.save()
 
     store.remove("MirrorPositionOpen", mirrorPositionOpen.id)

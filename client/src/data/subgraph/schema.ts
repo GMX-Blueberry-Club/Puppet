@@ -1,4 +1,4 @@
-import { IPositionDecrease, IPositionFeeUpdate, IPositionIncrease, IPositionLink, IPositionSettled, ISchema } from "gmx-middleware-utils"
+import { IPositionDecrease, IPositionFeesCollected, IPositionIncrease, IPositionLink, IPositionSettled, ISchema } from "gmx-middleware-utils"
 
 
 
@@ -80,7 +80,7 @@ const positionDecrease: ISchema<IPositionDecrease> = {
   __typename: 'PositionDecrease',
 }
 
-const positionFeeUpdate: ISchema<IPositionFeeUpdate> = {
+const positionFeeUpdate: ISchema<IPositionFeesCollected> = {
   id: 'string',
 
   orderKey: 'uint256',
@@ -127,7 +127,7 @@ const positionFeeUpdate: ISchema<IPositionFeeUpdate> = {
   blockTimestamp: 'uint256',
   transactionHash: 'string',
 
-  __typename: 'PositionFeeUpdate',
+  __typename: 'PositionFeesCollected',
 
 }
 

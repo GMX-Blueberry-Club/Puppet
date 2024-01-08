@@ -221,7 +221,7 @@ function onPositionDecrease(event: EventLog1): void {
 }
 
 function onPositionFeesInfo(event: EventLog1): void {
-  const positionFeeUpdate = dto.createPositionFeeUpdate(event)
+  const positionFeeUpdate = dto.createPositionFeesCollected(event)
   const existingLink = PositionLink.load(positionFeeUpdate.orderKey)
 
   positionFeeUpdate.link = existingLink === null ? positionFeeUpdate.orderKey : existingLink.id

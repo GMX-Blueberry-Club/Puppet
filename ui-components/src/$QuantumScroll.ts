@@ -50,7 +50,7 @@ export const $QuantumScroll = ({
 
     if (Array.isArray(nextResponse)) {
       if (nextResponse.length === 0) {
-        return until(nextScrollRequest, $emptyMessage)
+        return $emptyMessage
       }
 
       return mergeArray(nextResponse)

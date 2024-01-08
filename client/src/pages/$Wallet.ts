@@ -34,14 +34,14 @@ import { $AssetDepositEditor } from "../components/portfolio/$AssetDepositEditor
 import { $AssetWithdrawEditor } from "../components/portfolio/$AssetWithdrawEditor"
 import { $RouteSubscriptionEditor, IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor.js"
 import { $ProfilePerformanceGraph, getPerformanceTimeline } from "../components/trade/$ProfilePerformanceGraph"
-import * as store from "../data/store/store.js"
-import { subgraphClient } from "../data/subgraph/client"
+import * as storeDb from "../data/store/store.js"
 import { connectContract } from "../logic/common"
-import { getPuppetSubscriptionExpiry } from "../logic/subscriptionLogic"
+import { getPuppetSubscriptionExpiry } from "../logic/puppetLogic.js"
 import * as storage from "../utils/storage/storeScope.js"
 import { IWalletClient } from "../wallet/walletLink.js"
 import { $seperator2 } from "./common"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "./components/$LastActivity"
+import { IProfileMode } from "../data/type"
 
 
 
@@ -51,10 +51,6 @@ export interface IWallet {
   routeTypeList: Stream<ISetRouteType[]>
 }
 
-enum IProfileMode {
-  TRADER = 'Trader',
-  PUPPET = 'Puppet',
-}
 
 
 const optionDisplay = {
@@ -87,9 +83,8 @@ export const $Wallet = (config: IWallet) => component((
 
   const { wallet, route, routeTypeList } = config
 
-  const activityTimeframe = storage.replayWrite(store.activityTimeframe, GMX.TIME_INTERVAL_MAP.MONTH, changeActivityTimeframe)
-  const profileMode = storage.replayWrite(store.walletProfileMode, IProfileMode.PUPPET, selectProfileMode)
-
+  const activityTimeframe = storage.replayWrite(storeDb.store.global, changeActivityTimeframe, 'activityTimeframe')
+  const profileMode = storage.replayWrite(storeDb.store.wallet, selectProfileMode, 'selectedTab')
 
   const datastore = connectContract(PUPPET.CONTRACT[42161].Datastore)
   const readDepositBalance = datastore.read('getUint', getPuppetDepositAccountKey(config.wallet.account.address, GMX.ARBITRUM_ADDRESS.USDC))
@@ -101,7 +96,7 @@ export const $Wallet = (config: IWallet) => component((
   ])
 
   const priceTickMap = switchMap(params => {
-    return fromPromise(queryLatestPriceTick(subgraphClient, { activityTimeframe: params.activityTimeframe }))
+    return fromPromise(queryLatestPriceTick({ activityTimeframe: params.activityTimeframe }))
   }, combineObject({ activityTimeframe: activityTimeframe }))
 
   return [
@@ -123,7 +118,7 @@ export const $Wallet = (config: IWallet) => component((
         if (mode === IProfileMode.PUPPET) {
 
           const puppetTradeRouteList = awaitPromises(map(params => {
-            return queryPuppetTradeRoute(subgraphClient, { puppet: address, activityTimeframe: params.activityTimeframe })
+            return queryPuppetTradeRoute({ puppet: address, activityTimeframe: params.activityTimeframe })
           }, combineObject({ activityTimeframe })))
 
           return $column(layoutSheet.spacingTiny)(
@@ -424,11 +419,11 @@ export const $Wallet = (config: IWallet) => component((
         }
 
         const settledTradeList = awaitPromises(map(async params => {
-          const positionList = await getTraderPositionSettled(subgraphClient, { trader: config.wallet.account.address, blockTimestamp_gte: params.activityTimeframe })
+          const positionList = await getTraderPositionSettled({ trader: config.wallet.account.address, blockTimestamp_gte: params.activityTimeframe })
           return positionList
         }, combineObject({ activityTimeframe })))
 
-        const openTradeList = fromPromise(queryTraderPositionOpen(subgraphClient, { trader: config.wallet.account.address }))
+        const openTradeList = fromPromise(queryTraderPositionOpen({ trader: config.wallet.account.address }))
 
 
         return $column(layoutSheet.spacingTiny)(

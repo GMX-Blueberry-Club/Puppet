@@ -22,7 +22,7 @@ export const COMPETITION_METRIC_LIST = ['pnl', 'roi'] as const
 export const COMPETITION_START_MONTH = 1
 export const COMPETITION_START_YEAR = 2023
 
-export const TOURNAMENT_DURATION = GMX.TIME_INTERVAL_MAP.HR24 * 25 + GMX.TIME_INTERVAL_MAP.MIN60 * 16
+export const TOURNAMENT_DURATION = GMX.IntervalTime.HR24 * 25 + GMX.IntervalTime.MIN60 * 16
 export const TOURNAMENT_START = Date.UTC(date.getUTCFullYear(), date.getUTCMonth()) / 1000
 export const TOURNAMENT_END = TOURNAMENT_START + TOURNAMENT_DURATION
 
@@ -45,15 +45,15 @@ export const BI_18_PRECISION = 10n ** 18n
 export const BI_30_PRECISION = 10n ** 30n
 
 export const REWARD_DISTRIBUTOR = {
-  distributionPeriod: GMX.TIME_INTERVAL_MAP.DAY7,
-  activityPeriod: GMX.TIME_INTERVAL_MAP.MONTH,
+  distributionPeriod: GMX.IntervalTime.DAY7,
+  activityPeriod: GMX.IntervalTime.MONTH,
 }
 
 
 const toTime = (...params: Parameters<typeof Date.UTC>): bigint => BigInt(Math.floor(Date.UTC(...params) / 1000))
 
 export const saleConfig = {
-  saleDuration: GMX.TIME_INTERVAL_MAP.MONTH,
+  saleDuration: GMX.IntervalTime.MONTH,
   maxMintable: 50
 }
 

@@ -12,7 +12,7 @@ import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { $TextField } from "../../common/$TextField.js"
 import { wagmiWriteContract } from "../../logic/common.js"
-import { getWalletErc20Balance } from "../../logic/trade.js"
+import { getWalletErc20Balance } from "../../logic/traderLogic.js"
 import { IWalletClient, wallet } from "../../wallet/walletLink.js"
 import { $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 

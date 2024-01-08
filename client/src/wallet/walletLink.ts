@@ -4,17 +4,19 @@ import { awaitPromises, map, mergeArray, now, skip } from "@most/core"
 import { Stream } from "@most/types"
 import {
   Address, GetAccountResult, GetNetworkResult,
-  WalletClient, WebSocketPublicClient, configureChains, createConfig, createStorage, fetchBlockNumber, getAccount,
-  getNetwork, InjectedConnector, getPublicClient, getWalletClient, getWebSocketPublicClient, watchAccount, watchBlockNumber, watchNetwork
+  InjectedConnector,
+  WalletClient,
+  configureChains, createConfig, createStorage, fetchBlockNumber, getAccount,
+  getNetwork,
+  getPublicClient, getWalletClient, getWebSocketPublicClient, watchAccount, watchBlockNumber, watchNetwork
 } from '@wagmi/core'
 import { WalletConnectConnector } from '@wagmi/core/connectors/walletConnect'
-import { switchMap } from "gmx-middleware-utils"
-import { arbitrum } from "viem/chains"
-import * as viem from 'viem'
 import { alchemyProvider } from '@wagmi/core/providers/alchemy'
 import { publicProvider } from '@wagmi/core/providers/public'
 import { createWeb3Modal, walletConnectProvider } from '@web3modal/wagmi'
-import { jsonRpcProvider } from '@wagmi/core/providers/jsonRpc'
+import { switchMap } from "gmx-middleware-utils"
+import * as viem from 'viem'
+import { arbitrum } from "viem/chains"
 
 const chains = [
   arbitrum,
@@ -160,9 +162,9 @@ const configChain = configureChains(
 )
 
 const metadata = {
-  name: import.meta.env.VITE_APP_NAME,
-  description: import.meta.env.VITE_APP_DESC_LONG,
-  url: import.meta.env.VITE_WEBSITE,
+  name: '__APP_NAME__',
+  description: '__APP_DESC_SHORT__',
+  url: '__WEBSITE__',
   icons: ['https://imagedelivery.net/_aTEfDRm7z3tKgu9JhfeKA/5a7df101-00dc-4856-60a9-921b2879e200/lg']
 }
 

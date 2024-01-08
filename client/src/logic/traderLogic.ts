@@ -1,19 +1,25 @@
 
 import { replayLatest } from "@aelea/core"
 import { http, observer } from "@aelea/ui-components"
-import { empty, fromPromise, map, mergeArray, multicast, now, scan, skip } from "@most/core"
+import { constant, empty, fromPromise, map, mergeArray, multicast, now, scan, skip } from "@most/core"
 import { Stream } from "@most/types"
 import { fetchBalance, readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
 import {
   IPriceCandleDto, IRequestPricefeedApi, ITokenDescription, ITokenSymbol,
-  filterNull, getDenominator, getMappedValue, getTokenDescription, parseFixed, periodicRun, resolveAddress
+  filterNull, getDenominator, getMappedValue, getTokenDescription, parseFixed, periodicRun, resolveAddress, switchMap
 } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { } from "viem"
 import { ISupportedChain } from "../wallet/walletLink.js"
-
+import { contractReader } from "./common"
+import * as PUPPET from "puppet-middleware-const"
+import { arbitrum } from "viem/chains"
+import { getPuppetSubscriptionExpiryKey, getRouteAddressKey, getTradeRouteKey } from "puppet-middleware-utils"
+import * as storage from "../utils/storage/storeScope.js"
+import { store } from "../data/store/store"
+import * as indexDB from "../utils/storage/indexDB.js"
 
 
 
@@ -52,11 +58,11 @@ const derievedSymbolMapping: { [k: string]: ITokenSymbol } = {
 }
 
 const gmxIoPricefeedIntervalLabel = {
-  [GMX.TIME_INTERVAL_MAP.MIN5]: '5m',
-  [GMX.TIME_INTERVAL_MAP.MIN15]: '15m',
-  [GMX.TIME_INTERVAL_MAP.MIN60]: '1h',
-  [GMX.TIME_INTERVAL_MAP.HR4]: '4h',
-  [GMX.TIME_INTERVAL_MAP.HR24]: '1d',
+  [GMX.IntervalTime.MIN5]: '5m',
+  [GMX.IntervalTime.MIN15]: '15m',
+  [GMX.IntervalTime.MIN60]: '1h',
+  [GMX.IntervalTime.HR4]: '4h',
+  [GMX.IntervalTime.HR24]: '1d',
 }
 
 
@@ -204,3 +210,31 @@ export const getGmxIoPricefeed = async (queryParams: IRequestPricefeedApi): Prom
   return res
 }
 
+export function getTraderTradeRoute(
+  trader: viem.Address,
+  collateralToken: viem.Address,
+  indexToken: viem.Address,
+  isLong: boolean,
+  chain = arbitrum
+): Stream<viem.Address | null> {
+  const puppetContractMap = PUPPET.CONTRACT[chain.id]
+  const datastoreReader = contractReader(puppetContractMap.Datastore) 
+
+  const routeKey = getTradeRouteKey(trader, collateralToken, indexToken, isLong)
+  const routeAddressKey = getRouteAddressKey(routeKey)
+
+  const storedRouteKey = storage.get(store.tradeBox, 'traderRouteMap')
+  const fallbackGetRoute = switchMap(rmap => {
+    const routeAddress = rmap[trader]
+    if (routeAddress) {
+      return now(rmap[trader])
+    }
+
+    return switchMap(res => {
+      rmap[trader] = res
+      return res === GMX.ADDRESS_ZERO ? now(null) : constant(res, indexDB.set(store.tradeBox, 'traderRouteMap', rmap))
+    }, datastoreReader('getAddress', routeAddressKey))
+  }, storedRouteKey)
+
+  return fallbackGetRoute
+}

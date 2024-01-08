@@ -504,7 +504,7 @@ export type MintRule = MintPublic | MintHolder | MintPrivate
 
 
 export interface IRequestLeaderboardApi extends IRequestPagePositionApi, IPriceCandleSeed, IRequestSortApi<keyof IBlueberryLadder> {
-  timeInterval: typeof GMX.TIME_INTERVAL_MAP.HR24 | typeof GMX.TIME_INTERVAL_MAP.DAY7 | typeof GMX.TIME_INTERVAL_MAP.MONTH
+  timeInterval: typeof GMX.IntervalTime.HR24 | typeof GMX.IntervalTime.DAY7 | typeof GMX.IntervalTime.MONTH
 }
 export interface IRequestCompetitionLadderApi extends IPriceCandleSeed, IRequestSortApi<IBlueberryLadder>, IRequestPagePositionApi, IRequestTimerangeApi {
   referralCode: string

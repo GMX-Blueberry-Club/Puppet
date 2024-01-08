@@ -1,6 +1,6 @@
 import { Bytes, ethereum, log } from "@graphprotocol/graph-ts"
 import { EventLog } from "../generated/EventEmitter/EventEmitter"
-import { MarketCreated, OrderCreated, OrderStatus, PositionDecrease, PositionFeeUpdate, PositionIncrease, PositionOpen, PositionSettled } from "../generated/schema"
+import { MarketCreated, OrderCreated, OrderStatus, PositionDecrease, PositionFeesCollected, PositionIncrease, PositionOpen, PositionSettled } from "../generated/schema"
 import { MARKET_TOKEN_MAP, OrderExecutionStatus, ZERO_BI } from "./utils/const"
 import { getAddressItem, getBoolItem, getBytes32Item, getIntItem, getUintItem } from "./utils/datastore"
 import { getIdFromEvent } from "./utils/gmxHelpers"
@@ -47,6 +47,7 @@ export function createPositionIncrease<T extends EventLog>(event: T, orderStatus
   const positionIncrease = new PositionIncrease(eventId)
 
   positionIncrease.order = orderStatus.id
+  positionIncrease.feeCollected = orderStatus.id
 
   positionIncrease.account = getAddressItem(event.params.eventData, 0)
   positionIncrease.market = getAddressItem(event.params.eventData, 1)
@@ -92,6 +93,7 @@ export function createPositionDecrease<T extends EventLog>(event: T, orderStatus
   const positionDecrease = new PositionDecrease(eventId)
 
   positionDecrease.order = orderStatus.id
+  positionDecrease.feeCollected = orderStatus.id
 
   positionDecrease.account = getAddressItem(event.params.eventData, 0)
   positionDecrease.market = getAddressItem(event.params.eventData, 1)
@@ -134,11 +136,11 @@ export function createPositionDecrease<T extends EventLog>(event: T, orderStatus
   return positionDecrease
 }
 
-export function createPositionFeeUpdate<T extends EventLog>(event: T): PositionFeeUpdate {
-  const eventId = getIdFromEvent(event)
-  const dto = new PositionFeeUpdate(eventId)
-
-  dto.orderKey = getBytes32Item(event.params.eventData, 0)
+export function createPositionFeesCollected<T extends EventLog>(event: T): PositionFeesCollected {
+  const orderKey = getBytes32Item(event.params.eventData, 0)
+  const dto = new PositionFeesCollected(orderKey)
+  
+  dto.orderKey = orderKey
   dto.positionKey = getBytes32Item(event.params.eventData, 1)
   dto.referralCode = getBytes32Item(event.params.eventData, 2)
 
