@@ -4,6 +4,7 @@
   "files": [
     ".dist"
   ],
+  "type": "module",
   "scripts": {
     "dev": "rimraf .dist && DEBUG=vite-plugin-pwa SW_DEV=true vite --force",
     "dev-destroy": "bunx rimraf .dist && bunx DEBUG=vite-plugin-pwa SW_DESTROY=true vite",

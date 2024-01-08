@@ -15,9 +15,9 @@ const SITE_CONFIG = {
 }
 
 const vitePlugin = VitePWA({
-  workbox: {
-    cleanupOutdatedCaches: true
-  },
+  // workbox: {
+  //   cleanupOutdatedCaches: true
+  // },
   outDir: '.dist',
   registerType: 'autoUpdate',
   strategies: 'injectManifest',

@@ -209,7 +209,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                   })
                 ),
 
-                $row(layoutSheet.spacing, style({ position: 'absolute', zIndex: 100, right: '10px', bottom: '10px' }))(
+                $row(layoutSheet.spacing, style({ position: 'fixed', zIndex: 100, right: '16px', bottom: '16px' }))(
                   $row(
                     $Tooltip({
                       // $dropContainer: $defaultDropContainer,
