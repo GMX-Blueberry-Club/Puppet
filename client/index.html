@@ -69,22 +69,18 @@
             font-display: swap;
         }
 
-        @property --angle {
-            syntax: '<angle>';
-            initial-value: 90deg;
-            inherits: true;
-        }
-
-        @property --gradX {
-            syntax: '<percentage>';
-            initial-value: 50%;
-            inherits: true;
-        }
-
-        @property --gradY {
-            syntax: '<percentage>';
-            initial-value: 0%;
-            inherits: true;
+        @keyframes signal { 
+            from { 
+                transform: scale(0);
+                opacity: 0;
+            } 
+            20% {
+                opacity: 1;
+            }
+            to { 
+                transform: scale(2);
+                opacity: 0;
+            }  
         }
 
         @keyframes borderRotate {

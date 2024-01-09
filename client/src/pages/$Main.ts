@@ -114,7 +114,12 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
         $rootContainer(
           $column(style({ flex: 1, position: 'relative' }))(
             switchMap(chainEvent => {
-              const newLocal = take(1, subgraphStatus)
+              const subgraphBeaconStatusColor = map(status => {
+                const timestampDelta = unixTimestampNow() - status.block.timestamp
+
+                const color = timestampDelta > 60 ? pallete.negative : timestampDelta > 10 ? pallete.indeterminate : pallete.positive
+                return color
+              }, subgraphStatus)
               return $column(
                 designSheet.customScroll,
                 style({
@@ -227,15 +232,22 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                           )
                         )
                       }, combineObject({ subgraphStatus, blockChange })),
-                      $anchor: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+                      $anchor: $row(
+                        style({ width: '8px', height: '8px', borderRadius: '50%', outlineOffset: '4px', padding: '6px' }),
+                        styleBehavior(map(color => {
+                          return { backgroundColor: colorAlpha(color, .5), outlineColor: color }
+                        }, subgraphBeaconStatusColor))
+                      )(
                         $node(
-                          style({ width: '8px', height: '8px', borderRadius: '50%', outlineOffset: '4px', backgroundColor: pallete.foreground, outline: `1px solid ${pallete.foreground}`, padding: '6px' }),
-                          styleBehavior(map(status => {
-                            const timestampDelta = unixTimestampNow() - status.block.timestamp
-
-                            const color = timestampDelta > 60 ? pallete.negative : timestampDelta > 10 ? pallete.indeterminate : pallete.positive
-                            return { backgroundColor: colorAlpha(color, .25), outlineColor: color }
-                          }, newLocal))
+                          style({
+                            position: 'absolute', top: 'calc(50% - 20px)', left: 'calc(50% - 20px)', width: '40px', height: '40px',
+                            borderRadius: '50%', border: `1px solid rgba(74, 180, 240, 0.12)`, opacity: 0,
+                            animationName: 'signal', animationDuration: '2s',
+                            animationTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                          }),
+                          styleBehavior(map(color => {
+                            return { backgroundColor: colorAlpha(color, .5), animationIterationCount: color === pallete.negative ? 'infinite' : 1 }
+                          }, subgraphBeaconStatusColor))
                         )()
                       ),
                     })({}),
