@@ -140,8 +140,7 @@ export function getMpSlotPnL(mp: IMirrorPositionOpen, markPrice: bigint, puppet?
 
 
 export function getPortion(supply: bigint, share: bigint, amount: bigint): bigint {
-  if (supply === 0n) return amount
-  if (amount == 0n) throw new Error("amount cannot be 0")
+  if (supply === 0n || amount == 0n) return amount
 
   if (share == 0n) {
     return amount

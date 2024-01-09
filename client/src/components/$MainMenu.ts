@@ -176,7 +176,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
         // $circleButtonAnchor(attr({ href: 'https://discord.com/invite/7ZMmeU3z9j' }))(
         //   $icon({ $content: $discord, fill: pallete.middleground, width: '22px', viewBox: `0 0 32 32` })
         // ),
-        $circleButtonAnchor(attr({ href: 'https://twitter.com/puppetfinance' }))(
+        $circleButtonAnchor(attr({ href: 'https://twitter.com/PuppetCopy' }))(
           $icon({ $content: $twitter, fill: pallete.foreground, width: '22px', viewBox: `0 0 24 24` })
         ),
       )
