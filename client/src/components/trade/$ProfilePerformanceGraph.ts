@@ -73,14 +73,14 @@ export function getPerformanceTimeline(config: IPerformanceTimeline) {
     })
 
   const settledAdjustList: IPerformanceTickUpdateTick[] = config.settledPositionList.flatMap(mp => {
-    return [...mp.position.link.increaseList, ...mp.position.link.decreaseList].map(update => ({ update, mp, timestamp: Number(update.blockTimestamp) }))
+    return [...mp.position.link.increaseList, ...mp.position.link.decreaseList].filter(update => Number(update.blockTimestamp) > startTime).map(update => ({ update, mp, timestamp: Number(update.blockTimestamp) }))
   })
 
   const interval = findClosest(GMX.PRICEFEED_INTERVAL, config.activityTimeframe / config.tickCount)
   const uniqueIndexTokenList = [...new Set([...config.openPositionList.map(mp => mp.position.indexToken), ...config.settledPositionList.map(mp => mp.position.indexToken)])]
 
   const priceUpdateTicks = uniqueIndexTokenList.flatMap(indexToken => config.priceTickMap[indexToken] ?? [])
-  const source = [...openAdjustList, ...settledAdjustList, ...priceUpdateTicks]
+  const source = [...openAdjustList, ...settledAdjustList, ...priceUpdateTicks].sort((a, b) => getTime(a) - getTime(b))
   const seed: IGraphPnLTick = {
     value: 0,
     realisedPnl: 0n,

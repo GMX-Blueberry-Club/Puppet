@@ -9,7 +9,7 @@ import { ETH_ADDRESS_REGEXP, switchMap } from "gmx-middleware-utils"
 import * as viem from 'viem'
 import { $PuppetProfile } from "../components/participant/$Puppet.js"
 import { $TraderProfile } from "../components/participant/$Trader.js"
-import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor"
+import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor.js"
 import * as storage from "../utils/storage/storeScope.js"
 import { ISetRouteType, queryLatestPriceTick } from "puppet-middleware-utils"
 import { Stream } from "@most/types"
@@ -33,7 +33,7 @@ type IRouteOption = {
 }
 
 
-export const $Profile = (config: IProfile) => component((
+export const $PublicProfile = (config: IProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [selectProfileMode, selectProfileModeTether]: Behavior<IRouteOption, IRouteOption>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
@@ -99,7 +99,7 @@ export const $Profile = (config: IProfile) => component((
               })
             ),
             router.match(puppetRoute)(
-              $PuppetProfile({ ...config, activityTimeframe, address, priceTickMap, route, routeTypeList })({
+              $PuppetProfile({ activityTimeframe, address, priceTickMap, route, routeTypeList })({
                 changeRoute: changeRouteTether(),
                 changeActivityTimeframe: changeActivityTimeframeTether(),
                 modifySubscriber: modifySubscriberTether()

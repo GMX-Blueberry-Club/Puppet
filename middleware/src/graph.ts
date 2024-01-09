@@ -5,9 +5,11 @@ import { Client, createClient, fetchExchange } from '@urql/core'
 import { offlineExchange } from '@urql/exchange-graphcache'
 import { makeDefaultStorage } from '@urql/exchange-graphcache/default-storage'
 import * as GMX from "gmx-middleware-const"
-import { IPriceCandle, IPriceOracleMap, IPriceTickListMap, ISchema, findClosest, schema as gmxSchema, groupArrayManyMap, periodicRun, querySignedPrices, querySubgraph, unixTimestampNow } from "gmx-middleware-utils"
+import { IPriceCandle, IPriceOracleMap, IPriceTickListMap, ISchema, findClosest, schema as gmxSchema, groupArrayManyMap, parseQueryResults, periodicRun, querySignedPrices, querySubgraph, unixTimestampNow } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { schema } from './schema.js'
+import __tempTradeRouteDoc from './__temp_tradeRouteDoc.js'
+import { IPuppetTradeRoute } from './types.js'
 
 const storage = makeDefaultStorage({
   idbName: 'graphcache-v3', // The name of the IndexedDB database
@@ -29,7 +31,7 @@ const cache = offlineExchange({
 export type { Client }
 
 export const subgraphClient = createClient({
-  url: 'https://api.studio.thegraph.com/query/112/puppet/v0.0.69',
+  url: 'https://api.studio.thegraph.com/query/112/puppet/version/latest',
   exchanges: [cache, fetchExchange],
   fetchSubscriptions: true,
   requestPolicy: 'cache-first',
@@ -37,7 +39,6 @@ export const subgraphClient = createClient({
 
 interface IQueryTraderPositionOpen {
   trader: viem.Address
-  blockTimestamp_gte?: number
 }
 
 interface IQueryPuppetTradeRoute {
@@ -45,37 +46,54 @@ interface IQueryPuppetTradeRoute {
   activityTimeframe: GMX.IntervalTime
 }
 
+interface IQueryTraderPositionSettled {
+  trader: viem.Address
+  activityTimeframe: GMX.IntervalTime
+}
+
 export async function queryTraderPositionOpen(filter: IQueryTraderPositionOpen) {
+  const trader = filter.trader
 
   const res = querySubgraph(subgraphClient, {
     schema: schema.mirrorPositionOpen,
-    filter,
+    filter: {
+      trader
+    },
   })
   
   return res
 }
 
-export async function getTraderPositionSettled(filter: IQueryTraderPositionOpen) {
+export async function getTraderPositionSettled(filter: IQueryTraderPositionSettled) {
+  const blockTimestamp_gt = unixTimestampNow() - filter.activityTimeframe
+  const trader = filter.trader
+
   const res = querySubgraph(subgraphClient, {
     schema: schema.mirrorPositionSettled,
-    filter,
+    filter: {
+      blockTimestamp_gt, trader
+    },
   })
   
   return res
 }
 
 export async function queryPuppetTradeRoute(filter: IQueryPuppetTradeRoute) {
-  const timestamp_gte = unixTimestampNow() - filter.activityTimeframe
-
-  const res = querySubgraph(subgraphClient, {
-    schema: schema.puppetTradeRoute,
-    filter: {
-      puppet: filter.puppet,
-      // timestamp_gte,
-    },
-  })
+  const res = subgraphClient.query(__tempTradeRouteDoc(filter.puppet, filter.activityTimeframe), {  }).toPromise().then(res => {
+    const puppetTradeRoutes = res.data.puppetTradeRoutes as any[]
+    return puppetTradeRoutes.map(item => parseQueryResults(item, schema.puppetTradeRoute))
+  }) as Promise<IPuppetTradeRoute[]>
   
   return res
+
+  // const blockTimestamp_gt = unixTimestampNow() - filter.activityTimeframe
+  // const res = querySubgraph(subgraphClient, {
+  //   schema: schema.puppetTradeRoute,
+  //   filter: {
+  //     puppet: filter.puppet,
+  //     blockTimestamp_gt,
+  //   },
+  // })
 }
 
 
@@ -136,6 +154,7 @@ export async function queryLatestPriceTick(filter: IQueryLatestPriceTick, estTic
       interval,
       timestamp_gte,
     },
+    orderBy: 'timestamp',
     orderDirection: 'desc',
   })
 
@@ -158,6 +177,8 @@ export const latestPriceMap: Stream<IPriceOracleMap> = replayLatest(multicast(pe
 
 export async function queryLatestTokenPriceFeed(filter: IQueryPriceCandle = { interval: GMX.IntervalTime.MIN5 }) {
   const queryFeed = querySubgraph(subgraphClient, {
+    orderBy: 'timestamp',
+    orderDirection: 'desc',
     schema: gmxSchema.priceCandle,
     filter,
   })

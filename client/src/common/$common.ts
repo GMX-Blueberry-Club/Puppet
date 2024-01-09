@@ -30,7 +30,7 @@ import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/for
 import { $RouteSubscriptionEditor, IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor.js"
 import { contractReader } from "../logic/common"
 import { getPuppetSubscriptionExpiry } from "../logic/puppetLogic.js"
-import { IProfileActiveTab } from "../pages/$Profile.js"
+import { IProfileActiveTab } from "../pages/$PublicProfile.js"
 import { $seperator2 } from "../pages/common.js"
 import { $caretDown } from "./elements/$icons"
 import { wallet } from "../wallet/walletLink"

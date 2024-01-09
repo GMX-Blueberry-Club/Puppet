@@ -19,7 +19,7 @@ import { newUpdateInvoke } from "../sw/swUtils"
 import { fadeIn } from "../transitions/enter.js"
 import { block, blockChange, chain } from "../wallet/walletLink.js"
 import { $Home } from "./$Home.js"
-import { $Profile } from "./$Profile.js"
+import { $PublicProfile } from "./$PublicProfile.js"
 import { $Trade } from "./$Trade.js"
 import { $Wallet } from "./$Wallet.js"
 import { $Leaderboard } from "./leaderboard/$Leaderboard.js"
@@ -169,7 +169,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 ),
                 router.contains(profileRoute)(
                   $midContainer(
-                    fadeIn($Profile({
+                    fadeIn($PublicProfile({
                       route: profileRoute, routeTypeList,
                     })({
                       modifySubscriber: modifySubscriberTether(),

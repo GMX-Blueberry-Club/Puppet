@@ -16,7 +16,8 @@ import {
   readableTokenAmountLabel,
   readableUnitAmount,
   switchMap,
-  unixTimestampNow
+  unixTimestampNow,
+  zipState
 } from "gmx-middleware-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
@@ -400,7 +401,7 @@ export const $Wallet = (config: IWallet) => component((
                       )
                     })
                   )
-                }, combineObject({ puppetTradeRouteList, routeTypeList, priceTickMap, activityTimeframe })),
+                }, zipState({ puppetTradeRouteList, routeTypeList, priceTickMap, activityTimeframe })),
               ),
 
             ),
@@ -419,7 +420,7 @@ export const $Wallet = (config: IWallet) => component((
         }
 
         const settledTradeList = awaitPromises(map(async params => {
-          const positionList = await getTraderPositionSettled({ trader: config.wallet.account.address, blockTimestamp_gte: params.activityTimeframe })
+          const positionList = await getTraderPositionSettled({ trader: config.wallet.account.address, activityTimeframe: params.activityTimeframe })
           return positionList
         }, combineObject({ activityTimeframe })))
 

@@ -7,7 +7,7 @@ import { awaitPromises, map, multicast, now, skipRepeatsWith, startWith } from "
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $Link, $arrowRight, $icon, $infoTooltipLabel, IMarker } from "gmx-middleware-ui-components"
-import { IPriceTickListMap, filterNull, getMappedValue, groupArrayMany, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap } from "gmx-middleware-utils"
+import { IPriceTickListMap, filterNull, getMappedValue, groupArrayMany, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap, zipState } from "gmx-middleware-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
 import { IMirrorPositionOpen, IMirrorPositionSettled, IPuppetTradeRoute, ISetRouteType, accountSettledPositionListSummary, queryPuppetTradeRoute } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -153,7 +153,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
                 $text(getMappedValue(LAST_ACTIVITY_LABEL_MAP, params.activityTimeframe) )
               )
             )
-          }, combineObject({ puppetTradeRouteList, activityTimeframe, priceTickMap })),
+          }, zipState({ puppetTradeRouteList, activityTimeframe, priceTickMap })),
         ),
 
         $column(layoutSheet.spacing)(

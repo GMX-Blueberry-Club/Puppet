@@ -47,17 +47,17 @@ export const $QuantumScroll = ({
 
 
   const $itemLoader = map(nextResponse => {
+    const itemCount = Array.isArray(nextResponse) ? nextResponse.length : nextResponse.$items.length
+
+    if (itemCount === 0) {
+      return $emptyMessage
+    }
 
     if (Array.isArray(nextResponse)) {
-      if (nextResponse.length === 0) {
-        return $emptyMessage
-      }
-
       return mergeArray(nextResponse)
     }
 
-    const hasMoreItems = nextResponse.pageSize === nextResponse.$items.length
-
+    const hasMoreItems = nextResponse.pageSize === itemCount
 
     const $observerloader = $custom('observer')(
       nextScrollRequestTether(

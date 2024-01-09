@@ -192,6 +192,9 @@ export const $TraderPortfolio = (config: ITraderPortfolio) => component((
               $heading3('Settled Positions'),
               $Table({
                 dataSource,
+                scrollConfig: {
+                  $emptyMessage: $text(style({ color: pallete.foreground }))(`no settled positions within last ${getMappedValue(LAST_ACTIVITY_LABEL_MAP, params.activityTimeframe) }`)
+                },
                 columns: [
                   ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
                   entryColumn,
@@ -203,7 +206,7 @@ export const $TraderPortfolio = (config: ITraderPortfolio) => component((
                 scrollRequest: scrollRequestTether()
               })
             )
-          }, combineObject({ settledTradeList }))
+          }, zipState({ settledTradeList, activityTimeframe }))
             
         ),
       ),
@@ -223,7 +226,7 @@ export const $TraderProfile = (config: ITraderProfile) => component((
   const { activityTimeframe, address, priceTickMap, route } = config
 
   const settledTradeList = awaitPromises(map(async params => {
-    const positionList = await getTraderPositionSettled({ trader: address, blockTimestamp_gte: params.activityTimeframe })
+    const positionList = await getTraderPositionSettled({ trader: address, activityTimeframe: params.activityTimeframe })
     return positionList
   }, combineObject({ activityTimeframe })))
 
