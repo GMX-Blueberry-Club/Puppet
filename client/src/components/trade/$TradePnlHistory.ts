@@ -80,7 +80,6 @@
 //         ...config.updateList
 //       ],
 //       // source: [...feed.filter(tick => tick.timestamp > initialTick.time), ...trade.updateList, ...trade.increaseList, ...trade.decreaseList],
-//       interval,
 //       seed: initialTick,
 //       getTime: x => x.blockTimestamp,
 //       seedMap: (prev, next) => {

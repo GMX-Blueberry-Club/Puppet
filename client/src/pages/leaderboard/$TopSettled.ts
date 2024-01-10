@@ -3,12 +3,12 @@ import { $element, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, empty, map, now, startWith } from "@most/core"
+import { awaitPromises, empty, map, now, startWith, take } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $ButtonToggle, $Table, $bear, $bull, $icon, $marketLabel, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "gmx-middleware-ui-components"
-import { IMarketCreatedEvent, IPriceTickListMap, TEMP_MARKET_LIST, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
-import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, accountSettledPositionListSummary, openPositionListPnl, queryLatestPriceTick, queryOpenPositionList, querySettledPositionList } from "puppet-middleware-utils"
+import { IMarketCreatedEvent, IPriceTickListMap, TEMP_MARKET_LIST, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, querySignedPrices, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, accountSettledPositionListSummary, latestPriceMap, openPositionListPnl, queryLatestPriceTick, queryOpenPositionList, querySettledPositionList } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $labelDisplay } from "../../common/$TextField.js"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $puppets, $size } from "../../common/$common.js"
@@ -101,7 +101,7 @@ export const $TopSettled = (config: ITopSettled) => component((
 
 
     return { ...params, dataSource }
-  }, combineObject({ sortBy, activityTimeframe, filterMarketMarketList, isLong }))
+  }, combineObject({ sortBy, activityTimeframe, filterMarketMarketList, isLong, latestPriceMap: take(1, latestPriceMap) }))
 
 
 
@@ -198,7 +198,7 @@ export const $TopSettled = (config: ITopSettled) => component((
           const columns: TableColumn<ITableRow>[] = [
             {
               $head: $text('Trade Route'),
-              gridTemplate: screenUtils.isDesktopScreen ? '126px' : '80px',
+              gridTemplate: screenUtils.isDesktopScreen ? '114px' : '114px',
               // columnOp: style({ placeContent: 'flex-end' }),
               $bodyCallback: map(pos => {
 

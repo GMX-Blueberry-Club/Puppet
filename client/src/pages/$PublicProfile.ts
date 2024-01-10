@@ -43,9 +43,9 @@ export const $PublicProfile = (config: IProfile) => component((
 
   const { route, routeTypeList } = config
 
-  const profileAddressRoute = config.route.create({ title: 'Profile', fragment: ETH_ADDRESS_REGEXP })
-  const traderRoute = profileAddressRoute.create({ fragment: 'trader', title: 'Trader' })
-  const puppetRoute = profileAddressRoute.create({ fragment: 'puppet', title: 'Puppet' })
+  const profileAddressRoute = config.route
+  const traderRoute = profileAddressRoute.create({ fragment: 'trader' }).create({ title: 'Trader', fragment: ETH_ADDRESS_REGEXP })
+  const puppetRoute = profileAddressRoute.create({ fragment: 'puppet' }).create({ title: 'Puppet', fragment: ETH_ADDRESS_REGEXP })
 
   const activityTimeframe = storage.replayWrite(storeDb.store.global, changeActivityTimeframe, 'activityTimeframe')
   const priceTickMap = switchMap(params => {
@@ -88,7 +88,7 @@ export const $PublicProfile = (config: IProfile) => component((
       {
         run(sink, scheduler) {
           const urlFragments = document.location.pathname.split('/')
-          const address = viem.getAddress(urlFragments[urlFragments.length - 2])
+          const address = viem.getAddress(urlFragments[urlFragments.length - 1])
 
           return  $column(
             router.match(traderRoute)(
@@ -119,8 +119,8 @@ export const $PublicProfile = (config: IProfile) => component((
         changeRoute,
         map(option => {
           const urlFragments = document.location.pathname.split('/')
-          const address = urlFragments[urlFragments.length - 2] as viem.Address
-          const url = `/app/profile/${address}/${option.fragment}`
+          const address = urlFragments[urlFragments.length - 1] as viem.Address
+          const url = `/app/profile/${option.fragment}/${address}`
           history.pushState({}, '', url)
           return url
         }, selectProfileMode)

@@ -10,7 +10,6 @@ import {
   IPriceTickListMap,
   IPricetick,
   createTimeline,
-  findClosest,
   formatFixed,
   getPositionPnlUsd,
   unixTimestampNow
@@ -76,7 +75,6 @@ export function getPerformanceTimeline(config: IPerformanceTimeline) {
     return [...mp.position.link.increaseList, ...mp.position.link.decreaseList].filter(update => Number(update.blockTimestamp) > startTime).map(update => ({ update, mp, timestamp: Number(update.blockTimestamp) }))
   })
 
-  const interval = findClosest(GMX.PRICEFEED_INTERVAL, config.activityTimeframe / config.tickCount)
   const uniqueIndexTokenList = [...new Set([...config.openPositionList.map(mp => mp.position.indexToken), ...config.settledPositionList.map(mp => mp.position.indexToken)])]
 
   const priceUpdateTicks = uniqueIndexTokenList.flatMap(indexToken => config.priceTickMap[indexToken] ?? [])
@@ -88,7 +86,6 @@ export function getPerformanceTimeline(config: IPerformanceTimeline) {
   }
   const data = createTimeline({
     source,
-    interval,
     seed,
     getTime,
     seedMap: (acc, next) => {
@@ -138,25 +135,24 @@ export const $ProfilePerformanceGraph = (config: IPerformanceTimeline & { $conta
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
 ) => {
 
-
   const timeline = getPerformanceTimeline(config)
 
-  const openMarkerList = config.openPositionList.map((pos): IMarker => {
+  const openMarkerList = config.openPositionList.flatMap(pos => pos.position.link.increaseList).map((pos): IMarker => {
     return {
       position: 'inBar',
-      color: colorAlpha(pallete.primary, .15),
-      time: Number(pos.blockTimestamp) as Time,
+      color: colorAlpha(pallete.positive, .55),
+      time: unixTimestampNow() as Time,
       size: 0.1,
-      shape: 'circle',
+      shape: 'circle'
     }
   })
-  const settledMarkerList = config.settledPositionList.map((pos): IMarker => {
+  const settledMarkerList = config.settledPositionList.flatMap(pos => pos.position.link.increaseList).map((pos): IMarker => {
     return {
       position: 'inBar',
       color: colorAlpha(pallete.message, .15),
       time: Number(pos.blockTimestamp) as Time,
       size: 0.1,
-      shape: 'circle',
+      shape: 'circle'
     }
   })
 

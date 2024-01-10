@@ -21,7 +21,7 @@ import {
 } from "gmx-middleware-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
-import { IPuppetSubscritpionParams, ISetRouteType, accountSettledPositionListSummary, getParticiapntMpPortion, getPuppetDepositAccountKey, getTraderPositionSettled, queryLatestPriceTick, queryPuppetTradeRoute, queryTraderPositionOpen } from "puppet-middleware-utils"
+import { IPuppetSubscritpionParams, ISetRouteType, accountSettledPositionListSummary, getParticiapntMpPortion, getPuppetDepositAccountKey, getTraderPositionSettled, openPositionListPnl, queryLatestPriceTick, queryPuppetTradeRoute, queryTraderPositionOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $TraderDisplay, $pnlValue, $route } from "../common/$common"
 import { $puppetLogo } from "../common/$icons"
@@ -335,6 +335,8 @@ export const $Wallet = (config: IWallet) => component((
                     ...Object.entries(routeTypeTraderListMap).map(([routeTypeKey, tradeRouteList]) => {
                       const routeType = params.routeTypeList.find(route => route.routeTypeKey === routeTypeKey)!
 
+
+
                       return $column(layoutSheet.spacing)(
                         $route(routeType),
 
@@ -349,6 +351,8 @@ export const $Wallet = (config: IWallet) => component((
                                 const settledPositionList = tradeRouteDto.settledList.flatMap(pos => pos.position)
                                 const allPositions = [...openPositionList, ...settledPositionList]
                                 const summary = accountSettledPositionListSummary(allPositions, config.wallet.account.address)
+                                const pnl = map(openPnl => summary.pnl + openPnl, openPositionListPnl(openPositionList))
+
 
                                 return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: '10px 0' }))(
                                   $TraderDisplay({
@@ -391,7 +395,7 @@ export const $Wallet = (config: IWallet) => component((
                                     activityTimeframe: params.activityTimeframe
                                   })({}),
 
-                                  $pnlValue(summary.pnl)
+                                  $pnlValue(pnl)
                                 )
                               })
                             ),

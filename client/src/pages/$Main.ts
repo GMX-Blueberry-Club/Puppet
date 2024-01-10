@@ -6,8 +6,8 @@ import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
 import { constant, empty, fromPromise, map, merge, multicast, now, skipRepeats, startWith, take, tap } from '@most/core'
 import { CHAIN } from "gmx-middleware-const"
-import { $Tooltip, $alertContainer, $infoLabeledValue, $spinner } from "gmx-middleware-ui-components"
-import { filterNull, readableUnitAmount, switchMap, getTimeSince, unixTimestampNow, zipState } from "gmx-middleware-utils"
+import { $Tooltip, $alertContainer, $infoLabeledValue } from "gmx-middleware-ui-components"
+import { filterNull, getTimeSince, readableUnitAmount, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { queryRouteTypeList, subgraphStatus } from "puppet-middleware-utils"
 import { $midContainer } from "../common/$common.js"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount.js"
@@ -17,7 +17,7 @@ import { $RouteSubscriptionDrawer } from "../components/portfolio/$RouteSubscrip
 import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor"
 import { newUpdateInvoke } from "../sw/swUtils"
 import { fadeIn } from "../transitions/enter.js"
-import { block, blockChange, chain } from "../wallet/walletLink.js"
+import { blockChange, chain } from "../wallet/walletLink.js"
 import { $Home } from "./$Home.js"
 import { $PublicProfile } from "./$PublicProfile.js"
 import { $Trade } from "./$Trade.js"
@@ -120,6 +120,9 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 const color = timestampDelta > 60 ? pallete.negative : timestampDelta > 10 ? pallete.indeterminate : pallete.positive
                 return color
               }, subgraphStatus)
+
+              const newLocal = take(1, subgraphBeaconStatusColor)
+
               return $column(
                 designSheet.customScroll,
                 style({
@@ -236,7 +239,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                         style({ width: '8px', height: '8px', borderRadius: '50%', outlineOffset: '4px', padding: '6px' }),
                         styleBehavior(map(color => {
                           return { backgroundColor: colorAlpha(color, .5), outlineColor: color }
-                        }, subgraphBeaconStatusColor))
+                        }, newLocal))
                       )(
                         $node(
                           style({
@@ -247,7 +250,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                           }),
                           styleBehavior(map(color => {
                             return { backgroundColor: colorAlpha(color, .5), animationIterationCount: color === pallete.negative ? 'infinite' : 1 }
-                          }, subgraphBeaconStatusColor))
+                          }, newLocal))
                         )()
                       ),
                     })({}),

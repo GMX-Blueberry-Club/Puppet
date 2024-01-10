@@ -149,7 +149,7 @@ export const $sizeAndLiquidation = (mp: IMirrorPositionOpen, markPrice: Stream<b
 
 export const $puppets = (
   puppets: readonly viem.Address[],
-  // click: Tether<INode, string>
+  click?: Tether<INode, string>
 ) => {
 
   // const positionMarkPrice = tradeReader.getLatestPrice(now(pos.indexToken))
@@ -159,21 +159,25 @@ export const $puppets = (
     return $text(style({ fontSize: '0.85rem', color: pallete.foreground }))('-')
   }
                 
-  return $row(layoutSheet.spacingSmall, style({ cursor: 'pointer' }))(
+  return $row(style({ cursor: 'pointer' }))(
     ...puppets.map(address => {
-      return style({ marginRight: '-18px', border: '2px solid black' })(
-        $profileAvatar({ address, profileSize: 25 })
-      )
-      // return click(nodeEvent('click'), map(() => {
-      //   const url = `/app/profile/${address}/puppet`
+      if (!click) {
+        return style({ marginRight: '-12px', border: '2px solid black' })(
+          $profileAvatar({ address, profileSize: 25 })
+        )
+      }
 
-      //   history.pushState({}, '', url)
-      //   return url
-      // }))(
-      //   style({ marginRight: '-18px', border: '2px solid black' })(
-      //     $profileAvatar({ address, profileSize: 25 })
-      //   )
-      // )
+      
+      return click(nodeEvent('click'), map(() => {
+        const url = `/app/profile/puppet/${address}`
+
+        history.pushState({}, '', url)
+        return url
+      }))(
+        style({ marginRight: '-12px', border: '2px solid black' })(
+          $profileAvatar({ address, profileSize: 25 })
+        )
+      )
     }),
     // $content
   )
@@ -357,7 +361,7 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
       // $profileContainer: $defaultBerry(style({ width: '50px' }))
       }),
       route: config.route.create({ fragment: 'baseRoute' }),
-      url: `/app/profile/${config.trader}/${IProfileActiveTab.TRADER.toLowerCase()}`
+      url: `/app/profile/${IProfileActiveTab.TRADER.toLowerCase()}/${config.trader}`
     })({ click: clickTraderTether() }),
 
 
@@ -388,17 +392,9 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
             $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
               $route(config.positionParams, false),
               $puppets(config.summary.puppets),
-
-              // width: 26px;
-              // height: 26px;
-              // background-color: rgb(16, 18, 23);
-              // border-radius: 50%;
-              // margin-right: -18px;
-              // padding: 4px;
-              // border: 1px solid white;
               $icon({ $content: $puppetLogo, width: '26px', svgOps: style({ backgroundColor: pallete.background, borderRadius: '50%', padding: '4px', border: `1px solid ${pallete.message}`, marginRight: '-18px' }), viewBox: '0 0 32 32' }),
             ),
-            $container: $defaultMiniButtonSecondary(style({ borderRadius: '16px', borderColor: Number(expiry) > unixTimestampNow() ? pallete.primary : '' })) 
+            $container: $defaultMiniButtonSecondary(style({ borderRadius: '16px', padding: '6px 2px', borderColor: Number(expiry) > unixTimestampNow() ? pallete.primary : '' })) 
           })({
             click: popRouteSubscriptionEditorTether(constant(expiry))
           })

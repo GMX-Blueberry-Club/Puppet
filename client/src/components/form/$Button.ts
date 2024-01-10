@@ -99,7 +99,7 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
 
   const disabled = combineArray((isDisabled, isCtxPending) => {
     return isDisabled || isCtxPending
-  }, config.disabled || empty(), duringRequest)
+  }, config.disabled || now(false), duringRequest)
 
   return [
     $IntermediateConnectButton({

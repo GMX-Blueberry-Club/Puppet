@@ -54,7 +54,7 @@ export const puppetsColumn = <T extends {puppets: readonly `0x${string}`[]}>(cli
   $head: $text('Puppets'),
   gridTemplate: '90px',
   $bodyCallback: map((pos) => {
-    return $puppets(pos.puppets)
+    return $puppets(pos.puppets, click)
   })
 })
 

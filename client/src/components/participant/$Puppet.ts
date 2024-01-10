@@ -9,7 +9,7 @@ import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $Link, $arrowRight, $icon, $infoTooltipLabel, IMarker } from "gmx-middleware-ui-components"
 import { IPriceTickListMap, filterNull, getMappedValue, groupArrayMany, parseReadableNumber, readableFixedUSD30, readableUnitAmount, switchMap, zipState } from "gmx-middleware-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
-import { IMirrorPositionOpen, IMirrorPositionSettled, IPuppetTradeRoute, ISetRouteType, accountSettledPositionListSummary, queryPuppetTradeRoute } from "puppet-middleware-utils"
+import { IPuppetTradeRoute, ISetRouteType, accountSettledPositionListSummary, openPositionListPnl, queryPuppetTradeRoute } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
@@ -186,6 +186,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
    
 
                           const summary = accountSettledPositionListSummary([...settledPositionList, ...openPositionList], puppetTradeRoute.puppet)
+                          const pnl = map(openPnl => summary.pnl + openPnl, openPositionListPnl(openPositionList, puppetTradeRoute.puppet))
 
                           return $row(layoutSheet.spacing, style({ alignItems: 'center', padding: '10px 0' }))(
                             $TraderDisplay({
@@ -217,7 +218,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
                               activityTimeframe: params.activityTimeframe
                             })({}),
 
-                            $pnlValue(summary.pnl)
+                            $pnlValue(pnl)
                           )
                         })
                       ),
