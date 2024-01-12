@@ -127,7 +127,7 @@ export interface ITradeConfig {
 
 export interface IPositionEditorAbstractParams {
   referralCode: viem.Hex
-  routeTypeList: Stream<ISetRouteType[]>
+  routeTypeListQuery: Stream<Promise<ISetRouteType[]>>
   parentRoute: Route
   chain: ISupportedChain
 }

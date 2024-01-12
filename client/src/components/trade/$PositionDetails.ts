@@ -13,13 +13,6 @@ import { USD_DECIMALS } from "gmx-middleware-const"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 
 
-export enum ITradeFocusMode {
-  collateral,
-  size,
-}
-
-
-
 
 interface IPositionAdjustmentHistory {
   chain: ISupportedChain

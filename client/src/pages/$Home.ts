@@ -193,7 +193,6 @@ export const $Home = (config: ITreasury) => component((
               ? switchMap(deferredPrompt => {
                 return $column(layoutSheet.spacing)(
                   filterNull(map(req => {
-                    req.then(console.log)
 
                     return null
                   }, clickDownloadBtn)) as any,

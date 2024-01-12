@@ -26,6 +26,7 @@ import {
   SubscribeTradeRoute,
   Withdraw,
 } from "../generated/schema"
+import { getPuppetTradeRouteKey } from "./utils/utils"
 
 export function handleOpenPosition(event: OpenPositionEvent): void {
   const requestMirrorPosition = new RequestMirrorPosition(event.params.requestKey)
@@ -130,7 +131,7 @@ export function handleExecutePosition(event: ExecutePositionEvent): void {
 
       for (let i = 0; i < mirrorPositionOpen.puppets.length; i++) {
         const puppet = mirrorPositionOpen.puppets[i]
-        const puppetTradeRouteKey = puppet.concat(mirrorPositionOpen.trader).concat(mirrorPositionOpen.routeTypeKey)
+        const puppetTradeRouteKey = getPuppetTradeRouteKey(puppet, mirrorPositionOpen.trader, mirrorPositionOpen.routeTypeKey)
         const puppetPositionOpen = new PuppetPositionOpen(puppetTradeRouteKey)
 
         puppetPositionOpen.position = mirrorPositionOpen.id
@@ -167,7 +168,7 @@ export function handleExecutePosition(event: ExecutePositionEvent): void {
     for (let i = 0; i < mirrorPositionOpen.puppets.length; i++) {
       const puppet = mirrorPositionOpen.puppets[i]
       const puppetPositionSettled = new PuppetPositionSettled(executePosition.id.concatI32(i))
-      const puppetTradeRouteKey = puppet.concat(mirrorPositionOpen.trader).concat(mirrorPositionOpen.routeTypeKey)
+      const puppetTradeRouteKey = getPuppetTradeRouteKey(puppet, mirrorPositionOpen.trader, mirrorPositionOpen.routeTypeKey)
 
       puppetPositionSettled.position = executePosition.id
       puppetPositionSettled.puppetTradeRoute = puppetTradeRouteKey
@@ -213,35 +214,36 @@ export function handleSetRouteType(event: SetRouteTypeEvent): void {
 }
 
 export function handleSubscribeRoute(event: SubscribeRouteEvent): void {
-  const entity = new SubscribeTradeRoute(
+  const subscribeTradeRoute = new SubscribeTradeRoute(
     event.transaction.hash.concatI32(event.logIndex.toI32())
   )
-  const puppetTradeRouteKey = event.params.puppet.concat(event.params.trader).concat(event.params.routeTypeKey)
-  entity.puppetTradeRoute = puppetTradeRouteKey
-  entity.allowance = event.params.allowance
-  entity.subscriptionExpiry = event.params.subscriptionExpiry
-  entity.trader = event.params.trader
-  entity.puppet = event.params.puppet
-  entity.tradeRoute = event.params.route
-  entity.routeTypeKey = event.params.routeTypeKey
-  entity.subscribe = event.params.subscribe
+  const puppetTradeRouteKey = getPuppetTradeRouteKey(event.params.puppet, event.params.trader, event.params.routeTypeKey)
+  subscribeTradeRoute.puppetTradeRoute = puppetTradeRouteKey
+  subscribeTradeRoute.allowance = event.params.allowance
+  subscribeTradeRoute.subscriptionExpiry = event.params.subscriptionExpiry
+  subscribeTradeRoute.trader = event.params.trader
+  subscribeTradeRoute.puppet = event.params.puppet
+  subscribeTradeRoute.tradeRoute = event.params.route
+  subscribeTradeRoute.routeTypeKey = event.params.routeTypeKey
+  subscribeTradeRoute.subscribe = event.params.subscribe
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
+  subscribeTradeRoute.blockNumber = event.block.number
+  subscribeTradeRoute.blockTimestamp = event.block.timestamp
+  subscribeTradeRoute.transactionHash = event.transaction.hash
+  subscribeTradeRoute.save()
 
-
-  if (PuppetTradeRoute.load(puppetTradeRouteKey) === null) {
-    const puppetTradeRoute = new PuppetTradeRoute(puppetTradeRouteKey)
-    puppetTradeRoute.routeTypeKey = entity.routeTypeKey
-    puppetTradeRoute.trader = entity.trader
-    puppetTradeRoute.puppet = entity.puppet
-    puppetTradeRoute.tradeRoute = event.params.route
-
-    puppetTradeRoute.save()
+  if (PuppetTradeRoute.load(puppetTradeRouteKey)){
+    log.error("PuppetTradeRoute already exists", [])
+    return
   }
 
-  entity.save()
+  const puppetTradeRoute = new PuppetTradeRoute(puppetTradeRouteKey)
+  puppetTradeRoute.routeTypeKey = subscribeTradeRoute.routeTypeKey
+  puppetTradeRoute.trader = subscribeTradeRoute.trader
+  puppetTradeRoute.puppet = subscribeTradeRoute.puppet
+  puppetTradeRoute.tradeRoute = event.params.route
+
+  puppetTradeRoute.save()
 }
 
 export function handleDeposit(event: DepositEvent): void {

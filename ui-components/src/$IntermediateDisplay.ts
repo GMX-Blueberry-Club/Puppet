@@ -12,21 +12,12 @@ import { Abi } from "abitype"
 
 
 export const $spinner = $node(style({
-  minWidth: '60px',
-  maxWidth: '60px',
-  width: '60xp',
-  height: '45px',
-  maxHeight: '45px',
-  borderRadius: '14px',
-  backgroundImage: 'url(/assets/gbc-loop.gif)',
-  backgroundPosition: 'center',
-  backgroundSize: 'contain',
-  backgroundRepeat: 'no-repeat',
   margin: 'auto',
   placeSelf: 'center',
   alignSelf: 'center',
-  backgroundColor: 'black',
-}))()
+}))(
+  $text('Loading...')
+)
 
 
 export interface IIntermediatPromise<T> {

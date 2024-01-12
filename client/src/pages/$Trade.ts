@@ -267,7 +267,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
     
     return getRouteTypeKeyArgs.routeTypeKey
-  }, combineObject({ collateralToken, indexToken, isLong, routeTypeList: config.routeTypeList }))))
+  }, combineObject({ collateralToken, indexToken, isLong, routeTypeList: config.routeTypeListQuery }))))
 
   const marketInfo: Stream<IMarketInfo> = replayLatest(multicast(switchMap(params => {
     const query = getFullMarketInfo(config.chain, params.market, params.marketPrice)
@@ -709,7 +709,7 @@ export const $Trade = (config: ITradeComponent) => component((
     openPositionList,
     tradeConfig,
     marketList,
-    routeTypeList: config.routeTypeList,
+    routeTypeListQuery: config.routeTypeListQuery,
     chain: config.chain,
     parentRoute: config.parentRoute,
     referralCode: config.referralCode,

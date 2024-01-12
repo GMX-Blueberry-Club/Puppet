@@ -4,7 +4,7 @@ import { OrderCollateralDeltaAmountAutoUpdated, OrderCreated, OrderSizeDeltaAuto
 import * as dto from "./dto"
 import { IntervalUnixTime, OrderExecutionStatus, ZERO_BI } from "./utils/const"
 import { getAddressItem, getAddressItemList, getBoolItem, getBytes32Item, getStringItem, getUintItem } from "./utils/datastore"
-import { getIdFromEvent } from "./utils/gmxHelpers"
+import { getIdFromEvent } from "./utils/utils"
 
 export function handleEventLog1(event: EventLog1): void {
   if (event.params.eventName == "OraclePriceUpdate") {

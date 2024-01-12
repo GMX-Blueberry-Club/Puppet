@@ -26,11 +26,6 @@ import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 
-export enum ITradeFocusMode {
-  collateral,
-  size,
-}
-
 
 
 

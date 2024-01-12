@@ -15,7 +15,7 @@ export default (puppet: viem.Address, activityTimeframe: GMX.IntervalTime) => {
     puppet
     trader
     tradeRoute
-    settledList(where: { blockNumber_gte: ${blockTimestamp_gt} }) {
+    settledList(where: { blockTimestamp_gte: ${blockTimestamp_gt} }) {
       id
       position {
         id

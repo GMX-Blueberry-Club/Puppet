@@ -1,4 +1,4 @@
-import { continueWith, join, map } from "@most/core"
+import { continueWith, join, map, multicast } from "@most/core"
 import { Stream } from "@most/types"
 import * as indexDB from './indexDB.js'
 import { IDbParams, openDatabase } from "./indexDB.js"

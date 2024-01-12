@@ -2,10 +2,11 @@ import { Behavior, combineObject, isEmpty, O, Op } from "@aelea/core"
 import { $element, $Node, $text, attr, component, eventElementTarget, IBranch, INode, NodeComposeFn, nodeEvent, style, styleBehavior, styleInline, stylePseudo } from "@aelea/dom"
 import { $column, $icon, $row, Input, layoutSheet, observer } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { $xCross } from "gmx-middleware-ui-components"
-import { combine, constant, delay, empty, filter, map, merge, mergeArray, multicast, never, now, scan, skip, skipRepeats, snapshot, startWith, switchLatest, take, tap, zip } from "@most/core"
+import { constant, empty, filter, map, merge, mergeArray, multicast, never, now, scan, skip, skipRepeats, snapshot, startWith, switchLatest, take, tap, zip } from "@most/core"
 import { append, remove } from "@most/prelude"
 import { Stream } from "@most/types"
+import { $xCross } from "gmx-middleware-ui-components"
+import { streamOf } from "gmx-middleware-utils"
 import { $caretDown } from "../../common/elements/$icons.js"
 import { $Select, ISelect } from "./$Select.js"
 
@@ -174,6 +175,7 @@ export const $defaultChip = $row(style({ backgroundColor: pallete.primary, paddi
 export interface IMultiselectDrop<T> extends Input<T[]> {
   placeholder?: string
   closeOnSelect?: boolean
+  getId?: (item: T) => string | number
 
   selector: Omit<IMultiselect<T>, 'value'>
 
@@ -202,6 +204,7 @@ export const $DropMultiSelect = <T>({
   closeOnSelect = true,
   openMenu = empty(),
   $input = $element('input'),
+  getId,
 }: IMultiselectDrop<T>
 ) => component((
   [pick, pickTether]: Behavior<T, T>,
@@ -228,7 +231,7 @@ export const $DropMultiSelect = <T>({
   const select = switchLatest(
     map(initSeedList => {
       return skip(1, scan((seed, next) => {
-        const matchedIndex = seed.indexOf(next)
+        const matchedIndex = getId ? seed.findIndex(item => getId(item) === getId(next)) : seed.indexOf(next)
 
         if (matchedIndex === -1) {
           return append(next, seed)
@@ -326,7 +329,7 @@ export const $DropMultiSelect = <T>({
 
         ),
 
-        switchLatest(snapshot((selectedList, show) => {
+        switchLatest(snapshot((params, show) => {
           if (!show) {
             return empty()
           }
@@ -338,7 +341,10 @@ export const $DropMultiSelect = <T>({
             })
           )
 
-          const optionSelection = selector.list.filter(n => selectedList.indexOf(n) === -1)
+          const optionSelection = params.list.filter(n => {
+            const id = getId ? getId(n) : n
+            return params.selectionChange.findIndex(item => getId ? getId(item) === id : item === id) === -1
+          })
 
           if (optionSelection.length === 0) {
             return $floatingContainer($text('Nothing to select'))
@@ -377,7 +383,7 @@ export const $DropMultiSelect = <T>({
               select: pickTether()
             })
           )
-        }, selectionChange, isOpen)),
+        }, combineObject({ list: streamOf(selector.list), selectionChange }), isOpen)),
       ),
 
 

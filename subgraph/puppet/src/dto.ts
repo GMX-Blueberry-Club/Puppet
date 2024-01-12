@@ -3,7 +3,7 @@ import { EventLog } from "../generated/EventEmitter/EventEmitter"
 import { MarketCreated, OrderCreated, OrderStatus, PositionDecrease, PositionFeesCollected, PositionIncrease, PositionOpen, PositionSettled } from "../generated/schema"
 import { MARKET_TOKEN_MAP, OrderExecutionStatus, ZERO_BI } from "./utils/const"
 import { getAddressItem, getBoolItem, getBytes32Item, getIntItem, getUintItem } from "./utils/datastore"
-import { getIdFromEvent } from "./utils/gmxHelpers"
+import { getIdFromEvent } from "./utils/utils"
 
 
 

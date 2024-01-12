@@ -33,7 +33,7 @@ export const $TradeCardPreview = (config: ITradeCardPreview) => component((
 
   const hoverChartPnl = filterNull(map(params => {
     if (params.pnlCrossHairTimeChange?.point) {
-      const value = params.pnlCrossHairTimeChange.seriesData.values().next().value.value
+      const value = params.pnlCrossHairTimeChange.seriesData.values().next().value?.value
       return value
     }
 

@@ -3,9 +3,10 @@ import { NodeComposeFn, $Node, component, IBranch, nodeEvent, style } from "@ael
 import { constant, switchLatest, now } from "@most/core"
 import { Stream } from "@most/types"
 import { $defaultSelectContainer } from "./$Dropdown.js"
+import { streamOf, switchMap } from "gmx-middleware-utils"
 
 export interface ISelect<T> {
-  list: T[]
+  list: T[] | Stream<T[]>
   value: Stream<T>;
 
   $container?: NodeComposeFn<$Node>
@@ -18,24 +19,25 @@ export const $Select = <T>({ list, $$option, $container = $defaultSelectContaine
 ) => {
 
   return [
-    $container(
-      ...list.map(item => {
+    switchMap(_list => {
+      return $container(
+        ..._list.map(item => {
 
-        const selectBehavior = selectTether(
-          nodeEvent('click'),
-          constant(item)
-        )
-
-        const $opt = style({ cursor: 'pointer' })(
-          switchLatest(
-            $$option(now(item))
-          
+          const selectBehavior = selectTether(
+            nodeEvent('click'),
+            constant(item)
           )
-        )
 
-        return selectBehavior($opt)
-      })
-    ),
+          const $opt = style({ cursor: 'pointer' })(
+            switchLatest(
+              $$option(now(item))
+            )
+          )
+
+          return selectBehavior($opt)
+        })
+      )
+    }, streamOf(list)),
 
     {
       select

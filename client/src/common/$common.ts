@@ -375,7 +375,9 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
 ) => {
 
   const puppetSubscriptionExpiry = switchMap(w3p => {
-    return w3p ? getPuppetSubscriptionExpiry(w3p.account.address, config.positionParams.collateralToken, config.positionParams.indexToken, config.positionParams.isLong) : now(0n)
+    return w3p
+      ? getPuppetSubscriptionExpiry(w3p.account.address, config.positionParams.collateralToken, config.positionParams.indexToken, config.positionParams.isLong)
+      : now(0n)
   }, wallet)
 
   return [

@@ -74,8 +74,9 @@ export const $Baseline = (config: IBaselineChart) => {
       shiftVisibleRangeOnNewBar: true,
       rightBarStaysOnScroll: true,
       fixRightEdge: true,
+      fixLeftEdge: true,
       borderVisible: false,
-      
+      rightOffset: 0,
     },
     ...config.chartConfig || {}
   }
@@ -87,7 +88,7 @@ export const $Baseline = (config: IBaselineChart) => {
       const series = api.addBaselineSeries(baselineOptions)
       setTimeout(() => {
         api.timeScale().fitContent()
-      }, 150)
+      }, 55)
       
       return series
     }

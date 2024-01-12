@@ -27,10 +27,10 @@ import { IChangeSubscription } from "./$RouteSubscriptionEditor"
 interface IRouteSubscribeDrawer {
   modifySubscriber: Stream<IChangeSubscription>
   modifySubscriptionList: Stream<IChangeSubscription[]>
-  routeTypeList: Stream<ISetRouteType[]>
+  routeTypeListQuery: Stream<Promise<ISetRouteType[]>>
 }
 
-export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscriber, routeTypeList }: IRouteSubscribeDrawer) => component((
+export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscriber, routeTypeListQuery }: IRouteSubscribeDrawer) => component((
   [requestChangeSubscription, requestChangeSubscriptionTether]: Behavior<IWalletClient, Promise<viem.TransactionReceipt>>,
   [clickClose, clickCloseTether]: Behavior<any>,
   [clickRemoveSubsc, clickRemoveSubscTether]: Behavior<any, IChangeSubscription >,

@@ -1,34 +1,99 @@
-import { combineObject } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
+import { pallete } from "@aelea/ui-components-theme"
+import { fromPromise, map, startWith } from "@most/core"
 import { Stream } from "@most/types"
-import {  readableFixedUSD30, readableLeverage, switchMap } from "gmx-middleware-utils"
-import { IMirrorPosition, IMirrorPositionOpen, IMirrorPositionSettled, accountSettledPositionListSummary } from "puppet-middleware-utils"
+import { readableFixedUSD30, readableLeverage, switchMap, zipState } from "gmx-middleware-utils"
+import { IMirrorPositionOpen, IMirrorPositionSettled, accountSettledPositionListSummary } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile.js"
 import { $heading2 } from "../../common/$text.js"
-import { $metricLabel, $metricRow } from "./profileUtils.js"
-
 
 
 export interface IAccountSummary {
   route: router.Route
   address: viem.Address
-  settledPositionList: Stream<IMirrorPositionSettled[]>
-  openPositionList: Stream<IMirrorPositionOpen[]>
+  settledPositionListQuery: Stream<Promise<IMirrorPositionSettled[]>>
+  openPositionListQuery: Stream<Promise<IMirrorPositionOpen[]>>
 }
 
 
-export const $TraderProfileSummary = ({ address, openPositionList, route, settledPositionList }: IAccountSummary) => component((
+const intermediateText = <T>(query: Promise<T>, cb: (x: T) => string) => {
+  const txt = fromPromise(query)
+  return startWith('-', map(cb, txt))
+}
+
+
+export const $TraderProfileSummary = ({ address, openPositionListQuery, route, settledPositionListQuery }: IAccountSummary) => component((
 
 ) => {
+
+  const metrics = map(async params => {
+    const allPositions = [...await params.settledPositionListQuery, ...await params.openPositionListQuery]
+
+    return accountSettledPositionListSummary(allPositions)
+  }, zipState({ openPositionListQuery, settledPositionListQuery }))
+
   return [
 
     $column(layoutSheet.spacing, style({ minHeight: '90px' }))(
-      switchMap(params => {
-        const allPositions = [...params.settledPositionList, ...params.openPositionList]
-        const metrics = accountSettledPositionListSummary(allPositions)
+      switchMap(summaryQuery => {
+        return $node(style({ display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column', gap: screenUtils.isDesktopScreen ? '76px' : '26px', zIndex: 10, placeContent: 'center', alignItems: 'center', padding: '0 8px' }))(
+          $row(
+            $profileDisplay({
+              address,
+              labelSize: '22px',
+              profileSize: screenUtils.isDesktopScreen ? 90 : 90
+            })
+          ),
+          $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end' }))(
+            // $metricRow(
+            //   params.summary.subscribedPuppets.length
+            //     ? $metricValue(style({ paddingBottom: '5px' }))(
+            //       ...params.summary.subscribedPuppets.map(address => {
+            //         return $profileAvatar({ address, profileSize: 26 })
+            //       })
+            //     )
+            //     : $metricValue($text('-')),
+            //   $metricLabel($text('Puppets'))
+            // ),
+            $metricRow(
+              $heading2(intermediateText(summaryQuery, summary => `${summary.winCount} / ${summary.lossCount}`)),
+              $metricLabel($text('Win / Loss'))
+            ),
+            $metricRow(
+              $heading2(intermediateText(summaryQuery, summary => readableFixedUSD30(summary.avgCollateral))),
+              $metricLabel($text('Avg Collateral'))
+            ),
+            $metricRow(
+              $heading2(intermediateText(summaryQuery, summary => readableLeverage(summary.avgSize, summary.avgCollateral))),
+              $metricLabel($text('Avg Leverage'))
+            )
+          ),
+        )
+      }, metrics)
+      // $IntermediatePromise({
+
+      // })({}),
+    ),
+    {
+    }
+  ]
+})
+
+export const $PuppetProfileSummary = ({ address, openPositionListQuery, settledPositionListQuery, route }: IAccountSummary) => component(() => {
+
+  const metrics = map(async params => {
+    const allPositions = [...await params.settledPositionListQuery, ...await params.openPositionListQuery]
+
+    return accountSettledPositionListSummary(allPositions)
+  }, zipState({ openPositionListQuery, settledPositionListQuery }))
+
+  return [
+
+    $column(layoutSheet.spacing, style({ minHeight: '90px' }))(
+      switchMap(summaryQuery => {
 
         return $node(style({ display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column', gap: screenUtils.isDesktopScreen ? '76px' : '26px', zIndex: 10, placeContent: 'center', alignItems: 'center', padding: '0 8px' }))(
           $row(
@@ -50,69 +115,24 @@ export const $TraderProfileSummary = ({ address, openPositionList, route, settle
             //   $metricLabel($text('Puppets'))
             // ),
             $metricRow(
-              $heading2(metrics.size ? `${metrics.winCount} / ${metrics.lossCount}` : '-'),
+              $heading2(intermediateText(summaryQuery, summary => `${summary.winCount} / ${summary.lossCount}`)),
               $metricLabel($text('Win / Loss'))
             ),
             $metricRow(
-              $heading2(readableFixedUSD30(metrics.avgCollateral)),
+              $heading2(intermediateText(summaryQuery, summary => readableFixedUSD30(summary.avgCollateral))),
               $metricLabel($text('Avg Collateral'))
-            ),
-            $metricRow(
-              $heading2(metrics.size ? readableLeverage(metrics.avgSize, metrics.avgCollateral) : '-'),
-              $metricLabel($text('Avg Leverage'))
             )
           ),
         )
-      }, combineObject({ settledPositionList, openPositionList })),
+      }, metrics),
     ),
     {
     }
   ]
 })
 
-export const $PuppetProfileSummary = (config: IAccountSummary) => component(() => {
-
-
-  return [
-
-    $column(layoutSheet.spacing, style({ minHeight: '90px' }))(
-      switchMap(params => {
-        const metrics = accountSettledPositionListSummary(params.settledTradeList, config.address)
-
-        return $node(style({ display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column', gap: screenUtils.isDesktopScreen ? '76px' : '26px', zIndex: 10, placeContent: 'center', alignItems: 'center', padding: '0 8px' }))(
-          $row(
-            $profileDisplay({
-              address: config.address,
-              labelSize: '22px',
-              profileSize: screenUtils.isDesktopScreen ? 90 : 90
-            })
-          ),
-          $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end' }))(
-            // $metricRow(
-            //   params.summary.subscribedPuppets.length
-            //     ? $metricValue(style({ paddingBottom: '5px' }))(
-            //       ...params.summary.subscribedPuppets.map(address => {
-            //         return $profileAvatar({ address, profileSize: 26 })
-            //       })
-            //     )
-            //     : $metricValue($text('-')),
-            //   $metricLabel($text('Puppets'))
-            // ),
-            $metricRow(
-              $heading2(metrics.size ? `${metrics.winCount} / ${metrics.lossCount}` : '-'),
-              $metricLabel($text('Win / Loss'))
-            ),
-            $metricRow(
-              $heading2(readableFixedUSD30(metrics.avgCollateral)),
-              $metricLabel($text('Avg Collateral'))
-            )
-          ),
-        )
-      }, combineObject({ settledTradeList: config.settledPositionList })),
-    ),
-    {
-    }
-  ]
-})
+export const $metricRow = $column(layoutSheet.spacingTiny, style({ placeContent: 'center', alignItems: 'center' }))
+export const $metricLabel = $row(style({ color: pallete.foreground, letterSpacing: '1px', fontSize: screenUtils.isDesktopScreen ? '.85rem' : '.85rem' }))
+export const $metricValue = $row(style({ fontWeight: 900, letterSpacing: '1px', fontSize: '1.85rem' }))
 
 

@@ -4,11 +4,14 @@ import { IProfileMode, ITradeFocusMode } from '../type'
 import { ISortBy } from 'gmx-middleware-ui-components'
 import { IMarketCreatedEvent } from 'gmx-middleware-utils'
 import * as viem from 'viem'
+import { ISetRouteType } from 'puppet-middleware-utils'
 
 export const store = storeScope.createStoreDefinition('root', 3, {
   global: {
     initialState: {
       activityTimeframe: GMX.IntervalTime.MONTH,
+      marketList: [] as IMarketCreatedEvent[],
+      selectedTradeRouteList: [] as ISetRouteType[],
     }
   },
   tradeBox: {
@@ -32,7 +35,6 @@ export const store = storeScope.createStoreDefinition('root', 3, {
   leaderboard: {
     initialState: {
       sortBy: { direction: 'desc', selector: 'pnl' } as ISortBy,
-      filterMarketMarketList: [] as IMarketCreatedEvent[],
       isLong: null as boolean | null,
     }
   },

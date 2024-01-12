@@ -4,19 +4,22 @@ import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
-import { constant, empty, fromPromise, map, merge, multicast, now, skipRepeats, startWith, take, tap } from '@most/core'
+import { constant, empty, map, merge, multicast, now, skipRepeats, startWith, take, tap } from '@most/core'
+import * as GMX from 'gmx-middleware-const'
 import { CHAIN } from "gmx-middleware-const"
 import { $Tooltip, $alertContainer, $infoLabeledValue } from "gmx-middleware-ui-components"
 import { filterNull, getTimeSince, readableUnitAmount, switchMap, unixTimestampNow } from "gmx-middleware-utils"
-import { queryRouteTypeList, subgraphStatus } from "puppet-middleware-utils"
+import { ISetRouteType, queryLatestPriceTick, queryRouteTypeList, subgraphStatus } from "puppet-middleware-utils"
 import { $midContainer } from "../common/$common.js"
 import { $IntermediateConnectButton } from "../components/$ConnectAccount.js"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu.js'
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
 import { $RouteSubscriptionDrawer } from "../components/portfolio/$RouteSubscriptionDrawer.js"
 import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor"
+import * as storeDb from "../data/store/store.js"
 import { newUpdateInvoke } from "../sw/swUtils"
 import { fadeIn } from "../transitions/enter.js"
+import * as storage from "../utils/storage/storeScope.js"
 import { blockChange, chain } from "../wallet/walletLink.js"
 import { $Home } from "./$Home.js"
 import { $PublicProfile } from "./$PublicProfile.js"
@@ -37,13 +40,14 @@ interface Website {
 }
 
 
-
 export const $Main = ({ baseRoute = '' }: Website) => component((
   [routeChanges, linkClickTether]: Behavior<any, string>,
   [modifySubscriptionList, modifySubscriptionListTether]: Behavior<IChangeSubscription[]>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
   [clickUpdateVersion, clickUpdateVersionTether]: Behavior<any, bigint>,
 
+  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<GMX.IntervalTime>,
+  [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 ) => {
 
 
@@ -87,8 +91,14 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       : style({}),
   )
   const isDesktopScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
-  const routeTypeList = fromPromise(queryRouteTypeList())
 
+  const activityTimeframe = storage.replayWrite(storeDb.store.global, changeActivityTimeframe, 'activityTimeframe')
+  const selectedTradeRouteList = replayLatest(multicast(storage.replayWrite(storeDb.store.global, selectTradeRouteList, 'selectedTradeRouteList')))
+
+  const routeTypeListQuery = now(queryRouteTypeList())
+  const priceTickMapQuery = map(params => {
+    return queryLatestPriceTick({ activityTimeframe: params.activityTimeframe }, 50)
+  }, combineObject({ activityTimeframe }))
 
   return [
     $column(
@@ -146,11 +156,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                   $IntermediateConnectButton({
                     $$display: map(wallet => {
                       return $midContainer(
-                        $Wallet({
-                          routeTypeList,
-                          route: walletRoute,
-                          wallet: wallet,
-                        })({
+                        $Wallet({ route: walletRoute, routeTypeListQuery, wallet, activityTimeframe, selectedTradeRouteList, priceTickMapQuery, })({
                           modifySubscriber: modifySubscriberTether(),
                           changeRoute: linkClickTether(),
                         }))
@@ -159,23 +165,20 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 ),
                 router.match(leaderboardRoute)(
                   $midContainer(
-                    fadeIn($Leaderboard({
-                      // subscriptionList,
-                      route: leaderboardRoute,
-                    })({
-                      routeChange: linkClickTether(
-                        tap(console.log)
-                      ),
+                    fadeIn($Leaderboard({ route: leaderboardRoute, activityTimeframe, selectedTradeRouteList, priceTickMapQuery, routeTypeListQuery })({
+                      changeActivityTimeframe: changeActivityTimeframeTether(),
+                      selectTradeRouteList: selectTradeRouteListTether(),
+                      routeChange: linkClickTether(),
                       modifySubscriber: modifySubscriberTether(),
                     }))
                   )
                 ),
                 router.contains(profileRoute)(
                   $midContainer(
-                    fadeIn($PublicProfile({
-                      route: profileRoute, routeTypeList,
-                    })({
+                    fadeIn($PublicProfile({ route: profileRoute, routeTypeListQuery, priceTickMapQuery, activityTimeframe, selectedTradeRouteList })({
                       modifySubscriber: modifySubscriberTether(),
+                      changeActivityTimeframe: changeActivityTimeframeTether(),
+                      selectTradeRouteList: selectTradeRouteListTether(),
                       changeRoute: linkClickTether(),
                     }))
                   )
@@ -201,18 +204,12 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                           $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
                         ),
                       ),
-
                       $node(style({ height: '100px' }))(),
                     )
                   ),
                 ),
                 router.match(tradeRoute)(
-                  $Trade({
-                    routeTypeList,
-                    chain: chainEvent,
-                    referralCode: BLUEBERRY_REFFERAL_CODE,
-                    parentRoute: tradeRoute
-                  })({
+                  $Trade({ routeTypeListQuery, chain: chainEvent, referralCode: BLUEBERRY_REFFERAL_CODE, parentRoute: tradeRoute })({
                     changeRoute: linkClickTether()
                   })
                 ),
@@ -289,7 +286,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
           $column(style({ maxWidth: '1000px', margin: '0 auto', width: '100%', zIndex: 10 }))(
             $RouteSubscriptionDrawer({
-              routeTypeList,
+              routeTypeListQuery,
               modifySubscriptionList: replayLatest(modifySubscriptionList, []),
               modifySubscriber,
             })({

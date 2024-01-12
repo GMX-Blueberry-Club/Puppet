@@ -59,7 +59,7 @@ export async function queryTraderPositionOpen(filter: IQueryTraderPositionOpen) 
     filter: {
       trader
     },
-  })
+  }, { requestPolicy: 'network-only' })
   
   return res
 }
@@ -232,9 +232,9 @@ export async function queryLeaderboard() {
 }
 
 export async function queryRouteTypeList() {
-  const query = querySubgraph(subgraphClient, {
+  const query = await querySubgraph(subgraphClient, {
     schema: schema.setRouteType,
   })
 
-  return query
+  return query.filter(x => x.collateralToken === GMX.ARBITRUM_ADDRESS.USDC)
 }

@@ -1,4 +1,4 @@
-import { combineArray, map } from "@most/core"
+import { combineArray, map, now } from "@most/core"
 import { Stream } from "@most/types"
 import { factor, getPositionPnlUsd, lst } from "gmx-middleware-utils"
 import * as viem from "viem"
@@ -91,6 +91,8 @@ export function openPositionListPnl(
   tradeList: IMirrorPositionOpen[],
   puppet?: viem.Address,
 ): Stream<bigint> {
+
+  if (tradeList.length === 0) return now(0n)
 
   const pnlList = tradeList.map(mp => {
     return map(pm => {

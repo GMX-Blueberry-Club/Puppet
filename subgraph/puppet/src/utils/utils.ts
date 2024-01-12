@@ -42,5 +42,7 @@ export function calculatePositionDeltaPercentage(delta: BigInt, collateral: BigI
   return  delta.times(BASIS_POINTS_DIVISOR).div(collateral)
 }
 
-
+export function getPuppetTradeRouteKey(puppet: Bytes, trader: Bytes, routeTypeKey: Bytes): Bytes {
+  return puppet.concat(trader).concat(routeTypeKey)
+}
 

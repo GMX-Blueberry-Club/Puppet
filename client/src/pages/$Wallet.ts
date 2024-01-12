@@ -30,7 +30,7 @@ import { $card, $card2, $responsiveFlex } from "../common/elements/$common"
 import { $caretDown } from "../common/elements/$icons"
 import { $Popover } from "../components/$Popover"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
-import { $TraderPortfolio } from "../components/participant/$Trader"
+import { $TraderPortfolio } from "../components/participant/$TraderPortfolio.js"
 import { $AssetDepositEditor } from "../components/portfolio/$AssetDepositEditor.js"
 import { $AssetWithdrawEditor } from "../components/portfolio/$AssetWithdrawEditor"
 import { $RouteSubscriptionEditor, IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor.js"
@@ -42,16 +42,7 @@ import * as storage from "../utils/storage/storeScope.js"
 import { IWalletClient } from "../wallet/walletLink.js"
 import { $seperator2 } from "./common"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "./components/$LastActivity"
-import { IProfileMode } from "../data/type"
-
-
-
-export interface IWallet {
-  wallet: IWalletClient
-  route: router.Route
-  routeTypeList: Stream<ISetRouteType[]>
-}
-
+import { IPageGlobalParams, IProfileMode } from "../data/type"
 
 
 const optionDisplay = {
@@ -66,7 +57,7 @@ const optionDisplay = {
 }
 
 
-export const $Wallet = (config: IWallet) => component((
+export const $Wallet = (config: IPageGlobalParams & { wallet: IWalletClient }) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [selectProfileMode, selectProfileModeTether]: Behavior<IProfileMode>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
@@ -82,9 +73,8 @@ export const $Wallet = (config: IWallet) => component((
 
 ) => {
 
-  const { wallet, route, routeTypeList } = config
+  const { wallet, route, routeTypeListQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery } = config
 
-  const activityTimeframe = storage.replayWrite(storeDb.store.global, changeActivityTimeframe, 'activityTimeframe')
   const profileMode = storage.replayWrite(storeDb.store.wallet, selectProfileMode, 'selectedTab')
 
   const datastore = connectContract(PUPPET.CONTRACT[42161].Datastore)
@@ -96,9 +86,7 @@ export const $Wallet = (config: IWallet) => component((
     join(constant(readDepositBalance, awaitPromises(requestWithdrawAsset))),
   ])
 
-  const priceTickMap = switchMap(params => {
-    return fromPromise(queryLatestPriceTick({ activityTimeframe: params.activityTimeframe }))
-  }, combineObject({ activityTimeframe: activityTimeframe }))
+
 
   return [
 
@@ -149,7 +137,7 @@ export const $Wallet = (config: IWallet) => component((
                   // console.log(params)
                   const hoverChartPnl = filterNull(map(params => {
                     if (params.pnlCrossHairTimeChange?.point) {
-                      const value = params.pnlCrossHairTimeChange.seriesData.values().next().value.value
+                      const value = params.pnlCrossHairTimeChange.seriesData.values().next().value?.value
                       return value
                     }
 
@@ -423,12 +411,12 @@ export const $Wallet = (config: IWallet) => component((
           ) 
         }
 
-        const settledTradeList = awaitPromises(map(async params => {
+        const settledPositionList = awaitPromises(map(async params => {
           const positionList = await getTraderPositionSettled({ trader: config.wallet.account.address, activityTimeframe: params.activityTimeframe })
           return positionList
         }, combineObject({ activityTimeframe })))
 
-        const openTradeList = fromPromise(queryTraderPositionOpen({ trader: config.wallet.account.address }))
+        const openPositionList = fromPromise(queryTraderPositionOpen({ trader: config.wallet.account.address }))
 
 
         return $column(layoutSheet.spacingTiny)(
@@ -439,12 +427,12 @@ export const $Wallet = (config: IWallet) => component((
             })
           ),
           $TraderPortfolio({
-            priceTickMap, openTradeList, settledTradeList,
-            address, activityTimeframe,
+            priceTickMapQuery, openPositionListQuery, settledPositionListQuery,
+            address, activityTimeframe, selectedTradeRouteList, routeTypeListQuery,
             route: config.route,
           })({
-            modifySubscriber: modifySubscriberTether(),
-            changeRoute: changeRouteTether(),
+
+            
             changeActivityTimeframe: changeActivityTimeframeTether(),
           })
         ) 
@@ -454,7 +442,7 @@ export const $Wallet = (config: IWallet) => component((
     ),
 
     {
-      modifySubscriber,
+      modifySubscriber, changeActivityTimeframe,
       changeRoute
     }
   ]
