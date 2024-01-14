@@ -66,7 +66,6 @@ import { ITradeFocusMode } from "../../data/type"
 
 
 export interface ITradeParams {
-  marketList: IMarket[]
   tradeRoute: viem.Address | null
   routeTypeKey: viem.Hex
 
@@ -75,13 +74,12 @@ export interface ITradeParams {
   isTradingEnabled: boolean
   isPrimaryApproved: boolean
 
-
   marketPrice: IMarketPrice
   collateralPrice: bigint
   primaryPrice: bigint
   indexPrice: bigint
 
-  availableIndexLiquidityUsd: bigint
+  marketAvailableLiquidityUsd: bigint
   walletBalance: bigint
 
   executionFee: bigint
@@ -95,10 +93,7 @@ export interface ITradeParams {
   collateralDescription: ITokenDescription
 
   averagePrice: bigint | null
-  liquidationPrice: bigint | null
-
-  // collateralTokenPoolInfo: trade.ITokenPoolInfo
-}
+  liquidationPrice: bigint | null}
 
 
 
@@ -106,7 +101,6 @@ export interface ITradeParams {
 export interface ITradeConfig {
   focusPrice: number | null
   market: IMarket
-  marketInfo: IMarketInfo
   isLong: boolean
   indexToken: viem.Address
   primaryToken: viem.Address
@@ -134,11 +128,9 @@ export interface IPositionEditorAbstractParams {
 
 
 interface IPositionEditorConfig extends IPositionEditorAbstractParams {
-  openPositionList: Stream<IMirrorPositionOpen[]>
-  marketList: Stream<IMarket[]>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>
-  resetAdjustments: Stream<null>
+  resetAdjustments: Stream<any>
   $container: NodeComposeFn<$Node>
 }
 
@@ -149,7 +141,6 @@ const LIMIT_LEVERAGE_NORMAL = formatFixed(GMX.MAX_LEVERAGE_FACTOR, 4)
 const MIN_LEVERAGE_NORMAL = formatFixed(GMX.MIN_LEVERAGE_FACTOR, 4) / LIMIT_LEVERAGE_NORMAL
 
 export const $PositionEditor = (config: IPositionEditorConfig) => component((
-
   [clickSettingsPopover, clickSettingsPopoverTether]: Behavior<any, boolean>,
   [switchIsLong, switchIsLongTether]: Behavior<boolean>,
 
@@ -159,11 +150,11 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   [inputSizeDeltaUsd, inputSizeDeltaTetherUsd]: Behavior<INode, bigint>,
 
   [changePrimaryToken, changePrimaryTokenTether]: Behavior<viem.Address, viem.Address>,
-  [changeMarket, changeMarketTether]: Behavior<any, IMarket>,
+  [changeMarketToken, changeMarketTokenTether]: Behavior<any, viem.Address>,
   [clickChooseMarketPopover, clickChooseMarketPopoverTether]: Behavior<any>,
-  [changeIsUsdCollateralToken, changeIsUsdCollateralTokenTether]: Behavior<boolean>,
+  // [changeIsUsdCollateralToken, changeIsUsdCollateralTokenTether]: Behavior<boolean>,
 
-  [slideLeverage, slideLeverageTether]: Behavior<number, bigint>,
+  [changeLeverage, changeLeverageTether]: Behavior<number, bigint>,
   [changeSlippage, changeSlippageTether]: Behavior<string, bigint>,
   [changeExecutionFeeBuffer, changeExecutionFeeBufferTether]: Behavior<string, bigint>,
 
@@ -173,10 +164,10 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
   const {
     collateralToken, collateralDelta, collateralDeltaUsd, sizeDelta, focusMode, indexToken,
-    market, marketInfo, primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, isUsdCollateralToken
+    market, primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, isUsdCollateralToken
   } = config.tradeConfig
   const {
-    availableIndexLiquidityUsd, averagePrice, 
+    marketAvailableLiquidityUsd, averagePrice, 
     collateralDescription, collateralPrice, adjustmentFeeUsd, executionFee,
 
     indexDescription, marketPrice,
@@ -529,7 +520,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
                 const primaryCollateralThreshold = getBasisPoints(params.collateralDelta, params.walletBalance)
 
-                if (primaryCollateralThreshold > 9000n && primaryCollateralThreshold < 10000n) {
+                if (primaryCollateralThreshold > 9000n && primaryCollateralThreshold <= 10000n) {
                   return true
                 }
                 
@@ -688,7 +679,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
             }, combineObject({ position, adjustmentFeeUsd, collateralDeltaUsd, netPositionValueUsd, sizeDeltaUsd, focusMode, isIncrease, walletBalance })),
             thumbText: map(n => (n === 1 ? LIMIT_LEVERAGE_NORMAL : formatLeverageNumber.format(n * LIMIT_LEVERAGE_NORMAL)))
           })({
-            change: slideLeverageTether(
+            change: changeLeverageTether(
               map(leverage => {
                 const leverageRatio = BigInt(Math.round(Math.abs(leverage) * Number(GMX.MAX_LEVERAGE_FACTOR)))
 
@@ -719,13 +710,12 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
             $Popover({
               open: constant(
                 $MarketInfoList({
-                  marketList: config.marketList,
                   chain: config.chain,
                   $rowCallback: map(params => {
                     return $defaultTableRowContainer(style({ borderTop: `1px solid ${colorAlpha(pallete.foreground, .20)}` }))(
-                      changeMarketTether(
+                      changeMarketTokenTether(
                         nodeEvent('click'),
-                        constant(params.market),
+                        constant(params.market.marketToken),
                       )
                     )
                   })
@@ -891,16 +881,10 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
     {
       switchIsLong,
       changePrimaryToken,
-      changeMarket,
-      switchFocusMode: mergeArray([
-        // constant(ITradeFocusMode.collateral, clickPrimary),
-        switchFocusMode,
-      ]),
-      leverage: mergeArray([
-        slideLeverage,
-        // switchMap(ii=> ii ? empty() : clickPrimary, isIncrease)
-      ]),
-      isUsdCollateralToken: changeIsUsdCollateralToken,
+      changeMarketToken,
+      switchFocusMode,
+      changeLeverage,
+      // isUsdCollateralToken: changeIsUsdCollateralToken,
       changeCollateralDeltaUsd: mergeArray([
         inputPrimaryAmount,
         autoChangeCollateralAmount

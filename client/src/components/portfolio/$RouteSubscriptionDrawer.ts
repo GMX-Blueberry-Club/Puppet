@@ -143,7 +143,7 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
                     
               })
             )
-          }, combineObject({ modifySubscriptionList, routeTypeList })),
+          }, combineObject({ modifySubscriptionList, routeTypeList: awaitPromises(routeTypeListQuery) })),
 
           $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between' }))(
             switchMap(amount => {

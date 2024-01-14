@@ -2,19 +2,18 @@
 import { Behavior, combineObject } from "@aelea/core"
 import { $element, $node, $text, attr, component, style, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { empty, map, mergeArray, now, recoverWith, snapshot, take } from "@most/core"
+import { map, mergeArray, now, snapshot } from "@most/core"
+import * as wagmi from "@wagmi/core"
 import { IntervalTime } from "gmx-middleware-const"
 import { formatFixed, parseBps, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
-import { ISubscribeTradeRouteDto, getPuppetAllowancesKey } from "puppet-middleware-utils"
+import { getPuppetAllowancesKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { theme } from "../../assignThemeSync.js"
 import { $TextField } from "../../common/$TextField.js"
-import { contractReader } from "../../logic/common"
-import { IWalletClient, wallet } from "../../wallet/walletLink"
+import { wallet } from "../../wallet/walletLink"
 import { $ButtonSecondary } from "../form/$Button.js"
-
 
 interface IRouteSubscriptionEditor {
   // tradeRoute: viem.Address
@@ -51,14 +50,17 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
 ) => {
 
   const puppetContractMap = PUPPET.CONTRACT[arbitrum.id]
-  const datastoreReader = contractReader(puppetContractMap.Datastore) 
   const allowance = mergeArray([
-    switchMap(wallet => {
-      if (wallet == null) return now(0n)
-      const currentAllowance = map(([aa, bb]) => {
-        return aa ? bb : undefined
-      }, datastoreReader('tryGetAddressToUintFor', getPuppetAllowancesKey(wallet.account.address), config.tradeRoute))
-      return currentAllowance
+    switchMap(async wallet => {
+      if (wallet == null) return 0n
+
+      const [exists, factor] = await wagmi.readContract({
+        ...puppetContractMap.Datastore,
+        functionName: 'tryGetAddressToUintFor',
+        args: [getPuppetAllowancesKey(wallet.account.address), config.tradeRoute]
+      })
+
+      return exists ? factor : 0n
     }, wallet),
     inputAllowance
   ])

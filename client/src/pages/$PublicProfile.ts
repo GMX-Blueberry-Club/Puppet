@@ -6,11 +6,11 @@ import { map, mergeArray, now } from "@most/core"
 import * as GMX from 'gmx-middleware-const'
 import { $ButtonToggle, $defaulButtonToggleContainer } from "gmx-middleware-ui-components"
 import { ETH_ADDRESS_REGEXP, switchMap } from "gmx-middleware-utils"
-import { ISetRouteType, getTraderPositionSettled, queryPuppetTradeRoute, queryTraderPositionOpen } from "puppet-middleware-utils"
+import { ISetRouteType, queryTraderPositionSettled, queryPuppetTradeRoute, queryTraderPositionOpen } from "puppet-middleware-utils"
 import * as viem from 'viem'
-import { $PuppetPortfolio } from "../components/participant/$PuppetPortfolio.js"
+import { $PuppetProfile } from "../components/participant/$PuppetProfile.js"
 import { $PuppetProfileSummary, $TraderProfileSummary } from "../components/participant/$Summary"
-import { $TraderPortfolio } from "../components/participant/$TraderPortfolio.js"
+import { $TraderProfile } from "../components/participant/$TraderProfile.js"
 import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor.js"
 import { IPageGlobalParams } from "../data/type"
 
@@ -86,32 +86,13 @@ export const $PublicProfile = (config: IProfile) => component((
               const urlFragments = document.location.pathname.split('/')
               const address = viem.getAddress(urlFragments[urlFragments.length - 1])
 
-              const settledPositionListQuery = switchMap(params => {
-                return map(async filter => {
-                  const list = await getTraderPositionSettled({ trader: address, activityTimeframe: params.activityTimeframe })
-
-                  if (filter.length === 0) return list
-                  const routeTypeKeyList = filter.map(route => route.routeTypeKey)
-
-                  return list.filter(position => routeTypeKeyList.indexOf(position.routeTypeKey) !== -1)
-                }, selectedTradeRouteList)
-              }, combineObject({ activityTimeframe }))
-
-              const openPositionListQuery = switchMap(params => {
-                return map(async filter => {
-                  const list = await queryTraderPositionOpen({ trader: address })
-
-                  if (filter.length === 0) return list
-                  const routeTypeKeyList = filter.map(route => route.routeTypeKey)
-
-                  return list.filter(position => routeTypeKeyList.indexOf(position.routeTypeKey) !== -1)
-                }, selectedTradeRouteList)
-              }, combineObject({ activityTimeframe }))
+              const settledPositionListQuery = queryTraderPositionSettled({ address, activityTimeframe, selectedTradeRouteList })
+              const openPositionListQuery = queryTraderPositionOpen({ address, selectedTradeRouteList })
 
               return $column(layoutSheet.spacingBig)(
                 $TraderProfileSummary({ ...config, address, settledPositionListQuery, openPositionListQuery })({}),
 
-                $TraderPortfolio({ ...config, address, settledPositionListQuery, openPositionListQuery, })({
+                $TraderProfile({ ...config, address, settledPositionListQuery, openPositionListQuery, })({
                   selectTradeRouteList: selectTradeRouteListTether(),
                   changeRoute: changeRouteTether(),
                   changeActivityTimeframe: changeActivityTimeframeTether(),
@@ -125,23 +106,7 @@ export const $PublicProfile = (config: IProfile) => component((
             run(sink, scheduler) {
               const urlFragments = document.location.pathname.split('/')
               const address = viem.getAddress(urlFragments[urlFragments.length - 1])
-              const puppetTradeRouteListQuery = switchMap(params => {
-                return map(async filter => {
-                  const list = await queryPuppetTradeRoute({ puppet: address, activityTimeframe: params.activityTimeframe })
-
-                  if (filter.length === 0) return list
-                  const routeTypeKeyList = filter.map(route => route.routeTypeKey)
-
-                  return list
-                    .map(puppetTradeRoute => {
-                      const settledList = puppetTradeRoute.settledList.filter(x => routeTypeKeyList.indexOf(x.position.routeTypeKey) !== -1)
-                      const openList = puppetTradeRoute.openList.filter(x => routeTypeKeyList.indexOf(x.position.routeTypeKey) !== -1)
-
-                      return { ...puppetTradeRoute, openList, settledList }
-                    })
-                    .filter(puppetTradeRoute => puppetTradeRoute.settledList.length > 0 || puppetTradeRoute.openList.length > 0)
-                }, selectedTradeRouteList)
-              }, combineObject({ activityTimeframe }))
+              const puppetTradeRouteListQuery = queryPuppetTradeRoute({ address, activityTimeframe, selectedTradeRouteList })
 
               const settledPositionListQuery = map(async trList => {
                 const tradeList = (await trList).flatMap(p => p.settledList.map(x => x.position))
@@ -162,7 +127,7 @@ export const $PublicProfile = (config: IProfile) => component((
                 })({}),
 
                 $column(layoutSheet.spacingTiny)(
-                  $PuppetPortfolio({
+                  $PuppetProfile({
                     ...config,
                     address,
                     openPositionListQuery,

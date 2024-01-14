@@ -1,57 +1,35 @@
 import { Behavior, combineObject } from "@aelea/core"
-import { $node, $text, component, style } from "@aelea/dom"
+import { $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { awaitPromises, constant, join, map, mergeArray, now, startWith, switchLatest } from "@most/core"
+import { awaitPromises, map, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
-import { groupArrayMany, readableFixedUSD30, readableTokenAmountLabel, switchMap } from "gmx-middleware-utils"
-import { IPuppetTradeRoute, ISetRouteType, accountSettledPositionListSummary, getParticiapntMpPortion, getPuppetDepositAccountKey, openPositionListPnl } from "puppet-middleware-utils"
+import { groupArrayMany } from "gmx-middleware-utils"
+import { IPuppetTradeRoute, ISetRouteType, accountSettledPositionListSummary, openPositionListPnl } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $route } from "../../common/$common.js"
-import { $heading2, $heading3 } from "../../common/$text.js"
-import { $card, $card2, $responsiveFlex } from "../../common/elements/$common.js"
+import { $heading3 } from "../../common/$text.js"
+import { $card, $card2 } from "../../common/elements/$common.js"
 import { IPageUserParams } from "../../data/type.js"
 import { $seperator2 } from "../../pages/common.js"
 import { IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor.js"
 import { $ProfilePerformanceGraph } from "../trade/$ProfilePerformanceGraph.js"
 import { $PositionListPerformance } from "./$PositionListPerformance.js"
-import { $infoTooltipLabel } from "gmx-middleware-ui-components"
-import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button"
-import { $AssetDepositEditor } from "../portfolio/$AssetDepositEditor"
-import { $AssetWithdrawEditor } from "../portfolio/$AssetWithdrawEditor"
-import { connectContract } from "../../logic/common"
-import * as PUPPET from "puppet-middleware-const"
-import { $Popover } from "../$Popover"
 
 
-export interface IPuppetPortfolio extends IPageUserParams {
+export interface IPuppetProfile extends IPageUserParams {
   puppetTradeRouteListQuery: Stream<Promise<IPuppetTradeRoute[]>>
 }
 
-export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
+export const $PuppetProfile = (config: IPuppetProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
-
-  [openDepositPopover, openDepositPopoverTether]: Behavior<any>,
-  [openWithdrawPopover, openWithdrawPopoverTether]: Behavior<any>,
-  [requestDepositAsset, requestDepositAssetTether]: Behavior<Promise<viem.TransactionReceipt>>,
-  [requestWithdrawAsset, requestWithdrawAssetTether]: Behavior<Promise<viem.TransactionReceipt>>,
 
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 ) => {
   
-  const { activityTimeframe, address, priceTickMapQuery, puppetTradeRouteListQuery, openPositionListQuery, settledPositionListQuery, selectedTradeRouteList, routeTypeListQuery, route } = config
-
-  const datastore = connectContract(PUPPET.CONTRACT[42161].Datastore)
-  const readDepositBalance = datastore.read('getUint', getPuppetDepositAccountKey(config.address, GMX.ARBITRUM_ADDRESS.USDC))
-
-  
-  const readPuppetDeposit = mergeArray([
-    readDepositBalance,
-    join(constant(readDepositBalance, awaitPromises(requestDepositAsset))),
-    join(constant(readDepositBalance, awaitPromises(requestWithdrawAsset))),
-  ])
+  const { activityTimeframe, address, priceTickMapQuery, puppetTradeRouteListQuery, selectedTradeRouteList, routeTypeListQuery, route } = config
 
   return [
 
@@ -65,54 +43,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
         ),
 
         $column(layoutSheet.spacing)(
-          $responsiveFlex(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-            $heading2('Trade Routes'),
-            $node(style({ flex: 1 }))(),
-            $row(layoutSheet.spacingBig, style({ alignItems: 'center', minWidth: '0', flexShrink: 0 }))(
-              switchMap(amount => {
-                return $Popover({
-                  open: mergeArray([
-                    constant(
-                      $AssetDepositEditor({
-                        token: GMX.ARBITRUM_ADDRESS.USDC
-                      })({
-                        requestDepositAsset: requestDepositAssetTether(),
-                      }),
-                      openDepositPopover
-                    ),
-                    constant(
-                      $AssetWithdrawEditor({
-                        token: GMX.ARBITRUM_ADDRESS.USDC,
-                        balance: amount
-                      })({
-                        requestDepositAsset: requestWithdrawAssetTether(),
-                      }),
-                      openWithdrawPopover
-                    ),
-                  ]),
-                  $target: $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
-                    $responsiveFlex(layoutSheet.spacingSmall)(
-                      $infoTooltipLabel($text('The available amount ready to be matched against'), 'Available balance'),
-                      $text(readableTokenAmountLabel(GMX.ARBITRUM_ADDRESS.USDC, amount))
-                    ),
-                    $ButtonSecondary({
-                      $container: $defaultMiniButtonSecondary,
-                      $content: $text('Deposit')
-                    })({
-                      click: openDepositPopoverTether()
-                    }),
-                    $ButtonSecondary({
-                      $container: $defaultMiniButtonSecondary,
-                      $content: $text('Withdraw'),
-                      disabled: now(amount === 0n)
-                    })({
-                      click: openWithdrawPopoverTether()
-                    }),
-                  ),
-                })({})
-              }, readPuppetDeposit),
-            ),
-          ),
+          $heading3('Trade Routes'),
           switchLatest(awaitPromises(map(async params => {
 
             const puppetTradeRouteList = await params.puppetTradeRouteListQuery
@@ -131,23 +62,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
                 const routeType = routeTypeList.find(route => route.routeTypeKey === routeTypeKey)!
 
                 return $column(layoutSheet.spacing)(
-                  $row(
-                    $route(routeType),
-                    $row(layoutSheet.spacingBig, style({ alignItems: 'center', minWidth: '0', flexShrink: 0, flex: 1 }))(
-                      $responsiveFlex(layoutSheet.spacingSmall)(
-                        $infoTooltipLabel($text('The available amount ready to be matched against'), 'Used balance'),
-                        $text(
-                          startWith('-', awaitPromises(map(async query => {
-                            const balance = (await query).reduce((acc, pos) => {
-                              const collateralUsd = getParticiapntMpPortion(pos, pos.position.maxCollateralUsd, config.address)
-                              return acc + collateralUsd
-                            }, 0n)
-                            return readableFixedUSD30(balance)
-                          }, openPositionListQuery)))
-                        )
-                      ),
-                    ),
-                  ),
+                  $route(routeType),
 
                   $column(style({ paddingLeft: '16px' }))(
                     $row(layoutSheet.spacing)(

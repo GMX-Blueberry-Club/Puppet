@@ -29,27 +29,6 @@ type OrderCreated @entity(immutable: true) {
   isFrozen: Boolean!
 }
 
-# type OrderExecuted @entity(immutable: true) {
-#   link: PositionLink!
-
-#   id: Bytes!
-#   key: Bytes!
-#   account: Bytes!
-#   secondaryorderType: Int!
-# }
-
-# type OrderUpdated @entity(immutable: true) {
-#   link: PositionLink!
-
-#   id: Bytes!
-#   key: Bytes!
-#   account: Bytes!
-#   sizeDeltaUsd: BigInt!
-#   acceptablePrice: BigInt!
-#   triggerPrice: BigInt!
-#   minOutputAmount: BigInt!
-# }
-
 type OrderSizeDeltaAutoUpdated @entity(immutable: true) {
   id: Bytes!
   key: Bytes!

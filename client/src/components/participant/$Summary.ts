@@ -9,6 +9,7 @@ import { IMirrorPositionOpen, IMirrorPositionSettled, accountSettledPositionList
 import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile.js"
 import { $heading2 } from "../../common/$text.js"
+import { intermediateMessage } from "gmx-middleware-ui-components"
 
 
 export interface IAccountSummary {
@@ -19,13 +20,9 @@ export interface IAccountSummary {
 }
 
 
-const intermediateText = <T>(query: Promise<T>, cb: (x: T) => string) => {
-  const txt = fromPromise(query)
-  return startWith('-', map(cb, txt))
-}
 
 
-export const $TraderProfileSummary = ({ address, openPositionListQuery, route, settledPositionListQuery }: IAccountSummary) => component((
+export const $TraderProfileSummary = ({ address, openPositionListQuery, settledPositionListQuery, route }: IAccountSummary) => component((
 
 ) => {
 
@@ -59,15 +56,15 @@ export const $TraderProfileSummary = ({ address, openPositionListQuery, route, s
             //   $metricLabel($text('Puppets'))
             // ),
             $metricRow(
-              $heading2(intermediateText(summaryQuery, summary => `${summary.winCount} / ${summary.lossCount}`)),
+              $heading2(intermediateMessage(summaryQuery, summary => `${summary.winCount} / ${summary.lossCount}`)),
               $metricLabel($text('Win / Loss'))
             ),
             $metricRow(
-              $heading2(intermediateText(summaryQuery, summary => readableFixedUSD30(summary.avgCollateral))),
+              $heading2(intermediateMessage(summaryQuery, summary => readableFixedUSD30(summary.avgCollateral))),
               $metricLabel($text('Avg Collateral'))
             ),
             $metricRow(
-              $heading2(intermediateText(summaryQuery, summary => readableLeverage(summary.avgSize, summary.avgCollateral))),
+              $heading2(intermediateMessage(summaryQuery, summary => readableLeverage(summary.avgSize, summary.avgCollateral))),
               $metricLabel($text('Avg Leverage'))
             )
           ),
@@ -115,11 +112,11 @@ export const $PuppetProfileSummary = ({ address, openPositionListQuery, settledP
             //   $metricLabel($text('Puppets'))
             // ),
             $metricRow(
-              $heading2(intermediateText(summaryQuery, summary => `${summary.winCount} / ${summary.lossCount}`)),
+              $heading2(intermediateMessage(summaryQuery, summary => `${summary.winCount} / ${summary.lossCount}`)),
               $metricLabel($text('Win / Loss'))
             ),
             $metricRow(
-              $heading2(intermediateText(summaryQuery, summary => readableFixedUSD30(summary.avgCollateral))),
+              $heading2(intermediateMessage(summaryQuery, summary => readableFixedUSD30(summary.avgCollateral))),
               $metricLabel($text('Avg Collateral'))
             )
           ),

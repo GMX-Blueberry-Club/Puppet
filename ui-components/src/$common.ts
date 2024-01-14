@@ -2,7 +2,7 @@ import { combineObject, isStream, O, Op } from "@aelea/core"
 import { $element, $Node, $svg, $text, attr, IBranch, style, styleBehavior, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map, skipRepeats } from "@most/core"
+import { empty, fromPromise, map, skipRepeats, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { CHAIN } from "gmx-middleware-const"
 import { getTokenDescription, getTxExplorerUrl, IMarket, ITokenDescription, shortenTxAddress, switchMap } from "gmx-middleware-utils"
@@ -10,6 +10,15 @@ import { $alertIcon, $arrowRight, $caretDblDown, $info, $tokenIconMap } from "./
 import { $defaultDropContainer, $Tooltip } from "./$Tooltip.js"
 import { Chain } from "viem"
 
+
+export const intermediateMessage = <T>(query: Promise<T>, cb: (x: T) => string) => {
+  const txt = fromPromise(query)
+  return startWith('-', map(cb, txt))
+}
+
+export const $intermediateMessage = <T>(querySrc: Stream<Promise<T>>, cb: (x: T) => string) => {
+  return $text(switchMap(query => intermediateMessage(query, cb), querySrc))
+}
 
 export const $anchor = $element('a')(
   layoutSheet.spacingTiny,

@@ -12,10 +12,10 @@ import { $heading3 } from "../../common/$text.js"
 import { $card, $card2 } from "../../common/elements/$common.js"
 import { IPageUserParams } from "../../data/type.js"
 import { entryColumn, pnlSlotColumn, positionTimeColumn, puppetsColumn, settledPnlColumn, settledSizeColumn, slotSizeColumn } from "../table/$TableColumn.js"
-import { $PositionListPerformance } from "./$PositionListPerformance"
+import { $PositionListPerformance } from "./$PositionListPerformance.js"
 
 
-export const $TraderPortfolio = (
+export const $TraderProfile = (
   config: IPageUserParams
 ) => component((
   [changeRoute, changeRouteTether]: Behavior<any, string>,

@@ -159,6 +159,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                         $Wallet({ route: walletRoute, routeTypeListQuery, wallet, activityTimeframe, selectedTradeRouteList, priceTickMapQuery, })({
                           modifySubscriber: modifySubscriberTether(),
                           changeRoute: linkClickTether(),
+                          changeActivityTimeframe: changeActivityTimeframeTether(),
+                          selectTradeRouteList: selectTradeRouteListTether(),
                         }))
                     })
                   })({})

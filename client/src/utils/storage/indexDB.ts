@@ -1,8 +1,4 @@
-import { replayLatest } from "@aelea/core"
-import { constant, fromPromise, map, multicast } from "@most/core"
-import { disposeNone } from "@most/disposable"
-import { Stream } from "@most/types"
-import { switchMap } from "gmx-middleware-utils"
+export type GetKey<TSchema> = Extract<keyof TSchema, string | number>
 
 export interface IDbParams<TName extends string = string> {
   name: TName
@@ -13,92 +9,76 @@ export interface IDbParams<TName extends string = string> {
 export interface IDbStoreParams {
   name: string
   options?: IDBObjectStoreParameters
-  db: Stream<IDBDatabase>
+  dbQuery: Promise<IDBDatabase>
 }
 
+export interface IStoreConfig<TState, TType extends { [P in keyof TState]: TState[P]}> {
+  initialState: TType
+  options?: IDBObjectStoreParameters
+}
 
-export function set<TResult>(
-  params: IDbStoreParams,
+export interface IStoreDefinition<T, Type extends { [P in keyof T]: T[P]} = any> extends IDbStoreParams, IStoreConfig<T, Type> {}
+
+
+export async function set<TSchema, TKey extends GetKey<TSchema>, TData extends TSchema[TKey]>(
+  params: IStoreDefinition<TSchema>,
   key: IDBValidKey,
-  data: TResult,
-): Stream<TResult> {
-  return map(db => {
-    const tx = db.transaction(params.name, 'readwrite')
-    const store = tx.objectStore(params.name)
-    const req = store.put(data, key)
+  data: TData,
+): Promise<TData> {
+  const db = await params.dbQuery
+  const tx = db.transaction(params.name, 'readwrite')
+  const store = tx.objectStore(params.name)
 
-    req.onerror = err => {
-      throw new Error(`${err.type}: Unknown error`)
-    }
-
-    return data
-  }, params.db)
+  return request(store.put(data, key))
 }
 
-export function get<TResult>(
-  params: IDbStoreParams,
-  key: IDBValidKey | IDBKeyRange,
-): Stream<TResult | null> {
-  return switchMap(db => {
-    const store = db.transaction(params.name, 'readonly').objectStore(params.name)
-    return request(store.get(key))
-  }, params.db)
+export async function get<TSchema, TKey extends GetKey<TSchema>, TData extends TSchema[TKey]>(
+  params: IStoreDefinition<TSchema>,
+  key: TKey,
+): Promise<TData> {
+  const db = await params.dbQuery
+  const store = db.transaction(params.name, 'readonly').objectStore(params.name)
+  const value = await request<TData>(store.get(key))
+
+  return value === undefined ? params.initialState[key] : value
 }
 
 
-export function add<TResult>(
+export async function add<TResult>(
   params: IDbStoreParams,
   list: TResult[]
-): Stream<TResult[]> {
-  return switchMap(db => {
-    const store = db.transaction(params.name, 'readwrite').objectStore(params.name)
-    for (const item of list) {
-      store.add(item)
-    }
+): Promise<TResult[]> {
+  const db = await params.dbQuery
+  const store = db.transaction(params.name, 'readwrite').objectStore(params.name)
+  const requestList = list.map(item => request(store.add(item)))
 
-    return constant(list, request(store.count()))
-  }, params.db)
+  await Promise.all(requestList)
+  return list
 }
-export function getRange<TResult>(
+
+export async function clear<TResult>(
   params: IDbStoreParams,
-): Stream<TResult[]> {
-  return switchMap(db => {
-    const store = db.transaction(params.name, 'readonly').objectStore(params.name)
-
-    return request(store.getAll())
-  }, params.db)
+): Promise<TResult> {
+  const db = await params.dbQuery
+  const store = db.transaction(params.name, 'readwrite').objectStore(params.name)
+  return request(store.clear())
 }
 
-
-export function clear<TResult>(
-  params: IDbStoreParams,
-): Stream<TResult> {
-  return switchMap(db => {
-    const newLocal = db.transaction(params.name, 'readwrite')
-    const store = newLocal.objectStore(params.name)
-
-    return request(store.clear())
-  }, params.db)
-}
-
-
-export function cursor<TName extends string>(
+export async function cursor(
   params: IDbStoreParams,
   query?: IDBValidKey | IDBKeyRange | null,
   direction?: IDBCursorDirection
-): Stream<IDBCursorWithValue | null> {
-  return switchMap(db => {
-    const store = db.transaction(params.name, 'readwrite').objectStore(params.name)
-    return cursorStep(store.openCursor(query, direction))
-  }, params.db)
+): Promise<IDBCursorWithValue | null> {
+  const db = await params.dbQuery
+  const store = db.transaction(params.name, 'readwrite').objectStore(params.name)
+  return request(store.openCursor(query, direction))
 }
-
 
 export function openDatabase<TName extends string>(
   name: TName,
   version: number,
   storeParamList: IDbParams[]
-): Stream<IDBDatabase> {
+): Promise<IDBDatabase> {
   const openDbRequest = indexedDB.open(name, version)
 
   openDbRequest.onupgradeneeded = event => {
@@ -117,44 +97,15 @@ export function openDatabase<TName extends string>(
   }
 
   return request(openDbRequest)
-  // const requestDb = new Promise<IDBDatabase>((resolve, reject) => {
-  //   openDbRequest.onerror = err => reject(openDbRequest.error || new Error(`${err.type}: Unknown error`))
-  //   openDbRequest.onsuccess = () => {
-  //     resolve(openDbRequest.result)
-  //   }
-  // })
- 
-
-  // return fromPromise(requestDb)
 }
 
 
-function request<TResult>(req: IDBRequest<any>): Stream<TResult> {
-  return fromPromise(new Promise<TResult>((resolve, reject) => {
+function request<TResult>(req: IDBRequest<any>): Promise<TResult> {
+  return new Promise<TResult>((resolve, reject) => {
     req.onerror = err => reject(req.error || new Error(`${err.type}: Unknown error`))
     req.onsuccess = () => {
       resolve(req.result)
     }
-  }))
+  })
 }
 
-function cursorStep(req: IDBRequest<IDBCursorWithValue | null>): Stream<IDBCursorWithValue | null> {
-  return {
-    run(sink, scheduler) {
-      if (req instanceof IDBTransaction) {
-        req.oncomplete = () => sink.event(scheduler.currentTime(), null)
-        req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error(`${req.db.name}: Unknown error`))
-        return disposeNone()
-      }
-
-      req.onsuccess = () => {
-        const time = scheduler.currentTime()
-        sink.event(time, req.result)
-      }
-
-      req.onerror = err => sink.error(scheduler.currentTime(), req.error || new Error(`${err.type}: Unknown error`))
-
-      return disposeNone()
-    }
-  }
-}

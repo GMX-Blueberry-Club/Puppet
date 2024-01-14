@@ -171,7 +171,7 @@ const metadata = {
 const wagmiConfig = createConfig({
   autoConnect: true,
   connectors: [
-    new WalletConnectConnector({ chains, options: { projectId, showQrModal: false, metadata } }),
+    new WalletConnectConnector({ chains, options: { projectId, showQrModal: false, metadata, qrModalOptions: {} } }),
     new InjectedConnector({ chains, options: { shimDisconnect: true } }),
   ],
   publicClient: configChain.publicClient,

@@ -17,7 +17,6 @@ import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 interface IPositionAdjustmentHistory {
   chain: ISupportedChain
   wallet: Stream<IWalletClient>
-  openPositionList: Stream<IMirrorPositionOpen[]>
 
   pricefeed: Stream<IPriceCandle[]>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
@@ -43,15 +42,15 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
 ) => {
 
   const { 
-    collateralDeltaUsd, collateralToken, indexToken, collateralDelta, marketInfo, market, isUsdCollateralToken, sizeDelta, focusMode,
+    collateralDeltaUsd, collateralToken, indexToken, collateralDelta, market, isUsdCollateralToken, sizeDelta, focusMode,
     primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, focusPrice
   } = config.tradeConfig
   const {
-    availableIndexLiquidityUsd, averagePrice, collateralDescription,
+    averagePrice, collateralDescription,
     collateralPrice, executionFee,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
-    isTradingEnabled, liquidationPrice, marginFeeUsd, tradeRoute, netPositionValueUsd,
-    position, walletBalance, marketList, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
+    isTradingEnabled, liquidationPrice, marginFeeUsd, tradeRoute,
+    position, walletBalance, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
   } = config.tradeState
 
 

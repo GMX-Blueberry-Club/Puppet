@@ -20,7 +20,7 @@ import { getPuppetSubscriptionExpiryKey, getRouteAddressKey, getTradeRouteKey } 
 import * as storage from "../utils/storage/storeScope.js"
 import { store } from "../data/store/store"
 import * as indexDB from "../utils/storage/indexDB.js"
-
+import * as wagmi from "@wagmi/core"
 
 
 
@@ -210,31 +210,37 @@ export const getGmxIoPricefeed = async (queryParams: IRequestPricefeedApi): Prom
   return res
 }
 
-export function getTraderTradeRoute(
+export async function getTraderTradeRoute(
   trader: viem.Address,
   collateralToken: viem.Address,
   indexToken: viem.Address,
   isLong: boolean,
   chain = arbitrum
-): Stream<viem.Address | null> {
+): Promise<viem.Address | null> {
   const puppetContractMap = PUPPET.CONTRACT[chain.id]
-  const datastoreReader = contractReader(puppetContractMap.Datastore) 
-
   const routeKey = getTradeRouteKey(trader, collateralToken, indexToken, isLong)
   const routeAddressKey = getRouteAddressKey(routeKey)
+  const storedRouteKeyMap = await indexDB.get(store.tradeBox, 'traderRouteMap')
+  const routeAddress = storedRouteKeyMap[trader]
 
-  const storedRouteKey = storage.get(store.tradeBox, 'traderRouteMap')
-  const fallbackGetRoute = switchMap(rmap => {
-    const routeAddress = rmap[trader]
-    if (routeAddress) {
-      return now(rmap[trader])
-    }
 
-    return switchMap(res => {
-      rmap[trader] = res
-      return res === GMX.ADDRESS_ZERO ? now(null) : constant(res, indexDB.set(store.tradeBox, 'traderRouteMap', rmap))
-    }, datastoreReader('getAddress', routeAddressKey))
-  }, storedRouteKey)
+  if (routeAddress) {
+    return storedRouteKeyMap[trader]
+  }
 
-  return fallbackGetRoute
+  const queryAddress = await wagmi.readContract({
+    ...puppetContractMap.Datastore,
+    functionName: 'getAddress',
+    args: [routeAddressKey],
+  })
+
+  if (queryAddress === GMX.ADDRESS_ZERO) {
+    return null
+  }
+  
+  storedRouteKeyMap[trader] = queryAddress
+  
+  await indexDB.set(store.tradeBox, 'traderRouteMap', storedRouteKeyMap)
+
+  return queryAddress
 }

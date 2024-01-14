@@ -20,19 +20,15 @@ import {
   readablePercentage,
   streamOf, switchMap, unixTimestampNow
 } from "gmx-middleware-utils"
-import * as PUPPET from "puppet-middleware-const"
-import { getMpSlotPnL, getParticiapntMpPortion, IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen, IPuppetSubscritpionParams } from "puppet-middleware-utils"
+import { getMpSlotPnL, getParticiapntMpPortion, IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { arbitrum } from "viem/chains"
 import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile.js"
 import { $Popover } from "../components/$Popover.js"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button.js"
 import { $RouteSubscriptionEditor, IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor.js"
-import { contractReader } from "../logic/common"
 import { getPuppetSubscriptionExpiry } from "../logic/puppetLogic.js"
 import { IProfileActiveTab } from "../pages/$PublicProfile.js"
 import { $seperator2 } from "../pages/common.js"
-import { $caretDown } from "./elements/$icons"
 import { wallet } from "../wallet/walletLink"
 import { $puppetLogo } from "./$icons"
 
@@ -374,10 +370,10 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
   [modifySubscribeList, modifySubscribeListTether]: Behavior<IChangeSubscription>,
 ) => {
 
-  const puppetSubscriptionExpiry = switchMap(w3p => {
+  const puppetSubscriptionExpiry = switchMap(async w3p => {
     return w3p
       ? getPuppetSubscriptionExpiry(w3p.account.address, config.positionParams.collateralToken, config.positionParams.indexToken, config.positionParams.isLong)
-      : now(0n)
+      : 0n
   }, wallet)
 
   return [

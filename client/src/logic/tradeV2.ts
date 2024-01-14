@@ -387,7 +387,6 @@ export async function getMarketConfig(
   })
 
 
-
   const maxPnlFactorForTradersLong = wagmi.readContract({
     ...datastoreContract,
     functionName: 'getUint',
@@ -480,34 +479,39 @@ export async function getMarketConfig(
   }
 }
 
-export function getFullMarketInfo(chain: ISupportedChain, market: IMarket, price: IMarketPrice) {
+export async function getFullMarketInfo(chain: ISupportedChain, market: IMarket, price: IMarketPrice): Promise<IMarketInfo> {
   const gmxContractMap = GMX.CONTRACT[chain.id]
   const datastoreContract = gmxContractMap.Datastore
-  const v2Reader = contractReader(gmxContractMap.ReaderV2)
+  const usageQuery: Promise<IMarketUsageInfo> = getMarketPoolUsage(chain, market)
+  const configQuery: Promise<IMarketConfig> = getMarketConfig(chain, market)
+  const poolQuery: Promise<IMarketPool> = wagmi.readContract({
+    ...gmxContractMap.ReaderV2,
+    functionName: 'getMarketTokenPrice',
+    args: [
+      datastoreContract.address,
+      market,
+      price.indexTokenPrice,
+      price.longTokenPrice,
+      price.shortTokenPrice,
+      hashKey("MAX_PNL_FACTOR_FOR_TRADERS"),
+      true
+    ]
+    
+  }).then(([res, pool]) => pool)
 
+  const feesQuery: Promise<IMarketFees> = wagmi.readContract({
+    ...gmxContractMap.ReaderV2,
+    functionName: 'getMarketInfo',
+    args: [
+      gmxContractMap.Datastore.address,
+      price,
+      market.marketToken
+    ]
+  })
 
-  const usage: Stream<IMarketUsageInfo> = fromPromise(getMarketPoolUsage(chain, market))
-  const config: Stream<IMarketConfig> = fromPromise(getMarketConfig(chain, market))
-  const pool: Stream<IMarketPool> = map(res => res[1], v2Reader(
-    'getMarketTokenPrice',
-    datastoreContract.address,
-    market,
-    price.indexTokenPrice,
-    price.longTokenPrice,
-    price.shortTokenPrice,
-    hashKey("MAX_PNL_FACTOR_FOR_TRADERS"),
-    true
-  ))
-  const fees: Stream<IMarketFees> = v2Reader(
-    'getMarketInfo',
-    gmxContractMap.Datastore.address,
-    price,
-    market.marketToken
-  )
+  const [usage, config, pool, fees] = await Promise.all([usageQuery, configQuery, poolQuery, feesQuery])
 
-  const marketInfo = replayLatest(combineObject({ usage, config, pool, fees }))
-
-  return marketInfo
+  return { market, price, usage, config, pool, fees }
 }
 
 export async function getPositionOrderGasLimit(chain: ISupportedChain) {

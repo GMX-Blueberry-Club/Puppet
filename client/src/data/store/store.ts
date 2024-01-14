@@ -2,7 +2,7 @@ import * as storeScope from '../../utils/storage/storeScope.js'
 import * as GMX from 'gmx-middleware-const'
 import { IProfileMode, ITradeFocusMode } from '../type'
 import { ISortBy } from 'gmx-middleware-ui-components'
-import { IMarketCreatedEvent } from 'gmx-middleware-utils'
+import { IMarketCreatedEvent, TEMP_MARKET_LIST } from 'gmx-middleware-utils'
 import * as viem from 'viem'
 import { ISetRouteType } from 'puppet-middleware-utils'
 
@@ -24,11 +24,10 @@ export const store = storeScope.createStoreDefinition('root', 3, {
       executionFeeBuffer: 3000n,
       primaryToken: GMX.ARBITRUM_ADDRESS.USDC,
       isUsdCollateralToken: true,
-      borrowRateIntervalDisplay: GMX.IntervalTime.MIN60,
-      fundingRateIntervalDisplay: GMX.IntervalTime.MIN60,
+      feeRateIntervalDisplay: GMX.IntervalTime.MIN60,
       leverage: GMX.MAX_LEVERAGE_FACTOR / 4n,
       tradeRoute: null as viem.Address | null,
-      marketToken: null as viem.Address | null,
+      marketToken: TEMP_MARKET_LIST[0].marketToken,
       traderRouteMap: {} as Record<string, viem.Address>
     },
   },

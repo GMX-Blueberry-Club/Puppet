@@ -1,7 +1,8 @@
-import { continueWith, join, map, multicast } from "@most/core"
+import { awaitPromises, continueWith, debounce, join, map, merge, multicast, now } from "@most/core"
 import { Stream } from "@most/types"
 import * as indexDB from './indexDB.js'
-import { IDbParams, openDatabase } from "./indexDB.js"
+import { openDatabase } from "./indexDB.js"
+import { switchMap } from "gmx-middleware-utils"
 
 
 // stringify with bigint support
@@ -21,36 +22,29 @@ export function transformBigints(obj: any) {
   return obj
 }
 
-export interface IStoreConfig<TState, TType extends { [P in keyof TState]: TState[P]}> {
-  initialState: TType
-  options?: IDBObjectStoreParameters
-}
 
-export interface IStoreDefinition<T, Type extends { [P in keyof T]: T[P]} = any> extends indexDB.IDbStoreParams, IStoreConfig<T, Type> {
-}
-
-export const createStoreDefinition = <T, TDefinition extends { [P in keyof T]: IStoreDefinition<any> }>(
+export const createStoreDefinition = <T, TDefinition extends { [P in keyof T]: indexDB.IStoreDefinition<any> }>(
   dbName: string,
   dbVersion: number,
   definitions: TDefinition
-): { [P in keyof TDefinition]: IStoreDefinition<TDefinition[P]['initialState']> } => {
+): { [P in keyof TDefinition]: indexDB.IStoreDefinition<TDefinition[P]['initialState']> } => {
 
 
-  const defs: IDbParams[] = Object.entries(definitions).map(([key, params]: [string, any]): IDbParams => {
+  const defs: indexDB.IDbParams[] = Object.entries(definitions).map(([key, params]: [string, any]): indexDB.IDbParams => {
     return {
       name: key,
       ...params
     }
   })
 
-  const db = openDatabase(dbName, dbVersion, defs)
+  const dbQuery = openDatabase(dbName, dbVersion, defs)
 
   return defs.reduce((acc, next) => {
     return {
       ...acc,
       [next.name]: {
         ...next,
-        db,
+        dbQuery,
       }
     }
   }, {} as any)
@@ -58,32 +52,24 @@ export const createStoreDefinition = <T, TDefinition extends { [P in keyof T]: I
 
 
 
-type GetKey<TSchema> = Extract<keyof TSchema, string | number>
-
-export function get<TSchema, TKey extends GetKey<TSchema>, TData extends TSchema[TKey]>(
-  params: IStoreDefinition<TSchema>, key: TKey
+export function write<TSchema, TKey extends indexDB.GetKey<TSchema>, TData extends TSchema[TKey]>(
+  params: indexDB.IStoreDefinition<TSchema>, key: TKey, writeEvent: Stream<TData>
 ): Stream<TData> {
-  return map(res => {
-    return res === undefined
-      ? key === undefined ? params.initialState : params.initialState[key]
-      : res
-  }, indexDB.get(params, key))
+  const debouncedWrite = debounce(100, writeEvent)
+  return map(data => {
+    indexDB.set(params, key, data)
+    return data
+  }, debouncedWrite)
 }
 
-export function write<TSchema, TKey extends GetKey<TSchema>, TData extends TSchema[TKey]>(
-  params: IStoreDefinition<TSchema>, key: TKey, writeEvent: Stream<TData>
-): Stream<TData> {
-  return join(map(data => {
-    return indexDB.set(params, key, data)
-  }, writeEvent))
-}
-
-export function replayWrite<TSchema, TKey extends GetKey<TSchema>, TReturn extends TSchema[TKey]>(
-  params: IStoreDefinition<TSchema>, writeEvent: Stream<TReturn>, key: TKey
+export function replayWrite<TSchema, TKey extends indexDB.GetKey<TSchema>, TReturn extends TSchema[TKey]>(
+  params: indexDB.IStoreDefinition<TSchema>, writeEvent: Stream<TReturn>, key: TKey
 ): Stream<TReturn> {
-  const storedValue = get(params, key)
+  const storedValue = switchMap(() => indexDB.get(params, key), now(null))
   const writeSrc = write(params, key, writeEvent)
-  return continueWith(() => writeSrc, storedValue)
+
+  return merge(storedValue, writeSrc)
+  // return continueWith(() => writeSrc, storedValue)
 }
 
 

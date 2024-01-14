@@ -151,3 +151,12 @@ export function getPortion(supply: bigint, share: bigint, amount: bigint): bigin
   }
 }
 
+export function getLastAdjustment(mp: IMirrorPosition) {
+  const allAdjustmentList = [...mp.position.link.increaseList, ...mp.position.link.decreaseList].sort((a, b) => Number(b.blockTimestamp - a.blockTimestamp))
+
+  if (allAdjustmentList.length === 0) {
+    throw new Error("position has no updates")
+  }
+
+  return allAdjustmentList[0]
+}

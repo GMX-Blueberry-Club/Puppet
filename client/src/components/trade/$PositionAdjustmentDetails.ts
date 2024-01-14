@@ -1,4 +1,4 @@
-import { Behavior, combineObject } from "@aelea/core"
+import { Behavior, combineObject, replayLatest } from "@aelea/core"
 import { $Node, $node, $text, NodeComposeFn, attr, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
@@ -38,16 +38,6 @@ import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 
 
 
-
-interface IPositionAdjustmentHistory {
-  chain: ISupportedChain
-  openPositionList: Stream<IMirrorPositionOpen[]>
-  pricefeed: Stream<IPriceCandle[]>
-  tradeConfig: StateStream<ITradeConfig> // ITradeParams
-  tradeState: StateStream<ITradeParams>
-  $container: NodeComposeFn<$Node>
-}
-
 export type IRequestTradeParams = ITradeConfig & { wallet: IWalletClient }
 export type IRequestTrade = IRequestTradeParams & {
   executionFee: bigint
@@ -60,7 +50,16 @@ export type IRequestTrade = IRequestTradeParams & {
 
 
 
-export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) => component((
+
+interface IPositionAdjustmentDetails {
+  chain: ISupportedChain
+  pricefeed: Stream<IPriceCandle[]>
+  tradeConfig: StateStream<ITradeConfig> // ITradeParams
+  tradeState: StateStream<ITradeParams>
+  $container: NodeComposeFn<$Node>
+}
+
+export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) => component((
   [openEnableTradingPopover, openEnableTradingPopoverTether]: Behavior<any, any>,
   [dismissEnableTradingOverlay, dismissEnableTradingOverlayTether]: Behavior<any, false>,
 
@@ -72,15 +71,15 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
 ) => {
 
   const { 
-    collateralDeltaUsd, collateralToken, collateralDelta, marketInfo, market, isUsdCollateralToken, sizeDelta, focusMode,
+    collateralDeltaUsd, collateralToken, collateralDelta, market, isUsdCollateralToken, sizeDelta, focusMode,
     primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, focusPrice, indexToken, executionFeeBuffer
   } = config.tradeConfig
   const {
-    availableIndexLiquidityUsd, averagePrice, collateralDescription,
+    averagePrice, collateralDescription,
     collateralPrice, executionFee,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
-    isTradingEnabled, liquidationPrice, marginFeeUsd, tradeRoute, netPositionValueUsd,
-    position, walletBalance, marketList, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
+    isTradingEnabled, liquidationPrice, marginFeeUsd, tradeRoute,
+    position, walletBalance, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
   } = config.tradeState
 
 
@@ -259,65 +258,62 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
 
 
 
-  const validationError = skipRepeats(map((state) => {
-
-    if (state.leverage > GMX.MAX_LEVERAGE_FACTOR) {
-      return `Leverage exceeds ${readablePercentage(GMX.MAX_LEVERAGE_FACTOR)}x`
-    }
-
-    if (state.isIncrease) {
-      if (state.sizeDeltaUsd > state.availableIndexLiquidityUsd) {
-        return `Not enough liquidity. current capcity ${readableFixedUSD30(state.availableIndexLiquidityUsd)}`
+  const validationError = replayLatest(
+    skipRepeats(map(state => {
+      if (state.leverage > GMX.MAX_LEVERAGE_FACTOR) {
+        return `Leverage exceeds ${readablePercentage(GMX.MAX_LEVERAGE_FACTOR)}x`
       }
 
-      if (state.isIncrease ? state.collateralDelta > state.walletBalance : state.collateralDeltaUsd > state.walletBalance) {
-        return `Not enough ${state.primaryDescription.symbol} in connected account`
-      }
+      if (state.isIncrease) {
+        if (state.sizeDeltaUsd > state.marketAvailableLiquidityUsd) {
+          return `Not enough liquidity. current capcity ${readableFixedUSD30(state.marketAvailableLiquidityUsd)}`
+        }
 
-      if (state.leverage < GMX.MIN_LEVERAGE_FACTOR) {
-        return `Leverage below 1.1x`
-      }
+        if (state.isIncrease ? state.collateralDelta > state.walletBalance : state.collateralDeltaUsd > state.walletBalance) {
+          return `Not enough ${state.primaryDescription.symbol} in connected account`
+        }
+
+        if (state.leverage < GMX.MIN_LEVERAGE_FACTOR) {
+          return `Leverage below 1.1x`
+        }
 
       // if (state.position === null && state.collateralDeltaUsd < 10n ** 30n * 10n) {
       //   return `Min 10 Collateral required`
       // }
-    }
-    // else {
-    //   if (state.position && state.primaryToken !== state.collateralToken) {
-    //     const delta = getPnL(state.isLong, state.position.averagePrice, state.indexPrice, -state.sizeDeltaUsd)
-    //     const adjustedSizeDelta = safeDiv(abs(state.sizeDeltaUsd) * delta, state.position.latestUpdate.sizeInUsd)
-    //     const fees = state.swapFee + state.marginFeeUsd
-    //     const collateralDelta = -state.sizeDeltaUsd === state.position.latestUpdate.sizeInUsd
-    //       ? state.position.collateral - state.totalFeeUsd
-    //       : -state.collateralDeltaUsd
+      }
+      // else {
+      //   if (state.position && state.primaryToken !== state.collateralToken) {
+      //     const delta = getPnL(state.isLong, state.position.averagePrice, state.indexPrice, -state.sizeDeltaUsd)
+      //     const adjustedSizeDelta = safeDiv(abs(state.sizeDeltaUsd) * delta, state.position.latestUpdate.sizeInUsd)
+      //     const fees = state.swapFee + state.marginFeeUsd
+      //     const collateralDelta = -state.sizeDeltaUsd === state.position.latestUpdate.sizeInUsd
+      //       ? state.position.collateral - state.totalFeeUsd
+      //       : -state.collateralDeltaUsd
 
-    //     const totalOut = collateralDelta + adjustedSizeDelta - fees
+      //     const totalOut = collateralDelta + adjustedSizeDelta - fees
 
-    //     const nextUsdgAmount = totalOut * getDenominator(GMX.USDG_DECIMALS) / GMX.PRECISION
-    //     if (state.collateralTokenPoolInfo.usdgAmounts + nextUsdgAmount > state.collateralTokenPoolInfo.maxUsdgAmounts) {
-    //       return `${state.collateralDescription.symbol} pool exceeded, you cannot receive ${state.primaryDescription.symbol}, switch to ${state.collateralDescription.symbol} in the first input token switcher`
-    //     }
-    //   }
-    // }
+      //     const nextUsdgAmount = totalOut * getDenominator(GMX.USDG_DECIMALS) / GMX.PRECISION
+      //     if (state.collateralTokenPoolInfo.usdgAmounts + nextUsdgAmount > state.collateralTokenPoolInfo.maxUsdgAmounts) {
+      //       return `${state.collateralDescription.symbol} pool exceeded, you cannot receive ${state.primaryDescription.symbol}, switch to ${state.collateralDescription.symbol} in the first input token switcher`
+      //     }
+      //   }
+      // }
 
-    if (!state.isIncrease && state.position === null) {
-      return `No ${state.indexDescription.symbol} position to reduce`
-    }
+      if (!state.isIncrease && state.position === null) {
+        return `No ${state.indexDescription.symbol} position to reduce`
+      }
 
-    const indexPriceUsd = state.indexPrice * getDenominator(getTokenDescription(state.market.indexToken).decimals)
+      const indexPriceUsd = state.indexPrice * getDenominator(getTokenDescription(state.market.indexToken).decimals)
 
-    if (state.position && state.liquidationPrice && (state.isLong ? state.liquidationPrice > indexPriceUsd : state.liquidationPrice < indexPriceUsd)) {
-      return `Exceeding liquidation price`
-    }
+      if (state.position && state.liquidationPrice && (state.isLong ? state.liquidationPrice > indexPriceUsd : state.liquidationPrice < indexPriceUsd)) {
+        return `Exceeding liquidation price`
+      }
 
-    return null
-  }, combineObject({ ...config.tradeState, ...config.tradeConfig })))
+      return null
+    }, combineObject({ ...config.tradeState, ...config.tradeConfig }))),
+    null
+  )
 
-  const disableButtonValidation = map((error) => {
-    if (error) return true
-
-    return false
-  }, validationError)
 
   const latestWntPrice = map(priceMap => {
     const nativeToken = getNativeTokenAddress(config.chain)
@@ -381,7 +377,6 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
           )
         )
       ),
-
 
       $row(layoutSheet.spacingSmall, style({ alignItems: 'center', flex: 1 }))(
         $row(style({ flex: 1, minWidth: 0 }))(
@@ -451,9 +446,9 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
               ? $ButtonPrimaryCtx({
                 request: map(req => req.request, requestTrade),
                 disabled: map(params => {
-                  const newLocal = params.disableButtonValidation || params.sizeDelta === 0n && params.collateralDelta === 0n
+                  const newLocal = !!params.validationError || params.sizeDelta === 0n && params.collateralDelta === 0n
                   return newLocal
-                }, combineObject({ disableButtonValidation, sizeDelta, collateralDelta })),
+                }, combineObject({ validationError, sizeDelta, collateralDelta })),
                 $content: $text(
                   map(_params => {
                     let modLabel: string
@@ -490,7 +485,6 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentHistory) =
           )
         }, combineObject({ isPrimaryApproved, tradeRoute, isTradingEnabled, primaryToken, primaryDescription })))
       ),
-      
     ),
 
     {

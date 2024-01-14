@@ -6,7 +6,7 @@ import { fromPromise, map, take } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
 import { $Table, $defaultTableRowContainer, $marketSmallLabel } from 'gmx-middleware-ui-components'
-import { IMarket, IMarketFees, IMarketPrice, IMarketUsageInfo, IOraclePrice, getBorrowingFactorPerInterval, getFundingFactorPerInterval, readableFactorPercentage } from 'gmx-middleware-utils'
+import { IMarket, IMarketFees, IMarketPrice, IMarketUsageInfo, IOraclePrice, TEMP_MARKET_LIST, getBorrowingFactorPerInterval, getFundingFactorPerInterval, readableFactorPercentage } from 'gmx-middleware-utils'
 import { contractReader } from '../logic/common'
 import { getMarketPoolUsage } from '../logic/tradeV2'
 import { ISupportedChain } from '../wallet/walletLink'
@@ -16,14 +16,12 @@ import { latestPriceMap } from 'puppet-middleware-utils'
 interface IMarketList {
   $container?: NodeComposeFn<$Node>
   chain: ISupportedChain
-  marketList: Stream<IMarket[]>
   $rowCallback?: Op<{ market: IMarket, price: IMarketPrice }, NodeComposeFn<$Node>>
 }
 
 export const $MarketInfoList = ({
   $container = $column,
   chain,
-  marketList,
   $rowCallback
 }: IMarketList) => component((
 ) => {
@@ -31,7 +29,7 @@ export const $MarketInfoList = ({
   const v2Reader = contractReader(gmxContractMap.ReaderV2)
 
   const marketParamList = map(params => {
-    const data = params.marketList
+    const data = TEMP_MARKET_LIST
       .filter(market => market.indexToken !== GMX.ADDRESS_ZERO)
       .map(market => {
         const longTokenPrice = params.latestPriceMap[market.longToken]
@@ -43,7 +41,7 @@ export const $MarketInfoList = ({
         return { market, price }
       })
     return data
-  }, combineObject({ marketList, latestPriceMap: take(1, latestPriceMap) }))
+  }, combineObject({ latestPriceMap: take(1, latestPriceMap) }))
 
 
   return [

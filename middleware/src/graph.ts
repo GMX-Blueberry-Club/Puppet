@@ -5,11 +5,11 @@ import { Client, createClient, fetchExchange } from '@urql/core'
 import { offlineExchange } from '@urql/exchange-graphcache'
 import { makeDefaultStorage } from '@urql/exchange-graphcache/default-storage'
 import * as GMX from "gmx-middleware-const"
-import { IPriceCandle, IPriceOracleMap, IPriceTickListMap, ISchema, findClosest, schema as gmxSchema, groupArrayManyMap, parseQueryResults, periodicRun, querySignedPrices, querySubgraph, unixTimestampNow } from "gmx-middleware-utils"
+import { IPriceCandle, IPriceOracleMap, IPriceTickListMap, ISchema, combineState, findClosest, schema as gmxSchema, groupArrayManyMap, parseQueryResults, periodicRun, querySignedPrices, querySubgraph, unixTimestampNow } from "gmx-middleware-utils"
 import * as viem from "viem"
-import { schema } from './schema.js'
 import __tempTradeRouteDoc from './__temp_tradeRouteDoc.js'
-import { IPuppetTradeRoute } from './types.js'
+import { schema } from './schema.js'
+import { IPuppetTradeRoute, ISetRouteType } from './types.js'
 
 const storage = makeDefaultStorage({
   idbName: 'graphcache-v3', // The name of the IndexedDB database
@@ -37,63 +37,71 @@ export const subgraphClient = createClient({
   requestPolicy: 'cache-first',
 })
 
-interface IQueryTraderPositionOpen {
-  trader: viem.Address
+type IQueryPosition = {
+  address: viem.Address
+  selectedTradeRouteList?: Stream<ISetRouteType[]>
 }
 
-interface IQueryPuppetTradeRoute {
-  puppet: viem.Address
-  activityTimeframe: GMX.IntervalTime
+type IQueryTraderPositionOpen = IQueryPosition
+type IQueryPuppetTradeRoute = IQueryPosition & { activityTimeframe: Stream<GMX.IntervalTime> }
+type IQueryTraderPositionSettled = IQueryPosition & { activityTimeframe: Stream<GMX.IntervalTime> }
+
+export function queryTraderPositionOpen(queryParams: IQueryTraderPositionOpen, ) {
+  return map(async params => {
+    const list = await querySubgraph(subgraphClient, {
+      schema: schema.mirrorPositionOpen,
+      filter: {
+        trader: params.address
+      },
+    }, { requestPolicy: 'network-only' })
+
+    if (params.selectedTradeRouteList?.length) {
+      const routeTypeKeyList = params.selectedTradeRouteList.map(route => route.routeTypeKey)
+
+      return list.filter(position => routeTypeKeyList.indexOf(position.routeTypeKey) !== -1)
+    }
+
+    return list
+  }, combineState(queryParams))
 }
 
-interface IQueryTraderPositionSettled {
-  trader: viem.Address
-  activityTimeframe: GMX.IntervalTime
+export function queryTraderPositionSettled(queryParams: IQueryTraderPositionSettled) {
+
+  return map(async params => {
+    const blockTimestamp_gt = unixTimestampNow() - params.activityTimeframe
+    
+    const list = await querySubgraph(subgraphClient, {
+      schema: schema.mirrorPositionSettled,
+      filter: {
+        trader: params.address,
+        blockTimestamp_gt
+      },
+    }, { requestPolicy: 'network-only' })
+
+    if (params.selectedTradeRouteList && params.selectedTradeRouteList.length > 0) {
+      const routeTypeKeyList = params.selectedTradeRouteList.map(route => route.routeTypeKey)
+
+      return list.filter(position => routeTypeKeyList.indexOf(position.routeTypeKey) !== -1)
+    }
+    
+    return list
+  }, combineState(queryParams))
 }
 
-export async function queryTraderPositionOpen(filter: IQueryTraderPositionOpen) {
-  const trader = filter.trader
+export function queryPuppetTradeRoute(queryParams: IQueryPuppetTradeRoute) {
+  return map(async params => {
+    const list = await subgraphClient.query(__tempTradeRouteDoc(queryParams.address, params.activityTimeframe), {  }).toPromise().then(res => {
+      const puppetTradeRoutes = res.data.puppetTradeRoutes as any[]
+      return puppetTradeRoutes.map(item => parseQueryResults(item, schema.puppetTradeRoute))
+    }) as IPuppetTradeRoute[]
 
-  const res = querySubgraph(subgraphClient, {
-    schema: schema.mirrorPositionOpen,
-    filter: {
-      trader
-    },
-  }, { requestPolicy: 'network-only' })
-  
-  return res
-}
-
-export async function getTraderPositionSettled(filter: IQueryTraderPositionSettled) {
-  const blockTimestamp_gt = unixTimestampNow() - filter.activityTimeframe
-  const trader = filter.trader
-
-  const res = querySubgraph(subgraphClient, {
-    schema: schema.mirrorPositionSettled,
-    filter: {
-      blockTimestamp_gt, trader
-    },
-  })
-  
-  return res
-}
-
-export async function queryPuppetTradeRoute(filter: IQueryPuppetTradeRoute) {
-  const res = subgraphClient.query(__tempTradeRouteDoc(filter.puppet, filter.activityTimeframe), {  }).toPromise().then(res => {
-    const puppetTradeRoutes = res.data.puppetTradeRoutes as any[]
-    return puppetTradeRoutes.map(item => parseQueryResults(item, schema.puppetTradeRoute))
-  }) as Promise<IPuppetTradeRoute[]>
-  
-  return res
-
-  // const blockTimestamp_gt = unixTimestampNow() - filter.activityTimeframe
-  // const res = querySubgraph(subgraphClient, {
-  //   schema: schema.puppetTradeRoute,
-  //   filter: {
-  //     puppet: filter.puppet,
-  //     blockTimestamp_gt,
-  //   },
-  // })
+    if (params.selectedTradeRouteList && params.selectedTradeRouteList.length > 0) {
+      const routeTypeKeyList = params.selectedTradeRouteList.map(route => route.routeTypeKey)
+      return list.filter(position => routeTypeKeyList.indexOf(position.routeTypeKey) !== -1)
+    }
+    
+    return list
+  }, combineState(queryParams))
 }
 
 
