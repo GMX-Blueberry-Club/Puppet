@@ -221,7 +221,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                     $Tooltip({
                       // $dropContainer: $defaultDropContainer,
                       $content: switchMap(params => {
-                        const blocksBehind = Number(params.blockChange) - params.subgraphStatus.block.number
+                        const blocksBehind = Math.max(0, Number(params.blockChange) - params.subgraphStatus.block.number)
                         const timeSince = getTimeSince(Number(params.subgraphStatus.block.timestamp))
 
                         return $column(layoutSheet.spacingTiny)(

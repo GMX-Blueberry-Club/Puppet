@@ -2,7 +2,7 @@ import { Behavior, O, combineObject } from "@aelea/core"
 import { $node, $text, component, nodeEvent, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, constant, empty, join, map, mergeArray, now, skipRepeats, snapshot } from "@most/core"
+import { awaitPromises, constant, empty, fromPromise, join, map, mergeArray, now, skipRepeats, snapshot } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
 import { $alertTooltip, $check, $infoLabeledValue, $infoTooltip, $infoTooltipLabel, $target, $xCross } from "gmx-middleware-ui-components"
@@ -22,7 +22,8 @@ import { IWalletClient, wallet } from "../../wallet/walletLink.js"
 import { $ButtonCircular, $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $AssetDepositEditor } from "./$AssetDepositEditor.js"
 import { IChangeSubscription } from "./$RouteSubscriptionEditor"
-
+import * as wagmi from "@wagmi/core"
+import { getPuppetDepositAmount } from "../../logic/puppetLogic"
 
 interface IRouteSubscribeDrawer {
   modifySubscriber: Stream<IChangeSubscription>
@@ -39,17 +40,20 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
 ) => {
 
   const openIfEmpty = skipRepeats(map(l => l.length > 0, modifySubscriptionList))
-  const account = map(w3p => w3p?.account.address || null, wallet)
-  const datastore = connectContract(PUPPET.CONTRACT[42161].Datastore)
-  const readPuppetDeposit = switchMap(address => {
-    if (!address) {
+  const account = map(w3p => w3p ? w3p : null, wallet)
+
+  const readPuppetDeposit = switchMap(w3p => {
+    if (!w3p) {
       return now(0n)
     }
-      
-    const readDepositBalance = datastore.read('getUint', getPuppetDepositAccountKey(address, GMX.ARBITRUM_ADDRESS.USDC))
+
+    const address = w3p.account.address
     return mergeArray([
-      readDepositBalance,
-      join(constant(readDepositBalance, awaitPromises(requestDepositAsset)))
+      fromPromise(getPuppetDepositAmount(address, w3p.chain.id)),
+      switchMap(async txQuery =>  {
+        await txQuery
+        return getPuppetDepositAmount(address, w3p.chain.id)
+      }, requestDepositAsset)
     ])
   }, account)
 

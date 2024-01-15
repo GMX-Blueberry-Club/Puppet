@@ -2,9 +2,9 @@ import { $text, style, attr, $element, $Branch } from "@aelea/dom"
 import { $row, $column, $icon } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { empty, map, periodic } from "@most/core"
-import { readableFixedUSD30, unixTimestampNow } from "gmx-middleware-utils"
+import { readableUsd, unixTimestampNow } from "gmx-middleware-utils"
 import { $alertIcon, $defaultDropContainer, $Tooltip } from "gmx-middleware-ui-components"
-import { $pnlValue } from "../../common/$common.js"
+import { $pnlDisplay } from "../../common/$common.js"
 
 
 export const $alertTooltip = ($content: $Branch) => {
@@ -34,12 +34,12 @@ export const countdown = (targetDate: number) => {
 
 
 export const $competitionPrize = (prize: bigint | undefined, realisedPnl: bigint) => {
-  const val = readableFixedUSD30(realisedPnl)
+  const val = readableUsd(realisedPnl)
   const isNeg = realisedPnl < 0n
 
   return $row(
     $column(style({ alignItems: 'center' }))(
-      prize ? style({ fontSize: '1.3em' })($pnlValue(prize)) : empty(),
+      prize ? style({ fontSize: '1.3em' })($pnlDisplay(prize)) : empty(),
       style({ color: pallete.message })(
         $text(style({ color: isNeg ? pallete.negative : pallete.positive }))(
           `${isNeg ? '' : '+'}${val}`

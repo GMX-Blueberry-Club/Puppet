@@ -4,7 +4,7 @@ import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { map, now } from "@most/core"
 import { Stream } from "@most/types"
 import { $Table, $infoLabel, $txHashRef } from "gmx-middleware-ui-components"
-import { IPositionDecrease, IPositionIncrease, IPriceCandle, StateStream, TEMP_INDEX_TOKEN_MARKET_MAP, TEMP_MARKET_TOKEN_MARKET_MAP, adjustForDecimals, expandDecimals, getMappedValue, getTokenAmount, getTokenDescription, getTokenUsd, readableDate, readableFixedUSD30, readableTokenPrice, switchMap, getTimeSince, unixTimestampNow } from "gmx-middleware-utils"
+import { IPositionDecrease, IPositionIncrease, IPriceCandle, StateStream, TEMP_INDEX_TOKEN_MARKET_MAP, TEMP_MARKET_TOKEN_MARKET_MAP, adjustForDecimals, expandDecimals, getMappedValue, getTokenAmount, getTokenDescription, getTokenUsd, readableDate, readableUsd, readableTokenPrice, switchMap, getTimeSince, unixTimestampNow } from "gmx-middleware-utils"
 import { IMirrorPositionOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
@@ -17,12 +17,11 @@ import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 interface IPositionAdjustmentHistory {
   chain: ISupportedChain
   wallet: Stream<IWalletClient>
-
   pricefeed: Stream<IPriceCandle[]>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>
-
   $container: NodeComposeFn<$Node>
+  mirrorPosition: Stream<IMirrorPositionOpen | null>
 }
 
 export type IRequestTradeParams = ITradeConfig & { wallet: IWalletClient }
@@ -41,21 +40,7 @@ export type IRequestTrade = IRequestTradeParams & {
 export const $PositionDetails = (config: IPositionAdjustmentHistory) => component((
 ) => {
 
-  const { 
-    collateralDeltaUsd, collateralToken, indexToken, collateralDelta, market, isUsdCollateralToken, sizeDelta, focusMode,
-    primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, focusPrice
-  } = config.tradeConfig
-  const {
-    averagePrice, collateralDescription,
-    collateralPrice, executionFee,
-    indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
-    isTradingEnabled, liquidationPrice, marginFeeUsd, tradeRoute,
-    position, walletBalance, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
-  } = config.tradeState
-
-
-
-
+  const { chain, wallet, pricefeed, tradeConfig, tradeState, $container, mirrorPosition } = config
 
   return [
     switchMap(pos => {
@@ -73,7 +58,7 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
         // $container: $defaultTableContainer(screenUtils.isDesktopScreen ? style({ flex: '1 1 0', minHeight: '100px' }) : style({})),
         scrollConfig: {
           insertAscending: true,
-          $emptyMessage: style({ alignSelf: 'center' })(
+          $emptyMessage: style({ alignSelf: 'center', padding: '26px' })(
             $infoLabel(`No active position`)
           )
         },
@@ -148,7 +133,7 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
 
                   const pnl = req.priceImpactUsd
 
-                  return $text(readableFixedUSD30(pnl))
+                  return $text(readableUsd(pnl))
                 })
               }
             ] : [],
@@ -160,7 +145,7 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
               const amount = req.__typename === 'PositionIncrease' ? req.collateralAmount : -req.collateralAmount
               const delta = getTokenUsd(req.collateralTokenPriceMax, amount)
 
-              return $text(readableFixedUSD30(delta))
+              return $text(readableUsd(delta))
             })
           },
           {
@@ -171,12 +156,12 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
               const delta = req.__typename === 'PositionIncrease'
                 ? req.sizeDeltaUsd : -req.sizeDeltaUsd
 
-              return $text(readableFixedUSD30(delta))
+              return $text(readableUsd(delta))
             })
           },
         ]
       })({})
-    }, position),
+    }, mirrorPosition),
 
     // switchMap(tradeParams => {
     //   if (params.position === null) {

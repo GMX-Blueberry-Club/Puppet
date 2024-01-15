@@ -7,7 +7,7 @@ import * as GMX from 'gmx-middleware-const'
 import { groupArrayMany } from "gmx-middleware-utils"
 import { IPuppetTradeRoute, ISetRouteType, accountSettledPositionListSummary, openPositionListPnl } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $route } from "../../common/$common.js"
+import { $TraderDisplay, $TraderRouteDisplay, $pnlDisplay, $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
 import { $card, $card2 } from "../../common/elements/$common.js"
 import { IPageUserParams } from "../../data/type.js"
@@ -108,7 +108,7 @@ export const $PuppetProfile = (config: IPuppetProfile) => component((
                               activityTimeframe: params.activityTimeframe
                             })({}),
 
-                            $pnlValue(pnl)
+                            $pnlDisplay(pnl)
                           )
                         })
                       ),

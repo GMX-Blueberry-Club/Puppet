@@ -7,7 +7,7 @@ import { TableColumn } from "gmx-middleware-ui-components"
 import { IPriceOracleMap, getBasisPoints, readableDate, readablePercentage, getTimeSince, readableFactorPercentage } from "gmx-middleware-utils"
 import { IMirrorPosition, IMirrorPositionOpen, IMirrorPositionSettled, getParticiapntMpPortion, latestPriceMap } from "puppet-middleware-utils"
 import * as viem from 'viem'
-import { $entry, $openPnl, $pnlValue, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
+import { $entry, $openPnl, $pnlDisplay, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
 import { $seperator2 } from "../../pages/common.js"
 import { $txnIconLink } from "../../common/elements/$common"
 import { arbitrum } from "viem/chains"
@@ -77,7 +77,7 @@ export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IMirrorPosi
     const collateral = getParticiapntMpPortion(mp, mp.position.maxCollateralUsd, puppet)
     
     return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
-      $pnlValue(pnl),
+      $pnlDisplay(pnl),
       $seperator2,
       $text(style({ fontSize: '.85rem' }))(readablePercentage(getBasisPoints(pnl, collateral))),
     )

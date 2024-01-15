@@ -6,7 +6,7 @@ import { awaitPromises, debounce, empty, map, now, skipRepeatsWith, startWith, s
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $IntermediatePromise, $infoTooltipLabel, IMarker } from "gmx-middleware-ui-components"
-import { filterNull, parseReadableNumber, readableFixedUSD30, readableUnitAmount } from "gmx-middleware-utils"
+import { filterNull, parseReadableNumber, readableUsd, readableUnitAmount } from "gmx-middleware-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
 import { IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType } from "puppet-middleware-utils"
 import { $labelDisplay } from "../../common/$TextField.js"
@@ -135,7 +135,7 @@ export const $PositionListPerformance = (config: IPageGlobalParams & {
 
                 return {
                   position: 'aboveBar', time,
-                  text: readableFixedUSD30(pos.position.realisedPnlUsd),
+                  text: readableUsd(pos.position.realisedPnlUsd),
                   color: colorAlpha(pallete.message, .25),
                   size: 0.1,
                   shape: 'circle' as const,

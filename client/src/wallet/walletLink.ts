@@ -79,7 +79,7 @@ export const publicClient: Stream<viem.PublicClient> = map(params => {
   return clientAvaialble
 }, combineObject({ chain }))
 
-export const wallet = awaitPromises(map(async params => {
+export const wallet = switchMap(async params => {
   if (params.chain == null) {
     return null
   }
@@ -87,13 +87,13 @@ export const wallet = awaitPromises(map(async params => {
   const clientAvaialble = await getWalletClient({ chainId: params.chain.id })
 
   return clientAvaialble as IWalletClient
-}, combineObject({ chain, account })))
+}, combineObject({ chain, account }))
 
-export const nativeBalance = awaitPromises(map(params => {
+export const nativeBalance = switchMap(async params => {
   if (params.wallet === null) return 0n
 
   return params.publicClient.getBalance({ address: params.wallet.account.address })
-}, combineObject({ publicClient, wallet })))
+}, combineObject({ publicClient, wallet }))
 
 export const gasPrice = awaitPromises(map(pc => pc.getGasPrice(), publicClient))
 export const estimatedGasPrice = awaitPromises(map(pc => pc.estimateFeesPerGas({ chain: arbitrum }), publicClient))

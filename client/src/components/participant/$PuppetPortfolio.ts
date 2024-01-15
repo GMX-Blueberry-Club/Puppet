@@ -1,13 +1,13 @@
 import { Behavior, combineObject } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { awaitPromises, constant, join, map, mergeArray, now, startWith, switchLatest } from "@most/core"
+import { awaitPromises, constant, fromPromise, join, map, mergeArray, now, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
-import { groupArrayMany, readableFixedUSD30, readableTokenAmountLabel, switchMap } from "gmx-middleware-utils"
+import { groupArrayMany, readableUsd, readableTokenAmountLabel, switchMap } from "gmx-middleware-utils"
 import { IPuppetTradeRoute, ISetRouteType, accountSettledPositionListSummary, getParticiapntMpPortion, getPuppetDepositAccountKey, openPositionListPnl } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $route } from "../../common/$common.js"
+import { $TraderDisplay, $TraderRouteDisplay, $pnlDisplay, $route } from "../../common/$common.js"
 import { $heading2, $heading3 } from "../../common/$text.js"
 import { $card, $card2, $responsiveFlex } from "../../common/elements/$common.js"
 import { IPageUserParams } from "../../data/type.js"
@@ -22,6 +22,8 @@ import { $AssetWithdrawEditor } from "../portfolio/$AssetWithdrawEditor"
 import { connectContract } from "../../logic/common"
 import * as PUPPET from "puppet-middleware-const"
 import { $Popover } from "../$Popover"
+import { getPuppetDepositAmount } from "../../logic/puppetLogic"
+import { arbitrum } from "viem/chains"
 
 
 export interface IPuppetPortfolio extends IPageUserParams {
@@ -43,14 +45,13 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
   
   const { activityTimeframe, address, priceTickMapQuery, puppetTradeRouteListQuery, openPositionListQuery, settledPositionListQuery, selectedTradeRouteList, routeTypeListQuery, route } = config
 
-  const datastore = connectContract(PUPPET.CONTRACT[42161].Datastore)
-  const readDepositBalance = datastore.read('getUint', getPuppetDepositAccountKey(config.address, GMX.ARBITRUM_ADDRESS.USDC))
-
   
   const readPuppetDeposit = mergeArray([
-    readDepositBalance,
-    join(constant(readDepositBalance, awaitPromises(requestDepositAsset))),
-    join(constant(readDepositBalance, awaitPromises(requestWithdrawAsset))),
+    fromPromise(getPuppetDepositAmount(address, arbitrum.id)),
+    switchMap(async txQuery =>  {
+      await txQuery
+      return getPuppetDepositAmount(address, arbitrum.id)
+    }, requestDepositAsset)
   ])
 
   return [
@@ -142,7 +143,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
                               const collateralUsd = getParticiapntMpPortion(pos, pos.position.maxCollateralUsd, config.address)
                               return acc + collateralUsd
                             }, 0n)
-                            return readableFixedUSD30(balance)
+                            return readableUsd(balance)
                           }, openPositionListQuery)))
                         )
                       ),
@@ -193,7 +194,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
                               activityTimeframe: params.activityTimeframe
                             })({}),
 
-                            $pnlValue(pnl)
+                            $pnlDisplay(pnl)
                           )
                         })
                       ),

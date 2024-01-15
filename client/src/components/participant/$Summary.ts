@@ -4,7 +4,7 @@ import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { fromPromise, map, startWith } from "@most/core"
 import { Stream } from "@most/types"
-import { readableFixedUSD30, readableLeverage, switchMap, zipState } from "gmx-middleware-utils"
+import { readableUsd, readableLeverage, switchMap, zipState } from "gmx-middleware-utils"
 import { IMirrorPositionOpen, IMirrorPositionSettled, accountSettledPositionListSummary } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile.js"
@@ -60,7 +60,7 @@ export const $TraderProfileSummary = ({ address, openPositionListQuery, settledP
               $metricLabel($text('Win / Loss'))
             ),
             $metricRow(
-              $heading2(intermediateMessage(summaryQuery, summary => readableFixedUSD30(summary.avgCollateral))),
+              $heading2(intermediateMessage(summaryQuery, summary => readableUsd(summary.avgCollateral))),
               $metricLabel($text('Avg Collateral'))
             ),
             $metricRow(
@@ -116,7 +116,7 @@ export const $PuppetProfileSummary = ({ address, openPositionListQuery, settledP
               $metricLabel($text('Win / Loss'))
             ),
             $metricRow(
-              $heading2(intermediateMessage(summaryQuery, summary => readableFixedUSD30(summary.avgCollateral))),
+              $heading2(intermediateMessage(summaryQuery, summary => readableUsd(summary.avgCollateral))),
               $metricLabel($text('Avg Collateral'))
             )
           ),

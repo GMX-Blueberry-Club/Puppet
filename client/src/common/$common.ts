@@ -15,10 +15,10 @@ import {
   IOraclePrice,
   liquidationWeight,
   lst,
-  readableFixedUSD30,
+  readableUsd,
   readableLeverage,
   readablePercentage,
-  streamOf, switchMap, unixTimestampNow
+  streamOf, switchMap, unixTimestampNow, readablePnl
 } from "gmx-middleware-utils"
 import { getMpSlotPnL, getParticiapntMpPortion, IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -45,7 +45,7 @@ export const $midContainer = $column(
 
 export const $size = (size: bigint, collateral: bigint, $divider = $seperator2) => {
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
-    $text(readableFixedUSD30(size)),   
+    $text(readableUsd(size)),   
     $divider,
     $leverage(size, collateral),
   )
@@ -66,7 +66,7 @@ export const $routeIntent = (isLong: boolean, indexToken: viem.Address) => {
 export const $entry = (mp: IMirrorPosition) => {
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'center', placeContent: 'center', fontSize: '.85rem' }))(
     $routeIntent(mp.position.isLong, mp.position.indexToken),
-    $text(readableFixedUSD30(getEntryPrice(mp.position.sizeInUsd, mp.position.sizeInTokens, mp.position.indexToken))),
+    $text(readableUsd(getEntryPrice(mp.position.sizeInUsd, mp.position.sizeInTokens, mp.position.indexToken))),
   )
 }
 
@@ -136,7 +136,7 @@ export const $sizeAndLiquidation = (mp: IMirrorPositionOpen, markPrice: Stream<b
   const collateralUsd = getTokenUsd(mp.position.link.increaseList[0].collateralTokenPriceMin, collateralInToken)
 
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'flex-end' }))(
-    $text(readableFixedUSD30(sizeInUsd)),
+    $text(readableUsd(sizeInUsd)),
     $liquidationSeparator(mp.position.isLong, mp.position.sizeInUsd, mp.position.sizeInTokens, mp.position.collateralAmount, markPrice),
     $leverage(sizeInUsd, collateralUsd),
   )
@@ -212,32 +212,29 @@ export const $leverage = (size: bigint, collateral: bigint) => {
   return $text(style({ fontWeight: 'bold', letterSpacing: '0.05em', fontSize: '0.85rem' }))(readableLeverage(size, collateral))
 }
 
-export const $pnlValue = (pnl: Stream<bigint> | bigint, colorful = true) => {
+export const $pnlDisplay = (
+  pnl: Stream<bigint> | bigint,
+  bold = true
+) => {
   const pnls = isStream(pnl) ? pnl : now(pnl)
-  const display = map(value => {
-    return readableFixedUSD30(value)
-  }, pnls)
+  const display = map(value => readablePnl(value), pnls)
   const displayColor = skipRepeats(map(value => {
-    return value > 0n
-      ? pallete.positive : value === 0n
-        ? '' : pallete.negative
+    return value > 0n ? pallete.positive : value === 0n ? pallete.foreground : pallete.negative
   }, pnls))
 
-  const colorStyle = colorful
-    ? styleInline(map(color => {
-      return { color }
-    }, displayColor))
-    : O()
+  const colorStyle = styleInline(map(color => {
+    return { color }
+  }, displayColor))
 
-  // @ts-ignore
-  return $text(colorStyle, style({ fontWeight: 'bold' }))(display)
+  const $testStr = $text(colorStyle, style({ fontWeight: bold ? 'bold' : 'normal' }))
+  return $testStr(display)
 }
 
 export const $PnlPercentageValue = (pnl: Stream<bigint> | bigint, collateral: bigint, colorful = true) => {
   return $column(
-    $pnlValue(pnl, colorful),
+    $pnlDisplay(pnl, colorful),
     $seperator2,
-    $pnlValue(pnl, colorful),
+    $pnlDisplay(pnl, colorful),
   )
 }
 
@@ -249,7 +246,7 @@ export const $positionSlotPnl = (mp: IMirrorPositionOpen, positionMarkPrice: Str
     }, positionMarkPrice)
     : positionMarkPrice.min
 
-  return $pnlValue(value)
+  return $pnlDisplay(value)
 }
 
 export const $positionSlotRoi = (pos: IMirrorPositionOpen, positionMarkPrice: bigint | Stream<bigint>, account?: viem.Address) => {

@@ -19,7 +19,7 @@ import {
   getNativeTokenDescription,
   getPositionKey, getPriceImpactForPosition, getTokenAmount, getTokenDenominator, getTokenDescription, getTokenUsd,
   readableAccountingAmount,
-  readableFactorPercentage, readableFixedUSD30, readableTokenPrice,
+  readableFactorPercentage, readableUsd, readableTokenPrice,
   resolveAddress, switchMap, unixTimestampNow, zipState
 } from "gmx-middleware-utils"
 import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
@@ -435,7 +435,7 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ marketInfo, sizeDeltaUsd, isLong }))
 
   const marginFeeUsd = map(params => {
-    return getMarginFee(
+    return -getMarginFee(
       params.marketInfo,
       params.priceImpactUsd > 0n,
       params.sizeDeltaUsd
@@ -443,7 +443,7 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ marketInfo, priceImpactUsd, sizeDeltaUsd }))
 
   const adjustmentFeeUsd = map(params => {
-    return params.marginFeeUsd // + params.priceImpactUsd
+    return -params.marginFeeUsd // + params.priceImpactUsd
     // return params.marginFeeUsd + params.swapFee + params.priceImpactUsd
   }, combineObject({ marginFeeUsd, priceImpactUsd }))
 
@@ -654,9 +654,7 @@ export const $Trade = (config: ITradeComponent) => component((
     const adjustedGasLimit = params.executeGasLimit.estimatedFeeBaseGasLimit + applyFactor(estGasLimit, params.executeGasLimit.estimatedFeeMultiplierFactor)
     const feeTokenAmount = adjustedGasLimit * params.estimatedGasPrice.maxFeePerGas!
 
-    return feeTokenAmount
-    
-    // return getExecutionFee(params.executeGasLimit.estimatedFeeBaseGasLimit, params.executeGasLimit.estimatedFeeMultiplierFactor, estGasLimit, params.gasPrice)
+    return -feeTokenAmount
   }, combineObject({ executeGasLimit, isIncrease, estimatedGasPrice, gasPrice }))))
 
 
@@ -766,7 +764,7 @@ export const $Trade = (config: ITradeComponent) => component((
               $row(style({ whiteSpace: 'pre' }))(
                 switchMap(rateQuery => {
                   return $text(styleBehavior(map(rate => ({ color: rate ? pallete.negative : '' }), fromPromise(rateQuery))))(
-                    intermediateMessage(rateQuery, rate => readableFixedUSD30(-rate))
+                    intermediateMessage(rateQuery, rate => readableUsd(-rate))
                   )
                 }, marketBorrowRateQuery),
                 $text(style({ color: pallete.foreground }))(' / hr')
@@ -795,7 +793,7 @@ export const $Trade = (config: ITradeComponent) => component((
             $column(layoutSheet.spacingSmall)(
               $infoLabel('Available Liquidity'),
               switchMap(query => {
-                return $text(intermediateMessage(query, readableFixedUSD30))
+                return $text(intermediateMessage(query, readableUsd))
               }, marketAvailableLiquidityUsdQuery),
             ),
             screenUtils.isDesktopScreen
@@ -869,7 +867,7 @@ export const $Trade = (config: ITradeComponent) => component((
             close: formatFixed(fst.c, 30 - params.indexDescription.decimals),
             time: fst.timestamp as Time
           }
-          const rightOffset = screenUtils.isDesktopScreen ? ((document.body.clientWidth - CONTAINER_WIDTH) / 2) / 14 : 5
+          const rightOffset = screenUtils.isDesktopScreen ? ((document.body.clientWidth - CONTAINER_WIDTH) / 2) / 6.5 : 5
 
           return $CandleSticks({
             $content: $row(
@@ -890,8 +888,8 @@ export const $Trade = (config: ITradeComponent) => component((
                 }
 
                 return $row(layoutSheet.spacingSmall)(
-                  $infoLabeledValue('Size', $text(map(value => `${readableFixedUSD30(value)}`, sizeDeltaUsd))),
-                  $infoLabeledValue('Collateral', $text(map(value => `${readableFixedUSD30(value)}`, collateralDeltaUsd))),
+                  $infoLabeledValue('Size', $text(map(value => `${readableUsd(value)}`, sizeDeltaUsd))),
+                  $infoLabeledValue('Collateral', $text(map(value => `${readableUsd(value)}`, collateralDeltaUsd))),
                 )
               }, isFocused),
               $icon({ $content: $target, width: '16px', svgOps: style({ margin: '0 6px' }), viewBox: '0 0 32 32' }),
@@ -1039,6 +1037,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
       $tradeMidContainer(layoutSheet.spacingSmall, style({ padding: screenUtils.isMobileScreen ? '0 12px' : '' }))(
         $responsiveFlex(style({ flex: 1, display: 'flex' }))(
+          $seperator2,
 
           $column(layoutSheet.spacing, style({ padding: '25px', flex: 1, maxWidth: '460px' }))(
             $PositionAdjustmentDetails({
@@ -1061,9 +1060,10 @@ export const $Trade = (config: ITradeComponent) => component((
             $PositionListDetails({
               chain: config.chain,
               openPositionListQuery,
-              tradeConfig,
               tradeState,
+              mirrorPosition,
               wallet,
+              requestTrade,
               $container: $column
             })({
               switchPosition: switchPositionTether(),
@@ -1071,7 +1071,6 @@ export const $Trade = (config: ITradeComponent) => component((
               switchIsLong: switchIsLongTether(),
               switchIsIncrease: switchIsIncreaseTether(),
               changeLeverage: changeLeverageTether(),
-              changeIsUsdCollateralToken: changeIsUsdCollateralTokenTether(),
             }),
                     
           ),
@@ -1081,14 +1080,15 @@ export const $Trade = (config: ITradeComponent) => component((
           $PositionDetails({
             chain: config.chain,
             pricefeed,
+            mirrorPosition,
             tradeConfig,
             tradeState,
             wallet,
             $container: $column(style({ flex: 1 }))
-          })({
-          })
+          })({}),
                   
-                  
+          $seperator2,
+  
         )
 
         // switchMap(params => {

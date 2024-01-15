@@ -19,10 +19,13 @@ import {
   getNativeTokenAddress,
   getTokenDescription,
   getTokenUsd,
-  readableFixedUSD30,
+  readableUsd,
   readablePercentage,
   readableUnitAmount,
-  resolveAddress
+  resolveAddress,
+  readablePnl,
+  readableTokenAmountLabel,
+  zipState
 } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { IMirrorPositionOpen, latestPriceMap } from "puppet-middleware-utils"
@@ -33,6 +36,7 @@ import { connectContract, wagmiWriteContract } from "../../logic/common.js"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary } from "../form/$Button.js"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
+import { $pnlDisplay } from "../../common/$common"
 
 
 
@@ -70,7 +74,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
 
 ) => {
 
-  const { 
+  const {
     collateralDeltaUsd, collateralToken, collateralDelta, market, isUsdCollateralToken, sizeDelta, focusMode,
     primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, focusPrice, indexToken, executionFeeBuffer
   } = config.tradeConfig
@@ -226,10 +230,6 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
     return { ...params, ...req, acceptablePrice, request, swapRoute }
   }, combineObject({ executionFee, indexPrice, tradeRoute, routeTypeKey }), requestTradeParams))
 
-  const requestTradeRow = map(res => {
-    return [res]
-  }, requestTrade)
-  
   
 
   const requestApproveSpend = multicast(map(params => {
@@ -266,7 +266,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
 
       if (state.isIncrease) {
         if (state.sizeDeltaUsd > state.marketAvailableLiquidityUsd) {
-          return `Not enough liquidity. current capcity ${readableFixedUSD30(state.marketAvailableLiquidityUsd)}`
+          return `Not enough liquidity. current capcity ${readableUsd(state.marketAvailableLiquidityUsd)}`
         }
 
         if (state.isIncrease ? state.collateralDelta > state.walletBalance : state.collateralDeltaUsd > state.walletBalance) {
@@ -327,11 +327,17 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
   }, latestPriceMap)
 
   const executionFeeAfterBuffer = map(params => {
-    const executionFeeAfterBuffer = params.executionFee * (params.executionFeeBuffer + GMX.BASIS_POINTS_DIVISOR) / GMX.BASIS_POINTS_DIVISOR // params.executionFee
-    const feeUsd = getTokenUsd(params.latestWntPrice, executionFeeAfterBuffer)
+    return params.executionFee * (params.executionFeeBuffer + GMX.BASIS_POINTS_DIVISOR) / GMX.BASIS_POINTS_DIVISOR
+  }, combineObject({ executionFee, executionFeeBuffer }))
 
-    return feeUsd
-  }, combineObject({ executionFee, latestWntPrice, executionFeeBuffer }))
+  const executionFeeAfterBufferUsd = map(params => {
+    return getTokenUsd(params.latestWntPrice, params.executionFeeAfterBuffer)
+  }, zipState({ latestWntPrice, executionFeeAfterBuffer }))
+
+  const totalFeeUsd = map(params => {
+    return params.executionFeeAfterBufferUsd + params.marginFeeUsd + params.priceImpactUsd
+  }, combineObject({ adjustmentFeeUsd, executionFeeAfterBufferUsd, marginFeeUsd, priceImpactUsd }))
+
 
   return [
     config.$container(layoutSheet.spacing)(
@@ -353,15 +359,34 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
         // }, combineObject({ ...config.tradeState, sizeDeltaUsd }))),
         // $infoLabeledValue('Swap', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, swapFee))),
         style({ placeContent: 'space-between' })(
-          $infoLabeledValue('Execution Fee', $text(style({ color: pallete.indeterminate, alignSelf: 'flex-end' }))(map(feeUsd => {
-            return `${readableFixedUSD30(feeUsd)}`
-          }, executionFeeAfterBuffer)))
+          $infoLabeledValue(
+            'Max Transaction Fee',
+            $row(layoutSheet.spacingSmall)(
+              $text(style({ color: pallete.foreground }))(map(params => {
+                return readableTokenAmountLabel(getNativeTokenAddress(config.chain), params.executionFeeAfterBuffer)
+              }, combineObject({ executionFeeAfterBufferUsd, executionFeeAfterBuffer }))),
+              $text(style({ color: pallete.negative, alignSelf: 'flex-end' }))(map(params => {
+                return readablePnl(params.executionFeeAfterBufferUsd)
+              }, combineObject({ executionFeeAfterBufferUsd, executionFeeAfterBuffer })))
+            )
+          )
         ),
         style({ placeContent: 'space-between' })(
-          $infoLabeledValue('Price Impact', $text(style({ color: pallete.indeterminate }))(map(params => `${readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))} ${readableFixedUSD30(params.priceImpactUsd)}`, combineObject({ priceImpactUsd, sizeDeltaUsd }))))
+          // $infoLabeledValue('Price Impact', $text(style({ color: pallete.negative }))(map(params => {
+          //   return `${readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))} ${readablePnl(params.priceImpactUsd)}`
+          // }, combineObject({ priceImpactUsd, sizeDeltaUsd })))),
+          $infoLabeledValue(
+            'Price Impact',
+            $row(layoutSheet.spacingSmall)(
+              $text(style({ color: pallete.foreground }))(map(params => {
+                return readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))
+              }, combineObject({ priceImpactUsd, sizeDeltaUsd }))),
+              $pnlDisplay(priceImpactUsd, false)
+            )
+          )
         ),
         style({ placeContent: 'space-between' })(
-          $infoLabeledValue('Margin', $text(style({ color: pallete.indeterminate }))(map(readableFixedUSD30, marginFeeUsd)))
+          $infoLabeledValue('Margin', $text(style({ color: pallete.negative }))(map(readablePnl, marginFeeUsd)))
         )
       ),
       style({ placeContent: 'space-between' })(
@@ -372,9 +397,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
             ),
             'Total Fees'
           ),
-          $text(style({ color: pallete.indeterminate }))(
-            map(total => readableFixedUSD30(total), adjustmentFeeUsd)
-          )
+          $pnlDisplay(totalFeeUsd, false)
         )
       ),
 

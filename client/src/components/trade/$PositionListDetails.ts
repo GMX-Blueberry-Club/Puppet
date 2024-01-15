@@ -42,9 +42,10 @@ interface IPositionListDetails {
   chain: ISupportedChain
   wallet: Stream<IWalletClient>
   openPositionListQuery: Stream<Promise<IMirrorPositionOpen[]>>
-  tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>
   $container: NodeComposeFn<$Node>
+  requestTrade: Stream<IRequestTrade>
+  mirrorPosition: Stream<IMirrorPositionOpen | null>
 }
 export const $PositionListDetails = (config: IPositionListDetails) => component((
   [switchPosition, switchPositionTether]: Behavior<any, IMirrorPositionOpen>,
@@ -55,17 +56,7 @@ export const $PositionListDetails = (config: IPositionListDetails) => component(
   [switchIsIncrease, switchIsIncreaseTether]: Behavior<boolean>,
 ) => {
 
-  const { 
-    collateralDeltaUsd, collateralToken, collateralDelta, market, isUsdCollateralToken, sizeDelta, focusMode,
-    primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, focusPrice
-  } = config.tradeConfig
-  const {
-    averagePrice, collateralDescription,
-    collateralPrice, executionFee,
-    indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
-    isTradingEnabled, liquidationPrice, marginFeeUsd, tradeRoute,
-    walletBalance, position, priceImpactUsd, adjustmentFeeUsd, 
-  } = config.tradeState
+  const { chain, wallet, openPositionListQuery, tradeState, $container, requestTrade, mirrorPosition } = config
 
 
   return [
@@ -91,7 +82,7 @@ export const $PositionListDetails = (config: IPositionListDetails) => component(
                   $ButtonPrimary({
                     $content: $entry(mp),
                     $container: $defaultMiniButtonSecondary(
-                      styleBehavior(map(activePositionSlot => ({ backgroundColor: activePositionSlot.position.key === mp.position.key ? pallete.primary : pallete.middleground }), filterNull(position))),
+                      styleBehavior(map(activePositionSlot => ({ backgroundColor: activePositionSlot.position.key === mp.position.key ? pallete.primary : pallete.middleground }), filterNull(mirrorPosition))),
                       style({ borderRadius: '20px', borderColor: 'transparent',  })
                     )
                   })({
@@ -143,9 +134,6 @@ export const $PositionListDetails = (config: IPositionListDetails) => component(
         constant(false, clickClose)
       ]),
       changeLeverage: constant(0n, clickClose),
-      changeIsUsdCollateralToken: snapshot((params, posSlot) => {
-        return params.market.shortToken === posSlot.position.collateralToken
-      }, combineObject({ market }), switchPosition),
     }
   ]
 })

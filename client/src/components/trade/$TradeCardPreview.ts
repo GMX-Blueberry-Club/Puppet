@@ -5,7 +5,7 @@ import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { empty, map, multicast, now, skipRepeatsWith, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { $Baseline, $bear, $bull, $infoTooltipLabel, IMarker } from "gmx-middleware-ui-components"
-import { filterNull, parseReadableNumber, readableFixedUSD30, readableUnitAmount } from "gmx-middleware-utils"
+import { filterNull, parseReadableNumber, readableUsd, readableUnitAmount } from "gmx-middleware-utils"
 import { BaselineData, ChartOptions, DeepPartial, MouseEventParams, Time } from "lightweight-charts"
 import { IMirrorPositionSettled, IMirrorPositionOpen } from "puppet-middleware-utils"
 import { IPerformanceTimeline, getPerformanceTimeline } from "./$ProfilePerformanceGraph.js"
@@ -51,7 +51,7 @@ export const $TradeCardPreview = (config: ITradeCardPreview) => component((
 
     return {
       position,
-      text: pos.__typename === 'PositionDecrease' ? readableFixedUSD30(pos.basePnlUsd) : '',
+      text: pos.__typename === 'PositionDecrease' ? readableUsd(pos.basePnlUsd) : '',
       color: colorAlpha(pallete.message, .25),
       time: Number(pos.blockTimestamp) as Time,
       size: 0.1,

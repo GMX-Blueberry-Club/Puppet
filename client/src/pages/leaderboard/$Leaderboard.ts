@@ -11,7 +11,7 @@ import { IMarketCreatedEvent, IPriceTickListMap, TEMP_MARKET_LIST, getBasisPoint
 import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType, accountSettledPositionListSummary, latestPriceMap, openPositionListPnl, queryLatestPriceTick, queryOpenPositionList, querySettledPositionList } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $labelDisplay } from "../../common/$TextField.js"
-import { $TraderDisplay, $TraderRouteDisplay, $pnlValue, $puppets, $route, $size } from "../../common/$common.js"
+import { $TraderDisplay, $TraderRouteDisplay, $pnlDisplay, $puppets, $route, $size } from "../../common/$common.js"
 import { $card, $responsiveFlex } from "../../common/elements/$common.js"
 import { $DropMultiSelect } from "../../components/form/$Dropdown.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor"
@@ -265,7 +265,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
                 const pnl = map(openPnl => tr.summary.pnl + openPnl, openPositionListPnl(tr.openPositionList))
 
                 return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
-                  $pnlValue(pnl),
+                  $pnlDisplay(pnl),
                   $seperator2,
                   $text(style({ fontSize: '.85rem' }))(
                     map(pnl => {
