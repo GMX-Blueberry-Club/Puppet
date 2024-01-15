@@ -12,7 +12,7 @@ import { $heading3 } from "../../common/$text.js"
 import { $card, $card2 } from "../../common/elements/$common.js"
 import { IPageUserParams } from "../../data/type.js"
 import { entryColumn, pnlSlotColumn, positionTimeColumn, puppetsColumn, settledPnlColumn, settledSizeColumn, slotSizeColumn } from "../table/$TableColumn.js"
-import { $PositionListPerformance } from "./$PositionListPerformance.js"
+import { $ProfilePeformanceTimeline } from "./$ProfilePeformanceTimeline.js"
 
 
 export const $TraderProfile = (
@@ -33,7 +33,7 @@ export const $TraderProfile = (
     $column(layoutSheet.spacingBig)(
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
         $card2(style({ padding: 0, height: screenUtils.isDesktopScreen ? '200px' : '200px', position: 'relative', margin: screenUtils.isDesktopScreen ? `-36px -36px 0` : `-12px -12px 0px` }))(
-          $PositionListPerformance(config)({
+          $ProfilePeformanceTimeline(config)({
             selectTradeRouteList: selectTradeRouteListTether(),
             changeActivityTimeframe: changeActivityTimeframeTether(),
           })
@@ -97,7 +97,6 @@ export const $TraderProfile = (
             }, combineObject({ settledPositionListQuery, activityTimeframe }))))
             
           )
-
         ),
       ),
     ),

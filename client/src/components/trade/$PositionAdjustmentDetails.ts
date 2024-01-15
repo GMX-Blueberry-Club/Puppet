@@ -8,35 +8,20 @@ import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
 import { $alert, $alertTooltip, $anchor, $infoLabeledValue, $infoTooltipLabel } from "gmx-middleware-ui-components"
 import {
-  IPriceOracleMap,
-  IPriceCandle,
-  OrderType,
-  StateStream,
-  abs,
-  filterNull,
-  getBasisPoints,
-  getDenominator,
-  getNativeTokenAddress,
-  getTokenDescription,
-  getTokenUsd,
-  readableUsd,
-  readablePercentage,
-  readableUnitAmount,
-  resolveAddress,
-  readablePnl,
-  readableTokenAmountLabel,
-  zipState
+  IPriceCandle, OrderType, StateStream, abs, filterNull, getBasisPoints, getDenominator, getNativeTokenAddress, getTokenDescription, getTokenUsd,
+  readableFactorPercentage,
+  readablePercentage, readablePnl, readableTokenAmountLabel, readableUnitAmount, readableUsd, resolveAddress, zipState
 } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { IMirrorPositionOpen, latestPriceMap } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $Popover } from "../$Popover.js"
+import { $pnlDisplay } from "../../common/$common"
 import { $heading2 } from "../../common/$text.js"
-import { connectContract, wagmiWriteContract } from "../../logic/common.js"
+import { wagmiWriteContract } from "../../logic/common.js"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary } from "../form/$Button.js"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
-import { $pnlDisplay } from "../../common/$common"
 
 
 
@@ -75,14 +60,13 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
 ) => {
 
   const {
-    collateralDeltaUsd, collateralToken, collateralDelta, market, isUsdCollateralToken, sizeDelta, focusMode,
+    collateralDeltaAmount, collateralToken, market, isUsdCollateralToken, focusMode,
     primaryToken, isIncrease, isLong, leverage, sizeDeltaUsd, slippage, focusPrice, indexToken, executionFeeBuffer
   } = config.tradeConfig
   const {
-    averagePrice, collateralDescription,
-    collateralPrice, executionFee,
+    averagePrice, collateralDescription, collateralPrice, executionFee,
     indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
-    isTradingEnabled, liquidationPrice, marginFeeUsd, tradeRoute,
+    isTradingEnabled, liquidationPrice, marginFeeUsd, tradeRoute, marketInfo,
     position, walletBalance, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
   } = config.tradeState
 
@@ -93,7 +77,6 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
   }, combineObject(config.tradeConfig), clickProposeTrade)
 
   const requestTrade: Stream<IRequestTrade> = multicast(snapshot((params, req) => {
-
     const resolvedPrimaryAddress = resolveAddress(config.chain, req.primaryToken)
     const from = req.isIncrease ? resolvedPrimaryAddress : req.isLong ? req.market.indexToken : req.collateralToken
     const to = req.isIncrease ? req.isLong ? req.market.indexToken : req.collateralToken : resolvedPrimaryAddress
@@ -126,7 +109,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
 
     const executionFeeAfterBuffer = params.executionFee * (req.executionFeeBuffer + GMX.BASIS_POINTS_DIVISOR) / GMX.BASIS_POINTS_DIVISOR // params.executionFee
     const orderVaultAddress = GMX.CONTRACT[config.chain.id].OrderVault.address
-    const wntCollateralAmount = isNative ? req.collateralDelta : 0n
+    const wntCollateralAmount = isNative ? req.collateralDeltaAmount : 0n
     const totalWntAmount = wntCollateralAmount + executionFeeAfterBuffer
     const orderType = req.isIncrease
       ? req.focusPrice ? OrderType.LimitIncrease : OrderType.MarketIncrease
@@ -141,12 +124,12 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
         args: [
           {
             acceptablePrice,
-            collateralDelta: abs(req.collateralDelta),
+            collateralDelta: abs(req.collateralDeltaAmount),
             sizeDelta: abs(req.sizeDeltaUsd),
           },
           {
-            amount: req.collateralDelta,
-            path: req.collateralDelta ? [req.collateralToken] : [req.collateralToken],
+            amount: req.collateralDeltaAmount,
+            path: req.collateralDeltaAmount ? [req.collateralToken] : [req.collateralToken],
             minOut: 0n,
           },
           params.routeTypeKey,
@@ -161,12 +144,12 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
         args: [
           {
             acceptablePrice,
-            collateralDelta: req.collateralDelta,
+            collateralDelta: req.collateralDeltaAmount,
             sizeDelta: abs(req.sizeDeltaUsd),
           },
           {
-            amount: req.collateralDelta,
-            path: req.collateralDelta ? [req.collateralToken] : [],
+            amount: req.collateralDeltaAmount,
+            path: req.collateralDeltaAmount ? [req.collateralToken] : [],
             minOut: 0n,
           },
           executionFeeAfterBuffer,
@@ -230,8 +213,6 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
     return { ...params, ...req, acceptablePrice, request, swapRoute }
   }, combineObject({ executionFee, indexPrice, tradeRoute, routeTypeKey }), requestTradeParams))
 
-  
-
   const requestApproveSpend = multicast(map(params => {
     const recpt = wagmiWriteContract({
       address: params.primaryToken,
@@ -269,7 +250,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
           return `Not enough liquidity. current capcity ${readableUsd(state.marketAvailableLiquidityUsd)}`
         }
 
-        if (state.isIncrease ? state.collateralDelta > state.walletBalance : state.collateralDeltaUsd > state.walletBalance) {
+        if (state.isIncrease ? state.collateralDeltaAmount > state.walletBalance : state.collateralDeltaAmount > state.walletBalance) {
           return `Not enough ${state.primaryDescription.symbol} in connected account`
         }
 
@@ -339,6 +320,12 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
   }, combineObject({ adjustmentFeeUsd, executionFeeAfterBufferUsd, marginFeeUsd, priceImpactUsd }))
 
 
+
+  const isPriceFactorPositive = skipRepeats(map(amountUsd => amountUsd > 0n, priceImpactUsd))
+  const positionFeeFactor = map(params => {
+    return params.isPriceFactorPositive ? params.marketInfo.config.positionFeeFactorForPositiveImpact : params.marketInfo.config.positionFeeFactorForNegativeImpact
+  }, combineObject({ isPriceFactorPositive, marketInfo }))
+
   return [
     config.$container(layoutSheet.spacing)(
       $column(layoutSheet.spacingTiny)(
@@ -360,10 +347,10 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
         // $infoLabeledValue('Swap', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, swapFee))),
         style({ placeContent: 'space-between' })(
           $infoLabeledValue(
-            'Max Transaction Fee',
+            'Max Gas Fee',
             $row(layoutSheet.spacingSmall)(
               $text(style({ color: pallete.foreground }))(map(params => {
-                return readableTokenAmountLabel(getNativeTokenAddress(config.chain), params.executionFeeAfterBuffer)
+                return `${readableTokenAmountLabel(getNativeTokenAddress(config.chain), params.executionFeeAfterBuffer)}`
               }, combineObject({ executionFeeAfterBufferUsd, executionFeeAfterBuffer }))),
               $text(style({ color: pallete.negative, alignSelf: 'flex-end' }))(map(params => {
                 return readablePnl(params.executionFeeAfterBufferUsd)
@@ -379,14 +366,33 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
             'Price Impact',
             $row(layoutSheet.spacingSmall)(
               $text(style({ color: pallete.foreground }))(map(params => {
-                return readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))
+                return `(${readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))} size)`
               }, combineObject({ priceImpactUsd, sizeDeltaUsd }))),
               $pnlDisplay(priceImpactUsd, false)
             )
           )
         ),
         style({ placeContent: 'space-between' })(
-          $infoLabeledValue('Margin', $text(style({ color: pallete.negative }))(map(readablePnl, marginFeeUsd)))
+          $infoLabeledValue(
+            'Margin',
+            $row(layoutSheet.spacingSmall)(
+              $text(style({ color: pallete.foreground }))(map(factor => {
+                return `(${readableFactorPercentage(factor)} size)`
+              }, positionFeeFactor)),
+              $pnlDisplay(marginFeeUsd, false)
+            )
+          )
+        ),
+        style({ placeContent: 'space-between' })(
+          $infoLabeledValue(
+            'Min Puppet Reward',
+            $row(layoutSheet.spacingSmall)(
+              $text(style({ color: pallete.foreground }))(map(factor => {
+                return `(${readableFactorPercentage(factor)} size)`
+              }, positionFeeFactor)),
+              $pnlDisplay(0n, false)
+            )
+          )
         )
       ),
       style({ placeContent: 'space-between' })(
@@ -417,8 +423,8 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
           $ButtonSecondary({ 
             $content: $text('Reset'),
             disabled: map(params => {
-              return params.sizeDelta === 0n && params.collateralDelta === 0n && params.isIncrease
-            }, combineObject({ sizeDelta, collateralDelta, isIncrease }))
+              return params.sizeDeltaUsd === 0n && params.collateralDeltaAmount === 0n && params.isIncrease
+            }, combineObject({ sizeDeltaUsd, collateralDeltaAmount, isIncrease }))
           })({
             click: clickResetPositionTether(
               sample(position)
@@ -469,9 +475,9 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
               ? $ButtonPrimaryCtx({
                 request: map(req => req.request, requestTrade),
                 disabled: map(params => {
-                  const newLocal = !!params.validationError || params.sizeDelta === 0n && params.collateralDelta === 0n
+                  const newLocal = !!params.validationError || params.sizeDeltaUsd === 0n && params.collateralDeltaAmount === 0n
                   return newLocal
-                }, combineObject({ validationError, sizeDelta, collateralDelta })),
+                }, combineObject({ validationError, sizeDeltaUsd, collateralDeltaAmount })),
                 $content: $text(
                   map(_params => {
                     let modLabel: string

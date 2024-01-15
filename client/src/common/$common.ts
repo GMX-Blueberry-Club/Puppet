@@ -20,7 +20,7 @@ import {
   readablePercentage,
   streamOf, switchMap, unixTimestampNow, readablePnl
 } from "gmx-middleware-utils"
-import { getMpSlotPnL, getParticiapntMpPortion, IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen } from "puppet-middleware-utils"
+import { getMpSlotPnL, getParticiapntMpPortion, IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen, IPuppetTradeRoute } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile.js"
 import { $Popover } from "../components/$Popover.js"
@@ -401,3 +401,5 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
     { modifySubscribeList }
   ]
 })
+
+

@@ -212,7 +212,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                 ),
                 router.match(tradeRoute)(
                   $Trade({ routeTypeListQuery, chain: chainEvent, referralCode: BLUEBERRY_REFFERAL_CODE, parentRoute: tradeRoute })({
-                    changeRoute: linkClickTether()
+                    // changeRoute: linkClickTether()
                   })
                 ),
 

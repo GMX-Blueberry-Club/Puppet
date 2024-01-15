@@ -10,19 +10,12 @@ import * as GMX from "gmx-middleware-const"
 import { USD_DECIMALS } from "gmx-middleware-const"
 import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $target, intermediateMessage } from "gmx-middleware-ui-components"
 import {
-  IMarketInfo, IMarketPrice,
-  StateStream,
-  TEMP_MARKET_LIST, TEMP_MARKET_TOKEN_MARKET_MAP, applyFactor, div,
-  filterNull, formatFixed, getAvailableReservedUsd, getBorrowingFactorPerInterval,
-  getFundingFactorPerInterval,
-  getLiquidationPrice, getMappedValue, getMarginFee,
-  getNativeTokenDescription,
+  IMarketInfo, IMarketPrice, StateStream, TEMP_MARKET_TOKEN_MARKET_MAP, applyFactor, div,
+  filterNull, formatFixed, getAvailableReservedUsd, getBorrowingFactorPerInterval, getFundingFactorPerInterval, getLiquidationPrice, getMappedValue, getMarginFee, getNativeTokenDescription,
   getPositionKey, getPriceImpactForPosition, getTokenAmount, getTokenDenominator, getTokenDescription, getTokenUsd,
-  readableAccountingAmount,
-  readableFactorPercentage, readableUsd, readableTokenPrice,
-  resolveAddress, switchMap, unixTimestampNow, zipState
+  readableAccountingAmount, readableFactorPercentage, readableTokenAmountLabel, readableTokenPrice, readableUsd, resolveAddress, switchMap, unixTimestampNow, zipState
 } from "gmx-middleware-utils"
-import { CandlestickData, Coordinate, LineStyle, LogicalRange, MouseEventParams, Time } from "lightweight-charts"
+import { CandlestickData, Coordinate, LineStyle, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
 import { IMirrorPositionOpen, getLastAdjustment, latestPriceMap, queryLatestTokenPriceFeed, queryTraderPositionOpen } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -37,7 +30,6 @@ import { $PositionEditor, IPositionEditorAbstractParams, ITradeConfig, ITradePar
 import { $PositionListDetails, IRequestTrade } from "../components/trade/$PositionListDetails.js"
 import { store } from "../data/store/store.js"
 import { ITradeFocusMode } from "../data/type"
-import { contractReader, listenContract } from "../logic/common.js"
 import { getExecuteGasFee, getFullMarketInfo } from "../logic/tradeV2.js"
 import * as trade from "../logic/traderLogic.js"
 import { exchangesWebsocketPriceSource, getTraderTradeRoute } from "../logic/traderLogic.js"
@@ -71,7 +63,7 @@ const TIME_INTERVAL_LABEL_MAP = {
 
 export const $Trade = (config: ITradeComponent) => component((
   [selectTimeFrame, selectTimeFrameTether]: Behavior<GMX.IntervalTime>,
-  [changeRoute, changeRouteTether]: Behavior<string>,
+  // [changeRoute, changeRouteTether]: Behavior<string>,
 
   [changePrimaryToken, changePrimaryTokenTether]: Behavior<viem.Address>,
 
@@ -80,9 +72,9 @@ export const $Trade = (config: ITradeComponent) => component((
   [switchFocusMode, switchFocusModeTether]: Behavior<ITradeFocusMode>,
   [switchIsLong, switchIsLongTether]: Behavior<boolean>,
   [switchIsIncrease, switchIsIncreaseTether]: Behavior<boolean>,
-  [changeTradeRoute, changeTradeRouteTether]: Behavior<viem.Address | null>,
+  // [changeTradeRoute, changeTradeRouteTether]: Behavior<viem.Address | null>,
 
-  [changeCollateralDeltaUsd, changeCollateralDeltaUsdTether]: Behavior<bigint>,
+  [changeCollateralDeltaAmount, changeCollateralDeltaAmountTether]: Behavior<bigint>,
   [changeSizeDeltaUsd, changeSizeDeltaUsdTether]: Behavior<bigint>,
 
   // [requestAccountTradeList, requestAccountTradeListTether]: Behavior<IAccountTradeListParamApi, IAccountTradeListParamApi>,
@@ -99,18 +91,16 @@ export const $Trade = (config: ITradeComponent) => component((
   [requestTrade, requestTradeTether]: Behavior<IRequestTrade>,
 
   // [focusPriceAxisPoint, focusPriceAxisPointTether]: Behavior<Coordinate | null>,
-  [chartClick, chartClickTether]: Behavior<MouseEventParams>,
+  // [chartClick, chartClickTether]: Behavior<MouseEventParams>,
   // [chartCrosshairMove, chartCrosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
 
   [changeYAxisCoords, changeYAxisCoordsTether]: Behavior<Coordinate>,
   [changefocusPrice, changefocusPriceTether]: Behavior<number | null>,
   [changeIsFocused, changeIsFocusedTether]: Behavior<boolean>,
   
-  [changeBorrowRateIntervalDisplay, changeBorrowRateIntervalDisplayTether]: Behavior<GMX.IntervalTime>,
-  [changeFundingRateIntervalDisplay, changeFundingRateIntervalDisplayTether]: Behavior<GMX.IntervalTime>,
-
+  [changeFeeDisplayRate, changeFeeDisplayRateTether]: Behavior<GMX.IntervalTime>,
   
-  [chartVisibleLogicalRangeChange, chartVisibleLogicalRangeChangeTether]: Behavior<LogicalRange | null>,
+  // [chartVisibleLogicalRangeChange, chartVisibleLogicalRangeChangeTether]: Behavior<LogicalRange | null>,
 
   [clickResetPositionQuery, clickResetPositionTether]: Behavior<IMirrorPositionOpen | null>,
 
@@ -118,29 +108,12 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const { routeTypeListQuery } = config
   
-  const marketList = now(TEMP_MARKET_LIST)
-  const chainId = config.chain.id
-  const gmxContractMap = GMX.CONTRACT[config.chain.id]
-  const puppetContractMap = PUPPET.CONTRACT[config.chain.id]
+  // const gmxContractMap = GMX.CONTRACT[config.chain.id]
 
-  const v2Reader = contractReader(gmxContractMap.ReaderV2)
-  const datastoreReader = contractReader(puppetContractMap.Datastore) 
-
-  // client.watchContractEvent({
-  //   eventName: 'EventLog2',
-  //   strict: true,
+  // const orderCancelled = listenContract({
   //   abi: gmxContractMap.EventEmitter.abi,
-  //   address: gmxContractMap.EventEmitter.address,
-  //   args: { eventNameHash: GMX.OrderEvent.OrderCancelled },
-  //   onLogs: (logs) => {
-  //     console.log(logs)
-  //   },
-  // })
-
-  const orderCancelled = listenContract({
-    abi: gmxContractMap.EventEmitter.abi,
-    address: gmxContractMap.EventEmitter.address
-  })('EventLog2', { eventNameHash: GMX.OrderEvent.OrderCancelled })
+  //   address: gmxContractMap.EventEmitter.address
+  // })('EventLog2', { eventNameHash: GMX.OrderEvent.OrderCancelled })
   const focusMode = replayLatest(switchFocusMode, ITradeFocusMode.collateral)
 
   const chartInterval = storage.replayWrite(store.tradeBox, selectTimeFrame, 'chartInterval')
@@ -150,7 +123,7 @@ export const $Trade = (config: ITradeComponent) => component((
   const executionFeeBuffer = storage.replayWrite(store.tradeBox, changeExecutionFeeBuffer, 'executionFeeBuffer')
   const primaryToken = storage.replayWrite(store.tradeBox, changePrimaryToken, 'primaryToken')
   const isUsdCollateralToken = storage.replayWrite(store.tradeBox, changeIsUsdCollateralToken, 'isUsdCollateralToken')
-  const feeDisplayRate = storage.replayWrite(store.tradeBox, changeFundingRateIntervalDisplay, 'feeRateIntervalDisplay')
+  const feeDisplayRate = storage.replayWrite(store.tradeBox, changeFeeDisplayRate, 'feeRateIntervalDisplay')
   const marketToken: Stream<viem.Address> = storage.replayWrite(store.tradeBox, changeMarketToken, 'marketToken')
 
   const isIncrease = mergeArray([
@@ -161,7 +134,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const market = map(token => getMappedValue(TEMP_MARKET_TOKEN_MARKET_MAP, token), marketToken)
 
-  const collateralDeltaUsd = replayLatest(changeCollateralDeltaUsd, 0n)
+  const collateralDeltaAmount = replayLatest(changeCollateralDeltaAmount, 0n)
   const sizeDeltaUsd = replayLatest(changeSizeDeltaUsd, 0n)
 
 
@@ -215,33 +188,6 @@ export const $Trade = (config: ITradeComponent) => component((
     return params.latestPriceMap[token].min
   }, combineObject({ latestPriceMap, primaryToken }))
 
-  // const marketPoolUsage = replayLatest(multicast(switchMap(params => {
-  //   const poolInfo = fromPromise(getMarketPoolUsage(config.chain, params.market))
-
-  //   return poolInfo
-  // }, combineObject({ market, marketPrice }))))
-
-  // const marketConfig = replayLatest(multicast(switchMap(params => {
-  //   const poolInfo = fromPromise(getMarketConfig(config.chain, params.market))
-
-  //   return poolInfo
-  // }, combineObject({ market, marketPrice }))))
-
-  // const marketPool: Stream<IMarketPool> = replayLatest(multicast(switchMap(params => {
-  //   const data = v2Reader(
-  //     'getMarketTokenPrice',
-  //     gmxContractMap.Datastore.address,
-  //     params.market,
-  //     params.marketPrice.indexTokenPrice,
-  //     params.marketPrice.longTokenPrice,
-  //     params.marketPrice.shortTokenPrice,
-  //     hashKey("MAX_PNL_FACTOR_FOR_TRADERS"),
-  //     true
-  //   )
-
-  //   return map(res => res[1], data)
-  // }, combineObject({ market, marketPrice }))))
-
   const routeTypeKey = replayLatest(multicast(awaitPromises(map(async params => {
     const getRouteTypeKeyArgs = (await params.routeTypeListQuery).find(srt =>
       srt.collateralToken === params.collateralToken && srt.indexToken === params.indexToken && srt.isLong === params.isLong
@@ -278,7 +224,6 @@ export const $Trade = (config: ITradeComponent) => component((
   }, wallet)))
 
 
-
   const mirrorPosition: Stream<IMirrorPositionOpen | null> = replayLatest(multicast(mergeArray([
     awaitPromises(switchLatest(map(query => {
       return map(async params => {
@@ -300,53 +245,6 @@ export const $Trade = (config: ITradeComponent) => component((
     switchPosition,
     // clickResetPosition
   ])))
-  // const mirrorPositionQuery: Stream<Promise<IMirrorPositionOpen | null>> = replayLatest(multicast(mergeArray([
-  //   map(async params => {
-  //     const posKeyParams = params.positionKeyParams
-  //     if (posKeyParams === null) {
-  //       return null
-  //     }
-
-  //     const existingSlot = (await params.openPositionListQuery).find(slot => slot.position.key === posKeyParams.key)
-
-  //     if (!existingSlot) {
-  //       return null
-  //     }
-
-  //     return existingSlot
-  //   }, combineObject({ openPositionListQuery, positionKeyParams })),
-  //   switchPosition,
-  //   // clickResetPosition
-  // ])))
-
-  // const positionInfoQuery: Stream<Promise<{ info: IPositionInfo | null, mp: IMirrorPositionOpen } | null>> = multicast(replayLatest(map(async params => {
-  //   if (params.positionKeyParams === null) {
-  //     return null
-  //   }
-
-  //   try {
-  //     const info = wagmi.readContract({
-  //       ...gmxContractMap.ReaderV2,
-  //       functionName: 'getPositionInfo',
-  //       args: [
-  //         gmxContractMap.Datastore.address,
-  //         gmxContractMap.ReferralStorage.address,
-  //         params.positionKeyParams.key,
-  //         params.marketPrice,
-  //         0n,
-  //         GMX.ADDRESS_ZERO,
-  //         false
-  //       ]
-  //     })
-  //     return info
-  //   } catch (err) {
-  //     console.error(err)
-  //     return null
-  //   }
-  // }, zipState({ positionKeyParams, marketPrice, mirrorPositionQuery }))))
-
-
-
 
 
   const primaryDescription = map((token) => {
@@ -361,69 +259,6 @@ export const $Trade = (config: ITradeComponent) => component((
   const collateralDescription = map((address) => getTokenDescription(address), collateralToken)
 
 
-  // const collateralTokenPoolInfo = replayLatest(multicast(tradeReader.getTokenPoolInfo(collateralToken)))
-
-
-
-
-  // const swapFee = replayLatest(multicast(skipRepeats(map((params) => {
-  //   const inputAndIndexStable = params.primaryDescription.isUsd && params.indexDescription.isUsd
-  //   const swapFeeBasisPoints = inputAndIndexStable ? GMX.STABLE_SWAP_FEE_BASIS_POINTS : GMX.SWAP_FEE_BASIS_POINTS
-  //   const taxBasisPoints = inputAndIndexStable ? GMX.STABLE_TAX_BASIS_POINTS : GMX.TAX_BASIS_POINTS
-
-  //   return 0n
-  //   // const rsolvedInputAddress = resolveAddress(config.chain, params.primaryToken)
-  //   // if (rsolvedInputAddress === params.collateralToken) {
-  //   //   return 0n
-  //   // }
-
-
-  //   // let amountUsd = abs(params.collateralDeltaUsd)
-
-  //   // if (params.position && !params.isIncrease) {
-  //   //   const pnl = getPnL(params.isLong, params.position.averagePrice, params.marketPrice.indexTokenPrice.min, params.position.latestUpdate.sizeInUsd)
-  //   //   const adjustedDelta = getAdjustedDelta(params.position.latestUpdate.sizeInUsd, abs(params.sizeDeltaUsd), pnl)
-
-  //   //   if (adjustedDelta > 0n) {
-  //   //     amountUsd = amountUsd + adjustedDelta
-  //   //   }
-  //   // }
-
-
-  //   // const usdgAmount = amountUsd * getDenominator(params.inputTokenDescription.decimals) / GMX.PRECISION
-
-  //   // const feeBps0 = getFeeBasisPoints(
-  //   //   params.inputTokenDebtUsd,
-  //   //   params.inputTokenWeight,
-  //   //   usdgAmount,
-  //   //   swapFeeBasisPoints,
-  //   //   taxBasisPoints,
-  //   //   true,
-  //   //   params.usdgSupply,
-  //   //   params.totalTokenWeight
-  //   // )
-  //   // const feeBps1 = getFeeBasisPoints(
-  //   //   params.collateralTokenPoolInfo.usdgAmounts,
-  //   //   params.collateralTokenPoolInfo.tokenWeights,
-  //   //   usdgAmount,
-  //   //   swapFeeBasisPoints,
-  //   //   taxBasisPoints,
-  //   //   false,
-  //   //   params.usdgSupply,
-  //   //   params.totalTokenWeight
-  //   // )
-
-  //   // const feeBps = feeBps0 > feeBps1 ? feeBps0 : feeBps1
-  //   // const addedSwapFee = feeBps ? amountUsd * feeBps / GMX.PRECISION : 0n
-
-  //   // return addedSwapFee
-  // }, combineObject({
-  //   usdgSupply: usdg.read('totalSupply'), totalTokenWeight: vault.read('totalTokenWeights'),
-  //   collateralToken, primaryToken, isIncrease, sizeDeltaUsd, isLong, collateralTokenPoolInfo,
-  //   position, primaryDescription, inputTokenWeight, inputTokenDebtUsd, indexDescription, marketPrice
-  // })))))
-
-
   const priceImpactUsd = map(params => {
     if (params.sizeDeltaUsd === 0n) return 0n
 
@@ -435,11 +270,12 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ marketInfo, sizeDeltaUsd, isLong }))
 
   const marginFeeUsd = map(params => {
-    return -getMarginFee(
+    const fee = getMarginFee(
       params.marketInfo,
       params.priceImpactUsd > 0n,
       params.sizeDeltaUsd
     )
+    return fee
   }, combineObject({ marketInfo, priceImpactUsd, sizeDeltaUsd }))
 
   const adjustmentFeeUsd = map(params => {
@@ -447,13 +283,10 @@ export const $Trade = (config: ITradeComponent) => component((
     // return params.marginFeeUsd + params.swapFee + params.priceImpactUsd
   }, combineObject({ marginFeeUsd, priceImpactUsd }))
 
-  const collateralDelta = map(params => {
-    return getTokenAmount(params.primaryPrice, params.collateralDeltaUsd)
-  }, combineObject({ primaryPrice, collateralDeltaUsd }))
+  // const collateralDelta = map(params => {
+  //   return getTokenAmount(params.primaryPrice, params.collateralDeltaUsd)
+  // }, combineObject({ primaryPrice, collateralDeltaAmount }))
 
-  const sizeDelta = map(params => {
-    return getTokenAmount(params.indexPrice, params.sizeDeltaUsd)
-  }, combineObject({ indexDescription, indexPrice, sizeDeltaUsd }))
 
   const netPositionValueUsd = replayLatest(multicast(map(params => {
     const mirroredPosition = params.mirrorPosition
@@ -474,24 +307,6 @@ export const $Trade = (config: ITradeComponent) => component((
 
     return netValue
   }, combineObject({ mirrorPosition }))))
-
-  // const netPositionValueUsd = replayLatest(multicast(switchMap(posInfo => {
-  //   return map((params) => {
-  //     if (posInfo === null) {
-  //       return 0n
-  //     }
-    
-  //     const totalCostAmount = getTokenUsd(
-  //       params.collateralPrice,
-  //       posInfo.fees.totalCostAmount,
-  //     )
-
-  //     const collateralUsd = getTokenUsd(params.collateralPrice, posInfo.position.numbers.collateralAmount)
-  //     const netValue = collateralUsd - totalCostAmount
-
-  //     return netValue
-  //   }, combineObject({ positionInfo, collateralPrice }))
-  // }, positionInfo)))
 
   const focusPrice = replayLatest(multicast(changefocusPrice), null)
   const yAxisCoords = replayLatest(multicast(changeYAxisCoords), null)
@@ -527,21 +342,20 @@ export const $Trade = (config: ITradeComponent) => component((
     collateralToken,
     isUsdCollateralToken,
     leverage,
-    sizeDelta,
     sizeDeltaUsd,
-    collateralDelta,
-    collateralDeltaUsd,
+    // collateralDelta,
+    collateralDeltaAmount,
   }
   
   const averagePrice = multicast(map(params => {
     if (params.mirrorPosition === null) return 0n
     
     const totalSize = params.mirrorPosition.position.sizeInUsd + params.sizeDeltaUsd
-    const totalSizeInTokens = params.mirrorPosition.position.sizeInTokens + params.sizeDelta
+    const totalSizeInTokens = params.mirrorPosition.position.sizeInTokens + getTokenAmount(params.indexPrice, params.sizeDeltaUsd)
     const avg = (totalSize / totalSizeInTokens) * getTokenDenominator(params.indexToken)
 
     return avg
-  }, combineObject({ mirrorPosition, collateralPrice, indexToken, indexPrice, sizeDeltaUsd, sizeDelta })))
+  }, combineObject({ mirrorPosition, collateralPrice, indexToken, indexPrice, sizeDeltaUsd })))
 
   const liquidationPrice = multicast(map(params => {
     const lstAdjustment = params.mirrorPosition ? getLastAdjustment(params.mirrorPosition) : null
@@ -552,20 +366,20 @@ export const $Trade = (config: ITradeComponent) => component((
     const positionCollateral = lstAdjustment ? getTokenUsd(params.collateralPrice, lstAdjustment.collateralAmount) : 0n
     const positionCollateralInTokens = lstAdjustment ? lstAdjustment.collateralAmount : 0n
 
-    const size = positionSizeInTokens + params.sizeDelta
+    const size = positionSizeInTokens + getTokenAmount(params.indexPrice, params.sizeDeltaUsd)
     const sizeUsd = positionSizeUsd + params.sizeDeltaUsd
 
-    const collateral = positionCollateralInTokens + params.collateralDelta
-    const collateralUsd = positionCollateral + params.collateralDeltaUsd
+    const collateral = positionCollateralInTokens + params.collateralDeltaAmount
+    const collateralUsd = positionCollateral + getTokenUsd(params.collateralPrice, params.collateralDeltaAmount)
 
     const lp = getLiquidationPrice(params.marketInfo, params.isLong, params.collateralToken, params.indexToken, size, sizeUsd, collateral, collateralUsd)
     
     return lp
-  }, zipState({ sizeDeltaUsd, sizeDelta, isLong, collateralDeltaUsd, collateralDelta, collateralToken, collateralPrice, indexToken, mirrorPosition, marketInfo })))
+  }, zipState({ mirrorPosition, collateralPrice, indexPrice, sizeDeltaUsd, collateralDeltaAmount, marketInfo, isLong, collateralToken, indexToken })))
 
   const isPrimaryApproved = mergeArray([
     changeInputTokenApproved,
-    skipRepeats(awaitPromises(snapshot(async (collDeltaUsd, params) => {
+    skipRepeats(awaitPromises(snapshot(async (collateralAmount, params) => {
       if (!params.wallet) {
         console.warn(new Error('No wallet connected'))
         return false
@@ -576,7 +390,7 @@ export const $Trade = (config: ITradeComponent) => component((
         return true
       }
 
-      const contractAddress = getMappedValue(GMX.TRADE_CONTRACT_MAPPING, chainId).Router
+      const contractAddress = getMappedValue(GMX.TRADE_CONTRACT_MAPPING, config.chain.id).Router
 
       if (contractAddress === null || !params.wallet) {
         return false
@@ -590,13 +404,13 @@ export const $Trade = (config: ITradeComponent) => component((
           args: [params.wallet.account.address, PUPPET.CONTRACT[config.chain.id].Orchestrator.address]
         })
 
-        return allowedSpendAmount > collDeltaUsd
+        return allowedSpendAmount > collateralAmount
       } catch (err) {
         console.warn(err)
         return false
       }
 
-    }, collateralDeltaUsd, combineObject({ wallet, primaryToken, isIncrease, tradeRoute }))))
+    }, collateralDeltaAmount, combineObject({ wallet, primaryToken, isIncrease, tradeRoute }))))
   ])
 
   const marketAvailableLiquidityUsdQuery = replayLatest(multicast(map(async params => {
@@ -616,28 +430,6 @@ export const $Trade = (config: ITradeComponent) => component((
 
     return getFundingFactorPerInterval(mktInfo.usage, mktInfo.fees, params.feeDisplayRate)
   }, combineObject({ feeDisplayRate, marketInfoQuery }))))
-
-
-  // const openPositionList: Stream<IPositionMirrorOpen[]> = mergeArray([
-  //   combineArray((pos, posList) => {
-  //     if (posList.length === 0) {
-  //       return []
-  //     }
-
-  //     if (pos === null)  {
-  //       return posList
-  //     }
-
-  //     const trade = posList.find(t => t.key === pos.key) || null
-
-  //     if (trade === null) {
-  //       return posList
-  //     }
-
-  //     return posList //.filter(t => t.key !== pos.key)
-  //   }, mirroredPosition, positionList)
-  // ])
-
 
   const pricefeed = replayLatest(multicast(awaitPromises(map(async params => {
     return queryLatestTokenPriceFeed({
@@ -691,7 +483,7 @@ export const $Trade = (config: ITradeComponent) => component((
     averagePrice,
     liquidationPrice,
 
-    // collateralTokenPoolInfo,
+    marketInfo,
   }
 
   const $tradebox = $PositionEditor({
@@ -705,7 +497,7 @@ export const $Trade = (config: ITradeComponent) => component((
     $container: $column
   })({
     changeLeverage: changeLeverageTether(),
-    changeCollateralDeltaUsd: changeCollateralDeltaUsdTether(),
+    changeCollateralDeltaAmount: changeCollateralDeltaAmountTether(),
     changeSizeDeltaUsd: changeSizeDeltaUsdTether(),
     changePrimaryToken: changePrimaryTokenTether(),
     // isUsdCollateralToken: changeIsUsdCollateralTokenTether(),
@@ -888,8 +680,10 @@ export const $Trade = (config: ITradeComponent) => component((
                 }
 
                 return $row(layoutSheet.spacingSmall)(
-                  $infoLabeledValue('Size', $text(map(value => `${readableUsd(value)}`, sizeDeltaUsd))),
-                  $infoLabeledValue('Collateral', $text(map(value => `${readableUsd(value)}`, collateralDeltaUsd))),
+                  $infoLabeledValue('Size', $text(map(value => readableUsd(value), sizeDeltaUsd))),
+                  $infoLabeledValue('Collateral', $text(map(params => {
+                    return readableTokenAmountLabel(params.primaryToken, params.collateralDeltaAmount)
+                  }, combineObject({ collateralDeltaAmount, primaryToken })))),
                 )
               }, isFocused),
               $icon({ $content: $target, width: '16px', svgOps: style({ margin: '0 6px' }), viewBox: '0 0 32 32' }),
@@ -1015,8 +809,7 @@ export const $Trade = (config: ITradeComponent) => component((
             focusPrice: changefocusPriceTether(),
             isFocused: changeIsFocusedTether(),
             // crosshairMove: chartCrosshairMoveTether(),
-            click: chartClickTether(),
-            visibleLogicalRangeChange: chartVisibleLogicalRangeChangeTether(),
+            // click: chartClickTether(),
           })
 
               
@@ -1106,7 +899,7 @@ export const $Trade = (config: ITradeComponent) => component((
     ),
 
     {
-      changeRoute,
+      // changeRoute,
     }
   ]
 })

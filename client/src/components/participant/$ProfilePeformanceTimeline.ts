@@ -17,7 +17,7 @@ import { $DropMultiSelect } from "../form/$Dropdown.js"
 import { getPerformanceTimeline } from "../trade/$ProfilePerformanceGraph.js"
 import * as viem from "viem"
 
-export const $PositionListPerformance = (config: IPageGlobalParams & {
+export const $ProfilePeformanceTimeline = (config: IPageGlobalParams & {
   settledPositionListQuery: Stream<Promise<IMirrorPositionSettled[]>>
   openPositionListQuery: Stream<Promise<IMirrorPositionOpen[]>>
   puppet?: viem.Address
@@ -54,7 +54,7 @@ export const $PositionListPerformance = (config: IPageGlobalParams & {
           $DropMultiSelect({
             // $container: $row(layoutSheet.spacingTiny, style({ display: 'flex', position: 'relative' })),
             $input: $element('input')(style({ width: '100px' })),
-            $label: $labelDisplay(style({ color: pallete.foreground }))('Markets'),
+            $label: $labelDisplay(style({ color: pallete.foreground }))('Routes'),
             placeholder: 'All / Select',
             getId: item => item.routeTypeKey,
             $$chip: map(rt => $route(rt, false)),
