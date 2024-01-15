@@ -1,27 +1,26 @@
 import { Behavior, combineObject } from "@aelea/core"
 import { $element, $text, component, style } from "@aelea/dom"
-import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, empty, map, now, startWith, take } from "@most/core"
+import { awaitPromises, empty, map, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
-import { $ButtonToggle, $Table, $bear, $bull, $icon, $marketLabel, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "gmx-middleware-ui-components"
-import { IMarketCreatedEvent, IPriceTickListMap, TEMP_MARKET_LIST, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, querySignedPrices, readablePercentage, streamOf, switchMap, unixTimestampNow } from "gmx-middleware-utils"
-import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType, accountSettledPositionListSummary, latestPriceMap, openPositionListPnl, queryLatestPriceTick, queryOpenPositionList, querySettledPositionList } from "puppet-middleware-utils"
+import { $Table, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "gmx-middleware-ui-components"
+import { IPriceTickListMap, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType, accountSettledPositionListSummary, openPositionListPnl, queryLatestPriceTick, queryOpenPositionList, querySettledPositionList } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $labelDisplay } from "../../common/$TextField.js"
-import { $TraderDisplay, $TraderRouteDisplay, $pnlDisplay, $puppets, $route, $size } from "../../common/$common.js"
+import { $TraderDisplay, $TraderRouteDisplay, $pnlDisplay, $route, $size } from "../../common/$common.js"
 import { $card, $responsiveFlex } from "../../common/elements/$common.js"
 import { $DropMultiSelect } from "../../components/form/$Dropdown.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor"
 import { $tableHeader } from "../../components/table/$TableColumn.js"
 import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceGraph.js"
+import * as storeDb from "../../data/store/store.js"
+import { IPageGlobalParams } from "../../data/type"
 import * as storage from "../../utils/storage/storeScope.js"
 import { $seperator2 } from "../common.js"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity.js"
-import * as storeDb from "../../data/store/store.js"
-import { IPageGlobalParams } from "../../data/type"
 
 
 
@@ -89,6 +88,8 @@ export const $Leaderboard = (config: ILeaderboard) => component((
       const tradeListEntries = Object.values(tradeListMap)
       const filterestPosList: ITableRow[] = tradeListEntries.map(positionList => {
         const summary = accountSettledPositionListSummary(positionList)
+        const openPositionList = positionList.filter(mp => mp.__typename === 'MirrorPositionOpen') as IMirrorPositionOpen[]
+        const settledPositionList = positionList.filter(mp => mp.__typename === 'MirrorPositionSettled') as IMirrorPositionSettled[]
 
         return { account: positionList[0].trader, summary, openPositionList, settledPositionList, positionList, pricefeedMap }
       })
