@@ -68,7 +68,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
 
         $column(layoutSheet.spacing)(
           $responsiveFlex(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-            $heading2('Trade Routes'),
+            $heading3('Active Trader Routes'),
             $node(style({ flex: 1 }))(),
             $row(layoutSheet.spacingBig, style({ alignItems: 'center', minWidth: '0', flexShrink: 0 }))(
               switchMap(amount => {
@@ -158,6 +158,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
                         ...traderPuppetTradeRouteList.map(puppetTradeRoute => {
                           return $PuppetTraderTradeRoute({ route, puppetTradeRoute, routeTypeList, activityTimeframe: params.activityTimeframe, priceTickMap })({
                             modifySubscriber: modifySubscriberTether(),
+                            changeRoute: changeRouteTether(),
                           })
                         })
                       ),

@@ -71,6 +71,7 @@ export const $PuppetProfile = (config: IPuppetProfile) => component((
                         ...traderPuppetTradeRouteList.map(puppetTradeRoute => {
                           return $PuppetTraderTradeRoute({ route, puppetTradeRoute, routeTypeList, activityTimeframe: params.activityTimeframe, priceTickMap })({
                             modifySubscriber: modifySubscriberTether(),
+                            changeRoute: changeRouteTether(),
                           })
                         })
                       ),
