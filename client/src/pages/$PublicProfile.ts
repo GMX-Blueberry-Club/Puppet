@@ -124,6 +124,7 @@ export const $PublicProfile = (config: IProfile) => component((
                   openPositionListQuery,
                   address,
                   route,
+                  puppet: address,
                 })({}),
 
                 $column(layoutSheet.spacingTiny)(

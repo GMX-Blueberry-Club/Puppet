@@ -107,7 +107,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
     //   sizeDelta: abs(req.sizeDeltaUsd)
     // }
 
-    const executionFeeAfterBuffer = params.executionFee * (req.executionFeeBuffer + GMX.BASIS_POINTS_DIVISOR) / GMX.BASIS_POINTS_DIVISOR // params.executionFee
+    const executionFeeAfterBuffer = abs(params.executionFee * (req.executionFeeBuffer + GMX.BASIS_POINTS_DIVISOR) / GMX.BASIS_POINTS_DIVISOR) // params.executionFee
     const orderVaultAddress = GMX.CONTRACT[config.chain.id].OrderVault.address
     const wntCollateralAmount = isNative ? req.collateralDeltaAmount : 0n
     const totalWntAmount = wntCollateralAmount + executionFeeAfterBuffer

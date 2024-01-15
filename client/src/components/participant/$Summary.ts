@@ -17,19 +17,20 @@ export interface IAccountSummary {
   address: viem.Address
   settledPositionListQuery: Stream<Promise<IMirrorPositionSettled[]>>
   openPositionListQuery: Stream<Promise<IMirrorPositionOpen[]>>
+  puppet?: viem.Address
 }
 
 
 
 
-export const $TraderProfileSummary = ({ address, openPositionListQuery, settledPositionListQuery, route }: IAccountSummary) => component((
+export const $TraderProfileSummary = ({ address, openPositionListQuery, settledPositionListQuery, puppet, route }: IAccountSummary) => component((
 
 ) => {
 
   const metrics = map(async params => {
     const allPositions = [...await params.settledPositionListQuery, ...await params.openPositionListQuery]
 
-    return accountSettledPositionListSummary(allPositions)
+    return accountSettledPositionListSummary(allPositions, puppet)
   }, zipState({ openPositionListQuery, settledPositionListQuery }))
 
   return [
@@ -79,12 +80,12 @@ export const $TraderProfileSummary = ({ address, openPositionListQuery, settledP
   ]
 })
 
-export const $PuppetProfileSummary = ({ address, openPositionListQuery, settledPositionListQuery, route }: IAccountSummary) => component(() => {
+export const $PuppetProfileSummary = ({ address, openPositionListQuery, settledPositionListQuery, puppet, route }: IAccountSummary) => component(() => {
 
   const metrics = map(async params => {
     const allPositions = [...await params.settledPositionListQuery, ...await params.openPositionListQuery]
 
-    return accountSettledPositionListSummary(allPositions)
+    return accountSettledPositionListSummary(allPositions, puppet)
   }, zipState({ openPositionListQuery, settledPositionListQuery }))
 
   return [
