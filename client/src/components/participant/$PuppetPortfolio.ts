@@ -133,21 +133,20 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
                 const routeType = routeTypeList.find(route => route.routeTypeKey === routeTypeKey)!
 
                 return $column(layoutSheet.spacing)(
-                  $row(
+                  $row(style({ alignItems: 'center' }))(
                     $route(routeType),
-                    $row(layoutSheet.spacingBig, style({ alignItems: 'center', minWidth: '0', flexShrink: 0, flex: 1 }))(
-                      $responsiveFlex(layoutSheet.spacingSmall)(
-                        $infoTooltipLabel($text('The available amount ready to be matched against'), 'Used balance'),
-                        $text(
-                          startWith('-', awaitPromises(map(async query => {
-                            const balance = (await query).reduce((acc, pos) => {
-                              const collateralUsd = getParticiapntMpPortion(pos, pos.position.maxCollateralUsd, config.address)
-                              return acc + collateralUsd
-                            }, 0n)
-                            return readableUsd(balance)
-                          }, openPositionListQuery)))
-                        )
-                      ),
+                    $node(style({ flex: 1 }))(),
+                    $responsiveFlex(layoutSheet.spacingSmall)(
+                      $infoTooltipLabel($text('The available amount ready to be matched against'), 'Used balance'),
+                      $text(
+                        startWith('-', awaitPromises(map(async query => {
+                          const balance = (await query).reduce((acc, pos) => {
+                            const collateralUsd = getParticiapntMpPortion(pos, pos.position.maxCollateralUsd, config.address)
+                            return acc + collateralUsd
+                          }, 0n)
+                          return readableUsd(balance)
+                        }, openPositionListQuery)))
+                      )
                     ),
                   ),
 
