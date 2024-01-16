@@ -6,10 +6,11 @@ import { dark } from './src/common/theme.js'
 
 const SITE_CONFIG = {
   __WEBSITE__:  'https://puppet.house',
-  __TWITTER_HASH__:  'PuppetFinance',
+  __TWITTER_ID__:  '@PuppetCopy',
   __APP_NAME__:  'Puppet',
-  __APP_DESC_SHORT__:  'Copy Trading',
+  __APP_DESC_SHORT__:  'Puppet - Copy Trading',
   __APP_DESC_LONG__:  'Copy Trading Protocol - Matching the best traders with investors',
+  __OG_IMAGE__:  '/.netlify/functions/og-middlware',
   __THEME_PRIMARY__:  dark.pallete.primary,
   __THEME_BACKGROUND__:  dark.pallete.horizon,
 }
@@ -74,8 +75,8 @@ const vitePlugin = VitePWA({
 })
 
 
-const newLocal = replace({
-  // include: 'index.html',
+const replaceExec = replace({
+  include: 'index.html',
   ...SITE_CONFIG
 })
 // https://vitejs.dev/config/
@@ -84,7 +85,7 @@ export default defineConfig({
   publicDir: 'assets',
   plugins: [
     vitePlugin,
-    newLocal,
+    replaceExec,
   ],
   build: {
     outDir: ".dist",

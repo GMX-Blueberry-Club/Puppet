@@ -1,0 +1,15 @@
+{
+    "name": "puppet-opengraph",
+    "private": true,
+    "scripts": {
+        "dev": "netlify dev"
+    },
+    "dependencies": {
+        "chrome-aws-lambda": "7.0.0",
+        "puppeteer-core": "^21.7.0"
+    },
+    "devDependencies": {
+        "@netlify/edge-functions": "^2.3.0",
+        "@types/puppeteer": "^7.0.4"
+    }
+}
