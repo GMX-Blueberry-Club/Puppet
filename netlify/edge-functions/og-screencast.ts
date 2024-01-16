@@ -1,5 +1,5 @@
 import type { Context } from "@netlify/edge-functions"
-import { existsSync } from 'node:fs'
+import { existsSync } from 'fs'
 import chromium from 'chrome-aws-lambda'
 import puppeteer from 'puppeteer-core'
 
