@@ -1,0 +1,31 @@
+# Start with the Alpine Chrome base image
+FROM zenika/alpine-chrome
+
+USER root
+
+# Install glibc and other dependencies for Bun
+RUN apk --no-cache add ca-certificates wget bash \
+    && wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub \
+    && wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.31-r0/glibc-2.31-r0.apk \
+    && apk add --force-overwrite glibc-2.31-r0.apk
+
+ENV LANG=C.UTF-8
+
+# Download and install Bun
+RUN wget https://github.com/oven-sh/bun/releases/download/bun-v1.0.18/bun-linux-x64.zip \
+    && unzip bun-linux-x64.zip \
+    && mv bun-linux-x64/bun /usr/local/bin/bun \
+    && chmod +x /usr/local/bin/bun \
+    && rm -r bun-linux-x64 bun-linux-x64.zip
+
+# Set the working directory in the container
+WORKDIR /usr/src/app
+
+# Copy your application's source code
+COPY . .
+
+# Make port 3000 available to the world outside this container
+EXPOSE 3000
+
+# Run your Bun application
+CMD ["bun", "start"]
