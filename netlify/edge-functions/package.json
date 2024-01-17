@@ -5,7 +5,7 @@
         "dev": "netlify dev"
     },
     "dependencies": {
-        "chrome-aws-lambda": "7.0.0",
+        "chrome-aws-lambda": "10.1.0",
         "puppeteer-core": "^21.7.0"
     },
     "devDependencies": {

@@ -8,7 +8,7 @@ export default async function handler(request: Request, context: Context) {
   const titleParam = url.searchParams.get('title') || ''
   const cacheParam = url.searchParams.get('cache') || '86400'
 
-  const replacement = `og-screenast/?path=${encodeURIComponent(pathParam)}&title=${encodeURIComponent(titleParam)}&cache=${encodeURIComponent(cacheParam)}`
+  const replacement = `og-screenshot/?path=${encodeURIComponent(pathParam)}&title=${encodeURIComponent(titleParam)}&cache=${encodeURIComponent(cacheParam)}`
   const replacedPage = page.replace(/(<meta property="og:image" content=")[^"]*(">)/, `$1${replacement}$2`)
 
   response.headers.set('cache-control', `s-maxage=${cacheParam}`)

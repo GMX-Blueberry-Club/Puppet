@@ -5,6 +5,7 @@ import chromium from 'chrome-aws-lambda'
 export default async function handler(request: Request, context: Context) {
   let browser = null
   const url = new URL(request.url)
+  console.log('TEST')
 
   try {
     // Launch the browser in headless mode
@@ -41,7 +42,7 @@ export default async function handler(request: Request, context: Context) {
   }
 }
 
-export const config = { path: "/*" }
+export const config = { path: "/og-screenshot" }
 
 
 
@@ -86,4 +87,4 @@ export const config = { path: "/*" }
 //   )
 // }
 
-// export const config = { path: "/og-screenast" }
+// export const config = { path: "/og-screenshot" }

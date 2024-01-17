@@ -5,8 +5,8 @@
   
 
 [[edge_functions]]
-path = "/og-image/"
-function = "og-middlware"
+path = "/og-screenshot/"
+function = "og-screenshot"
 
 [[redirects]]
   from = "/*"
