@@ -1,9 +1,8 @@
-import type { Context } from "@netlify/edge-functions"
 import { existsSync } from 'fs'
 import chromium from 'chrome-aws-lambda'
 import puppeteer from 'puppeteer-core'
 
-export default async function handler(request: Request, context: Context) {
+export default async function handler(request, context) {
   const localChrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
   const executable = existsSync(localChrome) ? localChrome : chromium.executablePath
   const browser = await puppeteer.launch({

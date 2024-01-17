@@ -153,7 +153,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
           $iconPath: $trophy,
           route: parentRoute.create({ fragment: 'leaderboard' }),
           url: '/app/leaderboard',
-          text: 'leaderboard',
+          text: 'Leaderboard',
         })({
           click: routeChangeTether()
         }),

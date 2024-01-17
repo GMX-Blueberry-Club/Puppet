@@ -1,6 +1,5 @@
-import type { Context } from "@netlify/edge-functions"
 
-export default async function handler(request: Request, context: Context) {
+export default async function handler(request, context) {
   const response = await context.next()
   const page = await response.text()
     
