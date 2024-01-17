@@ -30,10 +30,9 @@ export default async function handler(request: Request, context: Context) {
       // isBase64Encoded: true,
     })
   } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Screenshot failed' }),
-    }
+    return new Response(JSON.stringify({ error: 'Screenshot failed' }), {
+      status: 500,
+    })
   } finally {
     // Close the browser
     if (browser !== null) {
