@@ -1,4 +1,3 @@
-import chromium from 'chrome-aws-lambda'
 import playwright from 'playwright-core'
 
 
@@ -37,7 +36,7 @@ async function launchBrowser() {
   const localChrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
   const localExists = await Bun.file(localChrome).exists()
   console.log('localExists', localExists)
-  const executable = localExists ? localChrome : await chromium.executablePath
+  const executable = localExists ? localChrome : process.env['CHROMIUM_EXECUTABLE_PATH']
   const browser = await playwright.chromium.launch({
     executablePath: executable,
     headless: true, 
