@@ -6,53 +6,66 @@ WORKDIR /usr/src/app
 RUN apk upgrade --no-cache --available \
     && apk add --no-cache \
       curl \
+      bash \
       chromium-swiftshader \
+      harfbuzz \
+      "freetype>2.10.4" \
       ttf-freefont \
-      font-noto-emoji \
+      nss \
+      gcompat \
     && apk add --no-cache \
       --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
       font-wqy-zenhei
 
-# Install Bun manually
-RUN curl -fsSL https://bun.sh/install | sh
-
 # Add Chrome as a user
-RUN adduser -D chrome \
-    && chown -R chrome:chrome /usr/src/app
+RUN adduser -D chrome
 
 # Set environment variables for headless Chrome
 ENV CHROME_BIN=/usr/bin/chromium-browser \
     CHROME_PATH=/usr/lib/chromium/ \
     CHROMIUM_FLAGS="--disable-software-rasterizer --disable-dev-shm-usage"
 
-# install dependencies into temp directory
-# this will cache them and speed up future builds
-FROM base AS install
-RUN mkdir -p /temp/dev
-COPY package.json bun.lockb /temp/dev/
-RUN cd /temp/dev && bun install --frozen-lockfile
+# Switch to the chrome user
+USER chrome
 
-# install with --production (exclude devDependencies)
-RUN mkdir -p /temp/prod
-COPY package.json bun.lockb /temp/prod/
-RUN cd /temp/prod && bun install --frozen-lockfile --production
+# Install Bun as the chrome user
+RUN curl -fsSL https://bun.sh/install | bash -s "bun-v1.0.18"
 
-# copy node_modules from temp directory
-# then copy all (non-ignored) project files into the image
-FROM base AS prerelease
-COPY --from=install /temp/dev/node_modules node_modules
-COPY . .
+# Add Bun to PATH for the chrome user
+ENV PATH="/home/chrome/.bun/bin:$PATH"
 
-# [optional] tests & build
+# Verify that Bun is installed and in the PATH
+RUN bun --version
+
+# Set environment variables for headless Chrome
+ENV CHROME_BIN=/usr/bin/chromium-browser \
+    CHROME_PATH=/usr/lib/chromium/ \
+    CHROMIUM_FLAGS="--disable-software-rasterizer --disable-dev-shm-usage"
+
+# Create necessary directories and set permissions
+RUN mkdir -p /usr/src/app /temp/dev /temp/prod \
+    && chown -R chrome:chrome /usr/src/app /temp
+
+# Switch to the chrome user
+USER chrome
+
+# Set the working directory to the app directory
+WORKDIR /usr/src/app
+
+# Copy package.json and bun.lockb files to the container
+COPY --chown=chrome:chrome package.json bun.lockb ./
+
+# Install dependencies
+RUN bun install --frozen-lockfile
+
+# Copy the rest of the application files to the container
+COPY --chown=chrome:chrome . .
+
+# Set the environment to production
 ENV NODE_ENV=production
 
-# copy production dependencies and source code into final image
-FROM base AS release
-COPY --from=install /temp/prod/node_modules node_modules
-COPY --from=prerelease /usr/src/app/index.ts .
-COPY --from=prerelease /usr/src/app/package.json .
-
-# Run Chrome as non-privileged user
-USER chrome
+# Expose the port the app runs on
 EXPOSE 3000/tcp
-ENTRYPOINT [ "bun", "run", "index.ts" ]
+
+# Set the entrypoint to run the app using Bun
+ENTRYPOINT ["bun", "run", "index.ts"]
