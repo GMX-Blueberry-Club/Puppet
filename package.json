@@ -7,7 +7,6 @@
     "client",
     "const",
     "middleware",
-    "netlify/edge-functions",
     "ui-components",
     "subgraph/*",
     "gmx-middleware/*"
