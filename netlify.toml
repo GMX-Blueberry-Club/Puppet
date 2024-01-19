@@ -1,17 +1,7 @@
 [build]
   publish="./client/.dist/"
   base = "."
-  command = "bun run build"
-  
-
-[[edge_functions]]
-path = "/og-screenshot/"
-function = "og-screenshot"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+  command = "bun run build" 
 
 [[headers]]
   for = "/*"
@@ -31,3 +21,9 @@ function = "og-screenshot"
   for = "/assets/*"
   [headers.values]
     cache-control = 'max-age=31536000, immutable'
+
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
