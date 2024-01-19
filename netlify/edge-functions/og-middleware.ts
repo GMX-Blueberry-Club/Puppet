@@ -13,8 +13,6 @@ export default async function handler(request: Request, context: Context) {
   const replacement = `${opengraphService}${url.pathname}?path=${pathParam}&title=${titleParam}&cache=${cacheParam}`
   const replacedPage = page.replace(/(<meta property="og:image" content=")[^"]*(">)/, `$1${replacement}$2`)
 
-  response.headers.set('cache-control', `s-maxage=${cacheParam}`)
-
   return new Response(replacedPage, response)
 }
 
