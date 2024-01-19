@@ -49,5 +49,5 @@
   ],
   "include": [
     "src"
-  ]
+, "src/sw.ts"  ]
 }

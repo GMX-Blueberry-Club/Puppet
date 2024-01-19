@@ -19,7 +19,7 @@ const vitePlugin = VitePWA({
   // workbox: {
   //   cleanupOutdatedCaches: true
   // },
-  outDir: '.dist',
+  // outDir: '.dist',
   registerType: 'autoUpdate',
   strategies: 'injectManifest',
   injectManifest: {
@@ -29,7 +29,7 @@ const vitePlugin = VitePWA({
   injectRegister: 'auto',
   srcDir: 'src',
   filename: 'sw.ts',
-  includeAssets: ['font/*.ttf', './*.png', './*.svg'],
+  // includeAssets: ['font/*.ttf', './*.png', './*.svg'],
   manifest: {
     name: SITE_CONFIG.__APP_NAME__,
     short_name: SITE_CONFIG.__APP_NAME__,
@@ -38,15 +38,15 @@ const vitePlugin = VitePWA({
     background_color: SITE_CONFIG.__THEME_BACKGROUND__,
     lang:"en",
     start_url: '/app/leaderboard',
-    display:"standalone",
+    display: "standalone",
     orientation: "any",
     categories:[ "Copy Trading", "Decentralized Perpetual Exchange", "DeFi" ],
     screenshots:[
-      { src:"/screenshot/narrow1.png", type:"image/png", sizes:"828x1792", form_factor:"narrow" },
-      { src:"/screenshot/narrow2.png", type:"image/png", sizes:"828x1792", form_factor:"narrow" },
+      { src: "screenshot/narrow1.png", type: "image/png", sizes: "828x1792", form_factor: "narrow" },
+      { src: "screenshot/narrow2.png", type: "image/png", sizes: "828x1792", form_factor: "narrow" },
 
-      { src:"/screenshot/wide1.png", type:"image/png", sizes:"3260x1692", form_factor:"wide" },
-      { src:"/screenshot/wide2.png", type:"image/png", sizes:"3260x1692", form_factor:"wide" }
+      { src: "screenshot/wide1.png", type: "image/png", sizes: "3260x1692", form_factor: "wide" },
+      { src: "screenshot/wide2.png", type: "image/png", sizes: "3260x1692", form_factor: "wide" }
     ],
     icons: [
       {
@@ -62,10 +62,7 @@ const vitePlugin = VitePWA({
     ]
   },
   mode: 'development',
-  base: '/',
   devOptions: {
-    // navigateFallbackAllowlist: [/^index.html$/],
-    // enabled: true,
     enabled: Boolean(process.env.SW_DEV),
     /* when using generateSW the PWA plugin will switch to classic */
     type: 'module',

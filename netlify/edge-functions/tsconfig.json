@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "outDir": ".dist/esm",
+    "esModuleInterop": true,
+    "types": [
+      "@types/node",
+    ],
+    "lib": [
+      "es2021"
+    ],
+    "rootDir": "./",
+  },
+  "references": []
+}

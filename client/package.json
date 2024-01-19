@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "rimraf .dist && DEBUG=vite-plugin-pwa SW_DEV=true vite --force",
     "dev-destroy": "bunx rimraf .dist && bunx DEBUG=vite-plugin-pwa SW_DESTROY=true vite",
-    "build": "vite build",
+    "build": "rimraf .dist && vite build",
     "build:tsc": "tsc -build",
     "preview": "bun vite preview --port=4173"
   },
