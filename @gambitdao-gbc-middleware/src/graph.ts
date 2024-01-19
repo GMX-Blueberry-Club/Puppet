@@ -1,10 +1,8 @@
 import { O } from "@aelea/core"
 import { map } from "@most/core"
-import { Client, ClientOptions, OperationContext, TypedDocumentNode, cacheExchange, fetchExchange, gql } from "@urql/core"
+import { Client, ClientOptions, Exchange, OperationContext, TypedDocumentNode, cacheExchange, createClient, fetchExchange, gql } from "@urql/core"
 import {
-  IIdentifiableEntity, IRequestPagePositionApi,
-  cacheMap,
-  createSubgraphClient,
+  IIdentifiableEntity, IRequestPagePositionApi
 } from "gmx-middleware-utils"
 import fetch from "isomorphic-fetch"
 import { numberToHex } from "viem"
@@ -12,16 +10,29 @@ import { ILabItem, ILabItemOwnership, IOwner, IToken } from "./types.js"
 export { Stream } from "@most/types"
 
 
+export type { Client, ClientOptions, OperationContext, TypedDocumentNode }
 
-export type { TypedDocumentNode, ClientOptions, OperationContext, Client }
+const createSubgraphClient = (opts: ClientOptions) => {
+  const client = createClient(opts)
 
-export const blueberrySubgraph = createSubgraphClient({
+  return async <Data, Variables extends object = object>(document: TypedDocumentNode<Data, Variables>, params: Variables, context?: Partial<OperationContext>): Promise<Data> => {
+    const result = await client.query(document, params, context)
+      .toPromise()
+
+    if (result.error) {
+      throw new Error(result.error.message)
+    }
+
+    return result.data!
+  }
+}
+
+const blueberrySubgraph = createSubgraphClient({
   fetch: fetch,
   url: 'https://api.thegraph.com/subgraphs/name/nissoh/blueberry-club-arbitrum',
   exchanges: [cacheExchange, fetchExchange,],
 })
 
-const cache = cacheMap({})
 
 export async function querySubgraph(document: string): Promise<any> {
   return blueberrySubgraph(gql(document) as any, {})
