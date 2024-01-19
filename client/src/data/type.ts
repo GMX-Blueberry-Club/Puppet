@@ -6,7 +6,6 @@ import { IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType } from 'pupp
 import * as viem from 'viem'
 
 export interface IPageGlobalParams {
-  route: router.Route
   activityTimeframe: Stream<GMX.IntervalTime>
   selectedTradeRouteList: Stream<ISetRouteType[]>
   priceTickMapQuery: Stream<Promise<IPriceTickListMap>>
@@ -14,6 +13,7 @@ export interface IPageGlobalParams {
 }
 
 export interface IPageUserParams extends IPageGlobalParams {
+  route: router.Route
   address: viem.Address
   settledPositionListQuery: Stream<Promise<IMirrorPositionSettled[]>>
   openPositionListQuery: Stream<Promise<IMirrorPositionOpen[]>>

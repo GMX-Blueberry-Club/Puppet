@@ -21,6 +21,7 @@ import { IPageGlobalParams } from "../../data/type"
 import * as storage from "../../utils/storage/storeScope.js"
 import { $seperator2 } from "../common.js"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity.js"
+import * as router from '@aelea/router'
 
 
 
@@ -34,7 +35,7 @@ type ITableRow = {
   pricefeedMap: IPriceTickListMap
 }
 
-export type ILeaderboard = IPageGlobalParams
+export type ILeaderboard = IPageGlobalParams & { route: router.Route }
 
 export const $Leaderboard = (config: ILeaderboard) => component((
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
@@ -60,12 +61,11 @@ export const $Leaderboard = (config: ILeaderboard) => component((
     const paging = startWith(requestPage, scrollRequest)
 
     const dataSource: Stream<TablePageResponse<ITableRow>> = awaitPromises(map(async req => {
-      const latestPriceTickQuery = queryLatestPriceTick({ activityTimeframe: params.activityTimeframe })
       const openPositionListQuery = queryOpenPositionList()
       const settledPositionListQuery = querySettledPositionList()
       const openPositionList = await openPositionListQuery
       const settledPositionList = await settledPositionListQuery
-      const pricefeedMap = await latestPriceTickQuery
+      const pricefeedMap = await params.priceTickMapQuery
       const allPositionList = [...openPositionList, ...settledPositionList]
       const filterStartTime = unixTimestampNow() - params.activityTimeframe
 
@@ -99,7 +99,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
 
     return { ...params, dataSource }
-  }, combineObject({ sortBy, activityTimeframe, selectedTradeRouteList, isLong }))
+  }, combineObject({ sortBy, activityTimeframe, selectedTradeRouteList, isLong, priceTickMapQuery }))
 
 
 

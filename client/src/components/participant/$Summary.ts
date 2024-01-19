@@ -13,7 +13,6 @@ import { intermediateMessage } from "gmx-middleware-ui-components"
 
 
 export interface IAccountSummary {
-  route: router.Route
   address: viem.Address
   settledPositionListQuery: Stream<Promise<IMirrorPositionSettled[]>>
   openPositionListQuery: Stream<Promise<IMirrorPositionOpen[]>>
@@ -23,7 +22,7 @@ export interface IAccountSummary {
 
 
 
-export const $TraderProfileSummary = ({ address, openPositionListQuery, settledPositionListQuery, puppet, route }: IAccountSummary) => component((
+export const $TraderProfileSummary = ({ address, openPositionListQuery, settledPositionListQuery, puppet }: IAccountSummary) => component((
 
 ) => {
 
@@ -37,7 +36,7 @@ export const $TraderProfileSummary = ({ address, openPositionListQuery, settledP
 
     $column(layoutSheet.spacing, style({ minHeight: '90px' }))(
       switchMap(summaryQuery => {
-        return $node(style({ display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column', gap: screenUtils.isDesktopScreen ? '76px' : '26px', zIndex: 10, placeContent: 'center', alignItems: 'center', padding: '0 8px' }))(
+        return $node(style({ display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column', gap: screenUtils.isDesktopScreen ? '56px' : '26px', zIndex: 10, placeContent: 'center', alignItems: 'center', padding: '0 8px' }))(
           $row(
             $profileDisplay({
               address,
@@ -80,7 +79,7 @@ export const $TraderProfileSummary = ({ address, openPositionListQuery, settledP
   ]
 })
 
-export const $PuppetProfileSummary = ({ address, openPositionListQuery, settledPositionListQuery, puppet, route }: IAccountSummary) => component(() => {
+export const $PuppetProfileSummary = ({ address, openPositionListQuery, settledPositionListQuery, puppet }: IAccountSummary) => component(() => {
 
   const metrics = map(async params => {
     const allPositions = [...await params.settledPositionListQuery, ...await params.openPositionListQuery]

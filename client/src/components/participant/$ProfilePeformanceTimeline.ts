@@ -27,7 +27,7 @@ export const $ProfilePeformanceTimeline = (config: IPageGlobalParams & {
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
 ) => {
 
-  const { activityTimeframe, selectedTradeRouteList, puppet, priceTickMapQuery, route, routeTypeListQuery, settledPositionListQuery, openPositionListQuery } = config
+  const { activityTimeframe, selectedTradeRouteList, puppet, priceTickMapQuery, routeTypeListQuery, settledPositionListQuery, openPositionListQuery } = config
 
   const newLocal = debounce(50, combineObject({ activityTimeframe, routeTypeListQuery, priceTickMapQuery, settledPositionListQuery, openPositionListQuery }))
   const positionParams = map(async (params) => {
@@ -134,8 +134,7 @@ export const $ProfilePeformanceTimeline = (config: IPageGlobalParams & {
                 const time = Number(pos.blockTimestamp) as Time
 
                 return {
-                  position: 'aboveBar', time,
-                  text: readableUsd(pos.position.realisedPnlUsd),
+                  position: 'inBar', time,
                   color: colorAlpha(pallete.message, .25),
                   size: 0.1,
                   shape: 'circle' as const,
@@ -147,7 +146,7 @@ export const $ProfilePeformanceTimeline = (config: IPageGlobalParams & {
                 autoScale: true,
                 ticksVisible: true,
                 scaleMargins: {
-                  top: 0.25,
+                  top: 0.4,
                   bottom: 0,
                 }
               },

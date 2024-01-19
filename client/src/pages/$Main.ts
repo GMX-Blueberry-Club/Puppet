@@ -26,6 +26,8 @@ import { $PublicProfile } from "./$PublicProfile.js"
 import { $Trade } from "./$Trade.js"
 import { $Wallet } from "./$Wallet.js"
 import { $Leaderboard } from "./leaderboard/$Leaderboard.js"
+import { $Opengraph } from "../opengraph/$Opengraph"
+import { $rootContainer } from "./common"
 
 
 const popStateEvent = eventElementTarget('popstate', window)
@@ -71,34 +73,17 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
   const leaderboardRoute = appRoute.create({ fragment: 'leaderboard' })
 
-  const $liItem = $element('li')(style({ marginBottom: '14px' }))
-  const $rootContainer = $column(
-    style({
-      color: pallete.message,
-      fill: pallete.message,
-      // position: 'relative',
-      // backgroundImage: `radial-gradient(570% 71% at 50% 15vh, ${pallete.background} 0px, ${pallete.horizon} 100%)`,
-      backgroundColor: pallete.horizon,
-      fontSize: '1rem',
-      // fontSize: screenUtils.isDesktopScreen ? '1.15rem' : '1rem',
-      minHeight: '100vh',
-      fontWeight: 400,
-      // flexDirection: 'row',
-    }),
+  const opengraph = rootRoute.create({ fragment: 'og' })
 
-    screenUtils.isMobileScreen
-      ? style({ userSelect: 'none' })
-      : style({}),
-  )
+  const $liItem = $element('li')(style({ marginBottom: '14px' }))
+
   const isDesktopScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
 
   const activityTimeframe = storage.replayWrite(storeDb.store.global, changeActivityTimeframe, 'activityTimeframe')
   const selectedTradeRouteList = replayLatest(multicast(storage.replayWrite(storeDb.store.global, selectTradeRouteList, 'selectedTradeRouteList')))
 
   const routeTypeListQuery = now(queryRouteTypeList())
-  const priceTickMapQuery = map(params => {
-    return queryLatestPriceTick({ activityTimeframe: params.activityTimeframe }, 50)
-  }, combineObject({ activityTimeframe }))
+  const priceTickMapQuery = replayLatest(queryLatestPriceTick({ activityTimeframe, selectedTradeRouteList }, 50))
 
   return [
     $column(
@@ -314,6 +299,10 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
           })({ routeChanges: linkClickTether() })
         )
       ),
+
+      router.contains(opengraph)(
+        $Opengraph(opengraph)({})
+      )
 
     )
 

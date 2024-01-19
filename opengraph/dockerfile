@@ -1,71 +1,57 @@
 # Start with Alpine Linux
-FROM alpine:3.18 as base
+FROM oven/bun:alpine as base
 WORKDIR /usr/src/app
 
-# Install necessary packages for Bun and Chromium
+USER root
+
+RUN apk update && apk upgrade && apk add --no-cache bash
+
+# Install latest Chromium package
 RUN apk upgrade --no-cache --available \
     && apk add --no-cache \
-      curl \
-      bash \
       chromium-swiftshader \
-      harfbuzz \
-      "freetype>2.10.4" \
       ttf-freefont \
-      nss \
-      gcompat \
+      font-noto-emoji \
     && apk add --no-cache \
       --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
       font-wqy-zenhei
 
 # Add Chrome as a user
-RUN adduser -D chrome
+RUN adduser -D chrome \
+    && chown -R chrome:chrome /usr/src/app
+
+# Run Chrome as non-privileged
+USER chrome
 
 # Set environment variables for headless Chrome
 ENV CHROME_BIN=/usr/bin/chromium-browser \
-    CHROME_PATH=/usr/lib/chromium/ \
-    CHROMIUM_FLAGS="--disable-software-rasterizer --disable-dev-shm-usage"
+    CHROME_PATH=/usr/lib/chromium/
 
-# Switch to the chrome user
+# Autorun chrome headless
+ENV CHROMIUM_FLAGS="--disable-software-rasterizer --disable-dev-shm-usage"
+
+# install dependencies into temp directory
+# this will cache them and speed up future builds
+FROM base AS install
+COPY package.json /usr/src/app/
+RUN bun install
+
+# install with --production (exclude devDependencies)
+COPY package.json /usr/src/app/
+RUN bun install
+
+# copy node_modules from temp directory
+# then copy all (non-ignored) project files into the image
+FROM base AS prerelease
+COPY --from=install /usr/src/app/node_modules node_modules
+COPY . .
+
+# copy production dependencies and source code into final image
+FROM base AS release
+COPY --from=install /usr/src/app/node_modules node_modules
+COPY --from=prerelease /usr/src/app/ .
+
+# run the app
 USER chrome
-
-# Install Bun as the chrome user
-RUN curl -fsSL https://bun.sh/install | bash -s "bun-v1.0.18"
-
-# Add Bun to PATH for the chrome user
-ENV PATH="/home/chrome/.bun/bin:$PATH"
-
-# Verify that Bun is installed and in the PATH
-RUN bun --version
-
-# Set environment variables for headless Chrome
-ENV CHROME_BIN=/usr/bin/chromium-browser \
-    CHROME_PATH=/usr/lib/chromium/ \
-    CHROMIUM_FLAGS="--disable-software-rasterizer --disable-dev-shm-usage"
-
-# Create necessary directories and set permissions
-RUN mkdir -p /usr/src/app /temp/dev /temp/prod \
-    && chown -R chrome:chrome /usr/src/app /temp
-
-# Switch to the chrome user
-USER chrome
-
-# Set the working directory to the app directory
-WORKDIR /usr/src/app
-
-# Copy package.json and bun.lockb files to the container
-COPY --chown=chrome:chrome package.json bun.lockb ./
-
-# Install dependencies
-RUN bun install --frozen-lockfile
-
-# Copy the rest of the application files to the container
-COPY --chown=chrome:chrome . .
-
-# Set the environment to production
-ENV NODE_ENV=production
-
-# Expose the port the app runs on
 EXPOSE 3000/tcp
-
-# Set the entrypoint to run the app using Bun
-ENTRYPOINT ["bun", "run", "index.ts"]
+ENTRYPOINT [ "bun", "run", "index.ts" ]

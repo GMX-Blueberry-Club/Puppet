@@ -1,7 +1,7 @@
 import { replayLatest } from '@aelea/core'
 import { map, multicast } from '@most/core'
 import { Stream } from '@most/types'
-import { Client, createClient, fetchExchange } from '@urql/core'
+import { Client, Exchange, createClient, fetchExchange } from '@urql/core'
 import { offlineExchange } from '@urql/exchange-graphcache'
 import { makeDefaultStorage } from '@urql/exchange-graphcache/default-storage'
 import * as GMX from "gmx-middleware-const"
@@ -26,7 +26,7 @@ const cache = offlineExchange({
   optimistic: {
     /* ... */
   },
-})
+}) as Exchange
 
 export type { Client }
 
@@ -36,6 +36,8 @@ export const subgraphClient = createClient({
   fetchSubscriptions: true,
   requestPolicy: 'cache-first',
 })
+
+
 
 type IQueryPosition = {
   address: viem.Address
@@ -66,7 +68,6 @@ export function queryTraderPositionOpen(queryParams: IQueryTraderPositionOpen, )
 }
 
 export function queryTraderPositionSettled(queryParams: IQueryTraderPositionSettled) {
-
   return map(async params => {
     const blockTimestamp_gt = unixTimestampNow() - params.activityTimeframe
     
@@ -107,7 +108,7 @@ export function queryPuppetTradeRoute(queryParams: IQueryPuppetTradeRoute) {
 
 interface IQueryLatestPriceTick {
   token?: viem.Address
-  activityTimeframe: GMX.IntervalTime
+  activityTimeframe: Stream<GMX.IntervalTime>
 }
 
 interface IQueryPriceCandle {
@@ -145,34 +146,44 @@ export const subgraphStatus: Stream<ISubgraphStatus> = replayLatest(multicast(pe
   }),
 })))
 
-export async function queryLatestPriceTick(filter: IQueryLatestPriceTick, estTickAmout = 20): Promise<IPriceTickListMap> {
-  const interval = findClosest(GMX.PRICEFEED_INTERVAL, filter.activityTimeframe / estTickAmout)
-  const timestamp_gte = unixTimestampNow() - filter.activityTimeframe
-  const signedPricesQuery = querySignedPrices()
 
-  const candleSchema: ISchema<{ id: string, timestamp: number; c: bigint; __typename: 'PriceCandle', token: viem.Address} > = {
-    id: 'string',
-    timestamp: 'int',
-    token: 'address',
-    c: 'int',
-    __typename: 'PriceCandle',
-  }
-  const candleListQuery =  querySubgraph(subgraphClient, {
-    schema: candleSchema,
-    filter: {
-      interval,
-      timestamp_gte,
-    },
-    orderBy: 'timestamp',
-    orderDirection: 'desc',
-  })
+type IQueryMarketHistory = {
+  selectedTradeRouteList: Stream<ISetRouteType[]>
+  activityTimeframe: Stream<GMX.IntervalTime>
+}
 
-  const candleList = [...await candleListQuery, ...Object.values(await signedPricesQuery).map(x => ({ timestamp: Number(x.timestamp), c: x.max, token: x.token }))]
-  const mapped: IPriceTickListMap = groupArrayManyMap(candleList, x => viem.getAddress(x.token), x => {
-    return { timestamp: Number(x.timestamp), price: x.c }
-  })
+const candleSchema: ISchema<{ id: string, timestamp: number; c: bigint; __typename: 'PriceCandle', token: viem.Address} > = {
+  id: 'string',
+  timestamp: 'int',
+  token: 'address',
+  c: 'int',
+  __typename: 'PriceCandle',
+}
+  
+export function queryLatestPriceTick(queryParams: IQueryMarketHistory, estTickAmout = 20) {
+  return map(async params => {
+    const interval = findClosest(GMX.PRICEFEED_INTERVAL, params.activityTimeframe / estTickAmout)
+    const timestamp_gte = unixTimestampNow() - params.activityTimeframe
+    const signedPricesQuery = querySignedPrices()
+  
+    const candleListQuery =  querySubgraph(subgraphClient, {
+      schema: candleSchema,
+      filter: {
+        interval,
+        timestamp_gte,
+      },
+      orderBy: 'timestamp',
+      orderDirection: 'desc',
+    })
 
-  return mapped
+    const candleList = [...await candleListQuery, ...Object.values(await signedPricesQuery).map(x => ({ timestamp: Number(x.timestamp), c: x.max, token: x.token }))]
+    const mapped: IPriceTickListMap = groupArrayManyMap(candleList, x => viem.getAddress(x.token), x => {
+      return { timestamp: Number(x.timestamp), price: x.c }
+    })
+
+    return mapped
+  }, combineState(queryParams))
+
 }
 
 export const latestPriceMap: Stream<IPriceOracleMap> = replayLatest(multicast(periodicRun({

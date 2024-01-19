@@ -7,6 +7,7 @@
     "client",
     "const",
     "middleware",
+    "opengraph",
     "netlify/edge-functions",
     "ui-components",
     "subgraph/*",

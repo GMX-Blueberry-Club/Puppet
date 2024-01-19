@@ -13,6 +13,7 @@ import * as storeDb from "../data/store/store.js"
 import { IPageGlobalParams, IProfileMode } from "../data/type"
 import * as storage from "../utils/storage/storeScope.js"
 import { IWalletClient } from "../wallet/walletLink.js"
+import * as router from '@aelea/router'
 
 
 const optionDisplay = {
@@ -27,7 +28,7 @@ const optionDisplay = {
 }
 
 
-export const $Wallet = (config: IPageGlobalParams & { wallet: IWalletClient }) => component((
+export const $Wallet = (config: IPageGlobalParams & { wallet: IWalletClient, route: router.Route }) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [selectProfileMode, selectProfileModeTether]: Behavior<IProfileMode>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
@@ -36,7 +37,7 @@ export const $Wallet = (config: IPageGlobalParams & { wallet: IWalletClient }) =
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 ) => {
 
-  const { wallet, route, routeTypeListQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery } = config
+  const { wallet, routeTypeListQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery } = config
 
   const profileMode = storage.replayWrite(storeDb.store.wallet, selectProfileMode, 'selectedTab')
 

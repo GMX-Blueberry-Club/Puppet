@@ -28,22 +28,10 @@ export interface IProfilePreview extends IAccountPreview {
 export const $profileDisplay = (config: IProfilePreview) => {
   const { $container = $row, address, showAddress = true, profileSize = 50, $labelContainer } = config
 
-
   return $container(style({ gap: `${profileSize / 6}px`, alignItems: 'center', textDecoration: 'none' }))(
     $profileAvatar(config),
     showAddress ? $AccountLabel(address, $labelContainer) : empty(),
-    // showAddress
-    //   ? profile?.ens?.labelName
-    //     ? $ProfileLabel(profile.ens!)
-    //     : $AccountLabel(address, labelSize)
-    //   : empty()
   )
-
-  // return switchLatest(map(profile => {
-  //   return profile
-  //     ? $profilePreview({ ...config, profile })
-  //     : $accountPreview(config)
-  // }, profileEv))
 }
 
 
