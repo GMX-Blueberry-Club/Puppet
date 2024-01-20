@@ -7,7 +7,7 @@ import { Stream } from "@most/types"
 import { getTokenDescription, getTxExplorerUrl, IMarket, ITokenDescription, shortenTxAddress, switchMap } from "gmx-middleware-utils"
 import { $alertIcon, $arrowRight, $caretDblDown, $info, $tokenIconMap } from "./$icons.js"
 import { $defaultDropContainer, $Tooltip } from "./$Tooltip.js"
-import { Chain } from "viem"
+import { Chain } from "viem/chains"
 
 
 export const intermediateMessage = <T>(query: Promise<T>, cb: (x: T) => string) => {
