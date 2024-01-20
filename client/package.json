@@ -44,7 +44,7 @@
     "mersenne-twister": "^1.1.0",
     "puppet-middleware-const": "workspace:*",
     "puppet-middleware-utils": "workspace:*",
-    "viem": "^1.21.4",
+    "viem": "^2.4.0",
     "@wagmi/core": "^1.4.12",
     "workbox-build": "^7.0.0",
     "workbox-core": "^7.0.0",
