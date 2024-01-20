@@ -2,12 +2,11 @@ import { Op, replayLatest } from "@aelea/core"
 import { $Node, $node, $text, component, style } from "@aelea/dom"
 import { $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { CHAIN } from "gmx-middleware-const"
 import { constant, empty, fromPromise, map, merge, mergeArray, multicast, now, recoverWith, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { $alert, $alertTooltip, $txHashRef, } from "./$common.js"
-import { Chain, TransactionReceipt } from "viem"
 import { Abi } from "abitype"
+import { Chain, TransactionReceipt } from "viem"
+import { $alert, $alertTooltip, $txHashRef, } from "./$common.js"
 
 
 

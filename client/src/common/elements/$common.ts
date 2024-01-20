@@ -1,9 +1,9 @@
 import { $Branch, $text, attr, style } from "@aelea/dom"
 import { $ButtonIcon, $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete, theme } from "@aelea/ui-components-theme"
-import { IToken, LAB_CHAIN } from "@gambitdao/gbc-middleware"
+import { IToken } from "@gambitdao/gbc-middleware"
 import { $anchor, $calendar, $caretDblDown, $ethScan } from "ui-components"
-import { getAccountExplorerUrl, getTxExplorerUrl, shortenAddress } from "gmx-middleware-utils"
+import { getAccountExplorerUrl, getExplorerUrl, getTxExplorerUrl, shortenAddress } from "gmx-middleware-utils"
 import { $berryByToken } from "../../components/$common.js"
 import { $trash } from "./$icons.js"
 import * as viem from "viem"
@@ -124,9 +124,11 @@ export const $accountIconLink = (address: viem.Address, chain: viem.Chain) => $a
   $text(style({}))(`${shortenAddress(address)} `),
 )
 
-export const $txnIconLink = (hash: string, chain: viem.Chain) => $anchor(attr({ href: getTxExplorerUrl(chain, hash) }))(
-  $icon({ $content: $ethScan, width: '16px', viewBox: '0 0 24 24' })
-)
+export const $txnIconLink = (hash: string, chain: viem.Chain) => {
+  return $anchor(attr({ href: getTxExplorerUrl(chain, hash) }))(
+    $icon({ $content: $ethScan, width: '16px', viewBox: '0 0 24 24' })
+  )
+}
 
 
 export interface ITeamMember {

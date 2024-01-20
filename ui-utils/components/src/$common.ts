@@ -4,7 +4,7 @@ import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { empty, fromPromise, map, skipRepeats, startWith } from "@most/core"
 import { Stream } from "@most/types"
-import { getTokenDescription, getTxExplorerUrl, IMarket, ITokenDescription, shortenTxAddress, switchMap } from "gmx-middleware-utils"
+import { getExplorerUrl, ITokenDescription, shortenTxAddress, switchMap } from "gmx-middleware-utils"
 import { $alertIcon, $arrowRight, $caretDblDown, $info, $tokenIconMap } from "./$icons.js"
 import { $defaultDropContainer, $Tooltip } from "./$Tooltip.js"
 import { Chain } from "viem/chains"
@@ -88,25 +88,6 @@ export const $infoTooltip = (text: string | $Node) => {
 }
 
 
-export const $txHashRef = (txHash: string, chain: Chain, label?: $Node) => {
-  const href = getTxExplorerUrl(chain, txHash)
-
-  return $anchor(attr({ href }))(label ?? $text(shortenTxAddress(txHash)))
-}
-
-
-
-// $text(style({ fontSize: '.85rem' }))(readableUSD(pos.averagePrice)),
-// $column(style({ marginLeft: '-5px', borderRadius: '50%', padding: '6px', alignItems: 'center', backgroundColor: pallete.horizon }))(
-//   $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
-
-//     $leverage(pos)
-//   ),
-// )
-
-
-
-
 
 export const $labeledDivider = (label: string) => {
   return $row(layoutSheet.spacing, style({ placeContent: 'center', alignItems: 'center' }))(
@@ -144,31 +125,13 @@ export const $tokenLabelFromSummary = (token: ITokenDescription, $label?: $Node)
   )
 }
 
-export const $marketLabel = (market: IMarket, showLabel = true) => {
-  const indexTokenDescription = getTokenDescription(market.indexToken)
-  const longTokenDescription = getTokenDescription(market.longToken)
-  const shortTokenDescription = getTokenDescription(market.shortToken)
-  const $iconG = $tokenIconMap[indexTokenDescription.symbol]
 
-  return $row(layoutSheet.spacing, style({ cursor: 'pointer', alignItems: 'center', }))(
-    $icon({ $content: $iconG, width: '34px', viewBox: '0 0 32 32' }),
-    showLabel
-      ? $column(layoutSheet.flex)(
-        $text(style({ fontWeight: 'bold' }))(indexTokenDescription.symbol),
-        $text(style({ fontSize: '.75rem', color: pallete.foreground }))(`${longTokenDescription.symbol}/${shortTokenDescription.symbol}`),
-      ): empty(),
-  )
+export const $txHashRef = (txHash: string, chain: Chain) => {
+  const href = getExplorerUrl(chain) + "/tx/" + txHash
+
+  return $anchor(attr({ href }))($text(shortenTxAddress(txHash)))
 }
 
-export const $marketSmallLabel = (market: IMarket) => {
-  const indexTokenDescription = getTokenDescription(market.indexToken)
-  const $iconG = $tokenIconMap[indexTokenDescription.symbol]
-
-  return $row(layoutSheet.spacingSmall, style({ cursor: 'pointer', alignItems: 'center', }))(
-    $icon({ $content: $iconG, width: '24px', viewBox: '0 0 32 32' }),
-    $text(style({ fontWeight: 'bold' }))(indexTokenDescription.symbol),
-  )
-}
 
 interface IHintNumberDisplay {
   label?: string
@@ -179,12 +142,8 @@ interface IHintNumberDisplay {
 }
 
 export const $hintNumChange = ({ change, isIncrease, val, label, tooltip }: IHintNumberDisplay) => {
-
   const arrowColor = map(ic => ic ? pallete.positive : pallete.indeterminate, isIncrease)
-
-  const displayChange = skipRepeats(map(str => {
-    return !!str
-  }, change))
+  const displayChange = skipRepeats(map(str => !!str, change))
 
   return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
     tooltip
@@ -232,4 +191,5 @@ export const $icon = ({ $content, width = '24px', viewBox = `0 0 32 32`, fill = 
     $content
   )
 )
+
 

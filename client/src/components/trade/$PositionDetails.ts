@@ -1,16 +1,15 @@
 import { O } from "@aelea/core"
 import { $Node, $node, $text, NodeComposeFn, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
+import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { map, now } from "@most/core"
 import { Stream } from "@most/types"
-import { $Table, $infoLabel, $txHashRef } from "ui-components"
-import { IPositionDecrease, IPositionIncrease, IPriceCandle, StateStream, TEMP_INDEX_TOKEN_MARKET_MAP, TEMP_MARKET_TOKEN_MARKET_MAP, adjustForDecimals, expandDecimals, getMappedValue, getTokenAmount, getTokenDescription, getTokenUsd, readableDate, readableUsd, readableTokenPrice, switchMap, getTimeSince, unixTimestampNow } from "gmx-middleware-utils"
+import { IPositionDecrease, IPositionIncrease, IPriceCandle, StateStream, TEMP_MARKET_TOKEN_MARKET_MAP, getMappedValue, getTimeSince, getTokenDescription, getTokenUsd, readableDate, readableTokenPrice, readableUsd, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { IMirrorPositionOpen } from "puppet-middleware-utils"
+import { $Table, $infoLabel, $txHashRef } from "ui-components"
 import * as viem from "viem"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
-import { USD_DECIMALS } from "gmx-middleware-const"
-import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 
 
 
@@ -86,7 +85,8 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
               const tokendescription = getTokenDescription(marketIndexToken.indexToken)
 
               return $row(layoutSheet.spacingSmall)(
-                $txHashRef(pos.transactionHash, config.chain, $text(`${direction} ${readableTokenPrice(tokendescription.decimals, pos.executionPrice)}`))
+                $txHashRef(pos.transactionHash, config.chain),
+                $text(`${direction} ${readableTokenPrice(tokendescription.decimals, pos.executionPrice)}`)
               )
 
               // return $row(layoutSheet.spacingSmall)(

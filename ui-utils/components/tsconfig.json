@@ -9,5 +9,9 @@
       "ESNext"
     ]
   },
-  "references": []
+  "references": [
+    {
+      "path": "../../gmx-middleware/utils"
+    }
+  ]
 }

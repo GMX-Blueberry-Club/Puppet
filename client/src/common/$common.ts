@@ -18,7 +18,7 @@ import {
   readableUsd,
   readableLeverage,
   readablePercentage,
-  streamOf, switchMap, unixTimestampNow, readablePnl
+  streamOf, switchMap, unixTimestampNow, readablePnl, IMarket
 } from "gmx-middleware-utils"
 import { getMpSlotPnL, getParticiapntMpPortion, IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen, IPuppetTradeRoute } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -274,6 +274,34 @@ export function $liquidationSeparator(isLong: boolean, sizeUsd: bigint, sizeInTo
     $seperator
   )
 }
+
+
+export const $marketLabel = (market: IMarket, showLabel = true) => {
+  const indexTokenDescription = getTokenDescription(market.indexToken)
+  const longTokenDescription = getTokenDescription(market.longToken)
+  const shortTokenDescription = getTokenDescription(market.shortToken)
+  const $iconG = $tokenIconMap[indexTokenDescription.symbol]
+
+  return $row(layoutSheet.spacing, style({ cursor: 'pointer', alignItems: 'center', }))(
+    $icon({ $content: $iconG, width: '34px', viewBox: '0 0 32 32' }),
+    showLabel
+      ? $column(layoutSheet.flex)(
+        $text(style({ fontWeight: 'bold' }))(indexTokenDescription.symbol),
+        $text(style({ fontSize: '.75rem', color: pallete.foreground }))(`${longTokenDescription.symbol}/${shortTokenDescription.symbol}`),
+      ): empty(),
+  )
+}
+
+export const $marketSmallLabel = (market: IMarket) => {
+  const indexTokenDescription = getTokenDescription(market.indexToken)
+  const $iconG = $tokenIconMap[indexTokenDescription.symbol]
+
+  return $row(layoutSheet.spacingSmall, style({ cursor: 'pointer', alignItems: 'center', }))(
+    $icon({ $content: $iconG, width: '24px', viewBox: '0 0 32 32' }),
+    $text(style({ fontWeight: 'bold' }))(indexTokenDescription.symbol),
+  )
+}
+
 
 // export const $openPositionPnlBreakdown = (mp: IPositionMirrorOpen, marketInfo: IMarketInfo) => {
 //   // const pendingFundingFee = getFundingFee(pos.entryFundingRate, cumulativeTokenFundingRates, pos.size)

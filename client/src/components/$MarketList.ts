@@ -5,13 +5,13 @@ import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { fromPromise, map, take } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
-import { $Table, $defaultTableRowContainer, $marketSmallLabel } from 'ui-components'
-import { IMarket, IMarketFees, IMarketPrice, IMarketUsageInfo, IOraclePrice, TEMP_MARKET_LIST, getBorrowingFactorPerInterval, getFundingFactorPerInterval, readableFactorPercentage } from 'gmx-middleware-utils'
+import { IMarket, IMarketFees, IMarketPrice, IMarketUsageInfo, TEMP_MARKET_LIST, getBorrowingFactorPerInterval, getFundingFactorPerInterval, readableFactorPercentage } from 'gmx-middleware-utils'
+import { latestPriceMap } from 'puppet-middleware-utils'
+import { $Table, $defaultTableRowContainer } from 'ui-components'
+import { $marketSmallLabel } from '../common/$common'
 import { contractReader } from '../logic/common'
 import { getMarketPoolUsage } from '../logic/tradeV2'
 import { ISupportedChain } from '../wallet/walletLink'
-import * as viem from 'viem'
-import { latestPriceMap } from 'puppet-middleware-utils'
 
 interface IMarketList {
   $container?: NodeComposeFn<$Node>
