@@ -47,6 +47,9 @@
       "path": "../ui-utils/router"
     },
     {
+      "path": "../ui-utils/storage"
+    },
+    {
       "path": "../@gambitdao-gbc-middleware"
     },
   ],

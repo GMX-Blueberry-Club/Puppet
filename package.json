@@ -6,7 +6,6 @@
     "*",
     "netlify/*",
     "ui-utils/*",
-    "subgraph/*",
     "gmx-middleware/*"
   ],
   "scripts": {
