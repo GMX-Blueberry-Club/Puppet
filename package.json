@@ -4,6 +4,7 @@
   "private": true,
   "workspaces": [
     "*",
+    "netlify/*",
     "subgraph/*",
     "gmx-middleware/*"
   ],
