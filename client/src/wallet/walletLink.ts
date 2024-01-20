@@ -100,7 +100,7 @@ export const estimatedGasPrice = awaitPromises(map(pc => pc.estimateFeesPerGas({
 
 export const blockCache = awaitPromises(map(async pc => {
   
-  return (await pc.getBlockNumber({ maxAge: 10000 })) || 0n
+  return (await pc.getBlockNumber({ cacheTime: 10000 })) || 0n
 }, publicClient))
 export const block = awaitPromises(map(n => fetchBlockNumber(), now(null)))
 export const blockChange = switchMap(c => fromCallback<bigint>(cb => watchBlockNumber({ listen: true, chainId: c.id }, bn => cb(bn))), chain)

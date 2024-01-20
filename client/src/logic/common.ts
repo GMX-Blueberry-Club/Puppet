@@ -7,41 +7,14 @@ import type { AbiParametersToPrimitiveTypes, Address, ExtractAbiEvent, ExtractAb
 import { ContractClientParams, ContractParams, StreamInput, StreamInputArray, switchMap } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { wallet } from "../wallet/walletLink.js"
-import { O } from "@aelea/core"
-import { http } from "@aelea/ui-components"
-import { filter, mergeArray, multicast } from "@most/core"
-import { ICommunicationMessage } from "gmx-middleware-utils"
-import { arbitrum } from "viem/chains"
 
 
 
-interface IContractConnect<TAbi extends viem.Abi, TChain extends viem.Chain = viem.Chain> {
+interface IContractConnect<TAbi extends viem.Abi> {
   read<TFunctionName extends string, TArgs extends AbiParametersToPrimitiveTypes<ExtractAbiFunction<TAbi, TFunctionName>['inputs']>>(functionName: viem.InferFunctionName<TAbi, TFunctionName, 'view' | 'pure'>, ...args_: onlyArray<TArgs> | onlyArray<StreamInputArray<onlyArray<TArgs>>>): Stream<viem.ReadContractReturnType<TAbi, TFunctionName>>
   listen<TEventName extends string, TLogs = viem.Log<bigint, number, false, ExtractAbiEvent<TAbi, TEventName>, true, TAbi, TEventName>>(eventName: viem.InferEventName<TAbi, TEventName>, args?: viem.GetEventArgs<TAbi, TEventName>): Stream<TLogs>
   // simulate<TFunctionName extends string, TChainOverride extends viem.Chain | undefined = undefined>(simParams: Omit<viem.SimulateContractParameters<TAbi, TFunctionName, TChain, TChainOverride>, 'address' | 'abi'>): Stream<viem.SimulateContractReturnType<TAbi, TFunctionName, TChain, TChainOverride>>
   // write<TFunctionName extends string>(simParams: Stream<ContractClientParams<TAbi>>): Stream<wagmi.PrepareWriteContractConfig<TAbi, TFunctionName, TChain['id']>>
-}
-
-
-export const getMappedValue2 = <
-  T,
-  TMap1,
-  TMap2,
-  TMapMap extends { [p in keyof TMap1]: { [P in keyof TMap2]: T } },
->(mapOfMap: TMapMap, map1Key: keyof TMap1, map2Key: keyof TMap2): T => {
-  const contractAddressMap = mapOfMap[map1Key]
-
-  if (!contractAddressMap) {
-    throw new Error(`map1Key[${String(map1Key)}] not found in map`)
-  }
-
-  const address = contractAddressMap[map2Key]
-
-  if (!address) {
-    throw new Error(`map2Key[${String(map2Key)}] not found in map`)
-  }
-
-  return address
 }
 
 
@@ -115,21 +88,7 @@ export const listenContract = <
 
 
 
-// export const simulateContract = <
-//   TAddress extends Address,
-//   TAbi extends viem.Abi,
-//   TChain extends viem.Chain,
-// >(params_: ContractParams<TAbi, TAddress>) =>
-//   <TFunctionName extends string, TChainOverride extends viem.Chain | undefined = undefined>(simParams: Omit<viem.SimulateContractParameters<TAbi, TFunctionName, TChain, TChainOverride>, 'address' | 'abi'>): Stream<viem.SimulateContractReturnType<TAbi, TFunctionName, TChain, TChainOverride>> => {
 
-//     const mapState = awaitPromises(map(({ client }) => {
-
-//       const sim = client.simulateContract({ ...params_, ...simParams } as any)
-//       return sim
-//     }, params_))
-
-//     return mapState as any
-//   }
 
 export const writeContract = <
   TAddress extends Address,
@@ -163,14 +122,6 @@ export const wagmiWriteContract = async <
   TChainId extends number, 
   TWalletClient extends wagmi.WalletClient = wagmi.WalletClient
 >(simParams: wagmi.PrepareWriteContractConfig<TAbi, TFunctionName, TChainId, TWalletClient>): Promise<viem.TransactionReceipt> => {
-
-  // const client = await wagmi.getWalletClient()
-
-  // if (client) {
-  //   await client.writeContract({ ...simParams, chain: arbitrum  })
-  // }
-  
-
   const client = wagmi.getPublicClient()
 
   const simReq = await wagmi.prepareWriteContract(simParams)
