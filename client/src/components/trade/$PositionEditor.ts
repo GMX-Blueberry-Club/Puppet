@@ -21,7 +21,7 @@ import {
   $infoTooltipLabel,
   $moreDots,
   $tokenIconMap, $tokenLabelFromSummary
-} from "gmx-middleware-ui-components"
+} from "ui-components"
 import {
   delta,
   div,
@@ -61,7 +61,7 @@ import * as trade from "../../logic/traderLogic.js"
 import { account, ISupportedChain } from "../../wallet/walletLink.js"
 import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown.js"
-import { ITradeFocusMode } from "../../data/type"
+import { ITradeFocusMode } from "../../const/type.js"
 
 
 

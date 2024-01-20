@@ -1,27 +1,22 @@
 import { Behavior, O, combineArray } from "@aelea/core"
-import { $Branch, $Node, $element, $svg, $text, StyleCSS, attr, component, nodeEvent, style, styleBehavior } from "@aelea/dom"
+import { $Branch, $Node, $element, $text, StyleCSS, attr, component, nodeEvent, style, styleBehavior } from "@aelea/dom"
 import { $RouterAnchor, IAnchor, Route } from '@aelea/router'
-import {  $column, $row, layoutSheet } from '@aelea/ui-components'
+import { $column, $row, layoutSheet } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { CHAIN } from "gmx-middleware-const"
-import { $Link, $anchor, $arrowRight, $caretDblDown, $caretDown, $discord, $gitbook, $github, $icon, $instagram, $moreDots, $twitter } from "gmx-middleware-ui-components"
 import { awaitPromises, constant, empty, map, multicast, snapshot, switchLatest } from '@most/core'
 import { Stream } from "@most/types"
-import { $bagOfCoinsCircle, $fileCheckCircle, $gmxLogo, $puppetLogo } from "../common/$icons.js"
-import { dark, light } from "../common/theme.js"
-import { $Picker } from "./$ThemePicker.js"
-import { $stackedCoins, $trophy } from "../common/elements/$icons.js"
-import { $Popover } from "./$Popover.js"
-import { $WalletProfileDisplay } from "./$WalletProfileDisplay.js"
-import { $ButtonSecondary, $defaultMiniButtonSecondary } from "./form/$Button.js"
 import { disconnect } from "@wagmi/core"
+import { CHAIN } from "gmx-middleware-const"
+import { $Link, $anchor, $discord, $gitbook, $github, $icon, $instagram, $moreDots, $twitter } from "ui-components"
+import { $bagOfCoinsCircle, $fileCheckCircle, $gmxLogo, $puppetLogo } from "../common/$icons.js"
+import { $stackedCoins, $trophy } from "../common/elements/$icons.js"
+import { dark, light } from "../common/theme.js"
 import { walletLink } from "../wallet/index.js"
-import { switchMap } from "gmx-middleware-utils"
-import { fadeIn } from "../transitions/enter.js"
-import * as storage from "../utils/storage/storeScope.js"
-import * as store from "../data/store/store.js"
-import { newUpdateInvoke } from "../sw/swUtils.js"
 import { $SwitchNetworkDropdown } from "./$ConnectAccount.js"
+import { $Popover } from "./$Popover.js"
+import { $Picker } from "./$ThemePicker.js"
+import { $WalletProfileDisplay } from "./$WalletProfileDisplay.js"
+import { $ButtonSecondary } from "./form/$Button.js"
 
 interface MainMenu {
   chainList: CHAIN[]

@@ -2,48 +2,33 @@ import playwright from 'playwright-core'
 import { getAddress } from 'viem'
 
 const CLIENT = process.env['CLIENT'] || 'http://localhost:8888'
-
-let browser = await launchBrowser()
-
-browser.addListener('close', async page => {
-  console.log('browser disconnected')
-  browser = await launchBrowser()
-})
-
-browser.addListener('crash', async page => {
-  console.log('browser crashed')
-  browser = await launchBrowser()
-})
-
-// http://localhost:3000/app/profile/trader/0x01c067eE4B1d20Cb205700b0a2FfdCF569Aa58a3?path=&title=&cache=86400
-
-export const ETH_ADDRESS_REGEXP = /^0x[a-fA-F0-9]{40}$/i
-export const TX_HASH_REGEX = /^0x([A-Fa-f0-9]{64})$/i
-
-
-export const whitelistPages = [
+const browserPage = launchBrowser()
+const whitelistPages = [
   {
     urlExp: /^\/app\/profile\/trader\/(0x[a-fA-F0-9]{40})$/,
     getUrl: (url: URL) => {
       const activityTimeframe = url.searchParams.get('activityTimeframe') || 2628000
       const address = getAddress(url.pathname.split('/')[4])
-      return `trader?address=${address}&activityTimeframe=${activityTimeframe}`
+      return `/og/trader?address=${address}&activityTimeframe=${activityTimeframe}`
     },
   }
 ]
 
 
-const server = Bun.serve({
+Bun.serve({
   async fetch(request: Request) {
     if (request.method !== 'GET') {
       return new Response('invalid method', { status: 400 })
     }
 
-    if (browser.isClosed()) {
+    const page = await browserPage
+
+    if (page.isClosed()) {
       return new Response('browser is closed', { status: 400 })
     }
 
     const url = new URL(request.url)
+
 
     // validate the pathname and query parameters from ogPages map
     const match = whitelistPages.find(x => url.pathname.match(x.urlExp))
@@ -52,18 +37,29 @@ const server = Bun.serve({
       return new Response('invalid url', { status: 400 })
     }
 
-
     try {
       const cardUrl = match.getUrl(url)
 
-      await browser.goto(`${CLIENT}/og/${cardUrl}`, { timeout: 15 * 1000, waitUntil: 'networkidle' })
+      console.log('cardUrl', cardUrl)
 
-      const screenshot = await browser.screenshot({ type: 'jpeg', quality: 95 })
 
-      return new Response(screenshot, {
-        headers: { "Content-Type": "image/png" },
-      })
+      // Use pushState to navigate to a new URL within the SPA
+      await page.evaluate(async (url) => {
+        // @ts-ignore
+        (history as any).pushState({}, '', url)
+        console.log('pushed state', url)
+        await Promise.resolve()
+      }, cardUrl)
+
+      await page.waitForLoadState('networkidle')
+
+      const screenshot = await page.screenshot({ type: 'jpeg', quality: 95 })
+
+      const headers = { "Content-Type": "image/png" }
+
+      return new Response(screenshot, { headers })
     } catch (error) {
+      console.error(error)
       if (error instanceof Error) {
         return new Response(error.message, { status: 400 })
       }
@@ -72,8 +68,6 @@ const server = Bun.serve({
     }
   },
 })
-
-console.log('Server running at', server.url)
 
 
 async function launchBrowser() {
@@ -90,10 +84,29 @@ async function launchBrowser() {
   console.log('Browser launched')
 
   const page = await chrome.newPage({
+    baseURL: CLIENT,
     viewport: { height: 600, width: 600 }
   })
 
-  console.log('Page created viewpost: 600x600')
+  console.log(`going to ${CLIENT}`)
+
+
+
+  await page.goto(`${CLIENT}/app/leaderboard`)
+
+  await page.waitForLoadState('networkidle')
+
+  console.log('Page loaded')
+
+  // page.addListener('close', async page => {
+  //   console.error('browser disconnected')
+  //   browserPage = await launchBrowser()
+  // })
+
+  // page.addListener('crash', async page => {
+  //   console.error('browser crashed')
+  //   browserPage = await launchBrowser()
+  // })
 
   return page
 }

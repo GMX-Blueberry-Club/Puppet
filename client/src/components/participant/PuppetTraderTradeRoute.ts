@@ -11,7 +11,7 @@ import { $ProfilePerformanceGraph } from "../trade/$ProfilePerformanceGraph.js"
 
 import * as router from "@aelea/router"
 import { pallete } from "@aelea/ui-components-theme"
-import { $Table, $caretDown, $infoLabeledValue, ScrollRequest } from "gmx-middleware-ui-components"
+import { $Table, $caretDown, $infoLabeledValue, ScrollRequest } from "ui-components"
 import { $Popover } from "../$Popover"
 import { $puppetLogo } from "../../common/$icons"
 import { $iconCircular } from "../../common/elements/$common"

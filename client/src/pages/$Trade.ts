@@ -8,7 +8,7 @@ import * as wagmi from "@wagmi/core"
 import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
 import { USD_DECIMALS } from "gmx-middleware-const"
-import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $target, intermediateMessage } from "gmx-middleware-ui-components"
+import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $target, intermediateMessage } from "ui-components"
 import {
   IMarketInfo, IMarketPrice, StateStream, TEMP_MARKET_TOKEN_MARKET_MAP, applyFactor, div,
   filterNull, formatFixed, getAvailableReservedUsd, getBorrowingFactorPerInterval, getFundingFactorPerInterval, getLiquidationPrice, getMappedValue, getMarginFee, getNativeTokenDescription,
@@ -28,12 +28,12 @@ import { $PositionAdjustmentDetails } from "../components/trade/$PositionAdjustm
 import { $PositionDetails } from "../components/trade/$PositionDetails.js"
 import { $PositionEditor, IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "../components/trade/$PositionEditor.js"
 import { $PositionListDetails, IRequestTrade } from "../components/trade/$PositionListDetails.js"
-import { store } from "../data/store/store.js"
-import { ITradeFocusMode } from "../data/type"
+import { store } from "../const/store.js"
+import { ITradeFocusMode } from "../const/type.js"
 import { getExecuteGasFee, getFullMarketInfo } from "../logic/tradeV2.js"
 import * as trade from "../logic/traderLogic.js"
 import { exchangesWebsocketPriceSource, getTraderTradeRoute } from "../logic/traderLogic.js"
-import * as storage from "../utils/storage/storeScope.js"
+import * as uiStorage from "ui-storage"
 import { estimatedGasPrice, gasPrice, wallet } from "../wallet/walletLink.js"
 import { $seperator2 } from "./common.js"
 
@@ -116,15 +116,15 @@ export const $Trade = (config: ITradeComponent) => component((
   // })('EventLog2', { eventNameHash: GMX.OrderEvent.OrderCancelled })
   const focusMode = replayLatest(switchFocusMode, ITradeFocusMode.collateral)
 
-  const chartInterval = storage.replayWrite(store.tradeBox, selectTimeFrame, 'chartInterval')
-  const isTradingEnabled = storage.replayWrite(store.tradeBox, enableTrading, 'isTradingEnabled')
-  const isLong = storage.replayWrite(store.tradeBox, switchIsLong, 'isLong')
-  const slippage = storage.replayWrite(store.tradeBox, changeSlippage, 'slippage')
-  const executionFeeBuffer = storage.replayWrite(store.tradeBox, changeExecutionFeeBuffer, 'executionFeeBuffer')
-  const primaryToken = storage.replayWrite(store.tradeBox, changePrimaryToken, 'primaryToken')
-  const isUsdCollateralToken = storage.replayWrite(store.tradeBox, changeIsUsdCollateralToken, 'isUsdCollateralToken')
-  const feeDisplayRate = storage.replayWrite(store.tradeBox, changeFeeDisplayRate, 'feeRateIntervalDisplay')
-  const marketToken: Stream<viem.Address> = storage.replayWrite(store.tradeBox, changeMarketToken, 'marketToken')
+  const chartInterval = uiStorage.replayWrite(store.tradeBox, selectTimeFrame, 'chartInterval')
+  const isTradingEnabled = uiStorage.replayWrite(store.tradeBox, enableTrading, 'isTradingEnabled')
+  const isLong = uiStorage.replayWrite(store.tradeBox, switchIsLong, 'isLong')
+  const slippage = uiStorage.replayWrite(store.tradeBox, changeSlippage, 'slippage')
+  const executionFeeBuffer = uiStorage.replayWrite(store.tradeBox, changeExecutionFeeBuffer, 'executionFeeBuffer')
+  const primaryToken = uiStorage.replayWrite(store.tradeBox, changePrimaryToken, 'primaryToken')
+  const isUsdCollateralToken = uiStorage.replayWrite(store.tradeBox, changeIsUsdCollateralToken, 'isUsdCollateralToken')
+  const feeDisplayRate = uiStorage.replayWrite(store.tradeBox, changeFeeDisplayRate, 'feeRateIntervalDisplay')
+  const marketToken: Stream<viem.Address> = uiStorage.replayWrite(store.tradeBox, changeMarketToken, 'marketToken')
 
   const isIncrease = mergeArray([
     constant(true, clickResetPositionQuery),
@@ -318,7 +318,7 @@ export const $Trade = (config: ITradeComponent) => component((
   
   const leverage = replayLatest(multicast(mergeArray([
     changeLeverage,
-    storage.replayWrite(store.tradeBox, debounce(50, changeLeverage), 'leverage'),
+    uiStorage.replayWrite(store.tradeBox, debounce(50, changeLeverage), 'leverage'),
     filterNull(map(params => {
       if (params.mirrorPosition === null) return null
 

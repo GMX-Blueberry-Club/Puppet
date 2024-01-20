@@ -6,7 +6,7 @@
 // import { map, startWith } from "@most/core"
 // import { Stream } from "@most/types"
 // import * as GMX from 'gmx-middleware-const'
-// import { $Table, ISortBy, ScrollRequest } from "gmx-middleware-ui-components"
+// import { $Table, ISortBy, ScrollRequest } from "ui-components"
 // import { IAbstractPositionParams, pagingQuery, switchMap } from "gmx-middleware-utils"
 // import { ROUTE_DESCRIPTION } from "puppet-middleware-const"
 // import { IPositionMirrorOpen, IPuppetSubscritpion, getMpSlotPnL, getRouteTypeKey } from "puppet-middleware-utils"

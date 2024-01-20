@@ -3,7 +3,7 @@ import { $Node, $node, $text, NodeComposeFn, component, style } from "@aelea/dom
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { map, now } from "@most/core"
 import { Stream } from "@most/types"
-import { $Table, $infoLabel, $txHashRef } from "gmx-middleware-ui-components"
+import { $Table, $infoLabel, $txHashRef } from "ui-components"
 import { IPositionDecrease, IPositionIncrease, IPriceCandle, StateStream, TEMP_INDEX_TOKEN_MARKET_MAP, TEMP_MARKET_TOKEN_MARKET_MAP, adjustForDecimals, expandDecimals, getMappedValue, getTokenAmount, getTokenDescription, getTokenUsd, readableDate, readableUsd, readableTokenPrice, switchMap, getTimeSince, unixTimestampNow } from "gmx-middleware-utils"
 import { IMirrorPositionOpen } from "puppet-middleware-utils"
 import * as viem from "viem"

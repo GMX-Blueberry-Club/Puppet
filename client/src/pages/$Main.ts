@@ -7,7 +7,7 @@ import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
 import { constant, empty, map, merge, multicast, now, skipRepeats, startWith, take, tap } from '@most/core'
 import * as GMX from 'gmx-middleware-const'
 import { CHAIN } from "gmx-middleware-const"
-import { $Tooltip, $alertContainer, $infoLabeledValue } from "gmx-middleware-ui-components"
+import { $Tooltip, $alertContainer, $infoLabeledValue } from "ui-components"
 import { filterNull, getTimeSince, readableUnitAmount, switchMap, unixTimestampNow } from "gmx-middleware-utils"
 import { ISetRouteType, queryLatestPriceTick, queryRouteTypeList, subgraphStatus } from "puppet-middleware-utils"
 import { $midContainer } from "../common/$common.js"
@@ -16,10 +16,10 @@ import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu.js'
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
 import { $RouteSubscriptionDrawer } from "../components/portfolio/$RouteSubscriptionDrawer.js"
 import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor"
-import * as storeDb from "../data/store/store.js"
+import * as storeDb from "../const/store.js"
 import { newUpdateInvoke } from "../sw/swUtils"
 import { fadeIn } from "../transitions/enter.js"
-import * as storage from "../utils/storage/storeScope.js"
+import * as uiStorage from "ui-storage"
 import { blockChange, chain } from "../wallet/walletLink.js"
 import { $Home } from "./$Home.js"
 import { $PublicProfile } from "./$PublicProfile.js"
@@ -79,8 +79,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
   const isDesktopScreen = skipRepeats(map(() => document.body.clientWidth > 1040 + 280, startWith(null, eventElementTarget('resize', window))))
 
-  const activityTimeframe = storage.replayWrite(storeDb.store.global, changeActivityTimeframe, 'activityTimeframe')
-  const selectedTradeRouteList = replayLatest(multicast(storage.replayWrite(storeDb.store.global, selectTradeRouteList, 'selectedTradeRouteList')))
+  const activityTimeframe = uiStorage.replayWrite(storeDb.store.global, changeActivityTimeframe, 'activityTimeframe')
+  const selectedTradeRouteList = replayLatest(multicast(uiStorage.replayWrite(storeDb.store.global, selectTradeRouteList, 'selectedTradeRouteList')))
 
   const routeTypeListQuery = now(queryRouteTypeList())
   const priceTickMapQuery = replayLatest(queryLatestPriceTick({ activityTimeframe, selectedTradeRouteList }, 50))

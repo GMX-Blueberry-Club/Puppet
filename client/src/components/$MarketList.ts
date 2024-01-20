@@ -5,7 +5,7 @@ import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { fromPromise, map, take } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
-import { $Table, $defaultTableRowContainer, $marketSmallLabel } from 'gmx-middleware-ui-components'
+import { $Table, $defaultTableRowContainer, $marketSmallLabel } from 'ui-components'
 import { IMarket, IMarketFees, IMarketPrice, IMarketUsageInfo, IOraclePrice, TEMP_MARKET_LIST, getBorrowingFactorPerInterval, getFundingFactorPerInterval, readableFactorPercentage } from 'gmx-middleware-utils'
 import { contractReader } from '../logic/common'
 import { getMarketPoolUsage } from '../logic/tradeV2'

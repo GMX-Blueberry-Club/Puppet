@@ -1,26 +1,24 @@
 
 import { replayLatest } from "@aelea/core"
 import { http, observer } from "@aelea/ui-components"
-import { constant, empty, fromPromise, map, mergeArray, multicast, now, scan, skip } from "@most/core"
+import { empty, fromPromise, map, mergeArray, multicast, now, scan, skip } from "@most/core"
 import { Stream } from "@most/types"
+import * as wagmi from "@wagmi/core"
 import { fetchBalance, readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
 import {
   IPriceCandleDto, IRequestPricefeedApi, ITokenDescription, ITokenSymbol,
-  filterNull, getDenominator, getMappedValue, getTokenDescription, parseFixed, periodicRun, resolveAddress, switchMap
+  filterNull, getDenominator, getMappedValue, getTokenDescription, parseFixed, periodicRun, resolveAddress
 } from "gmx-middleware-utils"
+import * as PUPPET from "puppet-middleware-const"
+import { getRouteAddressKey, getTradeRouteKey } from "puppet-middleware-utils"
+import * as uiStorage from "ui-storage"
 import * as viem from "viem"
 import { } from "viem"
-import { ISupportedChain } from "../wallet/walletLink.js"
-import { contractReader } from "./common"
-import * as PUPPET from "puppet-middleware-const"
 import { arbitrum } from "viem/chains"
-import { getPuppetSubscriptionExpiryKey, getRouteAddressKey, getTradeRouteKey } from "puppet-middleware-utils"
-import * as storage from "../utils/storage/storeScope.js"
-import { store } from "../data/store/store"
-import * as indexDB from "../utils/storage/indexDB.js"
-import * as wagmi from "@wagmi/core"
+import { store } from "../const/store.js"
+import { ISupportedChain } from "../wallet/walletLink.js"
 
 
 
@@ -220,7 +218,7 @@ export async function getTraderTradeRoute(
   const puppetContractMap = PUPPET.CONTRACT[chain.id]
   const routeKey = getTradeRouteKey(trader, collateralToken, indexToken, isLong)
   const routeAddressKey = getRouteAddressKey(routeKey)
-  const storedRouteKeyMap = await indexDB.get(store.tradeBox, 'traderRouteMap')
+  const storedRouteKeyMap = await uiStorage.indexDb.get(store.tradeBox, 'traderRouteMap')
   const routeAddress = storedRouteKeyMap[trader]
 
 
@@ -240,7 +238,7 @@ export async function getTraderTradeRoute(
   
   storedRouteKeyMap[trader] = queryAddress
   
-  await indexDB.set(store.tradeBox, 'traderRouteMap', storedRouteKeyMap)
+  await uiStorage.indexDb.set(store.tradeBox, 'traderRouteMap', storedRouteKeyMap)
 
   return queryAddress
 }

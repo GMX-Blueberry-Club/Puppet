@@ -3,7 +3,7 @@ import { $text, INode, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { map } from "@most/core"
 import { Stream } from "@most/types"
-import { TableColumn } from "gmx-middleware-ui-components"
+import { TableColumn } from "ui-components"
 import { IPriceOracleMap, getBasisPoints, readableDate, readablePercentage, getTimeSince, readableFactorPercentage } from "gmx-middleware-utils"
 import { IMirrorPosition, IMirrorPositionOpen, IMirrorPositionSettled, getParticiapntMpPortion, latestPriceMap } from "puppet-middleware-utils"
 import * as viem from 'viem'

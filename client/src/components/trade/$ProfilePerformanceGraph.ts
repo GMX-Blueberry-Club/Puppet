@@ -3,7 +3,7 @@ import { $Node, NodeComposeFn, component, style } from "@aelea/dom"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { now, skipRepeatsWith } from "@most/core"
 import * as GMX from 'gmx-middleware-const'
-import { $Baseline, IMarker } from "gmx-middleware-ui-components"
+import { $Baseline, IMarker } from "ui-components"
 import {
   IPositionDecrease,
   IPositionIncrease,

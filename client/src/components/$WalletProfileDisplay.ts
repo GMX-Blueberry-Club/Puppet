@@ -4,7 +4,7 @@ import { Route } from "@aelea/router"
 import { $column, $row } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, map, mergeArray, now, snapshot, switchLatest } from "@most/core"
-import { $Link } from "gmx-middleware-ui-components"
+import { $Link } from "ui-components"
 import { account, modal } from "../wallet/walletLink.js"
 import { $disconnectedWalletDisplay, $profileDisplay } from "./$AccountProfile.js"
 

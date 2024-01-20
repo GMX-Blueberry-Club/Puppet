@@ -1,13 +1,15 @@
 import { Behavior, combineObject } from "@aelea/core"
 import { $element, $text, component, style } from "@aelea/dom"
+import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, empty, map, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
-import { $Table, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "gmx-middleware-ui-components"
 import { IPriceTickListMap, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
-import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType, accountSettledPositionListSummary, openPositionListPnl, queryLatestPriceTick, queryOpenPositionList, querySettledPositionList } from "puppet-middleware-utils"
+import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType, accountSettledPositionListSummary, openPositionListPnl, queryOpenPositionList, querySettledPositionList } from "puppet-middleware-utils"
+import { $Table, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "ui-components"
+import * as uiStorage from "ui-storage"
 import * as viem from "viem"
 import { $labelDisplay } from "../../common/$TextField.js"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlDisplay, $route, $size } from "../../common/$common.js"
@@ -16,12 +18,10 @@ import { $DropMultiSelect } from "../../components/form/$Dropdown.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor"
 import { $tableHeader } from "../../components/table/$TableColumn.js"
 import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceGraph.js"
-import * as storeDb from "../../data/store/store.js"
-import { IPageGlobalParams } from "../../data/type"
-import * as storage from "../../utils/storage/storeScope.js"
+import * as storeDb from "../../const/store.js"
+import { IPageGlobalParams } from "../../const/type.js"
 import { $seperator2 } from "../common.js"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity.js"
-import * as router from '@aelea/router'
 
 
 
@@ -52,8 +52,8 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
   const { activityTimeframe, selectedTradeRouteList, priceTickMapQuery, route, routeTypeListQuery  } = config
 
-  const sortBy = storage.replayWrite(storeDb.store.leaderboard, sortByChange, 'sortBy')
-  const isLong = storage.replayWrite(storeDb.store.leaderboard, switchIsLong, 'isLong')
+  const sortBy = uiStorage.replayWrite(storeDb.store.leaderboard, sortByChange, 'sortBy')
+  const isLong = uiStorage.replayWrite(storeDb.store.leaderboard, switchIsLong, 'isLong')
 
 
   const pageParms = map(params => {

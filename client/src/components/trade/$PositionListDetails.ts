@@ -22,7 +22,7 @@ import { $seperator2 } from "../../pages/common"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
-import { $IntermediatePromise } from "gmx-middleware-ui-components"
+import { $IntermediatePromise } from "ui-components"
 
 
 

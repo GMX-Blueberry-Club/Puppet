@@ -6,7 +6,7 @@ import { pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import { TOKEN_SYMBOL } from "gmx-middleware-const"
-import { $bear, $bull, $infoLabel, $infoTooltipLabel, $Link, $tokenIconMap } from "gmx-middleware-ui-components"
+import { $bear, $bull, $infoLabel, $infoTooltipLabel, $Link, $tokenIconMap } from "ui-components"
 import {
   getBasisPoints,
   getEntryPrice,

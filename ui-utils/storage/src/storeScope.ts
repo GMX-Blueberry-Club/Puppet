@@ -1,26 +1,8 @@
-import { awaitPromises, continueWith, debounce, join, map, merge, multicast, now } from "@most/core"
+import { continueWith, debounce, map, now } from "@most/core"
 import { Stream } from "@most/types"
+import { switchMap } from "gmx-middleware-utils"
 import * as indexDB from './indexDB.js'
 import { openDatabase } from "./indexDB.js"
-import { switchMap } from "gmx-middleware-utils"
-
-
-// stringify with bigint support
-export function jsonStringify(obj: any) {
-  return JSON.stringify(obj, (_, v) => typeof v === 'bigint' ? v.toString() + 'n' : v)
-}
-
-const BIG_INT_STR = /^(?:[-+])?\d+n$/
-export function transformBigints(obj: any) {
-  for (const k in obj) {
-    if (typeof obj[k] === 'object' && obj[k] !== null) {
-      transformBigints(obj[k])
-    } else if (typeof obj[k] === 'string' && BIG_INT_STR.test(obj[k])) {
-      obj[k] = BigInt(obj[k].slice(0, -1))
-    }
-  }
-  return obj
-}
 
 
 export const createStoreDefinition = <T, TDefinition extends { [P in keyof T]: indexDB.IStoreDefinition<any> }>(
@@ -67,9 +49,8 @@ export function replayWrite<TSchema, TKey extends indexDB.GetKey<TSchema>, TRetu
 ): Stream<TReturn> {
   const storedValue = switchMap(() => indexDB.get(params, key), now(null))
   const writeSrc = write(params, key, writeEvent)
-
-  return merge(storedValue, writeSrc)
-  // return continueWith(() => writeSrc, storedValue)
+  
+  return continueWith(() => writeSrc, storedValue)
 }
 
 

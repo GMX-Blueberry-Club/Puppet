@@ -1,0 +1,33 @@
+{
+    "name": "ui-components",
+    "main": ".dist/cjs/index.js",
+    "module": ".dist/esm/index.js",
+    "types": ".dist/types/index.d.ts",
+    "type": "module",
+    "sideEffects": false,
+    "files": [
+        ".dist"
+    ],
+    "scripts": {
+        "clean": "rm -fr .dist/*",
+        "build": "bun tsc -b"
+    },
+    "dependencies": {
+        "@aelea/core": "^1.3.2",
+        "@aelea/dom": "^0.2.2",
+        "@aelea/router": "^0.20.2",
+        "@aelea/ui-components": "^0.28.2",
+        "@aelea/ui-components-theme": "^0.10.0",
+        "gmx-middleware-const": "workspace:*",
+        "gmx-middleware-utils": "workspace:*",
+        "@most/core": "^1.6.1",
+        "@most/disposable": "^1.3.0",
+        "@most/prelude": "^1.8.0",
+        "lightweight-charts": "^4.1.1",
+        "@most/scheduler": "^1.3.0",
+        "@most/types": "^1.1.0",
+        "abitype": "^1.0.0",
+        "jazzicon": "^1.5.0",
+        "viem": "^1.21.4"
+    }
+}

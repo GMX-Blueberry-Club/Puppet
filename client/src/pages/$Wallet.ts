@@ -3,15 +3,15 @@ import { $node, $text, component, style } from "@aelea/dom"
 import { $column, layoutSheet } from "@aelea/ui-components"
 import { map } from "@most/core"
 import * as GMX from "gmx-middleware-const"
-import { $ButtonToggle, $defaulButtonToggleContainer } from "gmx-middleware-ui-components"
+import { $ButtonToggle, $defaulButtonToggleContainer } from "ui-components"
 import { switchMap } from "gmx-middleware-utils"
 import { ISetRouteType, queryPuppetTradeRoute, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
 import { $PuppetPortfolio } from "../components/participant/$PuppetPortfolio"
 import { $TraderProfile } from "../components/participant/$TraderProfile.js"
 import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor.js"
-import * as storeDb from "../data/store/store.js"
-import { IPageGlobalParams, IProfileMode } from "../data/type"
-import * as storage from "../utils/storage/storeScope.js"
+import * as storeDb from "../const/store.js"
+import { IPageGlobalParams, IProfileMode } from "../const/type.js"
+import * as uiStorage from "ui-storage"
 import { IWalletClient } from "../wallet/walletLink.js"
 import * as router from '@aelea/router'
 
@@ -39,7 +39,7 @@ export const $Wallet = (config: IPageGlobalParams & { wallet: IWalletClient, rou
 
   const { wallet, routeTypeListQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery } = config
 
-  const profileMode = storage.replayWrite(storeDb.store.wallet, selectProfileMode, 'selectedTab')
+  const profileMode = uiStorage.replayWrite(storeDb.store.wallet, selectProfileMode, 'selectedTab')
 
 
 

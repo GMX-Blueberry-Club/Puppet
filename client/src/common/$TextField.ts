@@ -4,7 +4,7 @@ import { $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { empty } from "@most/core"
 import { Stream } from "@most/types"
-import { $Field, Field } from "gmx-middleware-ui-components"
+import { $Field, Field } from "ui-components"
 
 
 export interface TextField extends Field {

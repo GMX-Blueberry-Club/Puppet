@@ -41,7 +41,10 @@
       "path": "../const"
     },
     {
-      "path": "../ui-components"
+      "path": "../ui-utils/components"
+    },
+    {
+      "path": "../ui-utils/router"
     },
     {
       "path": "../@gambitdao-gbc-middleware"
@@ -49,5 +52,5 @@
   ],
   "include": [
     "src"
-, "src/sw.ts"  ]
+, "src/sw.ts", "../utils/router", "../utils/indexer/scope", "../utils/indexer/process"  ]
 }

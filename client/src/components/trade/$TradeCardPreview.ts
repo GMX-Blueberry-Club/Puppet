@@ -4,7 +4,7 @@ import { $NumberTicker, $column, $icon, $row, layoutSheet, screenUtils } from "@
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { empty, map, multicast, now, skipRepeatsWith, startWith } from "@most/core"
 import { Stream } from "@most/types"
-import { $Baseline, $bear, $bull, $infoTooltipLabel, IMarker } from "gmx-middleware-ui-components"
+import { $Baseline, $bear, $bull, $infoTooltipLabel, IMarker } from "ui-components"
 import { filterNull, parseReadableNumber, readableUsd, readableUnitAmount } from "gmx-middleware-utils"
 import { BaselineData, ChartOptions, DeepPartial, MouseEventParams, Time } from "lightweight-charts"
 import { IMirrorPositionSettled, IMirrorPositionOpen } from "puppet-middleware-utils"

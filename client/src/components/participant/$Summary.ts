@@ -9,7 +9,7 @@ import { IMirrorPositionOpen, IMirrorPositionSettled, accountSettledPositionList
 import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile.js"
 import { $heading2 } from "../../common/$text.js"
-import { intermediateMessage } from "gmx-middleware-ui-components"
+import { intermediateMessage } from "ui-components"
 
 
 export interface IAccountSummary {

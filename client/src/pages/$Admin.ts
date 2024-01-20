@@ -3,7 +3,7 @@
 // import { $column, $row, layoutSheet } from "@aelea/ui-components"
 // import { awaitPromises, empty, fromPromise, map, mergeArray, now, recoverWith, sample, snapshot } from "@most/core"
 // import { Stream } from "@most/types"
-// import { $Table, $alertContainer, $caretDown, $infoLabeledValue } from "gmx-middleware-ui-components"
+// import { $Table, $alertContainer, $caretDown, $infoLabeledValue } from "ui-components"
 // import { readableFileSize, readableNumber, readableUnitAmount, switchMap } from "gmx-middleware-utils"
 // import { $heading1, $heading2, $heading3 } from "../common/$text.js"
 // import { $ButtonPrimary, $buttonAnchor, defaultMiniButtonStyle } from "../components/form/$Button.js"
@@ -249,6 +249,13 @@
 
 //   ]
 // })
+
+
+// stringify with bigint support
+// export function jsonStringify(obj: any) {
+//   return JSON.stringify(obj, (_, v) => typeof v === 'bigint' ? v.toString() + 'n' : v)
+// }
+
 
 
 // function getJsonBlob<TData>(data: TData): Blob {

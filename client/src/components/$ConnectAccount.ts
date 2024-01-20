@@ -3,7 +3,7 @@ import { $Node, $element, $text, attr, component, nodeEvent, style } from "@aele
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { CHAIN } from "gmx-middleware-const"
-import { $alertContainer, $alertIcon, $walletConnectLogo } from "gmx-middleware-ui-components"
+import { $alertContainer, $alertIcon, $walletConnectLogo } from "ui-components"
 import { awaitPromises, empty, filter, map, mergeArray, now, snapshot, switchLatest, tap } from "@most/core"
 import { getNetwork } from "@wagmi/core"
 import { IWalletClient, chain, wallet, modal } from "../wallet/walletLink.js"

@@ -4,7 +4,7 @@ import * as router from '@aelea/router'
 import { $column, layoutSheet } from "@aelea/ui-components"
 import { map, mergeArray, now } from "@most/core"
 import * as GMX from 'gmx-middleware-const'
-import { $ButtonToggle, $defaulButtonToggleContainer } from "gmx-middleware-ui-components"
+import { $ButtonToggle, $defaulButtonToggleContainer } from "ui-components"
 import { ETH_ADDRESS_REGEXP } from "gmx-middleware-utils"
 import { ISetRouteType, queryPuppetTradeRoute, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
 import * as viem from 'viem'
@@ -12,7 +12,7 @@ import { $PuppetProfile } from "../components/participant/$PuppetProfile.js"
 import { $PuppetProfileSummary, $TraderProfileSummary } from "../components/participant/$Summary"
 import { $TraderProfile } from "../components/participant/$TraderProfile.js"
 import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor.js"
-import { IPageGlobalParams } from "../data/type"
+import { IPageGlobalParams } from "../const/type.js"
 
 
 export enum IProfileActiveTab {

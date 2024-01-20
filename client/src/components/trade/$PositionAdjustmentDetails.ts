@@ -6,7 +6,7 @@ import { awaitPromises, constant, empty, map, mergeArray, multicast, sample, ski
 import { Stream } from "@most/types"
 import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
-import { $alert, $alertTooltip, $anchor, $infoLabeledValue, $infoTooltipLabel } from "gmx-middleware-ui-components"
+import { $alert, $alertTooltip, $anchor, $infoLabeledValue, $infoTooltipLabel } from "ui-components"
 import {
   IPriceCandle, OrderType, StateStream, abs, filterNull, getBasisPoints, getDenominator, getNativeTokenAddress, getTokenDescription, getTokenUsd,
   readableFactorPercentage,

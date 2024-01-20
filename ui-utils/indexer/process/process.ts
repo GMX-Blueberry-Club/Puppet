@@ -54,6 +54,19 @@
 
 // }
 
+// const BIG_INT_STR = /^(?:[-+])?\d+n$/
+// export function transformBigints(obj: any) {
+//   for (const k in obj) {
+//     if (typeof obj[k] === 'object' && obj[k] !== null) {
+//       transformBigints(obj[k])
+//     } else if (typeof obj[k] === 'string' && BIG_INT_STR.test(obj[k])) {
+//       obj[k] = BigInt(obj[k].slice(0, -1))
+//     }
+//   }
+//   return obj
+// }
+
+
 // const seedFile: Stream<IProcessedStore<IGmxProcessState>> = importGlobal(async () => {
 //   const req = await (await fetch('/db/sha256-fNPTHJeW5_l2gEVhGYoF5yEI7cEddvO_ClCeV_Ms8xE=.json')).json().catch(() => null)
 

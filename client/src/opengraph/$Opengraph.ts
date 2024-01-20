@@ -12,24 +12,18 @@ import { $trader } from "./$trader"
 
 export const $Opengraph = (parentRoute: router.Route) => component(() => {
   const traderRoute = parentRoute.create({ fragment: /trader\?.*/ })
-
   const url = new URL(document.location.href)
 
-  const address = viem.getAddress(String(url.searchParams.get('address'))) as viem.Address
   const activityTimeframe = now(Number(url.searchParams.get('activityTimeframe')!) as GMX.IntervalTime)
   const selectedTradeRouteList = now([])
-
-  const settledPositionListQuery = queryTraderPositionSettled({ address, activityTimeframe, selectedTradeRouteList })
-  const openPositionListQuery = queryTraderPositionOpen({ address, selectedTradeRouteList })
   const priceTickMapQuery = queryLatestPriceTick({ activityTimeframe, selectedTradeRouteList })
   const routeTypeListQuery = now(queryRouteTypeList())
-
 
   return[
     $rootContainer(
       $column(layoutSheet.spacingBig, style({ placeContent: 'space-between', flex: 1, paddingTop: '36px' }))(
         router.contains(traderRoute)(
-          $trader({})
+          $trader({ priceTickMapQuery, routeTypeListQuery })
         ),
       ),
     )

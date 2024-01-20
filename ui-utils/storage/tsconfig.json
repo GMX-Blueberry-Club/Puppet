@@ -1,5 +1,5 @@
 {
-  "extends": "../tsconfig",
+  "extends": "../../tsconfig",
   "compilerOptions": {
     "outDir": ".dist/esm",
     "rootDir": "src",
@@ -13,12 +13,5 @@
       "ESNext"
     ]
   },
-  "references": [
-    {
-      "path": "../const"
-    },
-    {
-      "path": "../@gambitdao-gbc-middleware"
-    }
-  ]
+  "references": []
 }

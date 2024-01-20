@@ -4,7 +4,7 @@
 // import { map, multicast, skipRepeatsWith, switchLatest } from "@most/core"
 // import { Stream } from "@most/types"
 // import { CHAIN } from "gmx-middleware-const"
-// import { $Baseline } from "gmx-middleware-ui-components"
+// import { $Baseline } from "ui-components"
 // import {
 //   IPositionDecrease,
 //   IPositionIncrease,

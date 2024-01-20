@@ -5,6 +5,7 @@
   "workspaces": [
     "*",
     "netlify/*",
+    "ui-utils/*",
     "subgraph/*",
     "gmx-middleware/*"
   ],
