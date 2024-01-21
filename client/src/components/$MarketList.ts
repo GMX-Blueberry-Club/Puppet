@@ -5,13 +5,15 @@ import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { fromPromise, map, take } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from "gmx-middleware-const"
-import { IMarket, IMarketFees, IMarketPrice, IMarketUsageInfo, TEMP_MARKET_LIST, getBorrowingFactorPerInterval, getFundingFactorPerInterval, readableFactorPercentage } from 'gmx-middleware-utils'
+import { IMarket, IMarketFees, IMarketPrice, IMarketUsageInfo, TEMP_MARKET_LIST, getBorrowingFactorPerInterval, getFundingFactorPerInterval } from 'gmx-middleware-utils'
 import { latestPriceMap } from 'puppet-middleware-utils'
 import { $Table, $defaultTableRowContainer } from 'ui-components'
 import { $marketSmallLabel } from '../common/$common'
-import { contractReader } from '../logic/common'
 import { getMarketPoolUsage } from '../logic/tradeV2'
 import { ISupportedChain } from '../wallet/walletLink'
+import { ADDRESS_ZERO, IntervalTime, readableFactorPercentage } from 'common-utils'
+import { readContract } from '@wagmi/core'
+import { walletLink } from '../wallet'
 
 interface IMarketList {
   $container?: NodeComposeFn<$Node>
@@ -26,11 +28,10 @@ export const $MarketInfoList = ({
 }: IMarketList) => component((
 ) => {
   const gmxContractMap = GMX.CONTRACT[chain.id]
-  const v2Reader = contractReader(gmxContractMap.ReaderV2)
 
   const marketParamList = map(params => {
     const data = TEMP_MARKET_LIST
-      .filter(market => market.indexToken !== GMX.ADDRESS_ZERO)
+      .filter(market => market.indexToken !== ADDRESS_ZERO)
       .map(market => {
         const longTokenPrice = params.latestPriceMap[market.longToken]
         const shortTokenPrice = params.latestPriceMap[market.shortToken]
@@ -64,11 +65,16 @@ export const $MarketInfoList = ({
             $head: $text('Funding Rate'),
             gridTemplate: 'minmax(110px, 120px)',
             $bodyCallback: map(params => {
-              const fees: Stream<IMarketFees> = v2Reader('getMarketInfo', gmxContractMap.Datastore.address, params.price, params.market.marketToken)
+              // const fees: Stream<IMarketFees> = v2Reader('getMarketInfo', )
+              const fees: Stream<IMarketFees> = fromPromise(readContract(walletLink.wagmiConfig, {
+                ...gmxContractMap.ReaderV2,
+                functionName: 'getMarketInfo',
+                args: [gmxContractMap.Datastore.address, params.price, params.market.marketToken] as any
+              }))
               const usage: Stream<IMarketUsageInfo> = fromPromise(getMarketPoolUsage(chain, params.market))
 
               const fundingFactorPerInterval  = map(marketParams => {
-                return getFundingFactorPerInterval(marketParams.usage, marketParams.fees, GMX.IntervalTime.MIN60)
+                return getFundingFactorPerInterval(marketParams.usage, marketParams.fees, IntervalTime.MIN60)
               }, combineObject({ usage, fees }))
 
               return $text(map(fr => readableFactorPercentage(fr), fundingFactorPerInterval))
@@ -78,11 +84,15 @@ export const $MarketInfoList = ({
             $head: $text('Borrow Rate Long'),
             gridTemplate: '90px',
             $bodyCallback: map(params => {
-              const marketFees: Stream<IMarketFees> = v2Reader('getMarketInfo', gmxContractMap.Datastore.address, params.price, params.market.marketToken)
+              const marketFees: Stream<IMarketFees> = fromPromise(readContract(walletLink.wagmiConfig, {
+                ...gmxContractMap.ReaderV2,
+                functionName: 'getMarketInfo',
+                args: [gmxContractMap.Datastore.address, params.price, params.market.marketToken] as any
+              }))
 
 
               const shortBorrowRatePerInterval =  map(fees => {
-                return getBorrowingFactorPerInterval(fees, true, GMX.IntervalTime.MIN60)
+                return getBorrowingFactorPerInterval(fees, true, IntervalTime.MIN60)
               }, marketFees)
 
 
@@ -93,11 +103,15 @@ export const $MarketInfoList = ({
             $head: $text('Borrow Rate Short'),
             gridTemplate: '90px',
             $bodyCallback: map(params => {
-              const marketFees: Stream<IMarketFees> = v2Reader('getMarketInfo', gmxContractMap.Datastore.address, params.price, params.market.marketToken)
+              const marketFees: Stream<IMarketFees> = fromPromise(readContract(walletLink.wagmiConfig, {
+                ...gmxContractMap.ReaderV2,
+                functionName: 'getMarketInfo',
+                args: [gmxContractMap.Datastore.address, params.price, params.market.marketToken] as any
+              }))
 
 
               const shortBorrowRatePerInterval =  map(marketInfo => {
-                return getBorrowingFactorPerInterval(marketInfo, false, GMX.IntervalTime.MIN60)
+                return getBorrowingFactorPerInterval(marketInfo, false, IntervalTime.MIN60)
               }, marketFees)
 
 

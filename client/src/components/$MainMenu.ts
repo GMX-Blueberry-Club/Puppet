@@ -6,27 +6,27 @@ import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, constant, empty, map, multicast, snapshot, switchLatest } from '@most/core'
 import { Stream } from "@most/types"
 import { disconnect } from "@wagmi/core"
-import { CHAIN } from "gmx-middleware-const"
 import { $Link, $anchor, $discord, $gitbook, $github, $icon, $instagram, $moreDots, $twitter } from "ui-components"
 import { $bagOfCoinsCircle, $fileCheckCircle, $gmxLogo, $puppetLogo } from "../common/$icons.js"
 import { $stackedCoins, $trophy } from "../common/elements/$icons.js"
 import { dark, light } from "../common/theme.js"
 import { walletLink } from "../wallet/index.js"
-import { $SwitchNetworkDropdown } from "./$ConnectAccount.js"
 import { $Popover } from "./$Popover.js"
 import { $Picker } from "./$ThemePicker.js"
 import { $WalletProfileDisplay } from "./$WalletProfileDisplay.js"
 import { $ButtonSecondary } from "./form/$Button.js"
+import { wagmiConfig } from "../wallet/walletLink"
+import { switchMap } from "common-utils"
+import { $disconnectedWalletDisplay, $profileDisplay } from "./$AccountProfile"
 
 interface MainMenu {
-  chainList: CHAIN[]
   parentRoute: Route
   showAccount?: boolean
 }
 
 
 
-export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMenu) => component((
+export const $MainMenu = ({ parentRoute, showAccount = true }: MainMenu) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
   [clickPopoverClaim, clickPopoverClaimTether]: Behavior<any, any>,
   [walletChange, walletChangeTether]: Behavior<any, any>,
@@ -81,7 +81,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
               map(async xx => {
 
                 // Check if connection is already established
-                await disconnect()
+                await disconnect(wagmiConfig)
 
               }),
               awaitPromises
@@ -138,24 +138,43 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
       ),
 
       $row(layoutSheet.spacingBig, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
-        $WalletProfileDisplay({
-          // $container: $column(style({ alignSelf: 'center' })),
-          parentRoute
-        })({
-          routeChange: routeChangeTether(),
-        }),
+        // $WalletProfileDisplay({
+        //   // $container: $column(style({ alignSelf: 'center' })),
+        //   parentRoute
+        // })({
+        //   routeChange: routeChangeTether(),
+        // }),
+        style({ padding: 0 })(
+          $pageLink({
+            route: parentRoute.create({ fragment: 'wallet', title: 'Portfolio' }),
+            // anchorOp: style({  }),
+            url: `/app/wallet`,
+            $content: switchMap(wallet => {
+              const address = wallet?.account.address
+              return address
+                ? style({ paddingRight: '16px' })($profileDisplay({ $labelContainer: $column(style({ padding: '0 8px 0 4px' })), address }))
+                : style({ paddingRight: '18px', cursor: 'pointer' }, $disconnectedWalletDisplay())
+            }, walletLink.wallet)
+          })({
+            click: routeChangeTether(),
+          })
+        ),
         $pageLink({
-          $iconPath: $trophy,
+          $content: $row(layoutSheet.spacing, style({ alignItems: 'center', cursor: 'pointer',  borderRadius: '50px', pointerEvents: 'none' }))(
+            $icon({ $content: $trophy, svgOps: style({ width: '28px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),
+            $text(style({ fontSize: '1.15rem' }))('Leaderboard')
+          ),
           route: parentRoute.create({ fragment: 'leaderboard' }),
           url: '/app/leaderboard',
-          text: 'Leaderboard',
         })({
           click: routeChangeTether()
         }),
         $pageLink({
-          $iconPath: $gmxLogo, 
+          $content: $row(layoutSheet.spacing, style({ alignItems: 'center', cursor: 'pointer',  borderRadius: '50px', pointerEvents: 'none' }))(
+            $icon({ $content: $gmxLogo, svgOps: style({ width: '28px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),
+            $text(style({ fontSize: '1.15rem' }))('Trade')
+          ), 
           route: parentRoute.create({ fragment: 'trade' }),
-          text: 'Trade',
           url: '/app/trade',
         })({
           click: routeChangeTether()
@@ -163,7 +182,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
       ),
 
       $row(layoutSheet.spacingBig, style({ flex: 1, placeContent: 'flex-end', alignItems: 'center' }))(
-        $SwitchNetworkDropdown()({}),
+        // $SwitchNetworkDropdown()({}),
         $extraMenuPopover,
         // $circleButtonAnchor(attr({ href: 'https://docs.blueberry.club/' }))(
         //   $icon({ $content: $gitbook, fill: pallete.middleground, width: '22px', viewBox: `0 0 32 32` })
@@ -183,7 +202,7 @@ export const $MainMenu = ({ parentRoute, chainList, showAccount = true }: MainMe
   ]
 })
 
-export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: MainMenu) => component((
+export const $MainMenuMobile = ({ parentRoute, showAccount = true }: MainMenu) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
   [clickPopoverClaim, clickPopoverClaimTether]: Behavior<any, any>,
   [walletChange, walletChangeTether]: Behavior<any, any>,
@@ -275,7 +294,7 @@ export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: 
               map(async xx => {
 
                 // Check if connection is already established
-                await disconnect()
+                await disconnect(wagmiConfig)
 
               }),
               awaitPromises
@@ -339,7 +358,7 @@ export const $MainMenuMobile = ({ parentRoute, chainList, showAccount = true }: 
 })
 
 
-const $pageLink = (config: Omit<IAnchor, '$anchor'> & { $iconPath: $Branch<SVGPathElement>, text: string | Stream<string> }) => {
+const $pageLink = (config: Omit<IAnchor, '$anchor'> & { $content: $Node }) => {
 
   return component((
     [click, clickTether]: Behavior<string, string>,
@@ -350,17 +369,14 @@ const $pageLink = (config: Omit<IAnchor, '$anchor'> & { $iconPath: $Branch<SVGPa
       style({ borderRadius: '50px', padding: '11px 22px', border: `1px solid ${ colorAlpha(pallete.foreground, .2) }` }),
       styleBehavior(
         combineArray((isActive, isFocus): StyleCSS | null => {
-          return isActive ? { backgroundColor: `${pallete.background} !important`, fill: pallete.foreground, cursor: 'default' }
+          return isActive ? { backgroundColor: `${pallete.background} !important`, fill: pallete.foreground, borderColor: `${pallete.primary} !important`, cursor: `default  !important` }
             : isFocus ? { backgroundColor: `${pallete.background} !important`, fill: pallete.foreground }
               : null
         }, active, focus)
       ),
       // styleBehavior(map(isDisabled => (isDisabled ?  { pointerEvents: 'none', opacity: .3 } : {}), disabled))
     )(
-      $row(layoutSheet.spacing, style({ alignItems: 'center', cursor: 'pointer',  borderRadius: '50px', pointerEvents: 'none' }))(
-        $icon({ $content: config.$iconPath, svgOps: style({ width: '28px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),
-        $text(style({ fontSize: '1.15rem' }))(config.text)
-      )
+      config.$content
     )
 
 

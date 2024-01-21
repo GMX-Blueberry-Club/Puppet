@@ -5,7 +5,7 @@ import { pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, map, now, startWith, switchLatest } from "@most/core"
 import * as GMX from 'gmx-middleware-const'
 import { $Table, ScrollRequest } from "ui-components"
-import { pagingQuery } from "gmx-middleware-utils"
+import { pagingQuery } from "common-utils"
 import { MouseEventParams } from "lightweight-charts"
 import { ISetRouteType } from "puppet-middleware-utils"
 import { $heading3 } from "../../common/$text.js"
@@ -13,6 +13,7 @@ import { $card, $card2 } from "../../common/elements/$common.js"
 import { IPageUserParams } from "../../const/type.js"
 import { entryColumn, pnlSlotColumn, positionTimeColumn, puppetsColumn, settledPnlColumn, settledSizeColumn, slotSizeColumn } from "../table/$TableColumn.js"
 import { $ProfilePeformanceTimeline } from "./$ProfilePeformanceTimeline.js"
+import { IntervalTime } from "common-utils"
 
 
 export const $TraderProfile = (
@@ -22,7 +23,7 @@ export const $TraderProfile = (
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams>,
 
-  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
+  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 ) => {
 

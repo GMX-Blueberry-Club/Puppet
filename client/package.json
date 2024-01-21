@@ -6,9 +6,9 @@
   ],
   "type": "module",
   "scripts": {
-    "dev": "rimraf .dist && DEBUG=vite-plugin-pwa SW_DEV=true vite --force",
+    "dev": "rimraf .dist && DEBUG=vite-plugin-pwa SW_DEV=true vite",
     "dev-destroy": "bunx rimraf .dist && bunx DEBUG=vite-plugin-pwa SW_DESTROY=true vite",
-    "build": "rimraf .dist && vite build",
+    "build": "rimraf .dist && tsc && vite build",
     "build:tsc": "tsc -build",
     "preview": "bun vite preview --port=4173"
   },
@@ -26,11 +26,8 @@
     "@most/types": "^1.1.0",
     "@urql/core": "4.2.3",
     "@urql/exchange-graphcache": "6.4.0",
-    "@walletconnect/auth-client": "^2.1.2",
-    "@walletconnect/core": "^2.11.0",
-    "@walletconnect/push-client": "^0.10.8",
-    "@walletconnect/sign-client": "^2.11.0",
-    "@web3modal/wagmi": "^3.5.3",
+    "@wagmi/connectors": "4.1.6",
+    "@wagmi/core": "2.3.1",
     "abitype": "^1.0.0",
     "color": "^4.2.3",
     "construct-style-sheets-polyfill": "3.1.0",
@@ -39,13 +36,13 @@
     "ui-components": "workspace:*",
     "ui-storage": "workspace:*",
     "ui-router": "workspace:*",
+    "common-utils": "workspace:*",
     "gmx-middleware-utils": "workspace:*",
     "lightweight-charts": "^4.1.2",
     "mersenne-twister": "^1.1.0",
     "puppet-middleware-const": "workspace:*",
     "puppet-middleware-utils": "workspace:*",
     "viem": "^2.4.0",
-    "@wagmi/core": "^1.4.12",
     "workbox-build": "^7.0.0",
     "workbox-core": "^7.0.0",
     "workbox-precaching": "^7.0.0",
@@ -56,7 +53,8 @@
   "devDependencies": {
     "@rollup/plugin-replace": "^5.0.5",
     "dotenv": "^16.3.1",
-    "vite": "^5.0.10",
-    "vite-plugin-pwa": "^0.17.4"
+    "vite": "^5.0.12",
+    "vite-plugin-pwa": "^0.17.4",
+    "buffer": "^6.0.3"
   }
 }

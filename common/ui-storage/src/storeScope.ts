@@ -1,6 +1,5 @@
-import { continueWith, debounce, map, now } from "@most/core"
+import { awaitPromises, continueWith, debounce, map, now } from "@most/core"
 import { Stream } from "@most/types"
-import { switchMap } from "gmx-middleware-utils"
 import * as indexDB from './indexDB.js'
 import { openDatabase } from "./indexDB.js"
 
@@ -47,7 +46,7 @@ export function write<TSchema, TKey extends indexDB.GetKey<TSchema>, TData exten
 export function replayWrite<TSchema, TKey extends indexDB.GetKey<TSchema>, TReturn extends TSchema[TKey]>(
   params: indexDB.IStoreDefinition<TSchema>, writeEvent: Stream<TReturn>, key: TKey
 ): Stream<TReturn> {
-  const storedValue = switchMap(() => indexDB.get(params, key), now(null))
+  const storedValue = awaitPromises(map(() => indexDB.get(params, key), now(null)))
   const writeSrc = write(params, key, writeEvent)
   
   return continueWith(() => writeSrc, storedValue)

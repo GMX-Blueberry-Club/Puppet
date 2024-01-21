@@ -1,7 +1,6 @@
-import { groupArrayByKey, unixTimestampNow } from "gmx-middleware-utils"
-import * as GMX from "gmx-middleware-const"
 import { IAttributeMappings, LabItemSale, SaleType } from "./types.js"
 import { parseEther } from "viem"
+import { IntervalTime, groupArrayByKey, unixTimestampNow } from "common-utils"
 
 const date = new Date()
 const timeNow = unixTimestampNow()
@@ -22,7 +21,7 @@ export const COMPETITION_METRIC_LIST = ['pnl', 'roi'] as const
 export const COMPETITION_START_MONTH = 1
 export const COMPETITION_START_YEAR = 2023
 
-export const TOURNAMENT_DURATION = GMX.IntervalTime.HR24 * 25 + GMX.IntervalTime.MIN60 * 16
+export const TOURNAMENT_DURATION = IntervalTime.HR24 * 25 + IntervalTime.MIN60 * 16
 export const TOURNAMENT_START = Date.UTC(date.getUTCFullYear(), date.getUTCMonth()) / 1000
 export const TOURNAMENT_END = TOURNAMENT_START + TOURNAMENT_DURATION
 
@@ -45,15 +44,15 @@ export const BI_18_PRECISION = 10n ** 18n
 export const BI_30_PRECISION = 10n ** 30n
 
 export const REWARD_DISTRIBUTOR = {
-  distributionPeriod: GMX.IntervalTime.DAY7,
-  activityPeriod: GMX.IntervalTime.MONTH,
+  distributionPeriod: IntervalTime.DAY7,
+  activityPeriod: IntervalTime.MONTH,
 }
 
 
 const toTime = (...params: Parameters<typeof Date.UTC>): bigint => BigInt(Math.floor(Date.UTC(...params) / 1000))
 
 export const saleConfig = {
-  saleDuration: GMX.IntervalTime.MONTH,
+  saleDuration: IntervalTime.MONTH,
   maxMintable: 50
 }
 
@@ -650,7 +649,6 @@ For more details check our see discord discussions and even help us improve this
     ]
   },
 ]
-
 
 
 export const labItemDescriptionListMap = groupArrayByKey(saleDescriptionList, i => i.id)

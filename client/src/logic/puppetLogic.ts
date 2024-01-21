@@ -6,6 +6,7 @@ import * as viem from "viem"
 import { } from "viem"
 import { arbitrum } from "viem/chains"
 import * as GMX from "gmx-middleware-const"
+import { wagmiConfig } from "../wallet/walletLink"
 
 export async function getPuppetSubscriptionExpiry(
   puppet: viem.Address,
@@ -18,7 +19,7 @@ export async function getPuppetSubscriptionExpiry(
   const puppetContractMap = PUPPET.CONTRACT[chainId]
   const routeKey = getTradeRouteKey(puppet, collateralToken, indexToken, isLong)
 
-  return wagmi.readContract({
+  return wagmi.readContract(wagmiConfig, {
     ...puppetContractMap.Datastore,
     functionName: 'getUint',
     args: [getPuppetSubscriptionExpiryKey(puppet, routeKey)],
@@ -33,7 +34,7 @@ export async function getPuppetDepositAmount(
 
   const puppetContractMap = PUPPET.CONTRACT[chainId]
 
-  return wagmi.readContract({
+  return wagmi.readContract(wagmiConfig, {
     ...puppetContractMap.Datastore,
     functionName: 'getUint',
     args: [getPuppetDepositAccountKey(address, tokenAddress)],

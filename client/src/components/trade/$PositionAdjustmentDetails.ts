@@ -7,11 +7,6 @@ import { Stream } from "@most/types"
 import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
 import { $alert, $alertTooltip, $anchor, $infoLabeledValue, $infoTooltipLabel } from "ui-components"
-import {
-  IPriceCandle, OrderType, StateStream, abs, filterNull, getBasisPoints, getDenominator, getNativeTokenAddress, getTokenDescription, getTokenUsd,
-  readableFactorPercentage,
-  readablePercentage, readablePnl, readableTokenAmountLabel, readableUnitAmount, readableUsd, resolveAddress, zipState
-} from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { IMirrorPositionOpen, latestPriceMap } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -22,6 +17,9 @@ import { wagmiWriteContract } from "../../logic/common.js"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary } from "../form/$Button.js"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
+import { StateStream, abs, filterNull, readablePercentage, readableUsd, getDenominator, getTokenUsd, zipState, readableTokenAmountLabel, readablePnl, getBasisPoints, readableFactorPercentage, readableUnitAmount, ADDRESS_ZERO, BASIS_POINTS_DIVISOR } from "common-utils"
+import { IPriceCandle, resolveAddress, OrderType, getTokenDescription, getNativeTokenAddress, getNativeTokenDescription } from "gmx-middleware-utils"
+import { walletLink } from "../../wallet"
 
 
 
@@ -90,8 +88,8 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
         ? -req.slippage : req.slippage
 
     
-    const acceptablePrice = params.indexPrice * (allowedSlippage + GMX.BASIS_POINTS_DIVISOR) / GMX.BASIS_POINTS_DIVISOR
-    const isNative = req.primaryToken === GMX.ADDRESS_ZERO
+    const acceptablePrice = params.indexPrice * (allowedSlippage + BASIS_POINTS_DIVISOR) / BASIS_POINTS_DIVISOR
+    const isNative = req.primaryToken === ADDRESS_ZERO
 
 
     // const swapParams = {
@@ -107,7 +105,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
     //   sizeDelta: abs(req.sizeDeltaUsd)
     // }
 
-    const executionFeeAfterBuffer = abs(params.executionFee * (req.executionFeeBuffer + GMX.BASIS_POINTS_DIVISOR) / GMX.BASIS_POINTS_DIVISOR) // params.executionFee
+    const executionFeeAfterBuffer = abs(params.executionFee * (req.executionFeeBuffer + BASIS_POINTS_DIVISOR) / BASIS_POINTS_DIVISOR) // params.executionFee
     const orderVaultAddress = GMX.CONTRACT[config.chain.id].OrderVault.address
     const wntCollateralAmount = isNative ? req.collateralDeltaAmount : 0n
     const totalWntAmount = wntCollateralAmount + executionFeeAfterBuffer
@@ -117,7 +115,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
 
 
     const request = params.tradeRoute
-      ? wagmiWriteContract({
+      ? wagmiWriteContract( walletLink.wagmiConfig, {
         ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
         value: totalWntAmount,
         functionName: 'requestPosition',
@@ -137,7 +135,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
           req.isIncrease
         ]
       })
-      : wagmiWriteContract({
+      : wagmiWriteContract(walletLink.wagmiConfig, {
         ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
         value: totalWntAmount,
         functionName: 'registerRouteAccountAndRequestPosition',
@@ -214,7 +212,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
   }, combineObject({ executionFee, indexPrice, tradeRoute, routeTypeKey }), requestTradeParams))
 
   const requestApproveSpend = multicast(map(params => {
-    const recpt = wagmiWriteContract({
+    const recpt = wagmiWriteContract(walletLink.wagmiConfig, {
       address: params.primaryToken,
       abi: erc20Abi,
       functionName: 'approve',
@@ -308,7 +306,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
   }, latestPriceMap)
 
   const executionFeeAfterBuffer = map(params => {
-    return params.executionFee * (params.executionFeeBuffer + GMX.BASIS_POINTS_DIVISOR) / GMX.BASIS_POINTS_DIVISOR
+    return params.executionFee * (params.executionFeeBuffer + BASIS_POINTS_DIVISOR) / BASIS_POINTS_DIVISOR
   }, combineObject({ executionFee, executionFeeBuffer }))
 
   const executionFeeAfterBufferUsd = map(params => {
@@ -350,7 +348,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
             'Max Gas Fee',
             $row(layoutSheet.spacingSmall)(
               $text(style({ color: pallete.foreground }))(map(params => {
-                return `${readableTokenAmountLabel(getNativeTokenAddress(config.chain), params.executionFeeAfterBuffer)}`
+                return `${readableTokenAmountLabel(getNativeTokenDescription(config.chain), params.executionFeeAfterBuffer)}`
               }, combineObject({ executionFeeAfterBufferUsd, executionFeeAfterBuffer }))),
               $text(style({ color: pallete.negative, alignSelf: 'flex-end' }))(map(params => {
                 return readablePnl(params.executionFeeAfterBufferUsd)

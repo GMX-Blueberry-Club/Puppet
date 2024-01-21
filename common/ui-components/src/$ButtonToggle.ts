@@ -1,10 +1,9 @@
 import { Behavior, Op } from "@aelea/core"
 import { $Node, $text, component, INode, NodeComposeFn, nodeEvent, style, styleBehavior } from "@aelea/dom"
-import { $row, layoutSheet } from "@aelea/ui-components"
+import { $row } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { constant, map, now, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { invertColor } from "gmx-middleware-utils"
 
 export interface IButtonToggle<T> {
   options: T[]

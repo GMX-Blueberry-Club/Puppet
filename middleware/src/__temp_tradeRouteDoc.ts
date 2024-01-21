@@ -1,8 +1,7 @@
+import { IntervalTime, unixTimestampNow } from 'common-utils'
 import * as viem from 'viem'
-import * as GMX from "gmx-middleware-const"
-import { unixTimestampNow } from 'gmx-middleware-utils'
 
-export default (puppet: viem.Address, activityTimeframe: GMX.IntervalTime) => {
+export default (puppet: viem.Address, activityTimeframe: IntervalTime) => {
   const blockTimestamp_gt = unixTimestampNow() - activityTimeframe
 
   return `{

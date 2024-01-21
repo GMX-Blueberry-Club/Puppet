@@ -2,9 +2,9 @@ import { $text, style, attr, $element, $Branch } from "@aelea/dom"
 import { $row, $column, $icon } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { empty, map, periodic } from "@most/core"
-import { readableUsd, unixTimestampNow } from "gmx-middleware-utils"
 import { $alertIcon, $defaultDropContainer, $Tooltip } from "ui-components"
 import { $pnlDisplay } from "../../common/$common.js"
+import { readableUsd, unixTimestampNow } from "common-utils"
 
 
 export const $alertTooltip = ($content: $Branch) => {

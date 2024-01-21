@@ -6,16 +6,17 @@ import { constant, empty, fromPromise, join, map, mergeArray, multicast, now, sn
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/abis"
 import * as GMX from "gmx-middleware-const"
-import { getMappedValue, parseFixed, readableTokenAmount, readableTokenAmountLabel, switchMap } from "gmx-middleware-utils"
+import { getMappedValue, parseFixed, readableTokenAmount, readableTokenAmountLabel, switchMap } from "common-utils"
 import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { $TextField } from "../../common/$TextField.js"
 import { wagmiWriteContract } from "../../logic/common.js"
 import { getWalletErc20Balance } from "../../logic/traderLogic.js"
-import { IWalletClient, wallet } from "../../wallet/walletLink.js"
 import { $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
-
+import { getTokenDescription } from "gmx-middleware-utils"
+import { walletLink } from "../../wallet"
+import * as wagmi from "@wagmi/core"
 
 
 interface IAssetDepositEditor {
@@ -23,36 +24,36 @@ interface IAssetDepositEditor {
 }
 
 export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
-  [requestChangeSubscription, requestChangeSubscriptionTether]: Behavior<IWalletClient, Promise<viem.TransactionReceipt>>,
-  [requestDepositAsset, requestDepositAssetTether]: Behavior<IWalletClient, Promise<viem.TransactionReceipt>>,
+  [requestChangeSubscription, requestChangeSubscriptionTether]: Behavior<walletLink.IWalletClient, Promise<viem.TransactionReceipt>>,
+  [requestDepositAsset, requestDepositAssetTether]: Behavior<walletLink.IWalletClient, Promise<viem.TransactionReceipt>>,
   [inputDepositAmount, inputDepositAmountTether]: Behavior<string>,
   [clickMaxDeposit, clickMaxDepositTether]: Behavior<any>,
 ) => {
 
-  const account = map(w3p => w3p?.account.address || null, wallet)
+  const address = map(w3p => w3p?.account.address || null, walletLink.wallet)
+  const tokenDescription = getTokenDescription(config.token)
 
-  const balance = switchMap(address => address ? getWalletErc20Balance(arbitrum, config.token, address) : now(0n), account)
+  const balance = switchMap(address => address ? getWalletErc20Balance(arbitrum, config.token, address) : now(0n), address)
   const indexToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION_MAP, config.token)
-  const maxBalance = multicast(join(constant(map(amount => readableTokenAmount(config.token, amount), balance), clickMaxDeposit)))
-  const allowance = replayLatest(multicast(switchMap(address => {
-    if (address == null) {
+  const maxBalance = multicast(join(constant(map(amount => readableTokenAmount(tokenDescription, amount), balance), clickMaxDeposit)))
+  const allowance = replayLatest(multicast(switchMap(walletAddress => {
+    if (walletAddress == null) {
       return now(0n)
     }
 
-    return fromPromise(readContract({
+    return fromPromise(readContract(walletLink.wagmiConfig, {
       address: config.token,
       abi: erc20Abi,
       functionName: 'allowance',
-      args: [address, PUPPET.CONTRACT[42161].Orchestrator.address]
+      args: [walletAddress, PUPPET.CONTRACT[42161].Orchestrator.address]
     }))
-  }, account)))
+  }, address)))
 
 
 
   return [
 
     $column(layoutSheet.spacing)(
-
       $text(style({ maxWidth: '310px' }))('The amount utialised by traders you subscribed'),
 
       $row(layoutSheet.spacingSmall, style({ position: 'relative' }))(
@@ -60,7 +61,7 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
           label: 'Amount',
           value: maxBalance,
           placeholder: 'Enter amount',
-          hint: startWith('Balance: ', map(amount => `Balance: ${readableTokenAmountLabel(config.token, amount)}`, balance)),
+          hint: startWith('Balance: ', map(amount => `Balance: ${readableTokenAmountLabel(tokenDescription, amount)}`, balance)),
         })({
           change: inputDepositAmountTether()
         }),
@@ -84,12 +85,13 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
           })({
             click: requestChangeSubscriptionTether(
               map(w3p => {
-                return wagmiWriteContract({
+                const newLocal = wagmiWriteContract(walletLink.wagmiConfig, {
                   address: GMX.ARBITRUM_ADDRESS.USDC,
                   abi: erc20Abi,
                   functionName: 'approve',
                   args: [PUPPET.CONTRACT[42161].Orchestrator.address, 2n ** 256n - 1n]
                 })
+                return newLocal
               }),
               multicast
             )
@@ -107,7 +109,7 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
               snapshot((params, w3p) => {
                 const parsedFormatAmount = parseFixed(params.amount, indexToken.decimals)
 
-                return wagmiWriteContract({
+                return wagmiWriteContract(walletLink.wagmiConfig, {
                   ...PUPPET.CONTRACT[42161].Orchestrator,
                   functionName: 'deposit',
                   // value: 0n,

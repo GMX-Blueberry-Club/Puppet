@@ -7,17 +7,18 @@ import * as store from "../../const/store.js"
 import { Behavior } from "@aelea/core"
 import * as GMX from "gmx-middleware-const"
 import { Stream } from "@most/types"
+import { IntervalTime } from "common-utils"
 
 
 export const LAST_ACTIVITY_LABEL_MAP = {
-  [GMX.IntervalTime.HR24]: '24h',
-  [GMX.IntervalTime.DAY7]: '7d',
-  [GMX.IntervalTime.MONTH]: '30d',
+  [IntervalTime.HR24]: '24h',
+  [IntervalTime.DAY7]: '7d',
+  [IntervalTime.MONTH]: '30d',
   // [GMX.TIME_INTERVAL_MAP.YEAR]: '1y',
 }
 
-export const $LastAtivity = (activityTimeframe: Stream<GMX.IntervalTime>) => component((
-  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
+export const $LastAtivity = (activityTimeframe: Stream<IntervalTime>) => component((
+  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,
 ) => {
   
   const options = Object.entries(LAST_ACTIVITY_LABEL_MAP)

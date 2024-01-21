@@ -1,16 +1,13 @@
 
-import { replayLatest } from "@aelea/core"
-import { http, observer } from "@aelea/ui-components"
-import { empty, fromPromise, map, mergeArray, multicast, now, scan, skip } from "@most/core"
+import { http } from "@aelea/ui-components"
+import { empty, fromPromise, map, mergeArray, now, scan, skip } from "@most/core"
 import { Stream } from "@most/types"
 import * as wagmi from "@wagmi/core"
-import { fetchBalance, readContract } from "@wagmi/core"
+import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/abis"
+import { ADDRESS_ZERO, ITokenDescription, IntervalTime, USD_DECIMALS, filterNull, getDenominator, getMappedValue, parseFixed } from "common-utils"
 import * as GMX from "gmx-middleware-const"
-import {
-  IPriceCandleDto, IRequestPricefeedApi, ITokenDescription, ITokenSymbol,
-  filterNull, getDenominator, getMappedValue, getTokenDescription, parseFixed, periodicRun, resolveAddress
-} from "gmx-middleware-utils"
+import { IPriceCandleDto, IRequestPricefeedApi, ITokenSymbol, getTokenDescription, resolveAddress } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { getRouteAddressKey, getTradeRouteKey } from "puppet-middleware-utils"
 import * as uiStorage from "ui-storage"
@@ -18,6 +15,7 @@ import * as viem from "viem"
 import { } from "viem"
 import { arbitrum } from "viem/chains"
 import { store } from "../const/store.js"
+import { walletLink } from "../wallet"
 import { ISupportedChain } from "../wallet/walletLink.js"
 
 
@@ -56,29 +54,29 @@ const derievedSymbolMapping: { [k: string]: ITokenSymbol } = {
 }
 
 const gmxIoPricefeedIntervalLabel = {
-  [GMX.IntervalTime.MIN5]: '5m',
-  [GMX.IntervalTime.MIN15]: '15m',
-  [GMX.IntervalTime.MIN60]: '1h',
-  [GMX.IntervalTime.HR4]: '4h',
-  [GMX.IntervalTime.HR24]: '1d',
+  [IntervalTime.MIN5]: '5m',
+  [IntervalTime.MIN15]: '15m',
+  [IntervalTime.MIN60]: '1h',
+  [IntervalTime.HR4]: '4h',
+  [IntervalTime.HR24]: '1d',
 }
 
 
-const GMX_URL_CHAIN = {
-  [GMX.CHAIN.ARBITRUM]: 'https://gmx-server-mainnet.uw.r.appspot.com',
-  [GMX.CHAIN.AVALANCHE]: 'https://gmx-avax-server.uc.r.appspot.com',
-}
+// const GMX_URL_CHAIN = {
+//   [GMX.CHAIN.ARBITRUM]: 'https://gmx-server-mainnet.uw.r.appspot.com',
+//   [GMX.CHAIN.AVALANCHE]: 'https://gmx-avax-server.uc.r.appspot.com',
+// }
 
-const gmxIOPriceMapSource = {
-  [GMX.CHAIN.ARBITRUM]: replayLatest(multicast(observer.duringWindowActivity(periodicRun({
-    interval: 2000,
-    actionOp: map(async time => getGmxIOPriceMap(GMX_URL_CHAIN[GMX.CHAIN.ARBITRUM] + '/prices'))
-  })))),
-  [GMX.CHAIN.AVALANCHE]: replayLatest(multicast(observer.duringWindowActivity(periodicRun({
-    interval: 2000,
-    actionOp: map(async time => getGmxIOPriceMap(GMX_URL_CHAIN[GMX.CHAIN.AVALANCHE] + '/prices'))
-  })))),
-}
+// const gmxIOPriceMapSource = {
+//   [GMX.CHAIN.ARBITRUM]: replayLatest(multicast(observer.duringWindowActivity(periodicRun({
+//     interval: 2000,
+//     actionOp: map(async time => getGmxIOPriceMap(GMX_URL_CHAIN[GMX.CHAIN.ARBITRUM] + '/prices'))
+//   })))),
+//   [GMX.CHAIN.AVALANCHE]: replayLatest(multicast(observer.duringWindowActivity(periodicRun({
+//     interval: 2000,
+//     actionOp: map(async time => getGmxIOPriceMap(GMX_URL_CHAIN[GMX.CHAIN.AVALANCHE] + '/prices'))
+//   })))),
+// }
 
 export function latestPriceFromExchanges(tokendescription: ITokenDescription): Stream<bigint> {
   const symbol = derievedSymbolMapping[tokendescription.symbol]
@@ -133,14 +131,14 @@ export function latestPriceFromExchanges(tokendescription: ITokenDescription): S
     return prev === 0 ? next : (prev + next) / 2
   }, 0, allSources))
 
-  return map(ev => parseFixed(ev, GMX.USD_DECIMALS) / getDenominator(tokendescription.decimals), avgPrice)
+  return map(ev => parseFixed(ev, USD_DECIMALS) / getDenominator(tokendescription.decimals), avgPrice)
 }
 
 
-export function getWalletErc20Balance(chain: ISupportedChain, token: viem.Address | typeof GMX.ADDRESS_ZERO, walletAddress: viem.Address): Stream<bigint> {
+export function getWalletErc20Balance(chain: ISupportedChain, token: viem.Address | typeof ADDRESS_ZERO, walletAddress: viem.Address): Stream<bigint> {
 
-  if (token === GMX.ADDRESS_ZERO) {
-    return fromPromise(fetchBalance({ address: walletAddress }).then(res => res.value))
+  if (token === ADDRESS_ZERO) {
+    return fromPromise(wagmi.getBalance(walletLink.wagmiConfig, { address: walletAddress }).then(res => res.value))
   }
 
   const contractMapping = getMappedValue(GMX.TRADE_CONTRACT_MAPPING, chain.id)
@@ -151,7 +149,7 @@ export function getWalletErc20Balance(chain: ISupportedChain, token: viem.Addres
 
   const tokenAddress = resolveAddress(chain, token)
 
-  const erc20 = readContract({
+  const erc20 = readContract(walletLink.wagmiConfig, {
     address: tokenAddress,
     abi: erc20Abi,
     functionName: 'balanceOf',
@@ -226,13 +224,13 @@ export async function getTraderTradeRoute(
     return storedRouteKeyMap[trader]
   }
 
-  const queryAddress = await wagmi.readContract({
+  const queryAddress = await wagmi.readContract(walletLink.wagmiConfig, {
     ...puppetContractMap.Datastore,
     functionName: 'getAddress',
     args: [routeAddressKey],
   })
 
-  if (queryAddress === GMX.ADDRESS_ZERO) {
+  if (queryAddress === ADDRESS_ZERO) {
     return null
   }
   

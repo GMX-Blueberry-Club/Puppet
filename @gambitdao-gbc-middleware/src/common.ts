@@ -1,6 +1,6 @@
-import { unixTimestampNow } from "gmx-middleware-utils"
 import { IAttributeBackground, IAttributeClothes, IAttributeBody, IAttributeExpression, IAttributeFaceAccessory, IAttributeHat, LabItemSale, MintRule, SvgPartsMap, IBerryDisplayTupleMap, IAttributeBadge, IToken } from "./types.js"
 import { svgParts } from "./mappings/svgParts.js"
+import { unixTimestampNow } from "common-utils"
 
 
 export const labAttributeTuple = [IAttributeBackground, IAttributeClothes, IAttributeBody, IAttributeExpression, IAttributeFaceAccessory, IAttributeHat, IAttributeBadge] as const

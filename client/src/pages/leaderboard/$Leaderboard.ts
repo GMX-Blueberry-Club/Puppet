@@ -5,8 +5,8 @@ import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, empty, map, startWith } from "@most/core"
 import { Stream } from "@most/types"
-import * as GMX from 'gmx-middleware-const'
-import { IPriceTickListMap, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IntervalTime, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "common-utils"
+import { IPriceTickListMap } from "gmx-middleware-utils"
 import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType, accountSettledPositionListSummary, openPositionListPnl, queryOpenPositionList, querySettledPositionList } from "puppet-middleware-utils"
 import { $Table, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "ui-components"
 import * as uiStorage from "ui-storage"
@@ -43,7 +43,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
   [sortByChange, sortByChangeTether]: Behavior<ISortBy>,
 
-  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<GMX.IntervalTime>,
+  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<IntervalTime>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 
   [routeChange, routeChangeTether]: Behavior<any, string>,

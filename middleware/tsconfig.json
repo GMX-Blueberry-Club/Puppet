@@ -10,7 +10,7 @@
       "path": "../const"
     },
     {
-      "path": "../gmx-middleware/utils"
+      "path": "../common/utils"
     }
   ]
 }

@@ -2,15 +2,14 @@ import { O, Tether } from "@aelea/core"
 import { $text, INode, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { map } from "@most/core"
-import { Stream } from "@most/types"
-import { TableColumn } from "ui-components"
-import { IPriceOracleMap, getBasisPoints, readableDate, readablePercentage, getTimeSince, readableFactorPercentage } from "gmx-middleware-utils"
+import { getBasisPoints, getTimeSince, readableDate, readablePercentage } from "common-utils"
 import { IMirrorPosition, IMirrorPositionOpen, IMirrorPositionSettled, getParticiapntMpPortion, latestPriceMap } from "puppet-middleware-utils"
+import { TableColumn } from "ui-components"
 import * as viem from 'viem'
-import { $entry, $openPnl, $pnlDisplay, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
-import { $seperator2 } from "../../pages/common.js"
-import { $txnIconLink } from "../../common/elements/$common"
 import { arbitrum } from "viem/chains"
+import { $entry, $openPnl, $pnlDisplay, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
+import { $txnIconLink } from "../../common/elements/$common"
+import { $seperator2 } from "../../pages/common.js"
 
 
 export const $tableHeader = (primaryLabel: string, secondaryLabel: string) => $column(style({ textAlign: 'right' }))(

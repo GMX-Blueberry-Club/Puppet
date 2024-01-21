@@ -1,12 +1,13 @@
 import { O } from "@aelea/core"
 import { map } from "@most/core"
-import { Client, ClientOptions, Exchange, OperationContext, TypedDocumentNode, cacheExchange, createClient, fetchExchange, gql } from "@urql/core"
+import { Client, ClientOptions, OperationContext, TypedDocumentNode, cacheExchange, createClient, fetchExchange, gql } from "@urql/core"
 import {
-  IIdentifiableEntity, IRequestPagePositionApi
+  IIdentifiableEntity
 } from "gmx-middleware-utils"
 import fetch from "isomorphic-fetch"
 import { numberToHex } from "viem"
 import { ILabItem, ILabItemOwnership, IOwner, IToken } from "./types.js"
+import { IRequestPagePositionApi } from "common-utils"
 export { Stream } from "@most/types"
 
 

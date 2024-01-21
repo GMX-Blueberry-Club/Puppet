@@ -5,7 +5,7 @@
   "workspaces": [
     "*",
     "netlify/*",
-    "ui-utils/*",
+    "common/*",
     "gmx-middleware/*"
   ],
   "scripts": {

@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { dark } from './src/common/theme.js'
 
 
+
 const SITE_CONFIG = {
   __WEBSITE__:  'https://puppet.house',
   __TWITTER_ID__:  '@PuppetCopy',
@@ -87,10 +88,5 @@ export default defineConfig({
   build: {
     outDir: ".dist",
     target: "es2022",
-  },
-  resolve: {
-    alias: {
-      events: 'eventemitter3',
-    }
   }
 })

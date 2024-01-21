@@ -5,18 +5,15 @@ import { now, skipRepeatsWith } from "@most/core"
 import * as GMX from 'gmx-middleware-const'
 import { $Baseline, IMarker } from "ui-components"
 import {
-  IPositionDecrease,
-  IPositionIncrease,
-  IPriceTickListMap,
-  IPricetick,
+  IntervalTime,
   createTimeline,
   formatFixed,
-  getPositionPnlUsd,
   unixTimestampNow
-} from "gmx-middleware-utils"
+} from "common-utils"
 import { BaselineData, ChartOptions, DeepPartial, LineType, MouseEventParams, Time } from "lightweight-charts"
 import { IMirrorPositionOpen, IMirrorPositionSettled, getParticiapntMpPortion } from "puppet-middleware-utils"
 import * as viem from "viem"
+import { IPositionDecrease, IPositionIncrease, IPriceTickListMap, IPricetick, getPositionPnlUsd } from "gmx-middleware-utils"
 
 
 
@@ -37,7 +34,7 @@ export interface IPerformanceTimeline {
   settledPositionList: IMirrorPositionSettled[]
   priceTickMap: IPriceTickListMap
   tickCount: number
-  activityTimeframe: GMX.IntervalTime
+  activityTimeframe: IntervalTime
   chartConfig?: DeepPartial<ChartOptions>
 }
 

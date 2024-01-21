@@ -3,10 +3,9 @@ import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, layoutSheet } from "@aelea/ui-components"
 import { map, mergeArray, now } from "@most/core"
-import * as GMX from 'gmx-middleware-const'
-import { $ButtonToggle, $defaulButtonToggleContainer } from "ui-components"
-import { ETH_ADDRESS_REGEXP } from "gmx-middleware-utils"
+import { ETH_ADDRESS_REGEXP, IntervalTime } from "common-utils"
 import { ISetRouteType, queryPuppetTradeRoute, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
+import { $ButtonToggle, $defaulButtonToggleContainer } from "ui-components"
 import * as viem from 'viem'
 import { $PuppetProfile } from "../components/participant/$PuppetProfile.js"
 import { $PuppetProfileSummary, $TraderProfileSummary } from "../components/participant/$Summary"
@@ -35,7 +34,7 @@ export const $PublicProfile = (config: IProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [selectProfileMode, selectProfileModeTether]: Behavior<IRouteOption, IRouteOption>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
-  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
+  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 
 ) => {

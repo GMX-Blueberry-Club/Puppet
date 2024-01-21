@@ -41,13 +41,16 @@
       "path": "../const"
     },
     {
-      "path": "../ui-utils/components"
+      "path": "../common/utils"
     },
     {
-      "path": "../ui-utils/router"
+      "path": "../common/ui-components"
     },
     {
-      "path": "../ui-utils/storage"
+      "path": "../common/ui-router"
+    },
+    {
+      "path": "../common/ui-storage"
     },
     {
       "path": "../@gambitdao-gbc-middleware"

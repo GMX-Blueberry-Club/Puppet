@@ -2,11 +2,11 @@ import { $Branch, $text, attr, style } from "@aelea/dom"
 import { $ButtonIcon, $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete, theme } from "@aelea/ui-components-theme"
 import { IToken } from "@gambitdao/gbc-middleware"
+import { getAccountExplorerUrl, getTxExplorerUrl, shortenAddress } from "common-utils"
 import { $anchor, $calendar, $caretDblDown, $ethScan } from "ui-components"
-import { getAccountExplorerUrl, getExplorerUrl, getTxExplorerUrl, shortenAddress } from "gmx-middleware-utils"
+import * as viem from "viem"
 import { $berryByToken } from "../../components/$common.js"
 import { $trash } from "./$icons.js"
-import * as viem from "viem"
 
 export const $TrashBtn = $ButtonIcon($trash)
 

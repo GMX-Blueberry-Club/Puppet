@@ -6,7 +6,7 @@ import { constant, empty, filter, map, merge, mergeArray, multicast, never, now,
 import { append, remove } from "@most/prelude"
 import { Stream } from "@most/types"
 import { $xCross } from "ui-components"
-import { streamOf } from "gmx-middleware-utils"
+import { streamOf } from "common-utils"
 import { $caretDown } from "../../common/elements/$icons.js"
 import { $Select, ISelect } from "./$Select.js"
 

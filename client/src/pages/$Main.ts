@@ -1,33 +1,30 @@
 import { Behavior, combineObject, replayLatest } from "@aelea/core"
 import { $element, $node, $text, component, eventElementTarget, style, styleBehavior } from "@aelea/dom"
 import * as router from '@aelea/router'
-import { $column, $row, designSheet, layoutSheet, screenUtils } from '@aelea/ui-components'
+import { $column, $row, designSheet, layoutSheet } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
 import { constant, empty, map, merge, multicast, now, skipRepeats, startWith, take, tap } from '@most/core'
-import * as GMX from 'gmx-middleware-const'
-import { CHAIN } from "gmx-middleware-const"
-import { $Tooltip, $alertContainer, $infoLabeledValue } from "ui-components"
-import { filterNull, getTimeSince, readableUnitAmount, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IntervalTime, filterNull, getTimeSince, readableUnitAmount, switchMap, unixTimestampNow } from "common-utils"
 import { ISetRouteType, queryLatestPriceTick, queryRouteTypeList, subgraphStatus } from "puppet-middleware-utils"
+import { $Tooltip, $alertContainer, $infoLabeledValue } from "ui-components"
+import * as uiStorage from "ui-storage"
 import { $midContainer } from "../common/$common.js"
-import { $IntermediateConnectButton } from "../components/$ConnectAccount.js"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu.js'
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
 import { $RouteSubscriptionDrawer } from "../components/portfolio/$RouteSubscriptionDrawer.js"
 import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor"
 import * as storeDb from "../const/store.js"
+import { $Opengraph } from "../opengraph/$Opengraph"
 import { newUpdateInvoke } from "../sw/swUtils"
 import { fadeIn } from "../transitions/enter.js"
-import * as uiStorage from "ui-storage"
-import { blockChange, chain } from "../wallet/walletLink.js"
+import { walletLink } from "../wallet"
 import { $Home } from "./$Home.js"
 import { $PublicProfile } from "./$PublicProfile.js"
 import { $Trade } from "./$Trade.js"
 import { $Wallet } from "./$Wallet.js"
-import { $Leaderboard } from "./leaderboard/$Leaderboard.js"
-import { $Opengraph } from "../opengraph/$Opengraph"
 import { $rootContainer } from "./common"
+import { $Leaderboard } from "./leaderboard/$Leaderboard.js"
 
 
 const popStateEvent = eventElementTarget('popstate', window)
@@ -48,7 +45,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
   [clickUpdateVersion, clickUpdateVersionTether]: Behavior<any, bigint>,
 
-  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<GMX.IntervalTime>,
+  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<IntervalTime>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 ) => {
 
@@ -108,7 +105,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
       router.contains(appRoute)(
         $rootContainer(
           $column(style({ flex: 1, position: 'relative' }))(
-            switchMap(chainEvent => {
+            switchMap(chain => {
               const subgraphBeaconStatusColor = map(status => {
                 const timestampDelta = unixTimestampNow() - status.block.timestamp
 
@@ -120,35 +117,27 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
               return $column(
                 designSheet.customScroll,
-                style({
-                  flex: 1, position: 'absolute', inset: 0,
-                  overflowY: 'scroll', overflowX: 'hidden'
-                })
+                style({ flex: 1, position: 'absolute', inset: 0, overflowY: 'scroll', overflowX: 'hidden' })
               )(
                 switchMap(isDesktop => {
                   if (isDesktop) {
-                    return $MainMenu({ parentRoute: appRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+                    return $MainMenu({ parentRoute: appRoute })({
                       routeChange: linkClickTether()
                     })
                   }
 
-                  return $MainMenuMobile({ parentRoute: rootRoute, chainList: [CHAIN.ARBITRUM, CHAIN.AVALANCHE] })({
+                  return $MainMenuMobile({ parentRoute: rootRoute })({
                     routeChange: linkClickTether(),
                   })
                 }, isDesktopScreen),
-
                 router.contains(walletRoute)(
-                  $IntermediateConnectButton({
-                    $$display: map(wallet => {
-                      return $midContainer(
-                        $Wallet({ route: walletRoute, routeTypeListQuery, wallet, activityTimeframe, selectedTradeRouteList, priceTickMapQuery, })({
-                          modifySubscriber: modifySubscriberTether(),
-                          changeRoute: linkClickTether(),
-                          changeActivityTimeframe: changeActivityTimeframeTether(),
-                          selectTradeRouteList: selectTradeRouteListTether(),
-                        }))
-                    })
-                  })({})
+                  $midContainer(
+                    $Wallet({ route: walletRoute, routeTypeListQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery, })({
+                      modifySubscriber: modifySubscriberTether(),
+                      changeRoute: linkClickTether(),
+                      changeActivityTimeframe: changeActivityTimeframeTether(),
+                      selectTradeRouteList: selectTradeRouteListTether(),
+                    }))
                 ),
                 router.match(leaderboardRoute)(
                   $midContainer(
@@ -196,11 +185,10 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                   ),
                 ),
                 router.match(tradeRoute)(
-                  $Trade({ routeTypeListQuery, chain: chainEvent, referralCode: BLUEBERRY_REFFERAL_CODE, parentRoute: tradeRoute })({
+                  $Trade({ routeTypeListQuery, chain: chain, referralCode: BLUEBERRY_REFFERAL_CODE, parentRoute: tradeRoute })({
                     // changeRoute: linkClickTether()
                   })
                 ),
-
                 $row(layoutSheet.spacing, style({ position: 'fixed', zIndex: 100, right: '16px', bottom: '16px' }))(
                   $row(
                     $Tooltip({
@@ -218,7 +206,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                             $infoLabeledValue('blocks behind', readableUnitAmount(blocksBehind)),
                           )
                         )
-                      }, combineObject({ subgraphStatus, blockChange })),
+                      }, combineObject({ subgraphStatus, blockChange: walletLink.blockChange })),
                       $anchor: $row(
                         style({ width: '8px', height: '8px', borderRadius: '50%', outlineOffset: '4px', padding: '6px' }),
                         styleBehavior(map(color => {
@@ -266,9 +254,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                   //   ))
                   // }, combineObject({ blockChange, subgraphStatus })),
                 ),
-                
               )
-            }, chain)
+            }, walletLink.chain)
           ),
 
           $column(style({ maxWidth: '1000px', margin: '0 auto', width: '100%', zIndex: 10 }))(

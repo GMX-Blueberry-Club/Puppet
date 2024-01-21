@@ -12,7 +12,10 @@ import {
   switchLatest
 } from "@most/core"
 import { Stream } from "@most/types"
+import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, delta, div, filterNull, formatDiv, formatFixed, getBasisPoints, getTokenAmount, getTokenUsd, ITokenDescription, parseBps, parseFixed, parseReadableNumber, readableNumber, readableTokenAmountFromUsdAmount, readableTokenUsd, readableUnitAmount, readableUsd, StateStream, switchMap } from "common-utils"
 import * as GMX from "gmx-middleware-const"
+import { getNativeTokenAddress, getNativeTokenDescription, getTokenDescription, IMarket, IMarketInfo, IMarketPrice, resolveAddress, TEMP_MARKET_LIST } from "gmx-middleware-utils"
+import { IMirrorPositionOpen, ISetRouteType, latestPriceMap } from "puppet-middleware-utils"
 import {
   $bear, $bull,
   $ButtonToggle,
@@ -22,32 +25,6 @@ import {
   $moreDots,
   $tokenIconMap, $tokenLabelFromSummary
 } from "ui-components"
-import {
-  delta,
-  div,
-  filterNull,
-  formatDiv,
-  formatFixed,
-  getBasisPoints,
-  getNativeTokenAddress,
-  getNativeTokenDescription,
-  getTokenAmount,
-  getTokenDescription, getTokenUsd,
-  IMarket,
-  IMarketInfo,
-  IMarketPrice,
-  ITokenDescription,
-  parseBps,
-  parseFixed, parseReadableNumber,
-  readableUsd,
-  readableNumber,
-  readableTokenUsd,
-  readableTokenAmountFromUsdAmount,
-  readableUnitAmount,
-  resolveAddress,
-  StateStream, switchMap, TEMP_MARKET_LIST
-} from "gmx-middleware-utils"
-import { IMirrorPositionOpen, ISetRouteType, latestPriceMap } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $MarketInfoList } from "../$MarketList"
 import { $Popover } from "../$Popover"
@@ -57,11 +34,12 @@ import { $heading2 } from "../../common/$text.js"
 import { $TextField } from "../../common/$TextField"
 import { boxShadow } from "../../common/elements/$common"
 import { $caretDown } from "../../common/elements/$icons.js"
+import { ITradeFocusMode } from "../../const/type.js"
 import * as trade from "../../logic/traderLogic.js"
-import { account, ISupportedChain } from "../../wallet/walletLink.js"
+import { walletLink } from "../../wallet"
+import { ISupportedChain } from "../../wallet/walletLink.js"
 import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown.js"
-import { ITradeFocusMode } from "../../const/type.js"
 
 
 
@@ -179,7 +157,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
 
   const clickMaxPrimary = snapshot(params => {
-    const marginGasFee = params.primaryToken === GMX.ADDRESS_ZERO ? params.executionFee * 4n : 0n
+    const marginGasFee = params.primaryToken === ADDRESS_ZERO ? params.executionFee * 4n : 0n
     const balance = params.walletBalance - marginGasFee
 
     if (params.isIncrease) {
@@ -214,7 +192,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
     clickMaxPrimary,
     skipRepeats(snapshot(params => {
       const positionSizeUsd = params.position ? params.position.position.sizeInUsd : 0n
-      const nextFeeUsd = params.adjustmentFeeUsd * params.leverage / GMX.BASIS_POINTS_DIVISOR
+      const nextFeeUsd = params.adjustmentFeeUsd * params.leverage / BASIS_POINTS_DIVISOR
       const totalSize = params.sizeDeltaUsd + positionSizeUsd
       const nextCollateralUsd = div(totalSize - nextFeeUsd, params.leverage)
 
@@ -272,7 +250,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
         }
       }
 
-      const nextSize = totalCollateral * params.leverage / GMX.BASIS_POINTS_DIVISOR
+      const nextSize = totalCollateral * params.leverage / BASIS_POINTS_DIVISOR
 
       return nextSize - positionSizeUsd
     }, combineObject({ leverage, position, adjustmentFeeUsd, isIncrease, netPositionValueUsd, collateralPrice, collateralDeltaAmount }), sizeEffects)
@@ -442,7 +420,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
             $Dropdown({
               $container: $row(style({ position: 'relative', alignSelf: 'center' })),
               $selection: switchLatest(map(token => {
-                const tokenDesc = token === GMX.ADDRESS_ZERO
+                const tokenDesc = token === ADDRESS_ZERO
                   ? getNativeTokenDescription(config.chain)
                   : getTokenDescription(resolveAddress(config.chain, token))
 
@@ -470,9 +448,10 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 value: config.tradeConfig.primaryToken,
                 $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0, left: 'auto' })),
                 $$option: snapshot((w3p, option) => {
+                  const address = w3p?.account.address
                   const token = resolveAddress(config.chain, option)
-                  const balanceAmount = w3p?.address ? trade.getWalletErc20Balance(config.chain, option, w3p.address) : now(0n)
-                  const tokenDesc = option === GMX.ADDRESS_ZERO ? getNativeTokenDescription(config.chain) : getTokenDescription(option)
+                  const balanceAmount = address ? trade.getWalletErc20Balance(config.chain, option, address) : now(0n)
+                  const tokenDesc = option === ADDRESS_ZERO ? getNativeTokenDescription(config.chain) : getTokenDescription(option)
 
                   return $row(style({ placeContent: 'space-between', flex: 1 }))(
                     $tokenLabelFromSummary(tokenDesc),
@@ -487,9 +466,9 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                       ),
                     )
                   )
-                }, account),
+                }, walletLink.wallet),
                 list: [
-                  GMX.ADDRESS_ZERO,
+                  ADDRESS_ZERO,
                   ...TEMP_MARKET_LIST.map(m => m.indexToken),
                   TEMP_MARKET_LIST[0].shortToken,
                   // params.market.longToken,

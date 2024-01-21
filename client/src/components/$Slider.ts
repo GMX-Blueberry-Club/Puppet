@@ -4,7 +4,7 @@ import { $column, $row, Input, observer } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { join, map, mergeArray, multicast, now, snapshot, until } from "@most/core"
 import { Stream } from "@most/types"
-import { invertColor } from "gmx-middleware-utils"
+import { invertColor } from "common-utils"
 
 export interface LeverageSlider extends Input<number> {
   step?: number

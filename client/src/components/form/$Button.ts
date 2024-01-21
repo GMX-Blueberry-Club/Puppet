@@ -1,17 +1,14 @@
-import { Behavior, O, combineArray, combineObject } from "@aelea/core"
-import { $Branch, $element, $node, $text, INode, attrBehavior, component, nodeEvent, style, styleBehavior, styleInline, stylePseudo } from "@aelea/dom"
-import { $column, $icon, $row, Control, layoutSheet } from "@aelea/ui-components"
+import { Behavior, O, combineArray } from "@aelea/core"
+import { $Branch, $element, $node, INode, attrBehavior, component, nodeEvent, style, styleBehavior, styleInline, stylePseudo } from "@aelea/dom"
+import { $row, Control, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { $alertIcon, $Tooltip } from "ui-components"
-import { awaitPromises, constant, empty, map, mergeArray, multicast, never, now, recoverWith, skipRepeats, snapshot, startWith, switchLatest } from "@most/core"
+import { awaitPromises, constant, empty, map, mergeArray, multicast, now } from "@most/core"
 import { Stream } from "@most/types"
-import { $ButtonCore, $defaultButtonCore, IButtonCore } from "./$ButtonCore.js"
 import * as viem from "viem"
-import { invertColor } from "gmx-middleware-utils"
+import { $IntermediateConnectButton, } from "../$ConnectAccount.js"
 import { $iconCircular } from "../../common/elements/$common.js"
-import { $IntermediateConnectButton, $SwitchNetworkDropdown } from "../$ConnectAccount.js"
-import { theme } from "../../assignThemeSync.js"
 import { IWalletClient } from "../../wallet/walletLink"
+import { $ButtonCore, $defaultButtonCore, IButtonCore } from "./$ButtonCore.js"
 
 
 

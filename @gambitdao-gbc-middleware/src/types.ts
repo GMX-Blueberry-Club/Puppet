@@ -1,5 +1,5 @@
-import { IPositionListSummary, IPriceCandleSeed, IEnsRegistration, IResponsePageApi, IRequestPagePositionApi, IRequestSortApi, IRequestTimerangeApi, IPriceCandle } from "gmx-middleware-utils"
-import * as GMX from "gmx-middleware-const"
+import { IRequestPagePositionApi, IRequestSortApi, IResponsePageApi, IntervalTime } from "common-utils"
+import { IEnsRegistration, IPositionListSummary, IPriceCandle, IPriceCandleSeed, IRequestTimerangeApi } from "gmx-middleware-utils"
 
 export type IPrice = {
   priceUsd: bigint
@@ -504,7 +504,7 @@ export type MintRule = MintPublic | MintHolder | MintPrivate
 
 
 export interface IRequestLeaderboardApi extends IRequestPagePositionApi, IPriceCandleSeed, IRequestSortApi<keyof IBlueberryLadder> {
-  timeInterval: typeof GMX.IntervalTime.HR24 | typeof GMX.IntervalTime.DAY7 | typeof GMX.IntervalTime.MONTH
+  timeInterval: typeof IntervalTime.HR24 | typeof IntervalTime.DAY7 | typeof IntervalTime.MONTH
 }
 export interface IRequestCompetitionLadderApi extends IPriceCandleSeed, IRequestSortApi<IBlueberryLadder>, IRequestPagePositionApi, IRequestTimerangeApi {
   referralCode: string

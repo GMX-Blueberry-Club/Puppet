@@ -4,7 +4,7 @@ import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { awaitPromises, constant, fromPromise, map, mergeArray, now, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
-import { groupArrayMany, readableTokenAmountLabel, readableUsd, switchMap } from "gmx-middleware-utils"
+import { IntervalTime, groupArrayMany, readableTokenAmountLabel, readableUsd, switchMap } from "common-utils"
 import { IPuppetTradeRoute, ISetRouteType, getParticiapntMpPortion } from "puppet-middleware-utils"
 import { $infoTooltipLabel } from "ui-components"
 import * as viem from "viem"
@@ -22,6 +22,7 @@ import { $AssetWithdrawEditor } from "../portfolio/$AssetWithdrawEditor"
 import { IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor.js"
 import { $ProfilePeformanceTimeline } from "./$ProfilePeformanceTimeline.js"
 import { $PuppetTraderTradeRoute } from "./PuppetTraderTradeRoute"
+import { getTokenDescription } from "gmx-middleware-utils"
 
 
 export interface IPuppetPortfolio extends IPageUserParams {
@@ -37,7 +38,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
   [requestDepositAsset, requestDepositAssetTether]: Behavior<Promise<viem.TransactionReceipt>>,
   [requestWithdrawAsset, requestWithdrawAssetTether]: Behavior<Promise<viem.TransactionReceipt>>,
 
-  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
+  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 ) => {
   
@@ -51,6 +52,9 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
       return getPuppetDepositAmount(address, arbitrum.id)
     }, requestDepositAsset)
   ])
+
+  const depositToken = GMX.ARBITRUM_ADDRESS.USDC
+  const depositTokenDescription = getTokenDescription(depositToken)
 
   return [
 
@@ -73,7 +77,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
                   open: mergeArray([
                     constant(
                       $AssetDepositEditor({
-                        token: GMX.ARBITRUM_ADDRESS.USDC
+                        token: depositToken
                       })({
                         requestDepositAsset: requestDepositAssetTether(),
                       }),
@@ -81,7 +85,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
                     ),
                     constant(
                       $AssetWithdrawEditor({
-                        token: GMX.ARBITRUM_ADDRESS.USDC,
+                        token: depositToken,
                         balance: amount
                       })({
                         requestDepositAsset: requestWithdrawAssetTether(),
@@ -92,7 +96,7 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
                   $target: $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
                     $responsiveFlex(layoutSheet.spacingSmall)(
                       $infoTooltipLabel($text('The available amount ready to be matched against'), 'Available balance'),
-                      $text(readableTokenAmountLabel(GMX.ARBITRUM_ADDRESS.USDC, amount))
+                      $text(readableTokenAmountLabel(depositTokenDescription, amount))
                     ),
                     $ButtonSecondary({
                       $container: $defaultMiniButtonSecondary,

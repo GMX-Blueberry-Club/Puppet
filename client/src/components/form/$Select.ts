@@ -3,7 +3,7 @@ import { NodeComposeFn, $Node, component, IBranch, nodeEvent, style } from "@ael
 import { constant, switchLatest, now } from "@most/core"
 import { Stream } from "@most/types"
 import { $defaultSelectContainer } from "./$Dropdown.js"
-import { streamOf, switchMap } from "gmx-middleware-utils"
+import { streamOf, switchMap } from "common-utils"
 
 export interface ISelect<T> {
   list: T[] | Stream<T[]>

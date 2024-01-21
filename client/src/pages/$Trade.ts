@@ -6,18 +6,34 @@ import { awaitPromises, constant, debounce, empty, fromPromise, map, mergeArray,
 import { Stream } from "@most/types"
 import * as wagmi from "@wagmi/core"
 import { erc20Abi } from "abitype/abis"
-import * as GMX from "gmx-middleware-const"
-import { USD_DECIMALS } from "gmx-middleware-const"
-import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $target, intermediateMessage } from "ui-components"
 import {
-  IMarketInfo, IMarketPrice, StateStream, TEMP_MARKET_TOKEN_MARKET_MAP, applyFactor, div,
-  filterNull, formatFixed, getAvailableReservedUsd, getBorrowingFactorPerInterval, getFundingFactorPerInterval, getLiquidationPrice, getMappedValue, getMarginFee, getNativeTokenDescription,
-  getPositionKey, getPriceImpactForPosition, getTokenAmount, getTokenDenominator, getTokenDescription, getTokenUsd,
-  readableAccountingAmount, readableFactorPercentage, readableTokenAmountLabel, readableTokenPrice, readableUsd, resolveAddress, switchMap, unixTimestampNow, zipState
+  ADDRESS_ZERO,
+  IntervalTime,
+  StateStream,
+  USD_DECIMALS,
+  applyFactor,
+  div,
+  filterNull, formatFixed,
+  getMappedValue,
+  getTokenAmount,
+  getTokenDenominator, getTokenUsd,
+  readableAccountingAmount, readableFactorPercentage, readableTokenAmountLabel, readableTokenPrice, readableUsd, switchMap, unixTimestampNow, zipState
+} from "common-utils"
+import * as GMX from "gmx-middleware-const"
+import {
+  IMarketInfo,
+  IMarketPrice, TEMP_MARKET_TOKEN_MARKET_MAP,
+  getAvailableReservedUsd, getBorrowingFactorPerInterval, getFundingFactorPerInterval, getLiquidationPrice, getMarginFee, getNativeTokenDescription,
+  getPositionKey,
+  getPriceImpactForPosition,
+  getTokenDescription,
+  resolveAddress,
 } from "gmx-middleware-utils"
 import { CandlestickData, Coordinate, LineStyle, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
 import { IMirrorPositionOpen, getLastAdjustment, latestPriceMap, queryLatestTokenPriceFeed, queryTraderPositionOpen } from "puppet-middleware-utils"
+import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $target, intermediateMessage } from "ui-components"
+import * as uiStorage from "ui-storage"
 import * as viem from "viem"
 import { $midContainer } from "../common/$common.js"
 import { $responsiveFlex } from "../common/elements/$common"
@@ -33,8 +49,7 @@ import { ITradeFocusMode } from "../const/type.js"
 import { getExecuteGasFee, getFullMarketInfo } from "../logic/tradeV2.js"
 import * as trade from "../logic/traderLogic.js"
 import { exchangesWebsocketPriceSource, getTraderTradeRoute } from "../logic/traderLogic.js"
-import * as uiStorage from "ui-storage"
-import { estimatedGasPrice, gasPrice, wallet } from "../wallet/walletLink.js"
+import { estimatedGasPrice, gasPrice, wagmiConfig, wallet } from "../wallet/walletLink.js"
 import { $seperator2 } from "./common.js"
 
 
@@ -43,26 +58,26 @@ export type ITradeComponent = IPositionEditorAbstractParams
 
 
 const TIME_INTERVAL_LABEL_MAP = {
-  [GMX.IntervalTime.SEC]: '1s',
-  [GMX.IntervalTime.MIN]: '1m',
-  [GMX.IntervalTime.MIN5]: '5m',
-  [GMX.IntervalTime.MIN15]: '15m',
-  [GMX.IntervalTime.MIN30]: '30m',
-  [GMX.IntervalTime.MIN60]: '1h',
-  [GMX.IntervalTime.HR2]: '2h',
-  [GMX.IntervalTime.HR4]: '4h',
-  [GMX.IntervalTime.HR6]: '6h',
-  [GMX.IntervalTime.HR8]: '8h',
-  [GMX.IntervalTime.HR24]: '1d',
-  [GMX.IntervalTime.DAY7]: '1w',
-  [GMX.IntervalTime.MONTH]: '1mo',
-  [GMX.IntervalTime.MONTH2]: '2mo',
-  [GMX.IntervalTime.YEAR]: '2yr',
+  [IntervalTime.SEC]: '1s',
+  [IntervalTime.MIN]: '1m',
+  [IntervalTime.MIN5]: '5m',
+  [IntervalTime.MIN15]: '15m',
+  [IntervalTime.MIN30]: '30m',
+  [IntervalTime.MIN60]: '1h',
+  [IntervalTime.HR2]: '2h',
+  [IntervalTime.HR4]: '4h',
+  [IntervalTime.HR6]: '6h',
+  [IntervalTime.HR8]: '8h',
+  [IntervalTime.HR24]: '1d',
+  [IntervalTime.DAY7]: '1w',
+  [IntervalTime.MONTH]: '1mo',
+  [IntervalTime.MONTH2]: '2mo',
+  [IntervalTime.YEAR]: '2yr',
 } as const
 
 
 export const $Trade = (config: ITradeComponent) => component((
-  [selectTimeFrame, selectTimeFrameTether]: Behavior<GMX.IntervalTime>,
+  [selectTimeFrame, selectTimeFrameTether]: Behavior<IntervalTime>,
   // [changeRoute, changeRouteTether]: Behavior<string>,
 
   [changePrimaryToken, changePrimaryTokenTether]: Behavior<viem.Address>,
@@ -98,7 +113,7 @@ export const $Trade = (config: ITradeComponent) => component((
   [changefocusPrice, changefocusPriceTether]: Behavior<number | null>,
   [changeIsFocused, changeIsFocusedTether]: Behavior<boolean>,
   
-  [changeFeeDisplayRate, changeFeeDisplayRateTether]: Behavior<GMX.IntervalTime>,
+  [changeFeeDisplayRate, changeFeeDisplayRateTether]: Behavior<IntervalTime>,
   
   // [chartVisibleLogicalRangeChange, chartVisibleLogicalRangeChangeTether]: Behavior<LogicalRange | null>,
 
@@ -144,11 +159,12 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   const walletBalance = replayLatest(multicast(switchMap(params => {
-    if (!params.wallet) {
+    const account = params.wallet?.account
+    if (!account) {
       return now(0n)
     }
 
-    return trade.getWalletErc20Balance(config.chain, params.primaryToken, params.wallet.account.address)
+    return trade.getWalletErc20Balance(config.chain, params.primaryToken, account.address)
   }, combineObject({ primaryToken, wallet }))))
 
   
@@ -206,21 +222,23 @@ export const $Trade = (config: ITradeComponent) => component((
   const marketInfo: Stream<IMarketInfo> = replayLatest(multicast(awaitPromises(marketInfoQuery)))
 
   const tradeRoute: Stream<viem.Address | null> = switchMap(params => {
-    const w3p = params.wallet
-    if (w3p === null) {
+    const account = params.wallet?.account
+    if (!account) {
       return now(null)
     }
 
-    return getTraderTradeRoute(w3p.account.address, params.collateralToken, params.indexToken, params.isLong, config.chain)
+    return getTraderTradeRoute(account.address, params.collateralToken, params.indexToken, params.isLong, config.chain)
   }, combineObject({ collateralToken, wallet, indexToken, isLong }))
 
 
   const openPositionListQuery = multicast(replayLatest(switchMap(w3p => {
-    if (w3p === null) {
+    const account = w3p?.account
+
+    if (!account) {
       return now(Promise.resolve([] as IMirrorPositionOpen[]))
     }
 
-    return queryTraderPositionOpen({ address: w3p.account.address })
+    return queryTraderPositionOpen({ address: account.address })
   }, wallet)))
 
 
@@ -248,7 +266,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
   const primaryDescription = map((token) => {
-    if (token === GMX.ADDRESS_ZERO) {
+    if (token === ADDRESS_ZERO) {
       return getNativeTokenDescription(config.chain)
     }
 
@@ -352,10 +370,10 @@ export const $Trade = (config: ITradeComponent) => component((
     
     const totalSize = params.mirrorPosition.position.sizeInUsd + params.sizeDeltaUsd
     const totalSizeInTokens = params.mirrorPosition.position.sizeInTokens + getTokenAmount(params.indexPrice, params.sizeDeltaUsd)
-    const avg = (totalSize / totalSizeInTokens) * getTokenDenominator(params.indexToken)
+    const avg = (totalSize / totalSizeInTokens) * getTokenDenominator(params.indexDescription)
 
     return avg
-  }, combineObject({ mirrorPosition, collateralPrice, indexToken, indexPrice, sizeDeltaUsd })))
+  }, combineObject({ mirrorPosition, collateralPrice, indexToken, indexDescription, indexPrice, sizeDeltaUsd })))
 
   const liquidationPrice = multicast(map(params => {
     const lstAdjustment = params.mirrorPosition ? getLastAdjustment(params.mirrorPosition) : null
@@ -380,13 +398,13 @@ export const $Trade = (config: ITradeComponent) => component((
   const isPrimaryApproved = mergeArray([
     changeInputTokenApproved,
     skipRepeats(awaitPromises(snapshot(async (collateralAmount, params) => {
-      if (!params.wallet) {
+      if (!params.wallet?.account) {
         console.warn(new Error('No wallet connected'))
         return false
       }
 
 
-      if (params.primaryToken === GMX.ADDRESS_ZERO || !params.isIncrease) {
+      if (params.primaryToken === ADDRESS_ZERO || !params.isIncrease) {
         return true
       }
 
@@ -397,7 +415,7 @@ export const $Trade = (config: ITradeComponent) => component((
       }
 
       try {
-        const allowedSpendAmount = await wagmi.readContract({
+        const allowedSpendAmount = await wagmi.readContract(wagmiConfig, {
           address: params.primaryToken,
           abi: erc20Abi,
           functionName: 'allowance',
@@ -593,11 +611,11 @@ export const $Trade = (config: ITradeComponent) => component((
                 $ButtonToggle({
                   selected: chartInterval,
                   options: [
-                    GMX.IntervalTime.MIN5,
-                    GMX.IntervalTime.MIN15,
-                    GMX.IntervalTime.MIN60,
-                    GMX.IntervalTime.HR6,
-                    GMX.IntervalTime.HR24,
+                    IntervalTime.MIN5,
+                    IntervalTime.MIN15,
+                    IntervalTime.MIN60,
+                    IntervalTime.HR6,
+                    IntervalTime.HR24,
                   // GMX.TIME_INTERVAL_MAP.DAY7,
                   ],
                   $$option: map(option => {
@@ -628,11 +646,11 @@ export const $Trade = (config: ITradeComponent) => component((
                     return $text(style({ fontSize: '.85rem' }))(timeframeLabel)
                   }),
                   list: [
-                    GMX.IntervalTime.MIN5,
-                    GMX.IntervalTime.MIN15,
-                    GMX.IntervalTime.MIN60,
-                    GMX.IntervalTime.HR6,
-                    GMX.IntervalTime.HR24,
+                    IntervalTime.MIN5,
+                    IntervalTime.MIN15,
+                    IntervalTime.MIN60,
+                    IntervalTime.HR6,
+                    IntervalTime.HR24,
                   // GMX.TIME_INTERVAL_MAP.DAY7,
                   ],
                 }
@@ -682,8 +700,8 @@ export const $Trade = (config: ITradeComponent) => component((
                 return $row(layoutSheet.spacingSmall)(
                   $infoLabeledValue('Size', $text(map(value => readableUsd(value), sizeDeltaUsd))),
                   $infoLabeledValue('Collateral', $text(map(params => {
-                    return readableTokenAmountLabel(params.primaryToken, params.collateralDeltaAmount)
-                  }, combineObject({ collateralDeltaAmount, primaryToken })))),
+                    return readableTokenAmountLabel(params.primaryDescription, params.collateralDeltaAmount)
+                  }, combineObject({ collateralDeltaAmount, primaryDescription })))),
                 )
               }, isFocused),
               $icon({ $content: $target, width: '16px', svgOps: style({ margin: '0 6px' }), viewBox: '0 0 32 32' }),

@@ -4,8 +4,7 @@ import { $element, $node, $text, attr, component, style, stylePseudo } from "@ae
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { map, mergeArray, now, snapshot } from "@most/core"
 import * as wagmi from "@wagmi/core"
-import { IntervalTime } from "gmx-middleware-const"
-import { formatFixed, parseBps, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IntervalTime, formatFixed, parseBps, switchMap, unixTimestampNow } from "common-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { getPuppetAllowancesKey } from "puppet-middleware-utils"
 import * as viem from "viem"
@@ -14,6 +13,7 @@ import { theme } from "../../assignThemeSync.js"
 import { $TextField } from "../../common/$TextField.js"
 import { wallet } from "../../wallet/walletLink"
 import { $ButtonSecondary } from "../form/$Button.js"
+import { walletLink } from "../../wallet"
 
 interface IRouteSubscriptionEditor {
   // tradeRoute: viem.Address
@@ -54,7 +54,7 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
     switchMap(async wallet => {
       if (wallet == null) return 0n
 
-      const [exists, factor] = await wagmi.readContract({
+      const [exists, factor] = await wagmi.readContract(walletLink.wagmiConfig, {
         ...puppetContractMap.Datastore,
         functionName: 'tryGetAddressToUintFor',
         args: [getPuppetAllowancesKey(wallet.account.address), config.tradeRoute]

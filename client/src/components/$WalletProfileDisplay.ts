@@ -1,11 +1,11 @@
 import { Behavior } from "@aelea/core"
-import { $Node, NodeComposeFn, component, nodeEvent, style, styleBehavior } from "@aelea/dom"
+import { $Node, NodeComposeFn, component, style, styleBehavior } from "@aelea/dom"
 import { Route } from "@aelea/router"
 import { $column, $row } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, map, mergeArray, now, snapshot, switchLatest } from "@most/core"
+import { map, switchLatest } from "@most/core"
 import { $Link } from "ui-components"
-import { account, modal } from "../wallet/walletLink.js"
+import { walletLink } from "../wallet"
 import { $disconnectedWalletDisplay, $profileDisplay } from "./$AccountProfile.js"
 
 
@@ -27,33 +27,39 @@ export const $WalletProfileDisplay = ({ $container = $row, parentRoute }: IWalle
   return [
     $container(
       styleBehavior(map(active => ({ backgroundColor: active ? pallete.background : 'none' }), isActive)),
-      style({ border: `1px solid ${ colorAlpha(pallete.foreground, .2) }`, cursor: 'pointer', borderRadius: '30px', placeContent: 'center', fontFamily: `var(--font-monospace)` })
+      style({ border: `1px solid ${ colorAlpha(pallete.foreground, .2) }`,  borderRadius: '30px', placeContent: 'center', fontFamily: `var(--font-monospace)` })
     )(
-      switchLatest(snapshot((_, accountResult) => {
+      switchLatest(map(wallet => {
+        const address = wallet?.account?.address
+        const $display = address
+          ? style({ paddingRight: '16px' })($profileDisplay({ $labelContainer: $column(style({ padding: '0 8px 0 4px' })), address, $container }))
+          : style({ paddingRight: '18px' }, $disconnectedWalletDisplay($container))
+
+        return $Link({
+          route: walletRoute,
+          // anchorOp: style({  }),
+          url: `/app/wallet`,
+          $content: $display
+        })({
+          click: routeChangeTether(),
+          active: isActiveTether()
+        })
         
-        return accountResult?.address
-          ? $Link({
-            route: walletRoute,
-            // anchorOp: style({  }),
-            url: `/app/wallet`,
-            $content: style({ paddingRight: '16px' })($profileDisplay({ $labelContainer: $column(style({ padding: '0 8px 0 4px' })), address: accountResult?.address, $container }))
-          })({
-            click: routeChangeTether(),
-            active: isActiveTether()
-          })
-          : walletChangeTether(
-            nodeEvent('click'),
-            map(async () => {
-              await modal.open({
-                view: "Connect",
-              })
-              return `walletConnect`
-            }),
-            awaitPromises
-          )(
-            style({ paddingRight: '18px', cursor: 'pointer' }, $disconnectedWalletDisplay($container))
-          )
-      }, mergeArray([now(null), walletChange]), account))
+        // return  walletChangeTether(
+        //   nodeEvent('click'),
+        //   map(async () => {
+        //     await connect(wagmiConfig, {
+        //       connector: wcConnector
+        //     }).catch(e => {
+        //       console.error(e)
+        //     })
+        //     return `walletConnect`
+        //   }),
+        //   awaitPromises
+        // )(
+        //   style({ paddingRight: '18px', cursor: 'pointer' }, $disconnectedWalletDisplay($container))
+        // )
+      }, walletLink.wallet))
     ),
 
     {

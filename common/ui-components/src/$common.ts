@@ -4,10 +4,10 @@ import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { empty, fromPromise, map, skipRepeats, startWith } from "@most/core"
 import { Stream } from "@most/types"
-import { getExplorerUrl, ITokenDescription, shortenTxAddress, switchMap } from "gmx-middleware-utils"
 import { $alertIcon, $arrowRight, $caretDblDown, $info, $tokenIconMap } from "./$icons.js"
 import { $defaultDropContainer, $Tooltip } from "./$Tooltip.js"
 import { Chain } from "viem/chains"
+import { getExplorerUrl, getMappedValue, ITokenDescription, shortenTxAddress, switchMap } from "common-utils"
 
 
 export const intermediateMessage = <T>(query: Promise<T>, cb: (x: T) => string) => {
@@ -113,7 +113,7 @@ export const $tokenLabel = (token: ITokenDescription, $iconPath: $Node, $label?:
 
 
 export const $tokenLabelFromSummary = (token: ITokenDescription, $label?: $Node) => {
-  const $iconG = $tokenIconMap[token.symbol]
+  const $iconG = getMappedValue($tokenIconMap, token.symbol)
 
   return $row(layoutSheet.spacing, style({ cursor: 'pointer', alignItems: 'center', }))(
     $icon({ $content: $iconG, width: '34px', viewBox: '0 0 32 32' }),
@@ -126,7 +126,7 @@ export const $tokenLabelFromSummary = (token: ITokenDescription, $label?: $Node)
 }
 
 
-export const $txHashRef = (txHash: string, chain: Chain) => {
+export function $txHashRef(txHash: string, chain: Chain) {
   const href = getExplorerUrl(chain) + "/tx/" + txHash
 
   return $anchor(attr({ href }))($text(shortenTxAddress(txHash)))

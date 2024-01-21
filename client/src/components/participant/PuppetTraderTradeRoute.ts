@@ -3,7 +3,7 @@ import { $node, $text, component, nodeEvent, style } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { constant, empty, map, multicast, snapshot, startWith } from "@most/core"
 import * as GMX from 'gmx-middleware-const'
-import { IPriceTickListMap, pagingQuery, readableLeverage, readableUsd, switchMap, unixTimestampNow } from "gmx-middleware-utils"
+import { IntervalTime, pagingQuery, readableLeverage, readableUsd, switchMap, unixTimestampNow } from "common-utils"
 import { IPuppetTradeRoute, ISetRouteType, accountSettledPositionListSummary, openPositionListPnl } from "puppet-middleware-utils"
 import { $TraderDisplay, $pnlDisplay, $puppets } from "../../common/$common.js"
 import { $RouteSubscriptionEditor, IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor.js"
@@ -19,10 +19,11 @@ import { getPuppetSubscriptionExpiry } from "../../logic/puppetLogic"
 import { wallet } from "../../wallet/walletLink"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button"
 import { entryColumn, positionTimeColumn, settledPnlColumn, settledSizeColumn } from "../table/$TableColumn"
+import { IPriceTickListMap } from "gmx-middleware-utils"
 
 export interface IPuppetTraderTradeRoute {
   puppetTradeRoute: IPuppetTradeRoute
-  activityTimeframe: GMX.IntervalTime
+  activityTimeframe: IntervalTime
   priceTickMap: IPriceTickListMap
   routeTypeList: ISetRouteType[]
   route: router.Route

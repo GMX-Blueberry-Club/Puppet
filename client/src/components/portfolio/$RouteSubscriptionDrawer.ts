@@ -4,8 +4,8 @@ import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, constant, empty, fromPromise, map, mergeArray, now, skipRepeats, snapshot } from "@most/core"
 import { Stream } from "@most/types"
+import { groupArrayMany, readableDate, readablePercentage, readableTokenAmountLabel, switchMap } from "common-utils"
 import * as GMX from "gmx-middleware-const"
-import { groupArrayMany, readableDate, readablePercentage, readableTokenAmountLabel, switchMap } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { ISetRouteType } from "puppet-middleware-utils"
 import { $alertTooltip, $check, $infoLabeledValue, $infoTooltip, $infoTooltipLabel, $target, $xCross } from "ui-components"
@@ -23,6 +23,8 @@ import { IWalletClient, wallet } from "../../wallet/walletLink.js"
 import { $ButtonCircular, $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $AssetDepositEditor } from "./$AssetDepositEditor.js"
 import { IChangeSubscription } from "./$RouteSubscriptionEditor"
+import { getTokenDescription } from "gmx-middleware-utils"
+import { walletLink } from "../../wallet"
 
 interface IRouteSubscribeDrawer {
   modifySubscriber: Stream<IChangeSubscription>
@@ -64,6 +66,9 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
 
     return null
   }, readPuppetDeposit)
+
+  const depositToken = GMX.ARBITRUM_ADDRESS.USDC
+  const depositTokenDescription = getTokenDescription(depositToken)
   
 
   return [
@@ -143,7 +148,6 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
                   ),
                   $seperator2,
                 )
-                    
               })
             )
           }, combineObject({ modifySubscriptionList, routeTypeList: awaitPromises(routeTypeListQuery) })),
@@ -154,7 +158,7 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
                 $Popover({
                   open: constant(
                     $AssetDepositEditor({
-                      token: GMX.ARBITRUM_ADDRESS.USDC
+                      token: depositToken
                     })({
                       requestDepositAsset: requestDepositAssetTether(),
                     }),
@@ -163,7 +167,7 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
                   $target: $row(layoutSheet.spacing)(
                     $responsiveFlex(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
                       $infoTooltipLabel($text('The amount utialised by traders you subscribe'), 'Balance'),
-                      $text(readableTokenAmountLabel(GMX.ARBITRUM_ADDRESS.USDC, amount))
+                      $text(readableTokenAmountLabel(depositTokenDescription, amount))
                     ),
                     $ButtonSecondary({
                       $container: $defaultMiniButtonSecondary,
@@ -191,7 +195,7 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
                   const routeTypeKeys = list.map(x => x.routeTypeKey)
                   const subscribes = list.map(x => x.expiry > 0n)
 
-                  return wagmiWriteContract({
+                  return wagmiWriteContract(walletLink.wagmiConfig, {
                     ...PUPPET.CONTRACT[42161].Orchestrator,
                     functionName: 'batchSubscribe',
                     args: [w3p.account.address, allowances, expiries, traders, routeTypeKeys, subscribes]

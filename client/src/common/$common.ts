@@ -1,26 +1,22 @@
-import { Behavior, isStream, O, Tether } from "@aelea/core"
+import { Behavior, isStream, Tether } from "@aelea/core"
 import { $text, component, INode, nodeEvent, style, styleInline } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $icon, $row, $seperator, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, now, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
+import { getBasisPoints, getTokenUsd, lst, readableLeverage, readablePercentage, readablePnl, readableUsd, streamOf, switchMap, unixTimestampNow } from "common-utils"
 import { TOKEN_SYMBOL } from "gmx-middleware-const"
-import { $bear, $bull, $infoLabel, $infoTooltipLabel, $Link, $tokenIconMap } from "ui-components"
 import {
-  getBasisPoints,
   getEntryPrice,
   getRoughLiquidationPrice,
-  getTokenDescription, getTokenUsd, IAbstractPositionParams,
+  getTokenDescription, IAbstractPositionParams,
+  IMarket,
   IOraclePrice,
-  liquidationWeight,
-  lst,
-  readableUsd,
-  readableLeverage,
-  readablePercentage,
-  streamOf, switchMap, unixTimestampNow, readablePnl, IMarket
+  liquidationWeight
 } from "gmx-middleware-utils"
-import { getMpSlotPnL, getParticiapntMpPortion, IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen, IPuppetTradeRoute } from "puppet-middleware-utils"
+import { getMpSlotPnL, getParticiapntMpPortion, IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen } from "puppet-middleware-utils"
+import { $bear, $bull, $infoLabel, $infoTooltipLabel, $Link, $tokenIconMap } from "ui-components"
 import * as viem from "viem"
 import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile.js"
 import { $Popover } from "../components/$Popover.js"
@@ -64,9 +60,10 @@ export const $routeIntent = (isLong: boolean, indexToken: viem.Address) => {
 }
 
 export const $entry = (mp: IMirrorPosition) => {
+  const indexDescription = getTokenDescription(mp.position.indexToken)
   return $column(layoutSheet.spacingTiny, style({ alignItems: 'center', placeContent: 'center', fontSize: '.85rem' }))(
     $routeIntent(mp.position.isLong, mp.position.indexToken),
-    $text(readableUsd(getEntryPrice(mp.position.sizeInUsd, mp.position.sizeInTokens, mp.position.indexToken))),
+    $text(readableUsd(getEntryPrice(mp.position.sizeInUsd, mp.position.sizeInTokens, indexDescription))),
   )
 }
 
@@ -396,7 +393,7 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
 ) => {
 
   const puppetSubscriptionExpiry = switchMap(async w3p => {
-    return w3p
+    return w3p?.account
       ? getPuppetSubscriptionExpiry(w3p.account.address, config.positionParams.collateralToken, config.positionParams.indexToken, config.positionParams.isLong)
       : 0n
   }, wallet)

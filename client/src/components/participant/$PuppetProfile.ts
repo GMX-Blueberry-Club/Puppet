@@ -3,9 +3,8 @@ import { $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { awaitPromises, map, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import * as GMX from 'gmx-middleware-const'
-import { groupArrayMany } from "gmx-middleware-utils"
-import { IPuppetTradeRoute, ISetRouteType, accountSettledPositionListSummary, openPositionListPnl } from "puppet-middleware-utils"
+import { IntervalTime, groupArrayMany } from "common-utils"
+import { IPuppetTradeRoute, ISetRouteType } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
@@ -25,7 +24,7 @@ export const $PuppetProfile = (config: IPuppetProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
 
-  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
+  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 ) => {
   

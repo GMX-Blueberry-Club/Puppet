@@ -1,12 +1,13 @@
 import * as router from '@aelea/router'
 import { Stream } from '@most/types'
+import { IntervalTime } from 'common-utils'
 import * as GMX from 'gmx-middleware-const'
 import { IPriceTickListMap } from 'gmx-middleware-utils'
 import { IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType } from 'puppet-middleware-utils'
 import * as viem from 'viem'
 
 export interface IPageGlobalParams {
-  activityTimeframe: Stream<GMX.IntervalTime>
+  activityTimeframe: Stream<IntervalTime>
   selectedTradeRouteList: Stream<ISetRouteType[]>
   priceTickMapQuery: Stream<Promise<IPriceTickListMap>>
   routeTypeListQuery: Stream<Promise<ISetRouteType[]>>

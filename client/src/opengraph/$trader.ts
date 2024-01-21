@@ -7,6 +7,7 @@ import * as viem from 'viem'
 import { $ProfilePeformanceTimeline } from "../components/participant/$ProfilePeformanceTimeline.js"
 import { $TraderProfileSummary } from "../components/participant/$Summary.js"
 import { IOpengraphPageParams } from "./common"
+import { IntervalTime } from "common-utils"
 
 
 
@@ -15,7 +16,7 @@ export const $trader = (config: IOpengraphPageParams) => {
   const url = new URL(document.location.href)
 
   const address = viem.getAddress(String(url.searchParams.get('address'))) as viem.Address
-  const activityTimeframe = now(Number(url.searchParams.get('activityTimeframe')!) as GMX.IntervalTime)
+  const activityTimeframe = now(Number(url.searchParams.get('activityTimeframe')!) as IntervalTime)
   const selectedTradeRouteList = now([])
 
   const settledPositionListQuery = queryTraderPositionSettled({ address, activityTimeframe, selectedTradeRouteList })

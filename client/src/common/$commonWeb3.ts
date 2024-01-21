@@ -1,5 +1,5 @@
 import { $Node, attr, $text } from "@aelea/dom"
-import { getExplorerUrl, shortenTxAddress } from "gmx-middleware-utils"
+import { getExplorerUrl, shortenTxAddress } from "common-utils"
 import { $anchor } from "ui-components"
 import * as viem from "viem"
 

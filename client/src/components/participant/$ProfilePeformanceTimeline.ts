@@ -6,7 +6,7 @@ import { awaitPromises, debounce, empty, map, now, skipRepeatsWith, startWith, s
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $IntermediatePromise, $infoTooltipLabel, IMarker } from "ui-components"
-import { filterNull, parseReadableNumber, readableUsd, readableUnitAmount } from "gmx-middleware-utils"
+import { filterNull, parseReadableNumber, readableUsd, readableUnitAmount, IntervalTime } from "common-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
 import { IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType } from "puppet-middleware-utils"
 import { $labelDisplay } from "../../common/$TextField.js"
@@ -24,7 +24,7 @@ export const $ProfilePeformanceTimeline = (config: IPageGlobalParams & {
 }) => component((
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
-  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, GMX.IntervalTime>,
+  [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,
 ) => {
 
   const { activityTimeframe, selectedTradeRouteList, puppet, priceTickMapQuery, routeTypeListQuery, settledPositionListQuery, openPositionListQuery } = config
