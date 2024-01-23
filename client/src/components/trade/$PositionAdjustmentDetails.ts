@@ -135,7 +135,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
       : wagmiWriteContract(walletLink.wagmiConfig, {
         ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
         value: totalWntAmount,
-        functionName: 'registerRouteAccountAndRequestPosition',
+        functionName: 'registerRouteAndRequestPosition',
         args: [
           {
             acceptablePrice,
