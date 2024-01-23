@@ -221,14 +221,14 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const marketInfo: Stream<IMarketInfo> = replayLatest(multicast(awaitPromises(marketInfoQuery)))
 
-  const tradeRoute: Stream<viem.Address | null> = switchMap(params => {
+  const tradeRoute: Stream<viem.Address | null> = replayLatest(multicast(switchMap(params => {
     const account = params.wallet?.account
     if (!account) {
       return now(null)
     }
 
     return getTraderTradeRoute(account.address, params.collateralToken, params.indexToken, params.isLong, config.chain)
-  }, combineObject({ collateralToken, wallet, indexToken, isLong }))
+  }, combineObject({ collateralToken, wallet, indexToken, isLong }))))
 
 
   const openPositionListQuery = multicast(replayLatest(switchMap(w3p => {

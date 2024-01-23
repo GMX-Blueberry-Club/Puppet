@@ -1,16 +1,21 @@
-import { style } from "@aelea/dom"
+import { style, stylePseudo } from "@aelea/dom"
+import { $column } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { IAttributeBackground, IAttributeBadge, IAttributeMappings, IBerryDisplayTupleMap, IToken, getBerryFromItems, getLabItemTupleIndex, tokenIdAttributeTuple } from "@gambitdao/gbc-middleware"
-import { $Table, $defaultVScrollContainer, $infoLabeledValue, $spinner, TableOption } from "ui-components"
-import { $card } from "../common/elements/$common.js"
+import { $Table, $defaultTableCell, $defaultTableRowContainer, $defaultVScrollContainer, $infoLabeledValue, $spinner, TableOption } from "ui-components"
 import { $berry } from "./$DisplayBerry.js"
 
 
+export interface ICardTable<T> extends TableOption<T> {
+
+}
+
 export const $CardTable = <T>(config: TableOption<T>) => {
   return $Table({
-    $container: $card(style({ padding: "12px", gap: 0, borderRadius: '0' })),
+    $container: $column,
+    $cell: $defaultTableCell(style({ padding: '18px 0' })),
     scrollConfig: {
-      $container: $defaultVScrollContainer(style({ gap: '4px' })),
+      $container: $defaultVScrollContainer(style({ gap: '2px' })),
       $loader: style({ placeContent: 'center', margin: '0 1px', background: pallete.background, flexDirection: 'row-reverse', padding: '16px 0' })(
         $infoLabeledValue(
           'Loading',
@@ -20,6 +25,11 @@ export const $CardTable = <T>(config: TableOption<T>) => {
         )
       )
     },
+    $headerContainer: $defaultTableRowContainer(style({ padding: '8px 18px' })),
+    $rowContainer: $defaultTableRowContainer(
+      stylePseudo(':last-child', { borderRadius: '0 0 18px 18px', marginBottom: '2px' }),
+      style({ background: pallete.background, padding: '0 18px' })
+    ),
     // $bodyRowContainer: $defaultTableRowContainer(
     //   style({ margin: '0 1px' })
     // ),

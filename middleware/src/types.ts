@@ -58,17 +58,14 @@ export interface IMirrorPosition<TypeName extends 'MirrorPositionOpen' | 'Mirror
 export interface IMirrorPositionOpen extends IMirrorPosition<'MirrorPositionOpen'> { }
 export interface IMirrorPositionSettled extends IMirrorPosition<'MirrorPositionSettled'> {}
 
-export interface ISubscribeTradeRouteDto {
+
+export interface ISubscribeTradeRoute extends ILogTxType<'SubscribeTradeRoute'> {
   allowance: bigint
   subscriptionExpiry: bigint
   trader: viem.Address
   puppet: viem.Address
   tradeRoute: viem.Address
   routeTypeKey: viem.Hex
-  subscribe: boolean
-}
-export interface ISubscribeTradeRoute extends ISubscribeTradeRouteDto, ILogTxType<'SubscribeTradeRoute'> {
-  // puppetTradeRoute: IPuppetTradeRoute
 }
 
 export interface IPuppetPositionOpen extends ILogTxType<'PuppetPositionOpen'> {

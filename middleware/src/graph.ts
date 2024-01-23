@@ -1,16 +1,17 @@
 import { replayLatest } from '@aelea/core'
 import { map, multicast } from '@most/core'
 import { Stream } from '@most/types'
-import { Client, Exchange, createClient, fetchExchange } from '@urql/core'
-import { offlineExchange } from '@urql/exchange-graphcache'
+import { Client, createClient, fetchExchange } from '@urql/core'
 import { makeDefaultStorage } from '@urql/exchange-graphcache/default-storage'
+import { IntervalTime, combineState, getClosestNumber, groupArrayManyMap, periodicRun, unixTimestampNow } from 'common-utils'
 import * as GMX from "gmx-middleware-const"
 import { IPriceCandle, IPriceOracleMap, IPriceTickListMap, ISchema, schema as gmxSchema, parseQueryResults, querySignedPrices, querySubgraph } from "gmx-middleware-utils"
 import * as viem from "viem"
 import __tempTradeRouteDoc from './__temp_tradeRouteDoc.js'
 import { schema } from './schema.js'
 import { IPuppetTradeRoute, ISetRouteType } from './types.js'
-import { IntervalTime, combineState, getClosestNumber, groupArrayManyMap, periodicRun, unixTimestampNow } from 'common-utils'
+import { cacheExchange } from '@urql/exchange-graphcache'
+
 
 const storage = makeDefaultStorage({
   idbName: 'graphcache-v3', // The name of the IndexedDB database
@@ -18,18 +19,56 @@ const storage = makeDefaultStorage({
 })
 
 
-const cache = offlineExchange({
-  // schema,
-  storage,
-  updates: {
-    /* ... */
-  },
-  optimistic: {
-    /* ... */
-  },
-}) as Exchange
+// A simple in-memory cache object
+// const cache = {}
 
-export type { Client }
+// A utility function to hash queries for caching purposes
+// const hashQuery = (operation: Operation<any, AnyVariables>) => {
+//   // Implement a hashing function suitable for your queries
+// }
+
+// // Custom exchange
+// const immutableCacheExchange: Exchange = ({ forward }) => (ops$) => {
+//   return pipe(
+//     ops$,
+//     tap(operation => {
+//       const { key, query, variables, kind, context, } = operation
+      
+//       const hashedQuery = hashQuery(query.kind)
+
+//       if (!operation.context.skipCache && cache[hashedQuery]) {
+//         // If there's a cached response and we're not skipping cache, use it
+//         operation.data = cache[hashedQuery]
+//       }
+//     }),
+//     forward,
+//     tap(result => {
+//       const { operation, data } = result
+//       const { query, variables } = operation
+//       const hashedQuery = hashQuery(query)
+
+//       if (data && data.blockTimestamp) {
+//         // If the latest blockTimestamp is newer than the cached one, update the cache
+//         if (!cache[hashedQuery] || cache[hashedQuery].blockTimestamp < data.blockTimestamp) {
+//           cache[hashedQuery] = data
+//         }
+//       }
+//     }),
+//     filter(result => {
+//       // Filter out the operations that were served from the cache
+//       const { operation } = result
+//       const hashedQuery = hashQuery(operation.query)
+//       return !operation.data || (cache[hashedQuery] && operation.data.blockTimestamp < cache[hashedQuery].blockTimestamp)
+//     })
+//   )
+// }
+
+
+const cache = cacheExchange({
+  storage,
+})
+
+
 
 export const subgraphClient = createClient({
   url: 'https://api.studio.thegraph.com/query/112/puppet/version/latest',
@@ -258,3 +297,6 @@ export async function queryRouteTypeList() {
 
   return query.filter(x => x.collateralToken === GMX.ARBITRUM_ADDRESS.USDC)
 }
+
+export type { Client }
+

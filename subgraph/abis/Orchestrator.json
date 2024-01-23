@@ -143,37 +143,6 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "route",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "requestKey",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "routeKey",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "positionKey",
-        "type": "bytes32"
-      }
-    ],
-    "name": "AdjustTargetLeverage",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
         "name": "user",
         "type": "address"
       },
@@ -290,6 +259,37 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "address",
+        "name": "route",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "requestKey",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "routeKey",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "positionKey",
+        "type": "bytes32"
+      }
+    ],
+    "name": "DecreaseSize",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": false,
         "internalType": "uint256",
         "name": "amount",
@@ -310,7 +310,7 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "puppet",
+        "name": "receiver",
         "type": "address"
       }
     ],
@@ -420,7 +420,7 @@
         "type": "bytes32"
       }
     ],
-    "name": "LiquidatePosition",
+    "name": "LiquidateRoute",
     "type": "event"
   },
   {
@@ -495,19 +495,6 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
-        "internalType": "bool",
-        "name": "paused",
-        "type": "bool"
-      }
-    ],
-    "name": "Pause",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
         "indexed": true,
         "internalType": "address",
         "name": "trader",
@@ -520,7 +507,7 @@
         "type": "address"
       }
     ],
-    "name": "RegisterRouteAccount",
+    "name": "RegisterRoute",
     "type": "event"
   },
   {
@@ -551,45 +538,7 @@
         "type": "address"
       }
     ],
-    "name": "RescueRouteFunds",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "managmentFee",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "withdrawalFee",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "performanceFee",
-        "type": "uint256"
-      }
-    ],
-    "name": "SetFees",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "recipient",
-        "type": "address"
-      }
-    ],
-    "name": "SetFeesRecipient",
+    "name": "RescueToken",
     "type": "event"
   },
   {
@@ -726,18 +675,12 @@
       },
       {
         "indexed": false,
-        "internalType": "bool",
-        "name": "subscribe",
-        "type": "bool"
-      },
-      {
-        "indexed": false,
         "internalType": "bytes32",
         "name": "routeTypeKey",
         "type": "bytes32"
       }
     ],
-    "name": "SubscribeRoute",
+    "name": "Subscribe",
     "type": "event"
   },
   {
@@ -758,17 +701,49 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "receiver",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
         "name": "caller",
         "type": "address"
       }
     ],
-    "name": "TransferRouteFunds",
+    "name": "TransferTokens",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "managmentFee",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "withdrawalFee",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "performanceFee",
+        "type": "uint256"
+      }
+    ],
+    "name": "UpdateFees",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      }
+    ],
+    "name": "UpdateFeesRecipient",
     "type": "event"
   },
   {
@@ -782,6 +757,19 @@
       }
     ],
     "name": "UpdateKeeper",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "minExecutionFee",
+        "type": "uint256"
+      }
+    ],
+    "name": "UpdateMinExecutionFee",
     "type": "event"
   },
   {
@@ -814,6 +802,19 @@
       }
     ],
     "name": "UpdateOpenTimestamp",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "paused",
+        "type": "bool"
+      }
+    ],
+    "name": "UpdatePauseStatus",
     "type": "event"
   },
   {
@@ -861,7 +862,7 @@
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "amount",
+        "name": "amountOut",
         "type": "uint256"
       },
       {
@@ -938,52 +939,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "components": [
-          {
-            "internalType": "uint256",
-            "name": "collateralDelta",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "sizeDelta",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "acceptablePrice",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct IBaseRoute.AdjustPositionParams",
-        "name": "_adjustPositionParams",
-        "type": "tuple"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_executionFee",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "_routeKey",
-        "type": "bytes32"
-      }
-    ],
-    "name": "adjustTargetLeverage",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "_requestKey",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "authority",
     "outputs": [
@@ -1022,11 +977,6 @@
         "internalType": "bytes32[]",
         "name": "_routeTypeKeys",
         "type": "bytes32[]"
-      },
-      {
-        "internalType": "bool[]",
-        "name": "_subscribe",
-        "type": "bool[]"
       }
     ],
     "name": "batchSubscribe",
@@ -1071,11 +1021,11 @@
       },
       {
         "internalType": "address",
-        "name": "_asset",
+        "name": "_token",
         "type": "address"
       }
     ],
-    "name": "creditPuppetsAccount",
+    "name": "creditAccounts",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1107,12 +1057,58 @@
       },
       {
         "internalType": "address",
-        "name": "_asset",
+        "name": "_token",
         "type": "address"
       }
     ],
-    "name": "debitPuppetsAccount",
+    "name": "debitAccounts",
     "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "collateralDelta",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "sizeDelta",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "acceptablePrice",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IBaseRoute.AdjustPositionParams",
+        "name": "_adjustPositionParams",
+        "type": "tuple"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_executionFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "_routeKey",
+        "type": "bytes32"
+      }
+    ],
+    "name": "decreaseSize",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "_requestKey",
+        "type": "bytes32"
+      }
+    ],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -1125,12 +1121,12 @@
       },
       {
         "internalType": "address",
-        "name": "_asset",
+        "name": "_token",
         "type": "address"
       },
       {
         "internalType": "address",
-        "name": "_puppet",
+        "name": "_receiver",
         "type": "address"
       }
     ],
@@ -1148,7 +1144,7 @@
       },
       {
         "internalType": "address",
-        "name": "_asset",
+        "name": "_token",
         "type": "address"
       },
       {
@@ -1175,11 +1171,6 @@
         "internalType": "bytes32[]",
         "name": "_routeTypeKeys",
         "type": "bytes32[]"
-      },
-      {
-        "internalType": "bool[]",
-        "name": "_subscribe",
-        "type": "bool[]"
       }
     ],
     "name": "depositAndBatchSubscribe",
@@ -1188,13 +1179,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_amount",
-        "type": "uint256"
-      }
-    ],
+    "inputs": [],
     "name": "depositExecutionFees",
     "outputs": [],
     "stateMutability": "payable",
@@ -1246,11 +1231,6 @@
         "type": "uint256"
       },
       {
-        "internalType": "address",
-        "name": "_route",
-        "type": "address"
-      },
-      {
         "internalType": "bytes32",
         "name": "_requestKey",
         "type": "bytes32"
@@ -1282,6 +1262,11 @@
   },
   {
     "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_minExecutionFee",
+        "type": "uint256"
+      },
       {
         "internalType": "address",
         "name": "_wnt",
@@ -1345,7 +1330,7 @@
         "type": "bytes32"
       }
     ],
-    "name": "liquidatePosition",
+    "name": "liquidateRoute",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1414,7 +1399,7 @@
         "type": "bytes32"
       }
     ],
-    "name": "registerRouteAccount",
+    "name": "registerRoute",
     "outputs": [
       {
         "internalType": "bytes32",
@@ -1482,7 +1467,7 @@
         "type": "bytes32"
       }
     ],
-    "name": "registerRouteAccountAndRequestPosition",
+    "name": "registerRouteAndRequestPosition",
     "outputs": [
       {
         "internalType": "bytes32",
@@ -1594,7 +1579,7 @@
         "type": "address"
       }
     ],
-    "name": "rescueRouteFunds",
+    "name": "rescueToken",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1608,29 +1593,6 @@
       }
     ],
     "name": "setAuthority",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_managementFee",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_withdrawalFee",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_performanceFee",
-        "type": "uint256"
-      }
-    ],
-    "name": "setFees",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1707,14 +1669,9 @@
         "internalType": "bytes32",
         "name": "_routeTypeKey",
         "type": "bytes32"
-      },
-      {
-        "internalType": "bool",
-        "name": "_subscribe",
-        "type": "bool"
       }
     ],
-    "name": "subscribeRoute",
+    "name": "subscribe",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1741,16 +1698,11 @@
       },
       {
         "internalType": "address",
-        "name": "_asset",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_receiver",
+        "name": "_token",
         "type": "address"
       }
     ],
-    "name": "transferRouteFunds",
+    "name": "transferTokens",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1764,6 +1716,29 @@
       }
     ],
     "name": "updateDexAddresses",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_managementFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_withdrawalFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_performanceFee",
+        "type": "uint256"
+      }
+    ],
+    "name": "updateFees",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1797,6 +1772,19 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "_minExecutionFee",
+        "type": "uint256"
+      }
+    ],
+    "name": "updateMinExecutionFee",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "_multiSubscriber",
         "type": "address"
@@ -1815,7 +1803,7 @@
         "type": "bool"
       }
     ],
-    "name": "updatePauseSwitch",
+    "name": "updatePauseStatus",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1881,7 +1869,7 @@
       },
       {
         "internalType": "address",
-        "name": "_asset",
+        "name": "_token",
         "type": "address"
       },
       {
@@ -1896,7 +1884,13 @@
       }
     ],
     "name": "withdraw",
-    "outputs": [],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "_amountOut",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -1922,7 +1916,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_asset",
+        "name": "_token",
         "type": "address"
       }
     ],

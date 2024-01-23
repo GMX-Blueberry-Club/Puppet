@@ -13,7 +13,7 @@ import * as uiStorage from "ui-storage"
 import * as viem from "viem"
 import { $labelDisplay } from "../../common/$TextField.js"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlDisplay, $route, $size } from "../../common/$common.js"
-import { $card, $responsiveFlex } from "../../common/elements/$common.js"
+import { $card, $card2, $responsiveFlex } from "../../common/elements/$common.js"
 import { $DropMultiSelect } from "../../components/form/$Dropdown.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor"
 import { $tableHeader } from "../../components/table/$TableColumn.js"
@@ -22,6 +22,7 @@ import * as storeDb from "../../const/store.js"
 import { IPageGlobalParams } from "../../const/type.js"
 import { $seperator2 } from "../common.js"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity.js"
+import { $CardTable } from "../../components/$common"
 
 
 
@@ -105,12 +106,12 @@ export const $Leaderboard = (config: ILeaderboard) => component((
 
 
   return [
-    $column(style({ paddingTop: '36px' }))(
-      $card(layoutSheet.spacingBig, style({ flex: 1 }))(
+    $column(layoutSheet.spacing, style({ paddingTop: '36px' }))(
 
-        $responsiveFlex(layoutSheet.spacingBig, style({ placeContent: 'space-between', alignItems: 'flex-start' }))(
+      $card2(style({ padding: "0", gap: 0 }))(
+        $responsiveFlex(layoutSheet.spacingBig, style({ padding: '18px', placeContent: 'space-between', alignItems: 'flex-start' }))(
           $DropMultiSelect({
-            // $container: $row(layoutSheet.spacingTiny, style({ display: 'flex', position: 'relative' })),
+          // $container: $row(layoutSheet.spacingTiny, style({ display: 'flex', position: 'relative' })),
             $input: $element('input')(style({ width: '100px' })),
             $label: $labelDisplay(style({ color: pallete.foreground }))('Route'),
             placeholder: 'All / Select',
@@ -187,7 +188,6 @@ export const $Leaderboard = (config: ILeaderboard) => component((
             changeActivityTimeframe: changeActivityTimeframeTether()
           }),
         ),
-    
         switchMap(params => {
 
           const columns: TableColumn<ITableRow>[] = [
@@ -226,13 +226,13 @@ export const $Leaderboard = (config: ILeaderboard) => component((
             
             ...screenUtils.isDesktopScreen
               ? [
-                // {
-                //   $head: $text('Puppets'),
-                //   gridTemplate: '90px',
-                //   $bodyCallback: map((pos: ITableRow) => {
-                //     return $puppets(pos.summary.puppets, routeChangeTether)
-                //   })
-                // },
+              // {
+              //   $head: $text('Puppets'),
+              //   gridTemplate: '90px',
+              //   $bodyCallback: map((pos: ITableRow) => {
+              //     return $puppets(pos.summary.puppets, routeChangeTether)
+              //   })
+              // },
                 {
                   $head: $text('Win / Loss'),
                   gridTemplate: '90px',
@@ -301,7 +301,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
               : [],
           ]
 
-          return $Table({
+          return $CardTable({
             sortBy: params.sortBy,
             dataSource: params.dataSource,
             columns,
@@ -309,8 +309,9 @@ export const $Leaderboard = (config: ILeaderboard) => component((
             sortBy: sortByChangeTether(),
             scrollRequest: scrollRequestTether(),
           })
-        }, pageParms),
+        }, pageParms)
       )
+      
     ),
 
     {

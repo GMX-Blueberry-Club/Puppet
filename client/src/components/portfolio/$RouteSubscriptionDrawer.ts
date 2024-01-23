@@ -193,12 +193,11 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
                   const expiries = list.map(x => x.expiry)
                   const traders = list.map(a => a.trader)
                   const routeTypeKeys = list.map(x => x.routeTypeKey)
-                  const subscribes = list.map(x => x.expiry > 0n)
 
                   return wagmiWriteContract(walletLink.wagmiConfig, {
                     ...PUPPET.CONTRACT[42161].Orchestrator,
                     functionName: 'batchSubscribe',
-                    args: [w3p.account.address, allowances, expiries, traders, routeTypeKeys, subscribes]
+                    args: [w3p.account.address, allowances, expiries, traders, routeTypeKeys]
                   })
                 }, modifySubscriptionList)
               )

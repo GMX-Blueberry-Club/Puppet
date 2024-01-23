@@ -70,26 +70,23 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
 
 
 
-  const requestTradeParams = snapshot((config, wallet): IRequestTradeParams => {
-    return { ...config, wallet }
-  }, combineObject(config.tradeConfig), clickProposeTrade)
 
-  const requestTrade: Stream<IRequestTrade> = multicast(snapshot((params, req) => {
-    const resolvedPrimaryAddress = resolveAddress(config.chain, req.primaryToken)
-    const from = req.isIncrease ? resolvedPrimaryAddress : req.isLong ? req.market.indexToken : req.collateralToken
-    const to = req.isIncrease ? req.isLong ? req.market.indexToken : req.collateralToken : resolvedPrimaryAddress
+  const requestTrade: Stream<IRequestTrade> = multicast(snapshot((params, wallet) => {
+    const resolvedPrimaryAddress = resolveAddress(config.chain, params.primaryToken)
+    const from = params.isIncrease ? resolvedPrimaryAddress : params.isLong ? params.market.indexToken : params.collateralToken
+    const to = params.isIncrease ? params.isLong ? params.market.indexToken : params.collateralToken : resolvedPrimaryAddress
 
     const swapRoute = from === to ? [to] : [from, to]
 
-    const allowedSlippage = req.isLong
-      ? req.isIncrease
-        ? req.slippage : -req.slippage
-      : req.isIncrease
-        ? -req.slippage : req.slippage
+    const allowedSlippage = params.isLong
+      ? params.isIncrease
+        ? params.slippage : -params.slippage
+      : params.isIncrease
+        ? -params.slippage : params.slippage
 
     
     const acceptablePrice = params.indexPrice * (allowedSlippage + BASIS_POINTS_DIVISOR) / BASIS_POINTS_DIVISOR
-    const isNative = req.primaryToken === ADDRESS_ZERO
+    const isNative = params.primaryToken === ADDRESS_ZERO
 
 
     // const swapParams = {
@@ -105,13 +102,13 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
     //   sizeDelta: abs(req.sizeDeltaUsd)
     // }
 
-    const executionFeeAfterBuffer = abs(params.executionFee * (req.executionFeeBuffer + BASIS_POINTS_DIVISOR) / BASIS_POINTS_DIVISOR) // params.executionFee
+    const executionFeeAfterBuffer = abs(params.executionFee * (params.executionFeeBuffer + BASIS_POINTS_DIVISOR) / BASIS_POINTS_DIVISOR) // params.executionFee
     const orderVaultAddress = GMX.CONTRACT[config.chain.id].OrderVault.address
-    const wntCollateralAmount = isNative ? req.collateralDeltaAmount : 0n
+    const wntCollateralAmount = isNative ? params.collateralDeltaAmount : 0n
     const totalWntAmount = wntCollateralAmount + executionFeeAfterBuffer
-    const orderType = req.isIncrease
-      ? req.focusPrice ? OrderType.LimitIncrease : OrderType.MarketIncrease
-      : req.focusPrice ? OrderType.LimitDecrease : OrderType.MarketDecrease
+    const orderType = params.isIncrease
+      ? params.focusPrice ? OrderType.LimitIncrease : OrderType.MarketIncrease
+      : params.focusPrice ? OrderType.LimitDecrease : OrderType.MarketDecrease
 
 
     const request = params.tradeRoute
@@ -122,17 +119,17 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
         args: [
           {
             acceptablePrice,
-            collateralDelta: abs(req.collateralDeltaAmount),
-            sizeDelta: abs(req.sizeDeltaUsd),
+            collateralDelta: abs(params.collateralDeltaAmount),
+            sizeDelta: abs(params.sizeDeltaUsd),
           },
           {
-            amount: req.collateralDeltaAmount,
-            path: req.collateralDeltaAmount ? [req.collateralToken] : [req.collateralToken],
+            amount: params.collateralDeltaAmount,
+            path: params.collateralDeltaAmount ? [params.collateralToken] : [params.collateralToken],
             minOut: 0n,
           },
           params.routeTypeKey,
           executionFeeAfterBuffer,
-          req.isIncrease
+          params.isIncrease
         ]
       })
       : wagmiWriteContract(walletLink.wagmiConfig, {
@@ -142,12 +139,12 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
         args: [
           {
             acceptablePrice,
-            collateralDelta: req.collateralDeltaAmount,
-            sizeDelta: abs(req.sizeDeltaUsd),
+            collateralDelta: params.collateralDeltaAmount,
+            sizeDelta: abs(params.sizeDeltaUsd),
           },
           {
-            amount: req.collateralDeltaAmount,
-            path: req.collateralDeltaAmount ? [req.collateralToken] : [],
+            amount: params.collateralDeltaAmount,
+            path: params.collateralDeltaAmount ? [params.collateralToken] : [],
             minOut: 0n,
           },
           executionFeeAfterBuffer,
@@ -156,60 +153,8 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
       })
 
 
-    // GMX V2 ExchangeRouter
-    // const request = wagmiWriteContract({
-    //   ...GMX.CONTRACT[config.chain.id].ExchangeRouter,
-    //   value: totalWntAmount,
-    //   functionName: 'multicall',
-    //   args: [[
-    //     viem.encodeFunctionData({
-    //       abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-    //       functionName: 'sendWnt',
-    //       args: [orderVaultAddress, totalWntAmount]
-    //     }),
-    //     ...req.isIncrease && !isNative ? [
-    //       viem.encodeFunctionData({
-    //         abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-    //         functionName: 'sendTokens',
-    //         args: [resolvedPrimaryAddress, orderVaultAddress, req.collateralDelta]
-    //       })
-    //     ] : [],
-    //     viem.encodeFunctionData({
-    //       abi: GMX.CONTRACT[config.chain.id].ExchangeRouter.abi,
-    //       functionName: 'createOrder',
-    //       args: [
-    //         {
-    //           addresses: {
-    //             receiver: params.route,
-    //             callbackContract: GMX.ADDRESS_ZERO,
-    //             uiFeeReceiver: GMX.ADDRESS_ZERO,
-    //             market: req.market.marketToken,
-    //             initialCollateralToken: req.collateralToken,
-    //             swapPath: req.collateralDelta ? [req.market.marketToken] : []
-    //           },
-    //           numbers: {
-    //             sizeDeltaUsd: abs(req.sizeDeltaUsd),
-    //             initialCollateralDeltaAmount: 0n,
-    //             acceptablePrice: acceptablePrice,
-    //             triggerPrice: 0n,
-    //             executionFee: executionFeeAfterBuffer,
-    //             callbackGasLimit: 0n,
-    //             minOutputAmount: 0n,
-    //           },
-    //           orderType,
-    //           decreasePositionSwapType: DecreasePositionSwapType.NoSwap,
-    //           isLong: req.isLong,
-    //           shouldUnwrapNativeToken: isNative && req.collateralDelta > 0n,
-    //           referralCode: BLUEBERRY_REFFERAL_CODE,
-    //         }
-    //       ]
-    //     }),
-    //   ]]
-    // })
-
-
-    return { ...params, ...req, acceptablePrice, request, swapRoute }
-  }, combineObject({ executionFee, indexPrice, tradeRoute, routeTypeKey }), requestTradeParams))
+    return { ...params, acceptablePrice, request, swapRoute, wallet }
+  }, combineObject({ ...config.tradeConfig, executionFee, indexPrice, tradeRoute, routeTypeKey }), clickProposeTrade))
 
   const requestApproveSpend = multicast(map(params => {
     const recpt = wagmiWriteContract(walletLink.wagmiConfig, {

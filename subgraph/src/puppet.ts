@@ -6,7 +6,7 @@ import {
   OpenPosition as OpenPositionEvent,
   SetRouteType as SetRouteTypeEvent,
   SharesIncrease as SharesIncreaseEvent,
-  SubscribeRoute as SubscribeRouteEvent,
+  Subscribe as SubscribeRouteEvent,
   Withdraw as WithdrawEvent,
 } from "../generated/Orchestrator/Orchestrator"
 import {
@@ -225,7 +225,6 @@ export function handleSubscribeRoute(event: SubscribeRouteEvent): void {
   subscribeTradeRoute.puppet = event.params.puppet
   subscribeTradeRoute.tradeRoute = event.params.route
   subscribeTradeRoute.routeTypeKey = event.params.routeTypeKey
-  subscribeTradeRoute.subscribe = event.params.subscribe
 
   subscribeTradeRoute.blockNumber = event.block.number
   subscribeTradeRoute.blockTimestamp = event.block.timestamp
@@ -253,7 +252,7 @@ export function handleDeposit(event: DepositEvent): void {
   entity.amount = event.params.amount
   entity.asset = event.params.asset
   entity.caller = event.params.caller
-  entity.puppet = event.params.puppet
+  entity.puppet = event.params.receiver
 
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
@@ -266,7 +265,7 @@ export function handleWithdraw(event: WithdrawEvent): void {
   const entity = new Withdraw(
     event.transaction.hash.concatI32(event.logIndex.toI32())
   )
-  entity.amount = event.params.amount
+  entity.amount = event.params.amountOut
   entity.asset = event.params.asset
   entity.receiver = event.params.receiver
   entity.puppet = event.params.puppet

@@ -115,7 +115,6 @@ const subscribeTradeRoute: ISchema<ISubscribeTradeRoute> = {
   puppet: 'address',
   tradeRoute: 'address',
   routeTypeKey: 'string',
-  subscribe: 'bool',
 
 
   blockTimestamp: 'uint',

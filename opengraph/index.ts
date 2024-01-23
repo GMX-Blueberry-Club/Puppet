@@ -53,7 +53,7 @@ Bun.serve({
 
       await page.waitForLoadState('networkidle')
 
-      const screenshot = await page.screenshot({ type: 'jpeg', quality: 95 })
+      const screenshot = await page.screenshot({ omitBackground: true, type: 'png', quality: 95 })
 
       const headers = { "Content-Type": "image/png" }
 

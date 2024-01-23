@@ -1,12 +1,12 @@
 import { combineObject, fromCallback, replayLatest } from "@aelea/core"
 import { pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, continueWith, fromPromise, map, mergeArray, multicast, now } from "@most/core"
+import { awaitPromises, continueWith, fromPromise, map, multicast, now, startWith } from "@most/core"
 import { Stream } from "@most/types"
-import { coinbaseWallet, injected, walletConnect } from '@wagmi/connectors'
+import { walletConnect } from '@wagmi/connectors'
 import {
-  GetAccountReturnType, createConfig, createStorage,
-  getBlockNumber,
-  getChainId, getWalletClient, http, reconnect, watchAccount, watchBlockNumber, watchChainId, watchPublicClient
+  GetAccountReturnType, createConfig, createStorage, getBlockNumber,
+  getPublicClient,
+  getWalletClient, http, reconnect, watchAccount, watchBlockNumber, watchChainId, watchPublicClient
 } from "@wagmi/core"
 import { arbitrum } from '@wagmi/core/chains'
 import { switchMap } from "common-utils"
@@ -74,61 +74,63 @@ export const wagmiConfig = createConfig({
   transports,
 })
 
-const reconnectQuery = switchMap(() => {
-  return fromPromise(reconnect(wagmiConfig))
-}, now(null))
+const reconnectQuery = fromPromise(reconnect(wagmiConfig))
 
-const initalChain = map(([res]) => {
-  return res ? chains.find(c => c.id === res.chainId) : chains[0]
+
+
+export const chain: Stream<ISupportedChain> = switchMap(([init]) =>  {
+  const initalChain = init ? chains.find(c => c.id === init.chainId) : chains[0]
+  const change = fromCallback(cb => {
+    const watcher = watchChainId(wagmiConfig, {
+      onChange(res) {
+        const match = chains.find(chain => chain.id == res) || chains[0]
+        cb(match)
+      }
+    })
+  
+    return watcher
+  })
+  return startWith(initalChain, change)
 }, reconnectQuery)
 
-export const chain: Stream<ISupportedChain> = continueWith(() =>  fromCallback(cb => {
-  const watcher = watchChainId(wagmiConfig, {
-    onChange(res) {
-      const match = chains.find(chain => chain.id == res) || chains[0]
-      cb(match)
-    }
+
+
+export const account: Stream<viem.Address> = replayLatest(multicast(switchMap(([init]) => {
+  const initAccount = init ? [init.accounts[0]] : null
+  const change = fromCallback(cb => {
+    const watch = watchAccount(wagmiConfig, {
+      onChange(res) {
+        return cb(res.address)
+      }
+    })
+    return watch
   })
-  
-  return watcher
-}), initalChain)
+  return startWith(initAccount, change)
+}, reconnectQuery))) 
 
 
 
-export const account: Stream<GetAccountReturnType> = continueWith(() => multicast(fromCallback(cb => {
-  const watch = watchAccount(wagmiConfig, {
+const intialPublicClient = getPublicClient(wagmiConfig)
+
+const publicClientChange = fromCallback(cb => {
+  return watchPublicClient(wagmiConfig, {
     onChange(res) {
-      console.log('accountChange', res)
       return cb(res)
     }
   })
-  
+})
+
+export const publicClient: Stream<viem.PublicClient> = replayLatest(multicast(startWith(intialPublicClient, publicClientChange)))
 
 
-  return watch
-})), reconnectQuery) 
-
-
-
-
-export const publicClient: Stream<viem.PublicClient> = replayLatest(multicast(fromCallback(cb => {
-  return watchPublicClient(wagmiConfig, { onChange(res) {
-    return cb(res)
-  } })  
-})))
-
-
-
-
-export const wallet = replayLatest(multicast(switchMap(async params => {
-  if (params.account?.status !== 'connected') {
-    return null
+export const wallet: Stream<IWalletClient> = replayLatest(multicast(switchMap(async address => {
+  if (viem.isAddress(address)) {
+    const wClient = await getWalletClient(wagmiConfig)
+    return wClient
   }
 
-  const clientAvaialble = await getWalletClient(wagmiConfig)
-
-  return clientAvaialble
-}, combineObject({ account }))))
+  return null
+}, account)))
 
 
 // export const nativeBalance = switchMap(async params => {
