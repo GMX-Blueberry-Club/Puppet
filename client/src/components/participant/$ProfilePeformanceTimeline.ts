@@ -6,9 +6,9 @@ import { awaitPromises, debounce, empty, map, now, skipRepeatsWith, startWith, s
 import { Stream } from "@most/types"
 import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $IntermediatePromise, $infoTooltipLabel, IMarker } from "ui-components"
-import { filterNull, parseReadableNumber, readableUsd, readableUnitAmount, IntervalTime } from "common-utils"
+import { filterNull, parseReadableNumber, readableUsd, readableUnitAmount, IntervalTime, unixTimestampNow } from "common-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
-import { IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType } from "puppet-middleware-utils"
+import { IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType, getMpSlotPnL } from "puppet-middleware-utils"
 import { $labelDisplay } from "../../common/$TextField.js"
 import { $route } from "../../common/$common.js"
 import { IPageGlobalParams } from "../../const/type.js"
@@ -33,6 +33,7 @@ export const $ProfilePeformanceTimeline = (config: IPageGlobalParams & {
   const positionParams = map(async (params) => {
     const settledPositionList = await params.settledPositionListQuery
     const openPositionList = await params.openPositionListQuery
+    const priceTickMap = await params.priceTickMapQuery
 
     const timeline = getPerformanceTimeline({ 
       ...params,
@@ -43,7 +44,7 @@ export const $ProfilePeformanceTimeline = (config: IPageGlobalParams & {
       priceTickMap: await params.priceTickMapQuery
     })
 
-    return { ...params, settledPositionList, openPositionList, timeline }
+    return { ...params, priceTickMap, settledPositionList, openPositionList, timeline }
   }, newLocal)
 
 
@@ -127,20 +128,32 @@ export const $ProfilePeformanceTimeline = (config: IPageGlobalParams & {
             )
           }
 
-          return $Baseline({
-            markers: now([
-              ...params.settledPositionList.map((pos): IMarker => {
-                // const position = pos.position.realisedPnlUsd > 0n ? 'aboveBar' as const : 'belowBar' as const
-                const time = Number(pos.blockTimestamp) as Time
+          const openMarkerList = params.openPositionList.map((pos): IMarker => {
+            const priceTickList = params.priceTickMap[pos.position.indexToken]
+            const markPrice = priceTickList[priceTickList.length - 1].price
+            const pnl = getMpSlotPnL(pos, markPrice)
+            return {
+              position: 'inBar',
+              color: pnl < 0n ? pallete.negative : pallete.positive,
+              time: unixTimestampNow() as Time,
+              size: 0.1,
+              shape: 'circle'
+            }
+          })
+          const settledMarkerList = params.settledPositionList.flatMap(pos => pos.position.link.increaseList).map((pos): IMarker => {
+            return {
+              position: 'inBar',
+              color: colorAlpha(pallete.message, .15),
+              time: Number(pos.blockTimestamp) as Time,
+              size: 0.1,
+              shape: 'circle'
+            }
+          })
 
-                return {
-                  position: 'inBar', time,
-                  color: colorAlpha(pallete.message, .25),
-                  size: 0.1,
-                  shape: 'circle' as const,
-                }
-              }).sort((a, b) => Number(a.time) - Number(b.time)),
-            ]),
+          const allMarkerList = [...settledMarkerList, ...openMarkerList].sort((a, b) => Number(a.time) - Number(b.time))
+
+          return $Baseline({
+            markers: now(allMarkerList),
             chartConfig: {
               leftPriceScale: {
                 autoScale: true,

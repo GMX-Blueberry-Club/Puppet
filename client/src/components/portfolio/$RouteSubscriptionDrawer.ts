@@ -41,10 +41,9 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
 ) => {
 
   const openIfEmpty = skipRepeats(map(l => l.length > 0, modifySubscriptionList))
-  const account = map(w3p => w3p ? w3p : null, wallet)
 
   const readPuppetDeposit = switchMap(w3p => {
-    if (!w3p) {
+    if (!w3p?.account?.address) {
       return now(0n)
     }
 
@@ -56,7 +55,7 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
         return getPuppetDepositAmount(address, w3p.chain.id)
       }, requestDepositAsset)
     ])
-  }, account)
+  }, wallet)
 
 
   const validationError = map(amount => {
@@ -80,7 +79,7 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
       return fadeIn($card2(style({ border: `1px solid ${colorAlpha(pallete.foreground, .20)}`, borderBottom: 'none', padding: '18px', borderRadius: '20px 20px 0 0' }))(
         $column(layoutSheet.spacing)(
           $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-            $heading3('Portfolio Rules'),
+            $heading3('Modify Portfolio'),
             $infoTooltip('The following rules will apply to these traders in your portfolio. visit Profile to view your portfolio'),
 
             $node(style({ flex: 1 }))(),

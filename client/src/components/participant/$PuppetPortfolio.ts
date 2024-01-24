@@ -126,7 +126,6 @@ export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
               return $text('No active trade found')
             }
 
-
             const tradeRouteList = Object.entries(groupArrayMany(puppetTradeRouteList, x => x.routeTypeKey)) as [viem.Address, IPuppetTradeRoute[]][]
 
             return $column(layoutSheet.spacingBig, style({ width: '100%' }))(

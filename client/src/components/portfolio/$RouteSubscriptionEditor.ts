@@ -2,32 +2,27 @@
 import { Behavior, combineObject } from "@aelea/core"
 import { $element, $node, $text, attr, component, style, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { map, mergeArray, now, snapshot } from "@most/core"
-import * as wagmi from "@wagmi/core"
+import { colorAlpha, pallete } from "@aelea/ui-components-theme"
+import { empty, fromPromise, map, mergeArray, now, snapshot, startWith } from "@most/core"
 import { IntervalTime, formatFixed, parseBps, switchMap, unixTimestampNow } from "common-utils"
-import * as PUPPET from "puppet-middleware-const"
-import { getPuppetAllowancesKey } from "puppet-middleware-utils"
+import { ISetRouteType } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { arbitrum } from "viem/chains"
 import { theme } from "../../assignThemeSync.js"
 import { $TextField } from "../../common/$TextField.js"
-import { wallet } from "../../wallet/walletLink"
+import { $route } from "../../common/$common"
+import { getPuppetAllowance } from "../../logic/puppetLogic"
 import { $ButtonSecondary } from "../form/$Button.js"
+import { $Dropdown } from "../form/$Dropdown"
 import { walletLink } from "../../wallet"
 
 interface IRouteSubscriptionEditor {
-  // tradeRoute: viem.Address
-  // wallet?: IWalletClient
-  // routeKey: viem.Hex
   expiry: bigint
   tradeRoute: viem.Hex
 
-  routeTypeKey: viem.Hex
   trader: viem.Address
-  // collateralToken: viem.Address
-  // indexToken: viem.Address
-  // isLong: boolean
-  // marketList: Stream<IMarketCreatedEvent[]>
+
+  routeTypeKey: viem.Hex
+  routeTypeList?: ISetRouteType[]
 }
 
 export interface IChangeSubscription {
@@ -35,7 +30,6 @@ export interface IChangeSubscription {
   allowance: bigint
   routeTypeKey: viem.Hex
   trader: viem.Address
-
   previousSubscriptionExpiry: bigint
 }
 
@@ -44,24 +38,20 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
   [inputAllowance, inputAllowanceTether]: Behavior<any, bigint>,
   [clickUnsubscribe, clickUnsubscribeTether]: Behavior<any, IChangeSubscription>,
   [clickSubmit, clickSubmitTether]: Behavior<any, IChangeSubscription>,
-
-  // [switchIsLong, switchIsLongTether]: Behavior<boolean>,
-  // [switchisMarketIndexToken, switchisMarketIndexTokenTether]: Behavior<boolean>,
+  [changeRouteTypeKey, changeRouteTypeKeyTether]: Behavior<any, viem.Hex>,
 ) => {
 
-  const puppetContractMap = PUPPET.CONTRACT[arbitrum.id]
+  const { trader, routeTypeList } = config
+
   const allowance = mergeArray([
-    switchMap(async wallet => {
-      if (wallet == null) return 0n
+    switchMap(async w3p => {
+      if (w3p === null) {
+        return ''
+      }
 
-      const [exists, factor] = await wagmi.readContract(walletLink.wagmiConfig, {
-        ...puppetContractMap.Datastore,
-        functionName: 'tryGetAddressToUintFor',
-        args: [getPuppetAllowancesKey(wallet.account.address), config.tradeRoute]
-      })
-
-      return exists ? factor : 0n
-    }, wallet),
+      const allowance = getPuppetAllowance(w3p.account.address, config.tradeRoute)
+      return allowance || ''
+    }, walletLink.wallet),
     inputAllowance
   ])
 
@@ -70,106 +60,47 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
     now(config.expiry ? config.expiry : BigInt(unixTimestampNow() + IntervalTime.YEAR)),
     inputEndDate
   ])
+
+  const routeTypeKey = startWith(config.routeTypeKey, changeRouteTypeKey)
   
   const form = combineObject({
     allowance,
-    expiry
+    expiry,
+    routeTypeKey
   })
 
 
   const isSubscribed = config.expiry !== 0n
 
+  
   return [
     $column(layoutSheet.spacing, style({ maxWidth: '350px' }))(
-
       $text('The following rules will apply to this trader whenever he opens and maintain a position'),
-      // $labeledDivider('Matching Trigger'),
 
-      // $row(layoutSheet.spacingSmall)(
-      //   switchMap(params => {
-      //     return $infoLabeledValue(
-      //       $text(style({ width: '100px' }))('Position'),
-      //       $Dropdown({
-      //         $container: $row(style({ borderRadius: '30px', backgroundColor: pallete.background, padding: '4px 8px', position: 'relative', border: `1px solid ${colorAlpha(pallete.foreground, .2)}`, cursor: 'pointer' })),
-      //         selector: {
-      //           list: params.marketList,
-      //           $$option: map(market => $marketSmallLabel(market)),
-      //           value: market,
-      //         },
-      //         $selection: switchMap(market => {
-      //           return $row(layoutSheet.spacingSmall)(
-      //             $marketSmallLabel(market),
-      //             $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
-      //           )
-      //         }, market),
-      //       })({
-      //         select: selectMarketTether()
-      //       })
-      //     )
-      //   }, combineObject({ marketList })),
-      //   $Dropdown({
-      //     $container: $row(style({ borderRadius: '30px', backgroundColor: pallete.background, padding: '4px 8px', position: 'relative', border: `1px solid ${colorAlpha(pallete.foreground, .2)}`, cursor: 'pointer' })),
-      //     selector: {
-      //       list: [
-      //         true,
-      //         false,
-      //       ],
-      //       $$option: map(il => {
-      //         return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-      //           $icon({ $content: il ? $bull : $bear, width: '24px', viewBox: '0 0 32 32' }),
-      //           $text(il ? 'Long' : 'Short'),
-      //         )
-      //       }),
-      //       value: isLong,
-      //     },
-      //     $selection: switchLatest(map(il => {
-      //       return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-      //         $icon({ $content: il ? $bull : $bear, width: '24px', viewBox: '0 0 32 32' }),
-      //         $text(il ? 'Long' : 'Short'),
-      //         $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
-      //       )
-      //     }, isLong)),
-      //   })({
-      //     select: switchIsLongTether()
-      //   }),
-      // ),
+      routeTypeList ? $Dropdown({
+        $container: $row(style({ borderRadius: '30px', backgroundColor: pallete.background, padding: '4px 8px', position: 'relative', border: `1px solid ${colorAlpha(pallete.foreground, .2)}`, cursor: 'pointer' })),
+        $selection: switchMap(routeTypeKey => {
+          const match = routeTypeList.find(route => route.routeTypeKey === routeTypeKey)
 
-      // $infoLabeledValue(
-      //   $text(style({ width: '100px' }))('Collateral Token'),
-      //   switchMap(params => {
+          if (!match) {
+            throw new Error(`Route type key ${routeTypeKey} not found`)
+          }
 
-      //     return $Dropdown({
-      //       $container: $row(style({ borderRadius: '30px', backgroundColor: pallete.background, padding: '4px 8px', position: 'relative', border: `1px solid ${colorAlpha(pallete.foreground, .2)}`, cursor: 'pointer' })),
-      //       $selection: switchMap(isIndexToken => {
-      //         const token = isIndexToken ? params.market.shortToken : params.market.longToken
-      //         const tokenDesc = getTokenDescription(token)
+          return $route(match)
+        }, routeTypeKey),
+        selector: {
+          value: routeTypeKey,
+          $$option: map(key => {
+            const match = routeTypeList.find(route => route.routeTypeKey === key)!
 
-      //         return $row(layoutSheet.spacingTiny, style({ alignItems: 'center', cursor: 'pointer' }))(
-      //           $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
-      //             $icon({ $content: $tokenIconMap[tokenDesc.symbol], width: '24px', viewBox: '0 0 32 32' }),
-      //             $text(tokenDesc.symbol)
-      //           ),
-      //           $icon({ $content: $caretDown, width: '14px', viewBox: '0 0 32 32' })
-      //         )
-      //       }, isMarketIndexToken),
-      //       selector: {
-      //         value: isMarketIndexToken,
-      //         $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0 })),
-      //         $$option: map(option => {
-      //           const token = option ? params.market.longToken : params.market.shortToken
-      //           const desc = getTokenDescription(token)
-
-      //           return $tokenLabelFromSummary(desc)
-      //         }),
-      //         list: [
-      //           false,
-      //           true
-      //         ],
-      //       }
-      //     })({
-      //       select: switchisMarketIndexTokenTether()
-      //     })
-      //   }, combineObject({ market })),
+            return $route(match)
+          }),
+          list: routeTypeList.map(route => route.routeTypeKey),
+        }
+      })({
+        select: changeRouteTypeKeyTether()
+      })
+        : empty(),
       // ),
 
       // $labeledDivider('Deposit rules'),
@@ -212,7 +143,7 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
         })({
           click: clickUnsubscribeTether(
             snapshot(params => {
-              return { previousSubscriptionExpiry: config.expiry, routeTypeKey: config.routeTypeKey, trader: config.trader, ...params, expiry: 0n,  }
+              return { ...params, previousSubscriptionExpiry: config.expiry, trader: config.trader, expiry: 0n,  }
             }, form)
           )
         }),
@@ -222,8 +153,8 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
           disabled: map(params => !params.allowance, form)
         })({
           click: clickSubmitTether(
-            snapshot(subsc => {
-              return { previousSubscriptionExpiry: config.expiry, routeTypeKey: config.routeTypeKey, trader: config.trader, ...subsc, subscribe: true,  }
+            snapshot(params => {
+              return { ...params, previousSubscriptionExpiry: config.expiry, trader: config.trader,  }
             }, form)
           )
         })

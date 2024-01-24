@@ -9,7 +9,8 @@
     "gmx-middleware/*"
   ],
   "scripts": {
-    "build": "cd client && bun run build"
+    "build": "cd client && bun run build",
+    "clean": "cd client && bun run clean"
   },
   "devDependencies": {
     "@types/node": "^20.10.4",

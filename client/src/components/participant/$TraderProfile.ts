@@ -1,19 +1,15 @@
 import { Behavior, combineObject } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import { $column, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, map, now, startWith, switchLatest } from "@most/core"
-import * as GMX from 'gmx-middleware-const'
-import { $Table, ScrollRequest } from "ui-components"
-import { pagingQuery } from "common-utils"
-import { MouseEventParams } from "lightweight-charts"
+import { map, startWith } from "@most/core"
+import { IntervalTime, pagingQuery } from "common-utils"
 import { ISetRouteType } from "puppet-middleware-utils"
-import { $heading3 } from "../../common/$text.js"
+import { $IntermediatePromise, $Table, $infoLabel, ScrollRequest } from "ui-components"
 import { $card, $card2 } from "../../common/elements/$common.js"
 import { IPageUserParams } from "../../const/type.js"
-import { entryColumn, pnlSlotColumn, positionTimeColumn, puppetsColumn, settledPnlColumn, settledSizeColumn, slotSizeColumn } from "../table/$TableColumn.js"
+import { IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor"
+import { entryColumn, pnlColumn, positionTimeColumn, puppetsColumn, settledSizeColumn } from "../table/$TableColumn.js"
 import { $ProfilePeformanceTimeline } from "./$ProfilePeformanceTimeline.js"
-import { IntervalTime } from "common-utils"
 
 
 export const $TraderProfile = (
@@ -21,14 +17,26 @@ export const $TraderProfile = (
 ) => component((
   [changeRoute, changeRouteTether]: Behavior<any, string>,
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
-  [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams>,
 
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
+
+  [modifySubscribeList, modifySubscribeListTether]: Behavior<IChangeSubscription>,
+  [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, bigint>,
+
 ) => {
 
   const { activityTimeframe, selectedTradeRouteList, address, priceTickMapQuery, route, routeTypeListQuery, settledPositionListQuery, openPositionListQuery } = config
 
+
+  const positionListQuery = map(async (params) => {
+    const openPositionList = await params.openPositionListQuery
+    const settledPositionList = await params.settledPositionListQuery
+    const allPositions = [...openPositionList, ...settledPositionList]
+    const routeTypeList = await params.routeTypeListQuery
+
+    return { allPositions, openPositionList, settledPositionList, routeTypeList }
+  }, combineObject({ settledPositionListQuery, openPositionListQuery, routeTypeListQuery }))
 
   return [
     $column(layoutSheet.spacingBig)(
@@ -39,69 +47,100 @@ export const $TraderProfile = (
             changeActivityTimeframe: changeActivityTimeframeTether(),
           })
         ),
-        $column(layoutSheet.spacingBig)(
-          $column(layoutSheet.spacingSmall)(
-            $heading3('Open Positions'),
 
-            switchLatest(awaitPromises(
-              map(async params => {
-                const openPositionList = await params.openPositionListQuery
-                if (openPositionList.length === 0) {
-                  return $column(
-                    $text(style({ color: pallete.foreground }))('No open positions')
-                  )
-                }
+        $IntermediatePromise({
+          query: positionListQuery,
+          $$done: map(params => {
+            if (params.allPositions.length === 0) {
+              // const fstRouteType = params.routeTypeList[0]
+              // const tradeRoute = getTradeRouteKey(address, fstRouteType.collateralToken, fstRouteType.indexToken, fstRouteType.isLong)
 
-                return $Table({
-                  dataSource: now(openPositionList),
-                  columns: [
-                    ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
-                    entryColumn,
-                    puppetsColumn(changeRouteTether),
-                    slotSizeColumn(),
-                    pnlSlotColumn(),
-                  ],
-                })({
-                  // scrollIndex: changePageIndexTether()
-                })
-              }, combineObject({ openPositionListQuery }))
-            ))
-          ),
+              return $column(layoutSheet.spacingSmall)(
+                $text('No active positions found'),
+                $infoLabel(`Try changing the timeframe or selecting a different trade route`),
+                
+                // $Popover({
+                //   open: map((expiry) => {
+                //     return  $RouteSubscriptionEditor({ expiry: 0n, trader: address, tradeRoute: tradeRoute, routeTypeList: params.routeTypeList, routeTypeKey: params.routeTypeList[0].routeTypeKey })({
+                //       modifySubscribeList: modifySubscribeListTether()
+                //     }) 
+                //   }, popRouteSubscriptionEditor),
+                //   dismiss: modifySubscribeList,
+                //   $target: $column(
+                //     $text('You can still subscribe to this trader to mirror their trades in the future'),
+                //     $ButtonSecondary({
+                //       $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
+                //         $text('Mirror'),
+                //         $icon({ $content: $puppetLogo, width: '26px', svgOps: style({ backgroundColor: pallete.background, borderRadius: '50%', padding: '4px', border: `1px solid ${pallete.message}`, marginRight: '-18px' }), viewBox: '0 0 32 32' }),
+                //       ),
+                //       $container: $defaultMiniButtonSecondary(style({ borderRadius: '16px' })) 
+                //     })({
+                //       click: popRouteSubscriptionEditorTether()
+                //     })
+                //   )
+                // })({}),
+              )
+            }
 
-          $column(layoutSheet.spacingSmall)(
-            $heading3('Settled Positions'),
+            const paging = startWith({ offset: 0, pageSize: 20 }, scrollRequest)
+            const dataSource = map(req => {
+              return pagingQuery(req, params.allPositions)
+            }, paging)
 
-            switchLatest(awaitPromises(map(async params => {
-              const settledPositionList = await params.settledPositionListQuery
+            return $Table({
+              dataSource,
+              columns: [
+                ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
+                entryColumn,
+                puppetsColumn(changeRouteTether),
+                settledSizeColumn(),
+                pnlColumn(),
+              ],
+            })({
+              scrollRequest: scrollRequestTether()
+            })
+          })
+        })({}),
+        // $column(layoutSheet.spacingBig)(
+        //   $column(layoutSheet.spacingSmall)(
+        //     $heading3('Open Positions'),
 
-              if (settledPositionList.length === 0) {
-                return $text(style({ color: pallete.foreground }))(`no settled positions found`)
-              }
 
-              const paging = startWith({ offset: 0, pageSize: 20 }, scrollRequest)
-              const dataSource = map(req => {
-                return pagingQuery(req, settledPositionList)
-              }, paging)
+        //     switchLatest(awaitPromises(
+        //       map(async params => {
+        //         const openPositionList = await params.openPositionListQuery
+        //         if (openPositionList.length === 0) {
+        //           return $column(
+        //             $text(style({ color: pallete.foreground }))('No open positions')
+        //           )
+        //         }
 
-              return $Table({
-                dataSource,
-                columns: [
-                  ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
-                  entryColumn,
-                  puppetsColumn(changeRouteTether),
-                  settledSizeColumn(),
-                  settledPnlColumn(),
-                ],
-              })({
-                scrollRequest: scrollRequestTether()
-              })
-            }, combineObject({ settledPositionListQuery, activityTimeframe }))))
+        //         return $Table({
+        //           dataSource: now(openPositionList),
+        //           columns: [
+        //             ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
+        //             entryColumn,
+        //             puppetsColumn(changeRouteTether),
+        //             slotSizeColumn(),
+        //             pnlSlotColumn(),
+        //           ],
+        //         })({
+        //           // scrollIndex: changePageIndexTether()
+        //         })
+        //       }, combineObject({ openPositionListQuery }))
+        //     ))
+        //   ),
+
+        //   $column(layoutSheet.spacingSmall)(
+        //     $heading3('Positions'),
+
+       
             
-          )
-        ),
+        //   )
+        // ),
       ),
     ),
-    { changeRoute, changeActivityTimeframe, selectTradeRouteList }
+    { changeRoute, changeActivityTimeframe, selectTradeRouteList, modifySubscribeList }
   ]
 })
 

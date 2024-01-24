@@ -15,7 +15,7 @@ import {
   IOraclePrice,
   liquidationWeight
 } from "gmx-middleware-utils"
-import { getMpSlotPnL, getParticiapntMpPortion, IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen } from "puppet-middleware-utils"
+import { getMpSlotPnL, getParticiapntMpPortion, IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen, latestPriceMap } from "puppet-middleware-utils"
 import { $bear, $bull, $infoLabel, $infoTooltipLabel, $Link, $tokenIconMap } from "ui-components"
 import * as viem from "viem"
 import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile.js"
@@ -176,16 +176,18 @@ export const $puppets = (
   )
 }
 
-export const $openPnl = (latestPrice: Stream<bigint>, mp: IMirrorPositionOpen, account?: viem.Address) => {
+export const $positionPnl = (mp: IMirrorPositionOpen, puppet?: viem.Address) => {
+  const latestPrice = map(pm => pm[mp.position.indexToken].max, latestPriceMap)
+
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
     style({ flexDirection: 'row-reverse' })(
       $infoTooltipLabel(
-        $positionSlotPnl(mp, latestPrice, account),
-        $positionSlotPnl(mp, latestPrice, account),
+        $positionSlotPnl(mp, latestPrice, puppet),
+        $positionSlotPnl(mp, latestPrice, puppet),
       )
     ),
     $seperator2,
-    style({ fontSize: '.85rem' })($positionSlotRoi(mp, latestPrice, account)),
+    style({ fontSize: '.85rem' })($positionSlotRoi(mp, latestPrice, puppet)),
   )
 }
 
@@ -235,10 +237,10 @@ export const $PnlPercentageValue = (pnl: Stream<bigint> | bigint, collateral: bi
   )
 }
 
-export const $positionSlotPnl = (mp: IMirrorPositionOpen, positionMarkPrice: Stream<bigint> | IOraclePrice, account?: viem.Address) => {
+export const $positionSlotPnl = (mp: IMirrorPositionOpen, positionMarkPrice: Stream<bigint> | IOraclePrice, puppet?: viem.Address) => {
   const value = isStream(positionMarkPrice)
     ? map((price) => {
-      const pnl = getMpSlotPnL(mp, price, account)
+      const pnl = getMpSlotPnL(mp, price, puppet)
       return mp.position.realisedPnlUsd + pnl // - mp.position.cumulativeFee
     }, positionMarkPrice)
     : positionMarkPrice.min
@@ -246,12 +248,12 @@ export const $positionSlotPnl = (mp: IMirrorPositionOpen, positionMarkPrice: Str
   return $pnlDisplay(value)
 }
 
-export const $positionSlotRoi = (pos: IMirrorPositionOpen, positionMarkPrice: bigint | Stream<bigint>, account?: viem.Address) => {
+export const $positionSlotRoi = (pos: IMirrorPositionOpen, positionMarkPrice: bigint | Stream<bigint>, puppet?: viem.Address) => {
   const lstIncrease = lst(pos.position.link.increaseList)
   const collateralUsd = getTokenUsd(lstIncrease.collateralTokenPriceMin, pos.position.maxCollateralToken)
     
   const roi = map(markPrice => {
-    const delta = getMpSlotPnL(pos, markPrice, account)
+    const delta = getMpSlotPnL(pos, markPrice, puppet)
     return readablePercentage(getBasisPoints(pos.position.realisedPnlUsd + delta, collateralUsd))
   }, streamOf(positionMarkPrice))
   return $text(roi)
@@ -387,22 +389,30 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
   ]
 })
 
+
+
 export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
   [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, bigint>,
   [modifySubscribeList, modifySubscribeListTether]: Behavior<IChangeSubscription>,
 ) => {
 
-  const puppetSubscriptionExpiry = switchMap(async w3p => {
-    return w3p?.account
-      ? getPuppetSubscriptionExpiry(w3p.account.address, config.positionParams.collateralToken, config.positionParams.indexToken, config.positionParams.isLong)
-      : 0n
+  const puppetSubscriptionParams = switchMap(async w3p => {
+    const puppet = w3p?.account.address
+
+    if (!puppet) {
+      return 0n
+    }
+
+    const expiry = await getPuppetSubscriptionExpiry(w3p.account.address, config.trader, config.positionParams.collateralToken, config.positionParams.indexToken, config.positionParams.isLong)
+
+    return expiry
   }, wallet)
 
   return [
     $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
       $Popover({
-        open: map((expiry) => {
-          return  $RouteSubscriptionEditor({ expiry, trader: config.trader, tradeRoute: config.tradeRoute, routeTypeKey: config.routeTypeKey })({
+        open: map(expiry => {
+          return $RouteSubscriptionEditor({ expiry, trader: config.trader, tradeRoute: config.tradeRoute, routeTypeKey: config.routeTypeKey })({
             modifySubscribeList: modifySubscribeListTether()
           }) 
         }, popRouteSubscriptionEditor),
@@ -418,7 +428,7 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
           })({
             click: popRouteSubscriptionEditorTether(constant(expiry))
           })
-        }, puppetSubscriptionExpiry)
+        }, puppetSubscriptionParams)
       })({})
     ),
 

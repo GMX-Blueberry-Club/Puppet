@@ -360,7 +360,6 @@ export default (puppet: viem.Address, activityTimeframe: IntervalTime) => {
       puppet
       tradeRoute
       routeTypeKey
-      subscribe
       blockTimestamp
       transactionHash
       __typename

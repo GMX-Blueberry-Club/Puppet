@@ -1,5 +1,5 @@
-import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts"
-import { BASIS_POINTS_DIVISOR, ZERO_BI } from "./const"
+import { Address, BigInt, Bytes, ethereum, log } from "@graphprotocol/graph-ts"
+import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, MARKET_TOKEN_MAP, ZERO_BI } from "./const"
 
 
 export function getPositionKey(account: Bytes, market: Bytes, collateralToken: Bytes, isLong: boolean): Bytes {
@@ -46,3 +46,11 @@ export function getPuppetTradeRouteKey(puppet: Bytes, trader: Bytes, routeTypeKe
   return puppet.concat(trader).concat(routeTypeKey)
 }
 
+export function getIndexToken(market: Bytes): Bytes {
+  if (MARKET_TOKEN_MAP.has(market.toHex())) {
+    return MARKET_TOKEN_MAP.get(market.toHex())
+  }
+
+  log.error("getIndexToken failed: {}", [market.toHex()])
+  return ADDRESS_ZERO
+}

@@ -1,9 +1,9 @@
 import { Bytes, ethereum, log } from "@graphprotocol/graph-ts"
 import { EventLog } from "../generated/EventEmitter/EventEmitter"
 import { MarketCreated, OrderCreated, OrderStatus, PositionDecrease, PositionFeesCollected, PositionIncrease, PositionOpen, PositionSettled } from "../generated/schema"
-import { MARKET_TOKEN_MAP, OrderExecutionStatus, ZERO_BI } from "./utils/const"
+import { OrderExecutionStatus, ZERO_BI } from "./utils/const"
 import { getAddressItem, getBoolItem, getBytes32Item, getIntItem, getUintItem } from "./utils/datastore"
-import { getIdFromEvent } from "./utils/utils"
+import { getIdFromEvent, getIndexToken } from "./utils/utils"
 
 
 
@@ -199,7 +199,7 @@ export function initPositionOpen(event: ethereum.Event, positionIncrease: Positi
   dto.account = positionIncrease.account
   dto.market = positionIncrease.market
   dto.collateralToken = positionIncrease.collateralToken
-  dto.indexToken = MARKET_TOKEN_MAP.get(positionIncrease.market.toHex())
+  dto.indexToken = getIndexToken(positionIncrease.market)
 
   dto.cumulativeSizeUsd = ZERO_BI
   dto.cumulativeSizeToken = ZERO_BI

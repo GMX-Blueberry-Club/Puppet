@@ -43,6 +43,7 @@ interface IGraphPnLTick {
   realisedPnl: bigint
   value: number
   positionOpen: Record<viem.Hex, ITimelinePositionOpen>
+  time: number
 }
 
 
@@ -79,7 +80,8 @@ export function getPerformanceTimeline(config: IPerformanceTimeline) {
   const seed: IGraphPnLTick = {
     value: 0,
     realisedPnl: 0n,
-    positionOpen: {}
+    positionOpen: {},
+    time: startTime,
   }
   const data = createTimeline({
     source,
@@ -134,10 +136,11 @@ export const $ProfilePerformanceGraph = (config: IPerformanceTimeline & { $conta
 
   const timeline = getPerformanceTimeline(config)
 
-  const openMarkerList = config.openPositionList.flatMap(pos => pos.position.link.increaseList).map((pos): IMarker => {
+  const openMarkerList = config.openPositionList.map((pos): IMarker => {
+    const pnl = timeline[timeline.length - 1].value
     return {
       position: 'inBar',
-      color: colorAlpha(pallete.positive, .55),
+      color: pnl < 0 ? pallete.negative : pallete.positive,
       time: unixTimestampNow() as Time,
       size: 0.1,
       shape: 'circle'

@@ -106,7 +106,6 @@ export interface ISetRouteType extends ILogTypeId<'SetRouteType'> {
 
 
 export type IPuppetSubscritpionParams = {
-  subscribe: boolean
   allowance: bigint
   subscriptionExpiry: bigint
   routeTypeKey: viem.Hex

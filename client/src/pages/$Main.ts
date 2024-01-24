@@ -4,7 +4,7 @@ import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
-import { constant, empty, map, merge, multicast, now, skipRepeats, startWith, take, tap } from '@most/core'
+import { constant, empty, fromPromise, map, merge, multicast, now, skipRepeats, startWith, take, tap } from '@most/core'
 import { IntervalTime, filterNull, getTimeSince, readableUnitAmount, switchMap, unixTimestampNow } from "common-utils"
 import { ISetRouteType, queryLatestPriceTick, queryRouteTypeList, subgraphStatus } from "puppet-middleware-utils"
 import { $Tooltip, $alertContainer, $infoLabeledValue } from "ui-components"
@@ -25,6 +25,7 @@ import { $Trade } from "./$Trade.js"
 import { $Wallet } from "./$Wallet.js"
 import { $rootContainer } from "./common"
 import { $Leaderboard } from "./leaderboard/$Leaderboard.js"
+import { getBlockNumber } from "@wagmi/core"
 
 
 const popStateEvent = eventElementTarget('popstate', window)
@@ -195,8 +196,14 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                   $Tooltip({
                     // $dropContainer: $defaultDropContainer,
                     $content: switchMap(params => {
-                      const blocksBehind = Math.max(0, Number(params.blockChange) - params.subgraphStatus.block.number)
+                      const blocksBehind = $text(
+                        map(blockChange => {
+                          debugger
+                          return readableUnitAmount(Math.max(0, Number(blockChange) - params.subgraphStatus.block.number))
+                        }, walletLink.blockChange)
+                      )
                       const timeSince = getTimeSince(Number(params.subgraphStatus.block.timestamp))
+                      
 
                       return $column(layoutSheet.spacingTiny)(
                         $text('Subgraph Status'),
@@ -204,10 +211,10 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                           params.subgraphStatus.hasIndexingErrors
                             ? $alertContainer($text('Indexing has experienced errors')) : empty(),
                           $infoLabeledValue('Latest Sync', timeSince), 
-                          $infoLabeledValue('blocks behind', readableUnitAmount(blocksBehind)),
+                          $infoLabeledValue('blocks behind', blocksBehind),
                         )
                       )
-                    }, combineObject({ subgraphStatus, blockChange: walletLink.blockChange })),
+                    }, combineObject({ subgraphStatus })),
                     $anchor: $row(
                       style({ width: '8px', height: '8px', borderRadius: '50%', outlineOffset: '4px', padding: '6px' }),
                       styleBehavior(map(color => {

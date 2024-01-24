@@ -229,7 +229,7 @@ function onPositionFeesInfo(event: EventLog1): void {
 }
 
 
-export const PRICEFEED_INTERVAL = [
+export const PRICEFEED_INTERVAL_LIST = [
   IntervalUnixTime.MIN5,
   IntervalUnixTime.MIN15,
   IntervalUnixTime.MIN60,
@@ -245,8 +245,8 @@ function onOraclePriceUpdate(event: EventLog1): void {
   const timestamp = getUintItem(event.params.eventData, 2).toI32()
   
 
-  for (let index = 0; index < PRICEFEED_INTERVAL.length; index++) {
-    const interval = PRICEFEED_INTERVAL[index]
+  for (let index = 0; index < PRICEFEED_INTERVAL_LIST.length; index++) {
+    const interval = PRICEFEED_INTERVAL_LIST[index]
     const nextSlot = timestamp / interval
     const nextTimeSlot = nextSlot * interval
     const latestId = `${token.toHex()}:${interval}`

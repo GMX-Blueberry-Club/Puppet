@@ -1,7 +1,7 @@
 import { replayLatest } from '@aelea/core'
 import { map, multicast } from '@most/core'
 import { Stream } from '@most/types'
-import { Client, createClient, fetchExchange } from '@urql/core'
+import { Client, ClientOptions, createClient, fetchExchange } from '@urql/core'
 import { makeDefaultStorage } from '@urql/exchange-graphcache/default-storage'
 import { IntervalTime, combineState, getClosestNumber, groupArrayManyMap, periodicRun, unixTimestampNow } from 'common-utils'
 import * as GMX from "gmx-middleware-const"
@@ -70,13 +70,13 @@ const cache = cacheExchange({
 
 
 
-export const subgraphClient = createClient({
-  url: 'https://api.studio.thegraph.com/query/112/puppet/version/latest',
+const clientConfig: ClientOptions = {
+  url: 'https://gateway-arbitrum.network.thegraph.com/api/93134a5862bb37886897aafefac71e5c/subgraphs/id/72Xqc2HrxT78FcUYSC8C9E2hfTmUjXzzzPLkNqxiMdTY',
   exchanges: [cache, fetchExchange],
   fetchSubscriptions: true,
-  requestPolicy: 'cache-first',
-})
-
+  requestPolicy: 'cache-and-network',
+}
+export const subgraphClient = createClient(clientConfig)
 
 
 type IQueryPosition = {
@@ -167,17 +167,25 @@ interface ISubgraphStatus {
   hasIndexingErrors: boolean
 }
 
+
+const metaDataClient = createClient({
+  ...clientConfig,
+  exchanges: [fetchExchange],
+})
+
 export const subgraphStatus: Stream<ISubgraphStatus> = replayLatest(multicast(periodicRun({
   startImmediate: true,
   interval: 2500,
   actionOp: map(async count => {
-    const newLocal = await subgraphClient.query(`
+    const newLocal = await metaDataClient.query(`
     {
       _meta {
         block {
           number
+          hash
           timestamp
         }
+        deployment
         hasIndexingErrors
       }
     }

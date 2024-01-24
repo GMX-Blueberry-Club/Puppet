@@ -2,7 +2,6 @@ import { Behavior, replayLatest } from "@aelea/core"
 import { $node, $text, component, nodeEvent, style } from "@aelea/dom"
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { constant, empty, map, multicast, snapshot, startWith } from "@most/core"
-import * as GMX from 'gmx-middleware-const'
 import { IntervalTime, pagingQuery, readableLeverage, readableUsd, switchMap, unixTimestampNow } from "common-utils"
 import { IPuppetTradeRoute, ISetRouteType, accountSettledPositionListSummary, openPositionListPnl } from "puppet-middleware-utils"
 import { $TraderDisplay, $pnlDisplay, $puppets } from "../../common/$common.js"
@@ -11,6 +10,7 @@ import { $ProfilePerformanceGraph } from "../trade/$ProfilePerformanceGraph.js"
 
 import * as router from "@aelea/router"
 import { pallete } from "@aelea/ui-components-theme"
+import { IPriceTickListMap } from "gmx-middleware-utils"
 import { $Table, $caretDown, $infoLabeledValue, ScrollRequest } from "ui-components"
 import { $Popover } from "../$Popover"
 import { $puppetLogo } from "../../common/$icons"
@@ -18,8 +18,7 @@ import { $iconCircular } from "../../common/elements/$common"
 import { getPuppetSubscriptionExpiry } from "../../logic/puppetLogic"
 import { wallet } from "../../wallet/walletLink"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button"
-import { entryColumn, positionTimeColumn, settledPnlColumn, settledSizeColumn } from "../table/$TableColumn"
-import { IPriceTickListMap } from "gmx-middleware-utils"
+import { entryColumn, pnlColumn, positionTimeColumn, settledSizeColumn } from "../table/$TableColumn"
 
 export interface IPuppetTraderTradeRoute {
   puppetTradeRoute: IPuppetTradeRoute
@@ -51,7 +50,7 @@ export const $PuppetTraderTradeRoute = (config: IPuppetTraderTradeRoute) => comp
 
   const puppetSubscriptionExpiry = switchMap(async w3p => {
     return w3p
-      ? getPuppetSubscriptionExpiry(w3p.account.address, routeType.collateralToken, routeType.indexToken, routeType.isLong)
+      ? getPuppetSubscriptionExpiry(w3p.account.address, puppetTradeRoute.trader, routeType.collateralToken, routeType.indexToken, routeType.isLong)
       : 0n
   }, wallet)
 
@@ -154,7 +153,7 @@ export const $PuppetTraderTradeRoute = (config: IPuppetTraderTradeRoute) => comp
             ...screenUtils.isDesktopScreen ? [positionTimeColumn] : [],
             entryColumn,
             settledSizeColumn(puppetTradeRoute.puppet),
-            settledPnlColumn(puppetTradeRoute.puppet),
+            pnlColumn(puppetTradeRoute.puppet),
           ],
         })({
           scrollRequest: scrollRequestTether()

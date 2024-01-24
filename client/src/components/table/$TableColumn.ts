@@ -7,7 +7,7 @@ import { IMirrorPosition, IMirrorPositionOpen, IMirrorPositionSettled, getPartic
 import { TableColumn } from "ui-components"
 import * as viem from 'viem'
 import { arbitrum } from "viem/chains"
-import { $entry, $openPnl, $pnlDisplay, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
+import { $entry, $positionPnl, $pnlDisplay, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
 import { $txnIconLink } from "../../common/elements/$common"
 import { $seperator2 } from "../../pages/common.js"
 
@@ -57,32 +57,14 @@ export const puppetsColumn = <T extends {puppets: readonly `0x${string}`[]}>(cli
   })
 })
 
-export const pnlSlotColumn = <T extends IMirrorPositionOpen>(puppet?: viem.Address): TableColumn<T> => ({
-  $head: $tableHeader('PnL', 'ROI'),
+export const pnlColumn = <T extends IMirrorPositionOpen>(puppet?: viem.Address): TableColumn<T> => ({
+  $head: $tableHeader('PnL $', 'ROI'),
   gridTemplate: '90px',
   columnOp: style({ placeContent: 'flex-end' }),
   $bodyCallback: map(pos => {
-    const latestPrice = map(pm => pm[pos.position.indexToken].max, latestPriceMap)
-    return $openPnl(latestPrice, pos, puppet)
+    return $positionPnl(pos, puppet)
   })
 })
-
-export const settledPnlColumn = (puppet?: viem.Address): TableColumn<IMirrorPositionSettled> => ({
-  $head: $tableHeader('PnL $', 'ROI %'),
-  gridTemplate: '90px',
-  columnOp: style({ placeContent: 'flex-end' }),
-  $bodyCallback: map(mp => {
-    const pnl = getParticiapntMpPortion(mp, mp.position.realisedPnlUsd, puppet)
-    const collateral = getParticiapntMpPortion(mp, mp.position.maxCollateralUsd, puppet)
-    
-    return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
-      $pnlDisplay(pnl),
-      $seperator2,
-      $text(style({ fontSize: '.85rem' }))(readablePercentage(getBasisPoints(pnl, collateral))),
-    )
-  })
-})
-
 
 
 export const positionTimeColumn: TableColumn<IMirrorPositionSettled | IMirrorPositionOpen>  = {

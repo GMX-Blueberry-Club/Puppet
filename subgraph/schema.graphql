@@ -478,7 +478,6 @@ type SubscribeTradeRoute @entity(immutable: true) {
   puppet: Bytes! # address
   tradeRoute: Bytes! # address
   routeTypeKey: Bytes! # bytes32
-  subscribe: Boolean! # bool
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

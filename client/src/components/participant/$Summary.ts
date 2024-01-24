@@ -21,9 +21,10 @@ export interface IAccountSummary {
 
 
 
-export const $TraderProfileSummary = ({ address, openPositionListQuery, settledPositionListQuery, puppet }: IAccountSummary) => component((
-
+export const $TraderProfileSummary = (config: IAccountSummary) => component((
 ) => {
+
+  const { address, openPositionListQuery, settledPositionListQuery, puppet } = config
 
   const metrics = map(async params => {
     const allPositions = [...await params.settledPositionListQuery, ...await params.openPositionListQuery]

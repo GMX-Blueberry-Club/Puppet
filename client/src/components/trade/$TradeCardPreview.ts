@@ -5,7 +5,7 @@ import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { empty, map, multicast, now, skipRepeatsWith, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { $Baseline, $bear, $bull, $infoTooltipLabel, IMarker } from "ui-components"
-import { filterNull, parseReadableNumber, readableUsd, readableUnitAmount } from "common-utils"
+import { filterNull, parseReadableNumber, readableUsd, readableUnitAmount, unixTimestampNow } from "common-utils"
 import { BaselineData, ChartOptions, DeepPartial, MouseEventParams, Time } from "lightweight-charts"
 import { IMirrorPositionSettled, IMirrorPositionOpen } from "puppet-middleware-utils"
 import { IPerformanceTimeline, getPerformanceTimeline } from "./$ProfilePerformanceGraph.js"
@@ -43,28 +43,28 @@ export const $TradeCardPreview = (config: ITradeCardPreview) => component((
   }, combineObject({ pnlCrossHairTimeChange })))
 
 
-  const allAdjustments = [...config.mp.position.link.increaseList, ...config.mp.position.link.decreaseList]
 
-  const markerList = allAdjustments.map((pos): IMarker => {
-    const isSettled = 'settlement' in pos
-    const position = pos.collateralTokenPriceMax > 0n ? 'aboveBar' as const : 'belowBar' as const
-
+  const openMarkerList = config.openPositionList.map((pos): IMarker => {
+    const pnl = timeline[timeline.length - 1].value
     return {
-      position,
-      text: pos.__typename === 'PositionDecrease' ? readableUsd(pos.basePnlUsd) : '',
-      color: colorAlpha(pallete.message, .25),
+      position: 'inBar',
+      color: pnl < 0 ? pallete.negative : pallete.positive,
+      time: unixTimestampNow() as Time,
+      size: 0.1,
+      shape: 'circle'
+    }
+  })
+  const settledMarkerList = config.settledPositionList.flatMap(pos => pos.position.link.increaseList).map((pos): IMarker => {
+    return {
+      position: 'inBar',
+      color: colorAlpha(pallete.message, .15),
       time: Number(pos.blockTimestamp) as Time,
       size: 0.1,
-      shape: !isSettled ? 'arrowUp' as const : 'circle' as const,
+      shape: 'circle'
     }
-  }).sort((a, b) => Number(a.time) - Number(b.time))
-
-  const tickerStyle = style({
-    lineHeight: 1,
-    fontWeight: "bold",
-    zIndex: 10,
-    position: 'relative'
   })
+
+  const allMarkerList = [...settledMarkerList, ...openMarkerList].sort((a, b) => Number(a.time) - Number(b.time))
 
 
 
@@ -167,7 +167,7 @@ export const $TradeCardPreview = (config: ITradeCardPreview) => component((
             ),
           ),
           $Baseline({
-            markers: now(markerList),
+            markers: now(allMarkerList),
             chartConfig: {
               leftPriceScale: {
                 autoScale: true,

@@ -9,7 +9,7 @@ import { IMarket } from "gmx-middleware-utils"
 import { IMirrorPositionOpen, latestPriceMap } from "puppet-middleware-utils"
 import { $IntermediatePromise } from "ui-components"
 import * as viem from "viem"
-import { $entry, $openPnl, $sizeAndLiquidation } from "../../common/$common.js"
+import { $entry, $positionPnl, $sizeAndLiquidation } from "../../common/$common.js"
 import { $seperator2 } from "../../pages/common"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
@@ -82,7 +82,7 @@ export const $PositionListDetails = (config: IPositionListDetails) => component(
                     )
                   }),
                   $sizeAndLiquidation(mp, positionMarkPrice),
-                  $openPnl(positionMarkPrice, mp),
+                  $positionPnl(mp),
 
                   $ButtonSecondary({
                     $content: $text('Close'),

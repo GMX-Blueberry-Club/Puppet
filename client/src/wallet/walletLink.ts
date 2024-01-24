@@ -1,16 +1,17 @@
-import { combineObject, fromCallback, replayLatest } from "@aelea/core"
+import { fromCallback, replayLatest } from "@aelea/core"
 import { pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, continueWith, fromPromise, map, multicast, now, startWith } from "@most/core"
+import { awaitPromises, fromPromise, map, multicast, now, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { walletConnect } from '@wagmi/connectors'
 import {
-  GetAccountReturnType, createConfig, createStorage, getBlockNumber,
-  getPublicClient,
+  createConfig, createStorage, getBlockNumber, getPublicClient,
   getWalletClient, http, reconnect, watchAccount, watchBlockNumber, watchChainId, watchPublicClient
 } from "@wagmi/core"
-import { arbitrum } from '@wagmi/core/chains'
 import { switchMap } from "common-utils"
 import * as viem from 'viem'
+
+import { arbitrum } from "@wagmi/core/chains"
+// import { arbitrum } from "viem/chains"
 
 export const chains = [
   arbitrum, // avalanche
@@ -21,10 +22,6 @@ export const chains = [
 
 export type ISupportedChain = typeof chains[number]
 
-export interface IWalletConnected {
-  address: viem.Address
-  network: ISupportedChain
-}
 
 export type IWalletClient = viem.WalletClient<viem.Transport, ISupportedChain, viem.Account>
 
@@ -57,21 +54,19 @@ export const wcConnector = walletConnect({
     }
   }
 })
-const transports = chains.reduce((acc, chain) => {
-  return {
-    ...acc,
-    [chain.id]: http()
-  }
-}, {} as Record<ISupportedChain['id'], viem.Transport>)
+
 
 export const wagmiConfig = createConfig({
   chains,
+  storage,
   connectors: [
     // injected(),
     // coinbaseWallet({ appName: 'Create Wagmi' }),
     wcConnector,
   ],
-  transports,
+  transports: {
+    [arbitrum.id]: http()
+  },
 })
 
 const reconnectQuery = fromPromise(reconnect(wagmiConfig))
@@ -123,7 +118,7 @@ const publicClientChange = fromCallback(cb => {
 export const publicClient: Stream<viem.PublicClient> = replayLatest(multicast(startWith(intialPublicClient, publicClientChange)))
 
 
-export const wallet: Stream<IWalletClient> = replayLatest(multicast(switchMap(async address => {
+export const wallet: Stream<IWalletClient | null> = replayLatest(multicast(switchMap(async address => {
   if (viem.isAddress(address)) {
     const wClient = await getWalletClient(wagmiConfig)
     return wClient
@@ -143,7 +138,15 @@ export const gasPrice = awaitPromises(map(pc => pc.getGasPrice(), publicClient))
 export const estimatedGasPrice = awaitPromises(map(pc => pc.estimateFeesPerGas({ chain: arbitrum }), publicClient))
 
 export const block = awaitPromises(map(n => getBlockNumber(wagmiConfig), now(null)))
-export const blockChange: Stream<bigint> = fromCallback(cb => watchBlockNumber(wagmiConfig, { onBlockNumber: blockNumber => cb(blockNumber) }))
+export const blockChange: Stream<bigint> = fromCallback(cb => {
+  return watchBlockNumber(wagmiConfig, 
+    { 
+      onBlockNumber(bn) {
+        cb(bn)
+      }
+    }
+  )
+})
 
 
 

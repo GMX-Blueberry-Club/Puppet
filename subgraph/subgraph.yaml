@@ -33,7 +33,7 @@ dataSources:
     name: Orchestrator
     network: arbitrum-one
     source:
-      address: "0x75236b405F460245999F70bc06978AB2B4116920"
+      address: "0x9212c5a9e49B4E502F2A6E0358DEBe038707D6AC"
       abi: Orchestrator
       startBlock: 172773356
     mapping:
