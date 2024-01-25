@@ -23,8 +23,6 @@ export interface IProfilePreview extends IAccountPreview {
 
 
 
-
-
 export const $profileDisplay = (config: IProfilePreview) => {
   const { $container = $row, address, showAddress = true, profileSize = 50, $labelContainer } = config
 
@@ -56,7 +54,7 @@ export const $disconnectedWalletDisplay = ($container = $row, size = 50) => {
     $wrapper(style({ display: 'flex', border: `1px solid ${pallete.foreground}`, placeContent: 'center', alignItems: 'center' }))(
       $text(style({ fontWeight: 800, color: pallete.foreground }))('?')
     ),
-    $column(style({ whiteSpace: 'nowrap', fontSize: '.85rem', padding: '0 8px 0 4px', alignItems: 'center' }))(
+    $column(style({ whiteSpace: 'nowrap', fontSize: '.85rem', alignItems: 'center' }))(
       $text(style({  }))('0x----'),
       $text(style({ fontSize: '1.55em', lineHeight: 1 }))('----')
     )

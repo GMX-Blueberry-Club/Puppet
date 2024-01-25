@@ -3,10 +3,10 @@ import { $Branch, $Node, $element, $text, StyleCSS, attr, component, nodeEvent, 
 import { $RouterAnchor, IAnchor, Route } from '@aelea/router'
 import { $column, $row, layoutSheet } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, constant, empty, map, multicast, snapshot, switchLatest } from '@most/core'
+import { awaitPromises, constant, empty, map, multicast, now, snapshot, switchLatest } from '@most/core'
 import { Stream } from "@most/types"
 import { disconnect } from "@wagmi/core"
-import { $Link, $anchor, $discord, $gitbook, $github, $icon, $instagram, $moreDots, $twitter } from "ui-components"
+import { $Link, $anchor, $discord, $gitbook, $github, $icon, $infoLabeledValue, $infoTooltipLabel, $instagram, $intermediateMessage, $moreDots, $twitter, $intermediate$node, $infoLabel } from "ui-components"
 import { $bagOfCoinsCircle, $fileCheckCircle, $gmxLogo, $puppetLogo } from "../common/$icons.js"
 import { $stackedCoins, $trophy } from "../common/elements/$icons.js"
 import { dark, light } from "../common/theme.js"
@@ -16,8 +16,16 @@ import { $Picker } from "./$ThemePicker.js"
 import { $WalletProfileDisplay } from "./$WalletProfileDisplay.js"
 import { $ButtonSecondary } from "./form/$Button.js"
 import { wagmiConfig } from "../wallet/walletLink"
-import { switchMap } from "common-utils"
+import { readableTokenAmountLabel, switchMap } from "common-utils"
 import { $disconnectedWalletDisplay, $profileDisplay } from "./$AccountProfile"
+import { $responsiveFlex } from "../common/elements/$common"
+import { getTokenDescription } from "gmx-middleware-utils"
+import * as GMX from 'gmx-middleware-const'
+import { getPuppetDepositAmount } from "../logic/puppetLogic"
+import { arbitrum } from "viem/chains"
+import { $seperator2 } from "../pages/common"
+
+
 
 interface MainMenu {
   parentRoute: Route
@@ -113,7 +121,8 @@ export const $MainMenu = ({ parentRoute, showAccount = true }: MainMenu) => comp
     // overlayClick: clickPopoverClaimTether()
   })
 
-  
+  const depositToken = GMX.ARBITRUM_ADDRESS.USDC
+  const depositTokenDescription = getTokenDescription(depositToken)
 
   return [
 
@@ -138,6 +147,43 @@ export const $MainMenu = ({ parentRoute, showAccount = true }: MainMenu) => comp
       ),
 
       $row(layoutSheet.spacingBig, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
+        style({ padding: 0 })(
+          $pageLink({
+            route: parentRoute.create({ fragment: 'wallet', title: 'Portfolio' }),
+            // anchorOp: style({  }),
+            url: `/app/wallet`,
+            $content: switchMap(wallet => {
+              const address = wallet?.account.address
+              const depositQuery = now(address ? getPuppetDepositAmount(address, arbitrum.id) : Promise.resolve(0n))
+              
+              return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', pointerEvents: 'none', paddingRight: '16px' }))(
+                address
+                  ? $profileDisplay({ address })
+                  : style({ cursor: 'pointer' }, $disconnectedWalletDisplay()),
+
+                $seperator2,
+
+                $column(
+                  $infoLabel(
+                    'Balance'
+                  ),
+                  $intermediateMessage(
+                    map(async amount => {
+                      return readableTokenAmountLabel(depositTokenDescription, await amount)
+                    }, depositQuery)
+                  )
+                )
+                // $intermediateMessage(
+                //   map(async amount => {
+                //     return readableTokenAmountLabel(depositTokenDescription, await amount)
+                //   }, depositQuery)
+                // )
+              ) 
+            }, walletLink.wallet)
+          })({
+            click: routeChangeTether(),
+          })
+        ),
         $pageLink({
           $content: $row(layoutSheet.spacing, style({ alignItems: 'center', cursor: 'pointer',  borderRadius: '50px', pointerEvents: 'none' }))(
             $icon({ $content: $trophy, svgOps: style({ width: '28px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),
@@ -148,21 +194,6 @@ export const $MainMenu = ({ parentRoute, showAccount = true }: MainMenu) => comp
         })({
           click: routeChangeTether()
         }),
-        style({ padding: 0 })(
-          $pageLink({
-            route: parentRoute.create({ fragment: 'wallet', title: 'Portfolio' }),
-            // anchorOp: style({  }),
-            url: `/app/wallet`,
-            $content: switchMap(wallet => {
-              const address = wallet?.account.address
-              return address
-                ? style({ paddingRight: '16px' })($profileDisplay({ $labelContainer: $column(style({ padding: '0 8px 0 4px' })), address }))
-                : style({ paddingRight: '18px', cursor: 'pointer' }, $disconnectedWalletDisplay())
-            }, walletLink.wallet)
-          })({
-            click: routeChangeTether(),
-          })
-        ),
         $pageLink({
           $content: $row(layoutSheet.spacing, style({ alignItems: 'center', cursor: 'pointer',  borderRadius: '50px', pointerEvents: 'none' }))(
             $icon({ $content: $gmxLogo, svgOps: style({ width: '28px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),

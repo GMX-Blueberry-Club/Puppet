@@ -20,6 +20,7 @@ import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 import { StateStream, abs, filterNull, readablePercentage, readableUsd, getDenominator, getTokenUsd, zipState, readableTokenAmountLabel, readablePnl, getBasisPoints, readableFactorPercentage, readableUnitAmount, ADDRESS_ZERO, BASIS_POINTS_DIVISOR } from "common-utils"
 import { IPriceCandle, resolveAddress, OrderType, getTokenDescription, getNativeTokenAddress, getNativeTokenDescription } from "gmx-middleware-utils"
 import { walletLink } from "../../wallet"
+import { $seperator2 } from "../../pages/common"
 
 
 
@@ -258,11 +259,6 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
     return getTokenUsd(params.latestWntPrice, params.executionFeeAfterBuffer)
   }, zipState({ latestWntPrice, executionFeeAfterBuffer }))
 
-  const totalFeeUsd = map(params => {
-    return params.executionFeeAfterBufferUsd + params.marginFeeUsd + params.priceImpactUsd
-  }, combineObject({ adjustmentFeeUsd, executionFeeAfterBufferUsd, marginFeeUsd, priceImpactUsd }))
-
-
 
   const isPriceFactorPositive = skipRepeats(map(amountUsd => amountUsd > 0n, priceImpactUsd))
   const positionFeeFactor = map(params => {
@@ -271,66 +267,24 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
 
   return [
     config.$container(layoutSheet.spacing)(
-      $column(layoutSheet.spacingTiny)(
-        // switchLatest(map(params => {
-        //   const totalSizeUsd = params.position ? params.position.latestUpdate.sizeInUsd + params.sizeDeltaUsd : params.sizeDeltaUsd
-        //   const rateFactor = params.fundingRateFactor
-        //   const rate = safeDiv(rateFactor * params.collateralTokenPoolInfo.reservedAmount, params.collateralTokenPoolInfo.poolAmounts)
-        //   const nextSize = totalSizeUsd * rate / GMX.BASIS_POINTS_DIVISOR / 100n
-        //   return $column(
-        //     $infoLabeledValue(
-        //       'Borrow Fee',
-        //       $row(layoutSheet.spacingTiny)(
-        //         $text(style({ color: pallete.indeterminate }))(readableFixedUSD30(nextSize) + ' '),
-        //         $text(` / 1hr`)
-        //       )
-        //     )
-        //   )
-        // }, combineObject({ ...config.tradeState, sizeDeltaUsd }))),
-        // $infoLabeledValue('Swap', $text(style({ color: pallete.indeterminate, placeContent: 'space-between' }))(map(readableFixedUSD30, swapFee))),
+      $column(layoutSheet.spacingSmall)(
         style({ placeContent: 'space-between' })(
-          $infoLabeledValue(
-            'Max Gas Fee',
-            $row(layoutSheet.spacingSmall)(
-              $text(style({ color: pallete.foreground }))(map(params => {
-                return `${readableTokenAmountLabel(getNativeTokenDescription(config.chain), params.executionFeeAfterBuffer)}`
-              }, combineObject({ executionFeeAfterBufferUsd, executionFeeAfterBuffer }))),
-              $text(style({ color: pallete.negative, alignSelf: 'flex-end' }))(map(params => {
-                return readablePnl(params.executionFeeAfterBufferUsd)
-              }, combineObject({ executionFeeAfterBufferUsd, executionFeeAfterBuffer })))
-            )
-          )
-        ),
-        style({ placeContent: 'space-between' })(
-          // $infoLabeledValue('Price Impact', $text(style({ color: pallete.negative }))(map(params => {
-          //   return `${readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))} ${readablePnl(params.priceImpactUsd)}`
-          // }, combineObject({ priceImpactUsd, sizeDeltaUsd })))),
           $infoLabeledValue(
             'Price Impact',
-            $row(layoutSheet.spacingSmall)(
-              $text(style({ color: pallete.foreground }))(map(params => {
+            $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+              $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(map(params => {
                 return `(${readablePercentage(getBasisPoints(params.priceImpactUsd, params.sizeDeltaUsd))} size)`
               }, combineObject({ priceImpactUsd, sizeDeltaUsd }))),
               $pnlDisplay(priceImpactUsd, false)
             )
           )
         ),
+        $seperator2,
         style({ placeContent: 'space-between' })(
           $infoLabeledValue(
-            'Margin',
-            $row(layoutSheet.spacingSmall)(
-              $text(style({ color: pallete.foreground }))(map(factor => {
-                return `(${readableFactorPercentage(factor)} size)`
-              }, positionFeeFactor)),
-              $pnlDisplay(marginFeeUsd, false)
-            )
-          )
-        ),
-        style({ placeContent: 'space-between' })(
-          $infoLabeledValue(
-            'Min Puppet Reward',
-            $row(layoutSheet.spacingSmall)(
-              $text(style({ color: pallete.foreground }))(map(factor => {
+            'Est Puppet Reward',
+            $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+              $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(map(factor => {
                 return `(${readableFactorPercentage(factor)} size)`
               }, positionFeeFactor)),
               $pnlDisplay(0n, false)
@@ -342,11 +296,42 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
         $infoLabeledValue(
           $infoTooltipLabel(
             $column(layoutSheet.spacingSmall)(
-              $text('Collateral deducted upon your deposit including Borrow fee at the start of every hour. the rate changes based on utilization, it is calculated as (assets borrowed) / (total assets in pool) * 0.01%')
+              style({ placeContent: 'space-between' })(
+                $infoLabeledValue(
+                  'Transaction Cost',
+                  $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+                    $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(map(params => {
+                      return `${readableTokenAmountLabel(getNativeTokenDescription(config.chain), params.executionFeeAfterBuffer)}`
+                    }, combineObject({ executionFeeAfterBuffer }))),
+                    $text(style({ color: pallete.negative, alignSelf: 'flex-end', }))(map(params => {
+                      return readablePnl(params.executionFeeAfterBufferUsd)
+                    }, combineObject({ executionFeeAfterBufferUsd, executionFeeAfterBuffer })))
+                  )
+                ),
+              ),
+              $seperator2,
+              style({ placeContent: 'space-between' })(
+                $infoLabeledValue(
+                  'Margin',
+                  $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+                    $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(map(factor => {
+                      return `(${readableFactorPercentage(factor)} Position size)`
+                    }, positionFeeFactor)),
+                    $pnlDisplay(marginFeeUsd, false)
+                  )
+                )
+              ),
+              $seperator2,
+              $text('Collateral deducted from deposit including Borrow fee at the start of every hour. the rate changes based on utilization, it is calculated as (assets borrowed) / (total assets in pool) * 0.01%')
             ),
             'Total Fees'
           ),
-          $pnlDisplay(totalFeeUsd, false)
+          $pnlDisplay(
+            map(params => {
+              return params.executionFeeAfterBufferUsd + params.marginFeeUsd + params.priceImpactUsd
+            }, combineObject({ adjustmentFeeUsd, executionFeeAfterBufferUsd, marginFeeUsd, priceImpactUsd })),
+            false
+          )
         )
       ),
 
@@ -452,9 +437,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
                 )
               })
 
-          return $row(
-            $primary
-          )
+          return $primary
         }, combineObject({ isPrimaryApproved, tradeRoute, isTradingEnabled, primaryToken, primaryDescription })))
       ),
     ),

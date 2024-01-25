@@ -8,7 +8,7 @@ import { ISetRouteType, queryPuppetTradeRoute, queryTraderPositionOpen, queryTra
 import { $ButtonToggle, $defaulButtonToggleContainer } from "ui-components"
 import * as viem from 'viem'
 import { $PuppetProfile } from "../../components/participant/$PuppetProfile.js"
-import { $PuppetProfileSummary, $TraderProfileSummary } from "../../components/participant/$Summary.js"
+import { $PuppetSummary, $TraderSummary } from "../../components/participant/$Summary.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
 import { IPageGlobalParams } from "../../const/type.js"
 import { $TraderPage } from "./$Trader.js"
@@ -86,7 +86,7 @@ export const $PublicUserPage = (config: IProfile) => component((
               const openPositionListQuery = queryTraderPositionOpen({ address, selectedTradeRouteList })
 
               return $column(layoutSheet.spacingBig)(
-                $TraderProfileSummary({ ...config, address, settledPositionListQuery, openPositionListQuery })({}),
+                $TraderSummary({ ...config, address, settledPositionListQuery, openPositionListQuery })({}),
 
                 $TraderPage({ ...config, address, settledPositionListQuery, openPositionListQuery, })({
                   selectTradeRouteList: selectTradeRouteListTether(),
@@ -115,7 +115,7 @@ export const $PublicUserPage = (config: IProfile) => component((
               }, puppetTradeRouteListQuery)
 
               return  $column(layoutSheet.spacingBig)(
-                $PuppetProfileSummary({
+                $PuppetSummary({
                   settledPositionListQuery,
                   openPositionListQuery,
                   address,

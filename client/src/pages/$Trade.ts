@@ -32,7 +32,7 @@ import {
 import { CandlestickData, Coordinate, LineStyle, Time } from "lightweight-charts"
 import * as PUPPET from "puppet-middleware-const"
 import { IMirrorPositionOpen, getLastAdjustment, latestPriceMap, queryLatestTokenPriceFeed, queryTraderPositionOpen } from "puppet-middleware-utils"
-import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $target, intermediateMessage } from "ui-components"
+import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $intermediateMessage, $target, $intermediate$node } from "ui-components"
 import * as uiStorage from "ui-storage"
 import * as viem from "viem"
 import { $midContainer } from "../common/$common.js"
@@ -572,39 +572,42 @@ export const $Trade = (config: ITradeComponent) => component((
             $column(layoutSheet.spacingSmall)(
               $infoLabel('Borrow Rate'),
               $row(style({ whiteSpace: 'pre' }))(
-                switchMap(rateQuery => {
-                  return $text(styleBehavior(map(rate => ({ color: rate ? pallete.negative : '' }), fromPromise(rateQuery))))(
-                    intermediateMessage(rateQuery, rate => readableUsd(-rate))
-                  )
-                }, marketBorrowRateQuery),
+                $intermediate$node(
+                  map(async brateQuery => {
+                    const brate = await brateQuery
+                    const isPositive = brate > 0n
+                    const label = isPositive ? '+' : ''
+                    return $text(style({ color: isPositive ? pallete.positive : pallete.negative }))(
+                      label + readableFactorPercentage(brate)
+                    )
+                  }, marketBorrowRateQuery)
+                ),
                 $text(style({ color: pallete.foreground }))(' / hr')
               )
             ),
             $column(layoutSheet.spacingSmall)(
               $infoLabel('Funding Rate'),
               $row(style({ whiteSpace: 'pre' }))(
-                switchMap(params => {
-                  return $text(
-                    styleBehavior(map(frate => {
-                      const isPositive = params.isLong ? frate < 0n : frate > 0n
-                      return { color: isPositive ? pallete.positive : pallete.negative }
-                    }, fromPromise(params.marketFundingRateQuery)))
-                  )(
-                    intermediateMessage(params.marketFundingRateQuery, frate => {
-                      const isPositive = params.isLong ? frate < 0n : frate > 0n
-                      const label = isPositive ? '+' : ''
-                      return label + readableFactorPercentage(frate)
-                    })
-                  )
-                }, combineObject({ marketFundingRateQuery, isLong })),
+                $intermediate$node(
+                  map(async frateQuery => {
+                    const frate = await frateQuery
+                    const isPositive = frate > 0n
+                    const label = isPositive ? '+' : ''
+                    return $text(style({ color: isPositive ? pallete.positive : pallete.negative }))(
+                      label + readableFactorPercentage(frate)
+                    )
+                  }, marketFundingRateQuery)
+                ),
+
                 $text(style({ color: pallete.foreground }))(' / hr')
               )
             ),
             $column(layoutSheet.spacingSmall)(
               $infoLabel('Available Liquidity'),
-              switchMap(query => {
-                return $text(intermediateMessage(query, readableUsd))
-              }, marketAvailableLiquidityUsdQuery),
+              $intermediateMessage(map(async query => {
+                const value = await query
+                return readableUsd(value)
+              }, marketAvailableLiquidityUsdQuery))
             ),
             screenUtils.isDesktopScreen
               ? style({ pointerEvents: 'all' })(

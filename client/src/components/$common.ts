@@ -1,6 +1,6 @@
 import { style, stylePseudo } from "@aelea/dom"
 import { $column } from "@aelea/ui-components"
-import { pallete } from "@aelea/ui-components-theme"
+import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { IAttributeBackground, IAttributeBadge, IAttributeMappings, IBerryDisplayTupleMap, IToken, getBerryFromItems, getLabItemTupleIndex, tokenIdAttributeTuple } from "@gambitdao/gbc-middleware"
 import { $Table, $defaultTableCell, $defaultTableRowContainer, $defaultVScrollContainer, $infoLabeledValue, $spinner, TableOption } from "ui-components"
 import { $berry } from "./$DisplayBerry.js"
@@ -12,7 +12,7 @@ export interface ICardTable<T> extends TableOption<T> {
 
 export const $CardTable = <T>(config: TableOption<T>) => {
   return $Table({
-    $container: $column,
+    $container: $column(style({ borderTop: `1px solid ${colorAlpha(pallete.foreground, .2)}` })),
     $cell: $defaultTableCell(style({ padding: '18px 0' })),
     scrollConfig: {
       $container: $defaultVScrollContainer(style({ gap: '2px' })),

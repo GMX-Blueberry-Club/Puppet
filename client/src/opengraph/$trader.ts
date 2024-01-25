@@ -5,7 +5,7 @@ import * as GMX from 'gmx-middleware-const'
 import { queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $ProfilePeformanceTimeline } from "../components/participant/$ProfilePeformanceTimeline.js"
-import { $TraderProfileSummary } from "../components/participant/$Summary.js"
+import { $TraderSummary } from "../components/participant/$Summary.js"
 import { IOpengraphPageParams } from "./common"
 import { IntervalTime } from "common-utils"
 
@@ -24,7 +24,7 @@ export const $trader = (config: IOpengraphPageParams) => {
   
 
   return $column(layoutSheet.spacingBig, style({ placeContent: 'space-between', flex: 1 }))(
-    $TraderProfileSummary({ address, settledPositionListQuery, openPositionListQuery })({}),
+    $TraderSummary({ address, settledPositionListQuery, openPositionListQuery })({}),
 
     $column(style({ position: 'relative' }))(
       $ProfilePeformanceTimeline({ 

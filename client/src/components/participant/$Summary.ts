@@ -5,7 +5,7 @@ import { map } from "@most/core"
 import { Stream } from "@most/types"
 import { readableLeverage, readableUsd, switchMap, zipState } from "common-utils"
 import { IMirrorPositionOpen, IMirrorPositionSettled, accountSettledPositionListSummary } from "puppet-middleware-utils"
-import { intermediateMessage } from "ui-components"
+import { $intermediate$node } from "ui-components"
 import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile.js"
 import { $heading2 } from "../../common/$text.js"
@@ -21,12 +21,12 @@ export interface IAccountSummary {
 
 
 
-export const $TraderProfileSummary = (config: IAccountSummary) => component((
+export const $TraderSummary = (config: IAccountSummary) => component((
 ) => {
 
   const { address, openPositionListQuery, settledPositionListQuery, puppet } = config
 
-  const metrics = map(async params => {
+  const metricsQuery = map(async params => {
     const allPositions = [...await params.settledPositionListQuery, ...await params.openPositionListQuery]
 
     return accountSettledPositionListSummary(allPositions, puppet)
@@ -35,53 +35,58 @@ export const $TraderProfileSummary = (config: IAccountSummary) => component((
   return [
 
     $column(layoutSheet.spacing, style({ minHeight: '90px' }))(
-      switchMap(summaryQuery => {
-        return $node(style({ display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column', gap: screenUtils.isDesktopScreen ? '56px' : '26px', zIndex: 10, placeContent: 'center', alignItems: 'center', padding: '0 8px' }))(
-          $row(
-            $profileDisplay({
-              address,
-              labelSize: '22px',
-              profileSize: screenUtils.isDesktopScreen ? 90 : 90
-            })
-          ),
-          $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end' }))(
-            // $metricRow(
-            //   params.summary.subscribedPuppets.length
-            //     ? $metricValue(style({ paddingBottom: '5px' }))(
-            //       ...params.summary.subscribedPuppets.map(address => {
-            //         return $profileAvatar({ address, profileSize: 26 })
-            //       })
-            //     )
-            //     : $metricValue($text('-')),
-            //   $metricLabel($text('Puppets'))
-            // ),
-            $metricRow(
-              $heading2(intermediateMessage(summaryQuery, summary => `${summary.winCount} / ${summary.lossCount}`)),
-              $metricLabel($text('Win / Loss'))
-            ),
-            $metricRow(
-              $heading2(intermediateMessage(summaryQuery, summary => readableUsd(summary.avgCollateral))),
-              $metricLabel($text('Avg Collateral'))
-            ),
-            $metricRow(
-              $heading2(intermediateMessage(summaryQuery, summary => readableLeverage(summary.avgSize, summary.avgCollateral))),
-              $metricLabel($text('Avg Leverage'))
-            )
-          ),
-        )
-      }, metrics)
-      // $IntermediatePromise({
+      $node(style({ display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column', gap: screenUtils.isDesktopScreen ? '56px' : '26px', zIndex: 10, placeContent: 'center', alignItems: 'center', padding: '0 8px' }))(
+        $row(
+          $profileDisplay({
+            address,
+            labelSize: '22px',
+            profileSize: screenUtils.isDesktopScreen ? 90 : 90
+          })
+        ),
+        $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end' }))(
+          $metricRow(
+            $intermediate$node(
+              map(async summaryQuery => {
+                const summary = await summaryQuery
 
-      // })({}),
+                return $heading2(`${summary.winCount} / ${summary.lossCount}`)
+              }, metricsQuery)
+            ),
+            $metricLabel($text('Win / Loss'))
+          ),
+
+          $metricRow(
+            $intermediate$node(
+              map(async summaryQuery => {
+                const summary = await summaryQuery
+
+                return $heading2(readableUsd(summary.avgCollateral))
+              }, metricsQuery)
+            ),
+            $metricLabel($text('Avg Collateral'))
+          ),
+          $metricRow(
+            $intermediate$node(
+              map(async summaryQuery => {
+                const summary = await summaryQuery
+
+                return $heading2(readableLeverage(summary.avgSize, summary.avgCollateral))
+              }, metricsQuery)
+            ),
+            $metricLabel($text('Avg Leverage'))
+          )
+      
+        ),
+      )
     ),
     {
     }
   ]
 })
 
-export const $PuppetProfileSummary = ({ address, openPositionListQuery, settledPositionListQuery, puppet }: IAccountSummary) => component(() => {
+export const $PuppetSummary = ({ address, openPositionListQuery, settledPositionListQuery, puppet }: IAccountSummary) => component(() => {
 
-  const metrics = map(async params => {
+  const metricsQuery = map(async params => {
     const allPositions = [...await params.settledPositionListQuery, ...await params.openPositionListQuery]
 
     return accountSettledPositionListSummary(allPositions, puppet)
@@ -90,38 +95,48 @@ export const $PuppetProfileSummary = ({ address, openPositionListQuery, settledP
   return [
 
     $column(layoutSheet.spacing, style({ minHeight: '90px' }))(
-      switchMap(summaryQuery => {
+      $node(style({ display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column', gap: screenUtils.isDesktopScreen ? '56px' : '26px', zIndex: 10, placeContent: 'center', alignItems: 'center', padding: '0 8px' }))(
+        $row(
+          $profileDisplay({
+            address,
+            labelSize: '22px',
+            profileSize: screenUtils.isDesktopScreen ? 90 : 90
+          })
+        ),
+        $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end' }))(
+          $metricRow(
+            $intermediate$node(
+              map(async summaryQuery => {
+                const summary = await summaryQuery
 
-        return $node(style({ display: 'flex', flexDirection: screenUtils.isDesktopScreen ? 'row' : 'column', gap: screenUtils.isDesktopScreen ? '76px' : '26px', zIndex: 10, placeContent: 'center', alignItems: 'center', padding: '0 8px' }))(
-          $row(
-            $profileDisplay({
-              address,
-              labelSize: '22px',
-              profileSize: screenUtils.isDesktopScreen ? 90 : 90
-            })
-          ),
-          $row(layoutSheet.spacingBig, style({ alignItems: 'flex-end' }))(
-            // $metricRow(
-            //   params.summary.subscribedPuppets.length
-            //     ? $metricValue(style({ paddingBottom: '5px' }))(
-            //       ...params.summary.subscribedPuppets.map(address => {
-            //         return $profileAvatar({ address, profileSize: 26 })
-            //       })
-            //     )
-            //     : $metricValue($text('-')),
-            //   $metricLabel($text('Puppets'))
-            // ),
-            $metricRow(
-              $heading2(intermediateMessage(summaryQuery, summary => `${summary.winCount} / ${summary.lossCount}`)),
-              $metricLabel($text('Win / Loss'))
+                return $heading2(`${summary.winCount} / ${summary.lossCount}`)
+              }, metricsQuery)
             ),
-            $metricRow(
-              $heading2(intermediateMessage(summaryQuery, summary => readableUsd(summary.avgCollateral))),
-              $metricLabel($text('Avg Collateral'))
-            )
+            $metricLabel($text('Win / Loss'))
           ),
-        )
-      }, metrics),
+
+          $metricRow(
+            $intermediate$node(
+              map(async summaryQuery => {
+                const summary = await summaryQuery
+
+                return $heading2(readableUsd(summary.avgCollateral))
+              }, metricsQuery)
+            ),
+            $metricLabel($text('Avg Collateral'))
+          ),
+          $metricRow(
+            $intermediate$node(
+              map(async summaryQuery => {
+                const summary = await summaryQuery
+
+                return $heading2(readableLeverage(summary.avgSize, summary.avgCollateral))
+              }, metricsQuery)
+            ),
+            $metricLabel($text('Avg Leverage'))
+          )
+        ),
+      )
     ),
     {
     }
