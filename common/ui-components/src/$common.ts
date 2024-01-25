@@ -2,12 +2,13 @@ import { combineObject, isStream, O, Op } from "@aelea/core"
 import { $element, $Node, $svg, $text, attr, IBranch, style, styleBehavior, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, fromPromise, join, map, skipRepeats, startWith } from "@most/core"
+import { empty, fromPromise, join, map, skipRepeats, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { getExplorerUrl, getMappedValue, ITokenDescription, shortenTxAddress, switchMap } from "common-utils"
 import { Chain } from "viem/chains"
 import { $alertIcon, $arrowRight, $caretDblDown, $info, $tokenIconMap } from "./$icons.js"
 import { $defaultDropContainer, $Tooltip } from "./$Tooltip.js"
+import { disposeNone } from "@most/disposable"
 
 
 
@@ -189,20 +190,36 @@ export const $icon = ({ $content, width = '24px', viewBox = `0 0 32 32`, fill = 
 
 
 export const $intermediate$node = (querySrc: Stream<Promise<$Node>>, hint = '-'): $Node => {
-  const newLocal: Stream<$Node> = {
+  return switchLatest({
     run(sink, scheduler) {
-      return map(res => {
-        sink.event(scheduler.currentTime(), $text(hint))
-        return join(fromPromise(res))
-      }, querySrc).run(sink, scheduler)
-    }
-  }
+      let failed = false
 
-  return join(newLocal)
+      return querySrc.run({
+        event(time, res) {
+          sink.event(scheduler.currentTime(), $text(hint))
+
+          res.then(node => {
+            if (failed) return
+
+            sink.event(time, node)
+          })
+        },
+        error(time, err) {
+          failed = true
+          sink.error(time, err)
+        },
+        end(time) {
+          sink.end(time)
+        }
+      }, scheduler)
+    }
+  })
 }
 
-export const $intermediateMessage = (querySrc: Stream<Promise<string>>, hint = '-') => {
-  const text = switchMap(res => startWith(hint, fromPromise(res)), querySrc)
+export const $intermediateMessage = (querySrc: Stream<Promise<string>>, hint = '-'): $Node => {
+  const text = switchMap(res => {
+    return startWith(hint, fromPromise(res))
+  }, querySrc)
   return $text(text)
 }
 

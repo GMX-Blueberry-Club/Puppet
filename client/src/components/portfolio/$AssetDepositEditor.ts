@@ -17,6 +17,7 @@ import { $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from
 import { getTokenDescription } from "gmx-middleware-utils"
 import { walletLink } from "../../wallet"
 import * as wagmi from "@wagmi/core"
+import { $alertContainer } from "ui-components"
 
 
 interface IAssetDepositEditor {
@@ -61,7 +62,7 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
           label: 'Amount',
           value: maxBalance,
           placeholder: 'Enter amount',
-          hint: startWith('Balance: ', map(amount => `Balance: ${readableTokenAmountLabel(tokenDescription, amount)}`, balance)),
+          hint: map(amount => `Balance: ${readableTokenAmountLabel(tokenDescription, amount)}`, balance),
         })({
           change: inputDepositAmountTether()
         }),
@@ -72,6 +73,12 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
         })({
           click: clickMaxDepositTether()
         })
+      ),
+
+      style({ placeSelf: 'flex-start' })(
+        $alertContainer(
+          $text('This is a beta version of the app has not been audited. Use at your own risk.'),
+        )
       ),
       
       switchMap(allow => {

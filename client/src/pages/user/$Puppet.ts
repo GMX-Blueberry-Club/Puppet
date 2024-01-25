@@ -123,7 +123,7 @@ export const $PuppetPage = (config: IPuppetPortfolio) => component((
             const routeTypeList = await params.routeTypeListQuery
 
             if (puppetTradeRouteList.length === 0) {
-              return $text('No active trade found')
+              return $text('No activity found')
             }
 
             const tradeRouteList = Object.entries(groupArrayMany(puppetTradeRouteList, x => x.routeTypeKey)) as [viem.Address, IPuppetTradeRoute[]][]

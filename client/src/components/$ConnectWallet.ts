@@ -4,10 +4,11 @@ import { $icon, $row, layoutSheet } from "@aelea/ui-components"
 import { awaitPromises, map, now, switchLatest } from "@most/core"
 import { connect } from "@wagmi/core"
 import { ignoreAll, switchMap } from "common-utils"
-import { $walletConnectLogo } from "../common/$icons"
-import { walletLink } from "../wallet"
-import { $ButtonSecondary } from "./form/$Button.js"
+import { $walletConnectLogo } from "../common/$icons.js"
+import { walletLink } from "../wallet/index.js"
+import { $ButtonSecondary, $defaultMiniButtonSecondary } from "./form/$Button.js"
 import { IButtonCore } from "./form/$ButtonCore.js"
+import { $infoLabel } from "ui-components"
 
 
 
@@ -45,9 +46,11 @@ export const $ConnectChoiceList = () => component((
 
 
   return [
-    $row(
+    $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+      $infoLabel('Connect with'),
       ...walletLink.wagmiConfig.connectors.map(connector => {
         return $ButtonSecondary({
+          $container: $defaultMiniButtonSecondary,
           $content: $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
             ignoreAll(walletChange),
             connector.icon ?

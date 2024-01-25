@@ -8,7 +8,7 @@ import { ADDRESS_ZERO, IntervalTime, ignoreAll, switchMap } from "common-utils"
 import { ISetRouteType, queryPuppetTradeRoute, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
 import { $ButtonToggle, $defaulButtonToggleContainer } from "ui-components"
 import * as uiStorage from "ui-storage"
-import { $IntermediateConnectButton } from "../../components/$ConnectAccount.js"
+import { $IntermediateConnectButton } from "../../components/$ConnectWallet.js"
 import { $ButtonSecondary } from "../../components/form/$Button.js"
 import { $PuppetPage } from "./$Puppet.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
@@ -55,6 +55,24 @@ export const $WalletPage = (config: IPageGlobalParams & { route: router.Route })
     $column(layoutSheet.spacingBig)(
       $node(),
 
+      $row(style({ flex: 1, placeContent: 'center' }))(
+        ignoreAll(walletChange),
+        $IntermediateConnectButton({
+          $$display: map(wallet => {
+            return $ButtonSecondary({
+              $content: $text('Disconnect')
+            })({
+              click: walletChangeTether(
+                map(async xx => {
+                  await disconnect(walletLink.wagmiConfig)
+                }),
+                awaitPromises
+              )
+            })
+          })
+        })({}),
+      ),
+
       $row(
         $node(style({ flex: 1 }))(),
         $ButtonToggle({
@@ -65,23 +83,7 @@ export const $WalletPage = (config: IPageGlobalParams & { route: router.Route })
             return $text(optionDisplay[option].label)
           })
         })({ select: selectProfileModeTether() }),
-        $row(style({ flex: 1, placeContent: 'flex-end' }))(
-          ignoreAll(walletChange),
-          $IntermediateConnectButton({
-            $$display: map(wallet => {
-              return $ButtonSecondary({
-                $content: $text('Disconnect')
-              })({
-                click: walletChangeTether(
-                  map(async xx => {
-                    await disconnect(walletLink.wagmiConfig)
-                  }),
-                  awaitPromises
-                )
-              })
-            })
-          })({}),
-        ),
+        $node(style({ flex: 1 }))(),
       ),
 
       switchMap(params => {

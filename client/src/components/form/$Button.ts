@@ -5,7 +5,7 @@ import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, constant, empty, map, mergeArray, multicast, now } from "@most/core"
 import { Stream } from "@most/types"
 import * as viem from "viem"
-import { $IntermediateConnectButton, } from "../$ConnectAccount.js"
+import { $IntermediateConnectButton, } from "../$ConnectWallet.js"
 import { $iconCircular } from "../../common/elements/$common.js"
 import { IWalletClient } from "../../wallet/walletLink"
 import { $ButtonCore, $defaultButtonCore, IButtonCore } from "./$ButtonCore.js"
@@ -15,8 +15,7 @@ import { $ButtonCore, $defaultButtonCore, IButtonCore } from "./$ButtonCore.js"
 export const $defaultButtonPrimary = $defaultButtonCore(
   style({
     color: pallete.message, whiteSpace: 'nowrap', fill: 'white', borderRadius: '30px',
-    // boxShadow: `0px 0px 0 2px ${pallete.primary} inset`,
-    alignSelf: 'flex-end',
+    borderWidth: '1px', alignSelf: 'flex-end',
     padding: '15px 24px', fontWeight: 'bold', border: 'none', backgroundColor: pallete.primary,
   }),
   // stylePseudo(':hover', { backgroundColor: colorAlpha(pallete.primary, .5) })
@@ -35,7 +34,7 @@ export const $defaultButtonSecondary = $defaultButtonCore(
   style({ fontSize: '.85em' })
 )
 
-export const defaultMiniButtonStyle = style({ alignSelf: 'center', padding: '6px 10px', fontSize: '.85rem' })
+export const defaultMiniButtonStyle = style({ alignSelf: 'center', borderWidth: '1px', padding: '6px 10px', fontSize: '.85rem' })
 export const $defaultMiniButtonSecondary = $defaultButtonSecondary(defaultMiniButtonStyle)
 
 

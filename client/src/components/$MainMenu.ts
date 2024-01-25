@@ -153,7 +153,17 @@ export const $MainMenu = ({ parentRoute, showAccount = true }: MainMenu) => comp
             // anchorOp: style({  }),
             url: `/app/wallet`,
             $content: switchMap(wallet => {
-              const address = wallet?.account.address
+
+
+              if (wallet === null) {
+                return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', pointerEvents: 'none', paddingRight: '16px' }))(
+                  $disconnectedWalletDisplay(),
+                  $seperator2,
+                  style({ fontSize: '.85rem', color: pallete.foreground })($infoLabel('Click to Connect'))
+                )
+              }
+
+              const address = wallet.account.address
               const depositQuery = now(address ? getPuppetDepositAmount(address, arbitrum.id) : Promise.resolve(0n))
               
               return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', pointerEvents: 'none', paddingRight: '16px' }))(
@@ -167,11 +177,16 @@ export const $MainMenu = ({ parentRoute, showAccount = true }: MainMenu) => comp
                   $infoLabel(
                     'Balance'
                   ),
-                  $intermediateMessage(
+                  $intermediate$node(
                     map(async amount => {
-                      return readableTokenAmountLabel(depositTokenDescription, await amount)
+                      return $text(style({ whiteSpace: 'nowrap' }))(readableTokenAmountLabel(depositTokenDescription, await amount))
                     }, depositQuery)
-                  )
+                  ),
+                  // $intermediateMessage(
+                  //   map(async amount => {
+                  //     return readableTokenAmountLabel(depositTokenDescription, await amount)
+                  //   }, depositQuery)
+                  // )
                 )
                 // $intermediateMessage(
                 //   map(async amount => {

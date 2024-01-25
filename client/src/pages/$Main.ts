@@ -92,7 +92,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
   return [
     $column(
-      switchMap((cb) => {
+      switchMap(cb => {
         return fadeIn(
           $alertContainer(style({ backgroundColor: pallete.horizon }))(
             filterNull(constant(null, clickUpdateVersion)) as any,

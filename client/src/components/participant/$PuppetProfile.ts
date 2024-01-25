@@ -50,7 +50,7 @@ export const $PuppetProfile = (config: IPuppetProfile) => component((
             const routeTypeList = await params.routeTypeListQuery
 
             if (puppetTradeRouteList.length === 0) {
-              return $text('No active trade found')
+              return $text('No activity found')
             }
 
 

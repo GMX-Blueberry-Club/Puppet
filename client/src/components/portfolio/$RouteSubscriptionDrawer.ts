@@ -8,7 +8,7 @@ import { groupArrayMany, readableDate, readablePercentage, readableTokenAmountLa
 import * as GMX from "gmx-middleware-const"
 import * as PUPPET from "puppet-middleware-const"
 import { ISetRouteType } from "puppet-middleware-utils"
-import { $alertTooltip, $check, $infoLabeledValue, $infoTooltip, $infoTooltipLabel, $target, $xCross } from "ui-components"
+import { $alertContainer, $alertTooltip, $check, $infoLabeledValue, $infoTooltip, $infoTooltipLabel, $target, $xCross } from "ui-components"
 import * as viem from "viem"
 import { $profileDisplay } from "../$AccountProfile.js"
 import { $Popover } from "../$Popover.js"
@@ -150,6 +150,12 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
               })
             )
           }, combineObject({ modifySubscriptionList, routeTypeList: awaitPromises(routeTypeListQuery) })),
+
+          style({ placeSelf: 'flex-end' })(
+            $alertContainer(
+              $text('This is a beta version of the app has not been audited. Use at your own risk.'),
+            )
+          ),
 
           $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between' }))(
             switchMap(amount => {
