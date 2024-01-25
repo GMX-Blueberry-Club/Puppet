@@ -79,11 +79,14 @@ export const $infoTooltipLabel = (text: string | $Node, label?: string | $Node) 
   )
 }
 
-export const $infoTooltip = (text: string | $Node) => {
+export const $infoTooltip = (text: string | $Node, color = pallete.foreground, size = '24px' ) => {
   return $Tooltip({
     $dropContainer: $defaultDropContainer,
     $content: isStream(text) ? text : $text(text),
-    $anchor: $icon({ $content: $info, viewBox: '0 0 32 32', fill: pallete.foreground, svgOps: style({ width: '24px', height: '20px', padding: '2px 4px' }) }),
+    $anchor: $icon({ 
+      $content: $info, viewBox: '0 0 32 32', fill: color,
+      svgOps: style({ width: size, height: size, padding: '2px 4px' })
+    }),
   })({})
 }
 

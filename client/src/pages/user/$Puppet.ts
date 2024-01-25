@@ -9,27 +9,27 @@ import { IPuppetTradeRoute, ISetRouteType, getParticiapntMpPortion } from "puppe
 import { $infoTooltipLabel } from "ui-components"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
-import { $Popover } from "../$Popover"
+import { $Popover } from "../../components/$Popover.js"
 import { $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
 import { $card, $card2, $responsiveFlex } from "../../common/elements/$common.js"
-import { IPageUserParams } from "../../const/type.js"
-import { getPuppetDepositAmount } from "../../logic/puppetLogic"
-import { $seperator2 } from "../../pages/common.js"
-import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button"
-import { $AssetDepositEditor } from "../portfolio/$AssetDepositEditor"
-import { $AssetWithdrawEditor } from "../portfolio/$AssetWithdrawEditor"
-import { IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor.js"
-import { $ProfilePeformanceTimeline } from "./$ProfilePeformanceTimeline.js"
-import { $PuppetTraderTradeRoute } from "./PuppetTraderTradeRoute"
+import { IUserUserParams } from "../../const/type.js"
+import { getPuppetDepositAmount } from "../../logic/puppetLogic.js"
+import { $seperator2 } from "../common.js"
+import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../../components/form/$Button.js"
+import { $AssetDepositEditor } from "../../components/portfolio/$AssetDepositEditor.js"
+import { $AssetWithdrawEditor } from "../../components/portfolio/$AssetWithdrawEditor.js"
+import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
+import { $ProfilePeformanceTimeline } from "../../components/participant/$ProfilePeformanceTimeline.js"
+import { $PuppetTraderTradeRoute } from "../../components/participant/PuppetTraderTradeRoute.js"
 import { getTokenDescription } from "gmx-middleware-utils"
 
 
-export interface IPuppetPortfolio extends IPageUserParams {
+export interface IPuppetPortfolio extends IUserUserParams {
   puppetTradeRouteListQuery: Stream<Promise<IPuppetTradeRoute[]>>
 }
 
-export const $PuppetPortfolio = (config: IPuppetPortfolio) => component((
+export const $PuppetPage = (config: IPuppetPortfolio) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
 

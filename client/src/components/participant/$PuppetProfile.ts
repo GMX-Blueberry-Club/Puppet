@@ -9,14 +9,14 @@ import * as viem from "viem"
 import { $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
 import { $card, $card2 } from "../../common/elements/$common.js"
-import { IPageUserParams } from "../../const/type.js"
+import { IUserUserParams } from "../../const/type.js"
 import { $seperator2 } from "../../pages/common.js"
 import { IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor.js"
 import { $ProfilePeformanceTimeline } from "./$ProfilePeformanceTimeline.js"
 import { $PuppetTraderTradeRoute } from "./PuppetTraderTradeRoute"
 
 
-export interface IPuppetProfile extends IPageUserParams {
+export interface IPuppetProfile extends IUserUserParams {
   puppetTradeRouteListQuery: Stream<Promise<IPuppetTradeRoute[]>>
 }
 

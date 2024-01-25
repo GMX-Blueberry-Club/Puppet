@@ -7,17 +7,13 @@ import { ETH_ADDRESS_REGEXP, IntervalTime } from "common-utils"
 import { ISetRouteType, queryPuppetTradeRoute, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
 import { $ButtonToggle, $defaulButtonToggleContainer } from "ui-components"
 import * as viem from 'viem'
-import { $PuppetProfile } from "../components/participant/$PuppetProfile.js"
-import { $PuppetProfileSummary, $TraderProfileSummary } from "../components/participant/$Summary"
-import { $TraderProfile } from "../components/participant/$TraderProfile.js"
-import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor.js"
-import { IPageGlobalParams } from "../const/type.js"
+import { $PuppetProfile } from "../../components/participant/$PuppetProfile.js"
+import { $PuppetProfileSummary, $TraderProfileSummary } from "../../components/participant/$Summary.js"
+import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
+import { IPageGlobalParams } from "../../const/type.js"
+import { $TraderPage } from "./$Trader.js"
 
 
-export enum IProfileActiveTab {
-  TRADER = 'Trader',
-  PUPPET = 'Puppet',
-}
 
 export interface IProfile extends IPageGlobalParams {
   route: router.Route
@@ -30,7 +26,7 @@ type IRouteOption = {
 }
 
 
-export const $PublicProfile = (config: IProfile) => component((
+export const $PublicUserPage = (config: IProfile) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [selectProfileMode, selectProfileModeTether]: Behavior<IRouteOption, IRouteOption>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
@@ -92,7 +88,7 @@ export const $PublicProfile = (config: IProfile) => component((
               return $column(layoutSheet.spacingBig)(
                 $TraderProfileSummary({ ...config, address, settledPositionListQuery, openPositionListQuery })({}),
 
-                $TraderProfile({ ...config, address, settledPositionListQuery, openPositionListQuery, })({
+                $TraderPage({ ...config, address, settledPositionListQuery, openPositionListQuery, })({
                   selectTradeRouteList: selectTradeRouteListTether(),
                   changeRoute: changeRouteTether(),
                   changeActivityTimeframe: changeActivityTimeframeTether(),

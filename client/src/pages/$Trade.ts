@@ -888,17 +888,19 @@ export const $Trade = (config: ITradeComponent) => component((
 
           $seperator2,
 
-          $PositionDetails({
-            chain: config.chain,
-            pricefeed,
-            mirrorPosition,
-            tradeConfig,
-            tradeState,
-            wallet,
-            $container: $column(style({ flex: 1 }))
-          })({}),
-                  
+          $column(style({ flex: 1 }))(
+            $PositionDetails({
+              chain: config.chain,
+              pricefeed,
+              mirrorPosition,
+              tradeConfig,
+              tradeState,
+              wallet,
+            })({})
+          ),
+
           $seperator2,
+                  
   
         )
 

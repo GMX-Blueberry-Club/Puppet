@@ -6,18 +6,22 @@ import { IPriceTickListMap } from 'gmx-middleware-utils'
 import { IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType } from 'puppet-middleware-utils'
 import * as viem from 'viem'
 
-export interface IPageGlobalParams {
-  activityTimeframe: Stream<IntervalTime>
-  selectedTradeRouteList: Stream<ISetRouteType[]>
-  priceTickMapQuery: Stream<Promise<IPriceTickListMap>>
-  routeTypeListQuery: Stream<Promise<ISetRouteType[]>>
-}
 
-export interface IPageUserParams extends IPageGlobalParams {
-  route: router.Route
-  address: viem.Address
+export interface IUserActivityParams {
   settledPositionListQuery: Stream<Promise<IMirrorPositionSettled[]>>
   openPositionListQuery: Stream<Promise<IMirrorPositionOpen[]>>
+}
+
+export interface IPageGlobalParams {
+  priceTickMapQuery: Stream<Promise<IPriceTickListMap>>
+  routeTypeListQuery: Stream<Promise<ISetRouteType[]>>
+  activityTimeframe: Stream<IntervalTime>
+  selectedTradeRouteList: Stream<ISetRouteType[]>
+}
+
+export interface IUserUserParams extends IPageGlobalParams, IUserActivityParams {
+  route: router.Route
+  address: viem.Address
 }
 
 export enum ITradeFocusMode {
@@ -25,7 +29,7 @@ export enum ITradeFocusMode {
   size,
 }
 
-export enum IProfileMode {
+export enum IUserType {
   TRADER = 'Trader',
   PUPPET = 'Puppet',
 }

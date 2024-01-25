@@ -2,14 +2,13 @@ import { O, Tether } from "@aelea/core"
 import { $text, INode, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { map } from "@most/core"
-import { getBasisPoints, getTimeSince, readableDate, readablePercentage } from "common-utils"
+import { getTimeSince, readableDate } from "common-utils"
 import { IMirrorPosition, IMirrorPositionOpen, IMirrorPositionSettled, getParticiapntMpPortion, latestPriceMap } from "puppet-middleware-utils"
 import { TableColumn } from "ui-components"
 import * as viem from 'viem'
 import { arbitrum } from "viem/chains"
-import { $entry, $positionPnl, $pnlDisplay, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
+import { $entry, $positionPnl, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
 import { $txnIconLink } from "../../common/elements/$common"
-import { $seperator2 } from "../../pages/common.js"
 
 
 export const $tableHeader = (primaryLabel: string, secondaryLabel: string) => $column(style({ textAlign: 'right' }))(

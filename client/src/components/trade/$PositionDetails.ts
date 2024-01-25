@@ -4,13 +4,14 @@ import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { map, now } from "@most/core"
 import { Stream } from "@most/types"
-import { IMirrorPositionOpen } from "puppet-middleware-utils"
+import { IMirrorPositionOpen, IMirrorPositionSettled, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
 import { $Table, $infoLabel, $txHashRef } from "ui-components"
 import * as viem from "viem"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 import { StateStream, switchMap, unixTimestampNow, getTimeSince, readableDate, getMappedValue, readableTokenPrice, readableUsd, getTokenUsd } from "common-utils"
 import { IPriceCandle, IPositionIncrease, IPositionDecrease, TEMP_MARKET_TOKEN_MARKET_MAP, getTokenDescription } from "gmx-middleware-utils"
+import { $card2 } from "../../common/elements/$common"
 
 
 
@@ -20,7 +21,6 @@ interface IPositionAdjustmentHistory {
   pricefeed: Stream<IPriceCandle[]>
   tradeConfig: StateStream<ITradeConfig> // ITradeParams
   tradeState: StateStream<ITradeParams>
-  $container: NodeComposeFn<$Node>
   mirrorPosition: Stream<IMirrorPositionOpen | null>
 }
 
@@ -40,7 +40,9 @@ export type IRequestTrade = IRequestTradeParams & {
 export const $PositionDetails = (config: IPositionAdjustmentHistory) => component((
 ) => {
 
-  const { chain, wallet, pricefeed, tradeConfig, tradeState, $container, mirrorPosition } = config
+  const { chain, wallet, pricefeed, tradeConfig, tradeState, mirrorPosition } = config
+
+  // const settledPositionListQuery = queryTraderPositionSettled({ address, activityTimeframe, selectedTradeRouteList })
 
   return [
     switchMap(pos => {
@@ -49,8 +51,7 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
         : now([])
 
       return $Table({
-        $container: config.$container(style({ flex: 1 })),
-        $headerContainer: $node(layoutSheet.spacingSmall, style({ display: 'grid', padding: `12px`, borderBottom: `1px solid ${colorAlpha(pallete.foreground, .20)}` })),
+        $headerContainer: $node(layoutSheet.spacingSmall, style({ display: 'grid', padding: `12px` })),
         $rowContainer: $node(layoutSheet.spacingSmall, style({ padding: `12px` })),
         // headerCellOp: style({ padding: screenUtils.isDesktopScreen ? '15px 15px' : '6px 4px' }),
         // cellOp: style({ padding: screenUtils.isDesktopScreen ? '4px 15px' : '6px 4px' }),
@@ -164,32 +165,9 @@ export const $PositionDetails = (config: IPositionAdjustmentHistory) => componen
       })({})
     }, mirrorPosition),
 
-    // switchMap(tradeParams => {
-    //   if (params.position === null) {
-    //     const intent = tradeParams.isLong ? `Long-${tradeParams.indexDescription.symbol}` : `Short-${tradeParams.indexDescription.symbol}/${tradeParams.indexDescription.symbol}`
-
-    //     $column(layoutSheet.spacingSmall, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
-    //       $text(style({ fontSize: '1.5rem' }))('Trade History'),
-    //       $text(style({ color: pallete.foreground }))(
-    //         `No active ${intent} position`
-    //       )
-    //     )
-    //   }
-
-    //   return 
-    // }, combineObject({ indexDescription, isLong })),
-
     {
 
 
-      // leverage: filterNull(snapshot(state => {
-      //   if (state.position === null) {
-      //     return null
-      //   }
-
-      //   return div(state.position.size, state.position.collateral - state.fundingFee)
-      // }, combineObject({ position, fundingFee }), delay(50, clickResetPosition))),
-      
 
     }
   ]

@@ -21,7 +21,7 @@ import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerform
 import * as storeDb from "../../const/store.js"
 import { IPageGlobalParams } from "../../const/type.js"
 import { $seperator2 } from "../common.js"
-import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../components/$LastActivity.js"
+import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../../components/$LastActivity.js"
 import { $CardTable } from "../../components/$common"
 
 

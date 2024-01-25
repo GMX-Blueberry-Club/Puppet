@@ -47,8 +47,6 @@ export function handleOpenPosition(event: OpenPositionEvent): void {
 }
 
 export function handleSharesIncrease(event: SharesIncreaseEvent): void {
-
-
   const sharesIncrease = new SharesIncrease(event.params.requestKey)
 
   sharesIncrease.puppetsShares = event.params.puppetsShares

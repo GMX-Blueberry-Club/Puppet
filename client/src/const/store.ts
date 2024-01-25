@@ -1,6 +1,6 @@
 import * as storeScope from 'ui-storage'
 import * as GMX from 'gmx-middleware-const'
-import { IProfileMode, ITradeFocusMode } from './type'
+import { IUserType, ITradeFocusMode } from './type'
 import { ISortBy } from 'ui-components'
 import { IMarketCreatedEvent, TEMP_MARKET_LIST } from 'gmx-middleware-utils'
 import * as viem from 'viem'
@@ -40,7 +40,7 @@ export const store = storeScope.createStoreDefinition('root', 3, {
   },
   wallet: {
     initialState: {
-      selectedTab: IProfileMode.PUPPET
+      selectedTab: IUserType.PUPPET
     }
   }
 })

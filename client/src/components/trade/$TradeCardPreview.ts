@@ -50,11 +50,11 @@ export const $TradeCardPreview = (config: ITradeCardPreview) => component((
       position: 'inBar',
       color: pnl < 0 ? pallete.negative : pallete.positive,
       time: unixTimestampNow() as Time,
-      size: 0.1,
+      size: 1.5,
       shape: 'circle'
     }
   })
-  const settledMarkerList = config.settledPositionList.flatMap(pos => pos.position.link.increaseList).map((pos): IMarker => {
+  const settledMarkerList = config.settledPositionList.flatMap(pos => pos.position.link.decreaseList).map((pos): IMarker => {
     return {
       position: 'inBar',
       color: colorAlpha(pallete.message, .15),

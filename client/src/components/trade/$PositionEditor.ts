@@ -15,7 +15,7 @@ import { Stream } from "@most/types"
 import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, delta, div, filterNull, formatDiv, formatFixed, getBasisPoints, getTokenAmount, getTokenUsd, ITokenDescription, parseBps, parseFixed, parseReadableNumber, readableNumber, readableTokenAmountFromUsdAmount, readableTokenUsd, readableUnitAmount, readableUsd, StateStream, switchMap } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import { getNativeTokenAddress, getNativeTokenDescription, getTokenDescription, IMarket, IMarketInfo, IMarketPrice, resolveAddress, TEMP_MARKET_LIST } from "gmx-middleware-utils"
-import { IMirrorPositionOpen, ISetRouteType, latestPriceMap } from "puppet-middleware-utils"
+import { IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType, latestPriceMap } from "puppet-middleware-utils"
 import {
   $bear, $bull,
   $ButtonToggle,

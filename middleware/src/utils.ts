@@ -1,6 +1,6 @@
 import { combineArray, map, now } from "@most/core"
 import { Stream } from "@most/types"
-import { getPositionPnlUsd } from "gmx-middleware-utils"
+import { getPositionPnlUsd, isPositionSettled } from "gmx-middleware-utils"
 import * as viem from "viem"
 import { latestPriceMap } from "./graph.js"
 import { IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled } from "./types.js"
@@ -98,7 +98,7 @@ export function openPositionListPnl(
   const pnlList = tradeList.map(mp => {
     return map(pm => {
       const markPrice = pm[mp.position.indexToken].max
-      const pnl = getMpSlotPnL(mp, markPrice, puppet)
+      const pnl = getOpenMpPnL(mp, markPrice, puppet)
       return pnl
     }, latestPriceMap)
   })
@@ -133,14 +133,19 @@ export function getParticiapntMpPortion(mp: IMirrorPosition, amount: bigint, pup
   return getPortion(mp.totalSupply, share, amount)
 }
 
+export function getSettledMpPnL(mp: IMirrorPosition, puppet?: viem.Address): bigint {
+  const realisedPnl = getParticiapntMpPortion(mp, mp.position.realisedPnlUsd, puppet)
 
-export function getMpSlotPnL(mp: IMirrorPositionOpen, markPrice: bigint, puppet?: viem.Address): bigint {
-  const delta = getPositionPnlUsd(mp.position.isLong,  mp.position.sizeInUsd, mp.position.sizeInTokens, markPrice)
-  const openPnl = getParticiapntMpPortion(mp, delta, puppet)
-
-  return openPnl
+  return realisedPnl
 }
 
+export function getOpenMpPnL(mp: IMirrorPositionOpen | IMirrorPositionSettled, markPrice: bigint, puppet?: viem.Address): bigint {
+  const pnl = getPositionPnlUsd(mp.position.isLong,  mp.position.sizeInUsd, mp.position.sizeInTokens, markPrice)
+  const openPnl = getParticiapntMpPortion(mp, pnl, puppet)
+  const realisedPnl = getSettledMpPnL(mp, puppet)
+
+  return realisedPnl + openPnl
+}
 
 export function getPortion(supply: bigint, share: bigint, amount: bigint): bigint {
   if (supply === 0n || amount == 0n) return amount

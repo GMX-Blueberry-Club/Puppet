@@ -138,12 +138,16 @@ export const $MainMenu = ({ parentRoute, showAccount = true }: MainMenu) => comp
       ),
 
       $row(layoutSheet.spacingBig, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
-        // $WalletProfileDisplay({
-        //   // $container: $column(style({ alignSelf: 'center' })),
-        //   parentRoute
-        // })({
-        //   routeChange: routeChangeTether(),
-        // }),
+        $pageLink({
+          $content: $row(layoutSheet.spacing, style({ alignItems: 'center', cursor: 'pointer',  borderRadius: '50px', pointerEvents: 'none' }))(
+            $icon({ $content: $trophy, svgOps: style({ width: '28px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),
+            $text(style({ fontSize: '1.15rem' }))('Leaderboard')
+          ),
+          route: parentRoute.create({ fragment: 'leaderboard' }),
+          url: '/app/leaderboard',
+        })({
+          click: routeChangeTether()
+        }),
         style({ padding: 0 })(
           $pageLink({
             route: parentRoute.create({ fragment: 'wallet', title: 'Portfolio' }),
@@ -159,16 +163,6 @@ export const $MainMenu = ({ parentRoute, showAccount = true }: MainMenu) => comp
             click: routeChangeTether(),
           })
         ),
-        $pageLink({
-          $content: $row(layoutSheet.spacing, style({ alignItems: 'center', cursor: 'pointer',  borderRadius: '50px', pointerEvents: 'none' }))(
-            $icon({ $content: $trophy, svgOps: style({ width: '28px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),
-            $text(style({ fontSize: '1.15rem' }))('Leaderboard')
-          ),
-          route: parentRoute.create({ fragment: 'leaderboard' }),
-          url: '/app/leaderboard',
-        })({
-          click: routeChangeTether()
-        }),
         $pageLink({
           $content: $row(layoutSheet.spacing, style({ alignItems: 'center', cursor: 'pointer',  borderRadius: '50px', pointerEvents: 'none' }))(
             $icon({ $content: $gmxLogo, svgOps: style({ width: '28px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),

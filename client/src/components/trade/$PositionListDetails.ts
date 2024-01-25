@@ -83,7 +83,6 @@ export const $PositionListDetails = (config: IPositionListDetails) => component(
                   }),
                   $sizeAndLiquidation(mp, positionMarkPrice),
                   $positionPnl(mp),
-
                   $ButtonSecondary({
                     $content: $text('Close'),
                     $container: $defaultMiniButtonSecondary

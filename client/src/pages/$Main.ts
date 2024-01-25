@@ -20,9 +20,9 @@ import { newUpdateInvoke } from "../sw/swUtils"
 import { fadeIn } from "../transitions/enter.js"
 import { walletLink } from "../wallet"
 import { $Home } from "./$Home.js"
-import { $PublicProfile } from "./$PublicProfile.js"
+import { $PublicUserPage } from "./user/$Public.js"
 import { $Trade } from "./$Trade.js"
-import { $Wallet } from "./$Wallet.js"
+import { $WalletPage } from "./user/$Wallet.js"
 import { $rootContainer } from "./common"
 import { $Leaderboard } from "./leaderboard/$Leaderboard.js"
 import { getBlockNumber } from "@wagmi/core"
@@ -131,7 +131,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               }, isDesktopScreen),
               router.contains(walletRoute)(
                 $midContainer(
-                  $Wallet({ route: walletRoute, routeTypeListQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery, })({
+                  $WalletPage({ route: walletRoute, routeTypeListQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery, })({
                     modifySubscriber: modifySubscriberTether(),
                     changeRoute: changeRouteTether(),
                     changeActivityTimeframe: changeActivityTimeframeTether(),
@@ -150,7 +150,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               ),
               router.contains(profileRoute)(
                 $midContainer(
-                  fadeIn($PublicProfile({ route: profileRoute, routeTypeListQuery, priceTickMapQuery, activityTimeframe, selectedTradeRouteList })({
+                  fadeIn($PublicUserPage({ route: profileRoute, routeTypeListQuery, priceTickMapQuery, activityTimeframe, selectedTradeRouteList })({
                     modifySubscriber: modifySubscriberTether(),
                     changeActivityTimeframe: changeActivityTimeframeTether(),
                     selectTradeRouteList: selectTradeRouteListTether(),
@@ -186,7 +186,10 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               
               router.match(tradeRoute)(
                 switchMap(chain => {
-                  return $Trade({ routeTypeListQuery, chain: chain, referralCode: BLUEBERRY_REFFERAL_CODE, parentRoute: tradeRoute })({
+                  return $Trade({ 
+                    routeTypeListQuery,
+                    chain: chain, referralCode: BLUEBERRY_REFFERAL_CODE, parentRoute: tradeRoute
+                  })({
                   // changeRoute: linkClickTether()
                   })
                 }, walletLink.chain)  
@@ -198,7 +201,6 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                     $content: switchMap(params => {
                       const blocksBehind = $text(
                         map(blockChange => {
-                          debugger
                           return readableUnitAmount(Math.max(0, Number(blockChange) - params.subgraphStatus.block.number))
                         }, walletLink.blockChange)
                       )

@@ -39,26 +39,26 @@ const metadata = {
 
 
 export const wcConnector = walletConnect({
-  showQrModal: false,
+  showQrModal: true,
   projectId, metadata,
-  qrModalOptions: {
-    themeVariables: {
-      // "--w3m-color-mix": "red",
-      // "--w3m-color-mix-strength": 0,
-      // "--w3m-border-radius-master": "0px",
-      // '--w3m-font-family': 'var(--font)',
-      // '--w3m-accent': pallete.primary,
-      "--wcm-accent-color": pallete.primary,
-      "--wcm-font-family": 'var(--font)',
-      "--wcm-background-color": pallete.background,
-    }
-  }
+  // qrModalOptions: {
+  //   themeVariables: {
+  //     // "--w3m-color-mix": "red",
+  //     // "--w3m-color-mix-strength": 0,
+  //     // "--w3m-border-radius-master": "0px",
+  //     // '--w3m-font-family': 'var(--font)',
+  //     // '--w3m-accent': pallete.primary,
+  //     "--wcm-accent-color": pallete.primary,
+  //     "--wcm-font-family": 'var(--font)',
+  //     "--wcm-background-color": pallete.background,
+  //   }
+  // }
 })
 
 
 export const wagmiConfig = createConfig({
   chains,
-  storage,
+  // storage,
   connectors: [
     // injected(),
     // coinbaseWallet({ appName: 'Create Wagmi' }),

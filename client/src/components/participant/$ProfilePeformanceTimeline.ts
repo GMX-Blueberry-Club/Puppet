@@ -8,11 +8,11 @@ import * as GMX from 'gmx-middleware-const'
 import { $Baseline, $IntermediatePromise, $infoTooltipLabel, IMarker } from "ui-components"
 import { filterNull, parseReadableNumber, readableUsd, readableUnitAmount, IntervalTime, unixTimestampNow } from "common-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
-import { IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType, getMpSlotPnL } from "puppet-middleware-utils"
+import { IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType, getOpenMpPnL } from "puppet-middleware-utils"
 import { $labelDisplay } from "../../common/$TextField.js"
 import { $route } from "../../common/$common.js"
 import { IPageGlobalParams } from "../../const/type.js"
-import { $LastAtivity } from "../../pages/components/$LastActivity.js"
+import { $LastAtivity } from "../$LastActivity.js"
 import { $DropMultiSelect } from "../form/$Dropdown.js"
 import { getPerformanceTimeline } from "../trade/$ProfilePerformanceGraph.js"
 import * as viem from "viem"
@@ -129,21 +129,19 @@ export const $ProfilePeformanceTimeline = (config: IPageGlobalParams & {
           }
 
           const openMarkerList = params.openPositionList.map((pos): IMarker => {
-            const priceTickList = params.priceTickMap[pos.position.indexToken]
-            const markPrice = priceTickList[priceTickList.length - 1].price
-            const pnl = getMpSlotPnL(pos, markPrice)
+            const pnl = params.timeline[params.timeline.length - 1].value
             return {
               position: 'inBar',
               color: pnl < 0n ? pallete.negative : pallete.positive,
               time: unixTimestampNow() as Time,
-              size: 0.1,
+              size: 1.5,
               shape: 'circle'
             }
           })
-          const settledMarkerList = params.settledPositionList.flatMap(pos => pos.position.link.increaseList).map((pos): IMarker => {
+          const settledMarkerList = params.settledPositionList.flatMap(pos => pos.position.link.decreaseList).map((pos): IMarker => {
             return {
               position: 'inBar',
-              color: colorAlpha(pallete.message, .15),
+              color: colorAlpha(pallete.message, .5),
               time: Number(pos.blockTimestamp) as Time,
               size: 0.1,
               shape: 'circle'

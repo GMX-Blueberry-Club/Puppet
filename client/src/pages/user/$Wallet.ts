@@ -8,33 +8,33 @@ import { ADDRESS_ZERO, IntervalTime, ignoreAll, switchMap } from "common-utils"
 import { ISetRouteType, queryPuppetTradeRoute, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
 import { $ButtonToggle, $defaulButtonToggleContainer } from "ui-components"
 import * as uiStorage from "ui-storage"
-import { $IntermediateConnectButton } from "../components/$ConnectAccount"
-import { $ButtonSecondary } from "../components/form/$Button"
-import { $PuppetPortfolio } from "../components/participant/$PuppetPortfolio"
-import { $TraderProfile } from "../components/participant/$TraderProfile.js"
-import { IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor.js"
-import * as storeDb from "../const/store.js"
-import { IPageGlobalParams, IProfileMode } from "../const/type.js"
-import { walletLink } from "../wallet"
+import { $IntermediateConnectButton } from "../../components/$ConnectAccount.js"
+import { $ButtonSecondary } from "../../components/form/$Button.js"
+import { $PuppetPage } from "./$Puppet.js"
+import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
+import * as storeDb from "../../const/store.js"
+import { IPageGlobalParams, IUserType } from "../../const/type.js"
+import { walletLink } from "../../wallet/index.js"
+import { $TraderPage } from "./$Trader.js"
 
 
 const optionDisplay = {
-  [IProfileMode.PUPPET]: {
+  [IUserType.PUPPET]: {
     label: 'Puppet',
     url: '/puppet'
   },
-  [IProfileMode.TRADER]: {
+  [IUserType.TRADER]: {
     label: 'Trader',
     url: '/trader'
   },
 }
 
 
-export const $Wallet = (config: IPageGlobalParams & { route: router.Route }) => component((
+export const $WalletPage = (config: IPageGlobalParams & { route: router.Route }) => component((
   [walletChange, walletChangeTether]: Behavior<any, any>,
 
   [changeRoute, changeRouteTether]: Behavior<string, string>,
-  [selectProfileMode, selectProfileModeTether]: Behavior<IProfileMode>,
+  [selectProfileMode, selectProfileModeTether]: Behavior<IUserType>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
 
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,
@@ -60,7 +60,7 @@ export const $Wallet = (config: IPageGlobalParams & { route: router.Route }) => 
         $ButtonToggle({
           $container: $defaulButtonToggleContainer(style({ alignSelf: 'center', })),
           selected: profileMode,
-          options: [IProfileMode.PUPPET, IProfileMode.TRADER],
+          options: [IUserType.PUPPET, IUserType.TRADER],
           $$option: map(option => {
             return $text(optionDisplay[option].label)
           })
@@ -86,7 +86,7 @@ export const $Wallet = (config: IPageGlobalParams & { route: router.Route }) => 
 
       switchMap(params => {
         const address = params.wallet?.account?.address || ADDRESS_ZERO
-        if (params.profileMode === IProfileMode.PUPPET) {
+        if (params.profileMode === IUserType.PUPPET) {
           const puppetTradeRouteListQuery = queryPuppetTradeRoute({ address, activityTimeframe })
           const settledPositionListQuery = map(async tradeRoute => {
             return (await tradeRoute).map(x => x.settledList).flatMap(pp => pp.map(x => x.position))
@@ -95,7 +95,7 @@ export const $Wallet = (config: IPageGlobalParams & { route: router.Route }) => 
             return (await tradeRoute).map(x => x.openList).flatMap(pp => pp.map(x => x.position))
           }, puppetTradeRouteListQuery)
 
-          return $PuppetPortfolio({
+          return $PuppetPage({
             route, priceTickMapQuery, openPositionListQuery, settledPositionListQuery, puppetTradeRouteListQuery,
             address, activityTimeframe, selectedTradeRouteList, routeTypeListQuery,
           })({
@@ -109,13 +109,7 @@ export const $Wallet = (config: IPageGlobalParams & { route: router.Route }) => 
         const openPositionListQuery = queryTraderPositionOpen({ address, selectedTradeRouteList })
 
         return $column(layoutSheet.spacingTiny)(
-          $TraderProfile({
-            priceTickMapQuery, openPositionListQuery, settledPositionListQuery,
-            address, activityTimeframe, selectedTradeRouteList, routeTypeListQuery,
-            route: config.route,
-          })({
-
-            
+          $TraderPage({ ...config, openPositionListQuery, settledPositionListQuery, address })({ 
             changeActivityTimeframe: changeActivityTimeframeTether(),
           })
         ) 

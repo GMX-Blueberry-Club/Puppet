@@ -1,9 +1,9 @@
-import { Behavior, isStream, Tether } from "@aelea/core"
+import { Behavior, Tether } from "@aelea/core"
 import { $text, component, INode, nodeEvent, style, styleInline } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $icon, $row, $seperator, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { pallete } from "@aelea/ui-components-theme"
-import { constant, empty, map, now, skipRepeats } from "@most/core"
+import { colorAlpha, pallete } from "@aelea/ui-components-theme"
+import { constant, empty, map, skipRepeats } from "@most/core"
 import { Stream } from "@most/types"
 import { getBasisPoints, getTokenUsd, lst, readableLeverage, readablePercentage, readablePnl, readableUsd, streamOf, switchMap, unixTimestampNow } from "common-utils"
 import { TOKEN_SYMBOL } from "gmx-middleware-const"
@@ -12,18 +12,18 @@ import {
   getRoughLiquidationPrice,
   getTokenDescription, IAbstractPositionParams,
   IMarket,
-  IOraclePrice,
+  isPositionSettled,
   liquidationWeight
 } from "gmx-middleware-utils"
-import { getMpSlotPnL, getParticiapntMpPortion, IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen, latestPriceMap } from "puppet-middleware-utils"
-import { $bear, $bull, $infoLabel, $infoTooltipLabel, $Link, $tokenIconMap } from "ui-components"
+import { getOpenMpPnL, getParticiapntMpPortion, getSettledMpPnL, IMirrorPosition, IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, latestPriceMap } from "puppet-middleware-utils"
+import { $bear, $bull, $infoLabel, $infoTooltip, $Link, $tokenIconMap } from "ui-components"
 import * as viem from "viem"
 import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile.js"
 import { $Popover } from "../components/$Popover.js"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button.js"
 import { $RouteSubscriptionEditor, IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor.js"
+import { IUserType } from "../const/type"
 import { getPuppetSubscriptionExpiry } from "../logic/puppetLogic.js"
-import { IProfileActiveTab } from "../pages/$PublicProfile.js"
 import { $seperator2 } from "../pages/common.js"
 import { wallet } from "../wallet/walletLink"
 import { $puppetLogo } from "./$icons"
@@ -177,17 +177,10 @@ export const $puppets = (
 }
 
 export const $positionPnl = (mp: IMirrorPositionOpen, puppet?: viem.Address) => {
-  const latestPrice = map(pm => pm[mp.position.indexToken].max, latestPriceMap)
-
   return $column(layoutSheet.spacingTiny, style({ textAlign: 'right' }))(
-    style({ flexDirection: 'row-reverse' })(
-      $infoTooltipLabel(
-        $positionSlotPnl(mp, latestPrice, puppet),
-        $positionSlotPnl(mp, latestPrice, puppet),
-      )
-    ),
+    $positionSlotPnl(mp, puppet),
     $seperator2,
-    style({ fontSize: '.85rem' })($positionSlotRoi(mp, latestPrice, puppet)),
+    $positionOpenRoi(mp, puppet),
   )
 }
 
@@ -212,20 +205,21 @@ export const $leverage = (size: bigint, collateral: bigint) => {
 }
 
 export const $pnlDisplay = (
-  pnl: Stream<bigint> | bigint,
+  pnlSrc: Stream<bigint> | bigint,
   bold = true
 ) => {
-  const pnls = isStream(pnl) ? pnl : now(pnl)
-  const display = map(value => readablePnl(value), pnls)
+  const pnl = streamOf(pnlSrc)
+  const display = map(value => readablePnl(value), pnl)
   const displayColor = skipRepeats(map(value => {
     return value > 0n ? pallete.positive : value === 0n ? pallete.foreground : pallete.negative
-  }, pnls))
+  }, pnl))
 
   const colorStyle = styleInline(map(color => {
     return { color }
   }, displayColor))
 
   const $testStr = $text(colorStyle, style({ fontWeight: bold ? 'bold' : 'normal' }))
+
   return $testStr(display)
 }
 
@@ -237,26 +231,43 @@ export const $PnlPercentageValue = (pnl: Stream<bigint> | bigint, collateral: bi
   )
 }
 
-export const $positionSlotPnl = (mp: IMirrorPositionOpen, positionMarkPrice: Stream<bigint> | IOraclePrice, puppet?: viem.Address) => {
-  const value = isStream(positionMarkPrice)
-    ? map((price) => {
-      const pnl = getMpSlotPnL(mp, price, puppet)
-      return mp.position.realisedPnlUsd + pnl // - mp.position.cumulativeFee
-    }, positionMarkPrice)
-    : positionMarkPrice.min
+export const $positionSlotPnl = (mp: IMirrorPositionOpen | IMirrorPositionSettled, puppet?: viem.Address) => {
 
-  return $pnlDisplay(value)
+  const latestPrice = map(pm => pm[mp.position.indexToken].max, latestPriceMap)
+
+  const isSettled = isPositionSettled(mp.position)
+  const value = isSettled
+    ? getSettledMpPnL(mp, puppet)
+    : map(price => {
+      const openPnl = getOpenMpPnL(mp, price, puppet)
+      return mp.position.realisedPnlUsd + openPnl // - mp.position.cumulativeFee
+    }, latestPrice)
+    
+
+  const displayColor = skipRepeats(map(value => {
+    return value > 0n ? pallete.positive : value === 0n ? pallete.foreground : pallete.negative
+  }, streamOf(value)))
+
+  return isSettled
+    ? $pnlDisplay(value)
+    : $row(style({ alignItems: 'center' }))(
+      switchMap(color => style({ backgroundColor: colorAlpha(color, .1), borderRadius: '50%' })($infoTooltip('WIP', color, '18px')), displayColor),
+      $pnlDisplay(value),
+    )
 }
 
-export const $positionSlotRoi = (pos: IMirrorPositionOpen, positionMarkPrice: bigint | Stream<bigint>, puppet?: viem.Address) => {
-  const lstIncrease = lst(pos.position.link.increaseList)
-  const collateralUsd = getTokenUsd(lstIncrease.collateralTokenPriceMin, pos.position.maxCollateralToken)
-    
-  const roi = map(markPrice => {
-    const delta = getMpSlotPnL(pos, markPrice, puppet)
-    return readablePercentage(getBasisPoints(pos.position.realisedPnlUsd + delta, collateralUsd))
-  }, streamOf(positionMarkPrice))
-  return $text(roi)
+export const $positionOpenRoi = (mp: IMirrorPositionOpen | IMirrorPositionSettled, puppet?: viem.Address) => {
+  const lstIncrease = lst(mp.position.link.increaseList)
+  const collateralUsd = getTokenUsd(lstIncrease.collateralTokenPriceMin, mp.position.maxCollateralToken)
+  const latestPrice = map(pm => pm[mp.position.indexToken].max, latestPriceMap)
+
+  const roi = isPositionSettled(mp.position)
+    ? readablePercentage(getBasisPoints(mp.position.realisedPnlUsd, collateralUsd))
+    : map(markPrice => {
+      const delta = getOpenMpPnL(mp, markPrice, puppet)
+      return readablePercentage(getBasisPoints(mp.position.realisedPnlUsd + delta, collateralUsd))
+    }, latestPrice)
+  return $text(style({ fontSize: '.85rem' }))(roi)
 }
 
 export function $liquidationSeparator(isLong: boolean, sizeUsd: bigint, sizeInTokens: bigint, collateralAmount: bigint, markPrice: Stream<bigint>) {
@@ -381,7 +392,7 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
       // $profileContainer: $defaultBerry(style({ width: '50px' }))
       }),
       route: config.route.create({ fragment: 'baseRoute' }),
-      url: `/app/profile/${IProfileActiveTab.TRADER.toLowerCase()}/${config.trader}`
+      url: `/app/profile/${IUserType.TRADER.toLowerCase()}/${config.trader}`
     })({ click: clickTraderTether() }),
 
 
