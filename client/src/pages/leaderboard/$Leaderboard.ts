@@ -2,7 +2,7 @@ import { Behavior, combineObject } from "@aelea/core"
 import { $element, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { pallete } from "@aelea/ui-components-theme"
+import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, empty, map, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { IntervalTime, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "common-utils"
@@ -109,7 +109,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
     $column(layoutSheet.spacing, style({ paddingTop: '36px' }))(
 
       $card2(style({ padding: "0", gap: 0 }))(
-        $responsiveFlex(layoutSheet.spacingBig, style({ padding: '18px', placeContent: 'space-between', alignItems: 'flex-start' }))(
+        $responsiveFlex(layoutSheet.spacingBig, style({ padding: '26px', borderBottom: `1px solid ${colorAlpha(pallete.foreground, .2)}`, placeContent: 'space-between', alignItems: 'flex-start' }))(
           $DropMultiSelect({
           // $container: $row(layoutSheet.spacingTiny, style({ display: 'flex', position: 'relative' })),
             $input: $element('input')(style({ width: '100px' })),

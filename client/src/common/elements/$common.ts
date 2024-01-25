@@ -23,7 +23,6 @@ export const $card2 = $column(layoutSheet.spacing,
   style({
     borderRadius: '20px', padding: '20px',
     backgroundColor: pallete.middleground,
-    border: `1px solid ${colorAlpha(pallete.foreground, .2)}`,
     boxShadow: 'rgba(0, 0, 0, 0.25) 0px 4px 20px 0px',
   })
 )

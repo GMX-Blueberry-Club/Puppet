@@ -25,10 +25,10 @@ export const $CardTable = <T>(config: TableOption<T>) => {
         )
       )
     },
-    $headerContainer: $defaultTableRowContainer(style({ padding: '8px 18px' })),
+    $headerContainer: $defaultTableRowContainer(style({ background: pallete.background, padding: '8px 18px' })),
     $rowContainer: $defaultTableRowContainer(
       stylePseudo(':last-child', { borderRadius: '0 0 18px 18px', marginBottom: '2px' }),
-      style({ background: pallete.background, padding: '0 18px' })
+      style({ background: pallete.background, padding: '0 26px' })
     ),
     // $bodyRowContainer: $defaultTableRowContainer(
     //   style({ margin: '0 1px' })
