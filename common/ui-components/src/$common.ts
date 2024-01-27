@@ -191,10 +191,11 @@ export const $icon = ({ $content, width = '24px', viewBox = `0 0 32 32`, fill = 
 export const $intermediate$node = (querySrc: Stream<Promise<$Node>>, hint = '-'): $Node => {
   const state = promiseState(querySrc)
   return switchMap(res => {
-    if (res.state === PromiseStatus.PENDING) {
-      return $text(hint)
+    if (res.state === PromiseStatus.DONE) {
+      return res.value
     }
-    return res.value
+
+    return $text(hint)
   }, state)
 }
 
