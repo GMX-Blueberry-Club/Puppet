@@ -25,8 +25,8 @@ import { $RouteSubscriptionEditor, IChangeSubscription } from "../components/por
 import { IUserType } from "../const/type"
 import { getPuppetSubscriptionExpiry } from "../logic/puppetLogic.js"
 import { $seperator2 } from "../pages/common.js"
-import { wallet } from "../wallet/walletLink"
 import { $puppetLogo } from "./$icons"
+import { walletLink } from "../wallet"
 
 
 export const $midContainer = $column(
@@ -417,7 +417,7 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
     const expiry = await getPuppetSubscriptionExpiry(w3p.account.address, config.trader, config.positionParams.collateralToken, config.positionParams.indexToken, config.positionParams.isLong)
 
     return expiry
-  }, wallet)
+  }, walletLink.wallet)
 
   return [
     $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(

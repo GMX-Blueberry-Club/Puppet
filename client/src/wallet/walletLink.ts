@@ -1,23 +1,16 @@
 import { fromCallback, replayLatest } from "@aelea/core"
-import { pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, fromPromise, map, multicast, now, startWith } from "@most/core"
+import { awaitPromises, fromPromise, map, mergeArray, multicast, now, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { walletConnect } from '@wagmi/connectors'
-import {
-  createConfig, createStorage, getBlockNumber, getPublicClient,
-  getWalletClient, http, reconnect, watchAccount, watchBlockNumber, watchChainId, watchPublicClient
-} from "@wagmi/core"
+import { Connection, GetAccountReturnType, createConfig, createStorage, getBlockNumber, getPublicClient, getWalletClient, http, reconnect, watchAccount, watchBlockNumber, watchChainId, watchPublicClient } from "@wagmi/core"
+import { arbitrum } from "@wagmi/core/chains"
 import { switchMap } from "common-utils"
 import * as viem from 'viem'
-
-import { arbitrum } from "@wagmi/core/chains"
 // import { arbitrum } from "viem/chains"
 
 export const chains = [
   arbitrum, // avalanche
-
   // mainnet, sepolia,
-  
 ] as const
 
 export type ISupportedChain = typeof chains[number]
@@ -37,10 +30,10 @@ const metadata = {
   icons: ['https://imagedelivery.net/_aTEfDRm7z3tKgu9JhfeKA/5a7df101-00dc-4856-60a9-921b2879e200/lg']
 }
 
-
 export const wcConnector = walletConnect({
   showQrModal: true,
   projectId, metadata,
+  isNewChainsStale: true,
   // qrModalOptions: {
   //   themeVariables: {
   //     // "--w3m-color-mix": "red",
@@ -57,6 +50,11 @@ export const wcConnector = walletConnect({
 
 
 export const wagmiConfig = createConfig({
+  storage: storage,
+  syncConnectedChain: true,
+  batch: {
+    multicall: true
+  },
   chains,
   // storage,
   connectors: [
@@ -69,12 +67,18 @@ export const wagmiConfig = createConfig({
   },
 })
 
-const reconnectQuery = fromPromise(reconnect(wagmiConfig))
+const reconnectQuery: Stream<Connection | null> = map(connectionArray => {
+  if (connectionArray.length === 0) {
+    return null
+  }
+
+  return connectionArray[0]
+}, fromPromise(reconnect(wagmiConfig)))
 
 
 
-export const chain: Stream<ISupportedChain> = switchMap(([init]) =>  {
-  const initalChain = init ? chains.find(c => c.id === init.chainId) : chains[0]
+export const chain: Stream<ISupportedChain> = switchMap(connection =>  {
+  const initalChain = connection ? chains.find(c => c.id === connection.chainId) : chains[0]
   const change = fromCallback(cb => {
     const watcher = watchChainId(wagmiConfig, {
       onChange(res) {
@@ -89,18 +93,12 @@ export const chain: Stream<ISupportedChain> = switchMap(([init]) =>  {
 }, reconnectQuery)
 
 
-
-export const account: Stream<viem.Address> = replayLatest(multicast(switchMap(([init]) => {
-  const initAccount = init ? [init.accounts[0]] : null
-  const change = fromCallback(cb => {
-    const watch = watchAccount(wagmiConfig, {
-      onChange(res) {
-        return cb(res.address)
-      }
-    })
-    return watch
-  })
-  return startWith(initAccount, change)
+export const account: Stream<GetAccountReturnType> = replayLatest(multicast(switchMap(connection => {
+  return fromCallback(cb => watchAccount(wagmiConfig, {
+    onChange(res) {
+      return cb(res)
+    }
+  }))
 }, reconnectQuery))) 
 
 
@@ -118,14 +116,17 @@ const publicClientChange = fromCallback(cb => {
 export const publicClient: Stream<viem.PublicClient> = replayLatest(multicast(startWith(intialPublicClient, publicClientChange)))
 
 
-export const wallet: Stream<IWalletClient | null> = replayLatest(multicast(switchMap(async address => {
-  if (viem.isAddress(address)) {
-    const wClient = await getWalletClient(wagmiConfig)
-    return wClient
-  }
+export const wallet: Stream<IWalletClient | null> = replayLatest(multicast(mergeArray([
+  awaitPromises(map(connection => connection ? getWalletClient(wagmiConfig) : null, reconnectQuery)),
+  switchMap(async connection => {
+    if (connection.status === 'connected') {
+      const wClient = await getWalletClient(wagmiConfig)
+      return wClient
+    }
 
-  return null
-}, account)))
+    return null
+  }, account)
+])))
 
 
 // export const nativeBalance = switchMap(async params => {
