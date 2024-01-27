@@ -3,24 +3,22 @@ import { Behavior, combineObject } from "@aelea/core"
 import { $element, $node, $text, attr, component, style, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { empty, fromPromise, map, mergeArray, now, snapshot, startWith } from "@most/core"
+import { empty, map, mergeArray, now, snapshot, startWith } from "@most/core"
 import { IntervalTime, formatFixed, parseBps, switchMap, unixTimestampNow } from "common-utils"
 import { ISetRouteType } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { theme } from "../../assignThemeSync.js"
 import { $TextField } from "../../common/$TextField.js"
 import { $route } from "../../common/$common"
+import { IWalletPageParams } from "../../const/type"
 import { getPuppetAllowance } from "../../logic/puppetLogic"
 import { $ButtonSecondary } from "../form/$Button.js"
 import { $Dropdown } from "../form/$Dropdown"
-import { walletLink } from "../../wallet"
 
 interface IRouteSubscriptionEditor {
   expiry: bigint
   tradeRoute: viem.Hex
-
   trader: viem.Address
-
   routeTypeKey: viem.Hex
   routeTypeList?: ISetRouteType[]
 }
@@ -33,7 +31,7 @@ export interface IChangeSubscription {
   previousSubscriptionExpiry: bigint
 }
 
-export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => component((
+export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor & IWalletPageParams) => component((
   [inputEndDate, inputEndDateTether]: Behavior<any, bigint>,
   [inputAllowance, inputAllowanceTether]: Behavior<any, bigint>,
   [clickUnsubscribe, clickUnsubscribeTether]: Behavior<any, IChangeSubscription>,
@@ -41,17 +39,18 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
   [changeRouteTypeKey, changeRouteTypeKeyTether]: Behavior<any, viem.Hex>,
 ) => {
 
-  const { trader, routeTypeList } = config
+  const { trader, routeTypeList, tradeRoute, walletClientQuery } = config
 
   const allowance = mergeArray([
-    switchMap(async w3p => {
-      if (w3p === null) {
+    switchMap(async walletQuery => {
+      const wallet = await walletQuery
+      if (wallet === null) {
         return ''
       }
 
-      const allowance = getPuppetAllowance(w3p.account.address, config.tradeRoute)
-      return allowance || ''
-    }, walletLink.wallet),
+      const amount = await getPuppetAllowance(wallet, wallet.account.address, config.tradeRoute)
+      return amount || ''
+    }, walletClientQuery),
     inputAllowance
   ])
 
@@ -79,11 +78,11 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
 
       routeTypeList ? $Dropdown({
         $container: $row(style({ borderRadius: '30px', backgroundColor: pallete.background, padding: '4px 8px', position: 'relative', border: `1px solid ${colorAlpha(pallete.foreground, .2)}`, cursor: 'pointer' })),
-        $selection: switchMap(routeTypeKey => {
-          const match = routeTypeList.find(route => route.routeTypeKey === routeTypeKey)
+        $selection: switchMap(key => {
+          const match = routeTypeList.find(route => route.routeTypeKey === key)
 
           if (!match) {
-            throw new Error(`Route type key ${routeTypeKey} not found`)
+            throw new Error(`Route type key ${key} not found`)
           }
 
           return $route(match)
@@ -163,7 +162,7 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor) => co
     ),
 
     {
-      modifySubscribeList: mergeArray([
+      modifySubscriber: mergeArray([
         clickSubmit,
         clickUnsubscribe
       ]),

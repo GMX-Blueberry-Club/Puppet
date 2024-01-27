@@ -1,9 +1,8 @@
 import * as wagmi from "@wagmi/core"
 import * as GMX from "gmx-middleware-const"
 import { hashData, IMarket, IMarketConfig, IMarketFees, IMarketInfo, IMarketPool, IMarketPrice, IMarketUsageInfo } from "gmx-middleware-utils"
-import { ISupportedChain, wagmiConfig } from "../wallet/walletLink.js"
-import { factor } from "common-utils"
-
+import { factor, getMappedValue } from "common-utils"
+import * as viem from 'viem'
 
 
 
@@ -31,10 +30,10 @@ const ESTIMATED_GAS_FEE_MULTIPLIER_FACTOR = "ESTIMATED_GAS_FEE_MULTIPLIER_FACTOR
 
 
 export async function getMarketPoolUsage(
-  chain: ISupportedChain,
+  chain: viem.Chain,
   market: IMarket
 ): Promise<IMarketUsageInfo> {
-  const datastoreContract = GMX.CONTRACT[chain.id].Datastore
+  const datastoreContract = getMappedValue(GMX.CONTRACT, chain.id).Datastore
   // const v2Reader = contractReader(readerV2)
 
 
@@ -354,10 +353,10 @@ export async function getMarketPoolUsage(
 }
 
 export async function getMarketConfig(
-  chain: ISupportedChain,
+  chain: viem.Chain,
   market: IMarket,
 ): Promise<IMarketConfig> {
-  const datastoreContract = GMX.CONTRACT[chain.id].Datastore
+  const datastoreContract = getMappedValue(GMX.CONTRACT, chain.id).Datastore
  
 
   const reserveFactorLong = wagmi.readContract(wagmiConfig, {
@@ -477,8 +476,9 @@ export async function getMarketConfig(
   }
 }
 
-export async function getFullMarketInfo(chain: ISupportedChain, market: IMarket, price: IMarketPrice): Promise<IMarketInfo> {
-  const gmxContractMap = GMX.CONTRACT[chain.id]
+export async function getFullMarketInfo(chain: viem.Chain, market: IMarket, price: IMarketPrice): Promise<IMarketInfo> {
+
+  const gmxContractMap = getMappedValue(GMX.CONTRACT, chain.id)
   const datastoreContract = gmxContractMap.Datastore
   const usageQuery: Promise<IMarketUsageInfo> = getMarketPoolUsage(chain, market)
   const configQuery: Promise<IMarketConfig> = getMarketConfig(chain, market)
@@ -512,7 +512,7 @@ export async function getFullMarketInfo(chain: ISupportedChain, market: IMarket,
   return { market, price, usage, config, pool, fees }
 }
 
-export async function getPositionOrderGasLimit(chain: ISupportedChain) {
+export async function getPositionOrderGasLimit(chain: viem.Chain) {
   const datastoreContract = GMX.CONTRACT[chain.id].Datastore
 
   const increaseGasLimit =  wagmi.readContract(wagmiConfig, {
@@ -529,7 +529,7 @@ export async function getPositionOrderGasLimit(chain: ISupportedChain) {
   return { increaseGasLimit, decreaseGasLimit }
 }
 
-export async function getExecuteGasFee(chain: ISupportedChain) {
+export async function getExecuteGasFee(chain: viem.Chain) {
   const datastoreContract = GMX.CONTRACT[chain.id].Datastore
 
   const estimatedFeeBaseGasLimit =  wagmi.readContract(wagmiConfig, {

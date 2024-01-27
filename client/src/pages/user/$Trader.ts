@@ -6,15 +6,13 @@ import { IntervalTime, pagingQuery } from "common-utils"
 import { ISetRouteType } from "puppet-middleware-utils"
 import { $IntermediatePromise, $Table, $infoLabel, ScrollRequest } from "ui-components"
 import { $card, $card2 } from "../../common/elements/$common.js"
-import { IUserUserParams } from "../../const/type.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
 import { entryColumn, pnlColumn, positionTimeColumn, puppetsColumn, settledSizeColumn } from "../../components/table/$TableColumn.js"
 import { $ProfilePeformanceTimeline } from "../../components/participant/$ProfilePeformanceTimeline.js"
+import { IPageParams, IUserActivityParams } from "../../const/type"
 
 
-export const $TraderPage = (
-  config: IUserUserParams
-) => component((
+export const $TraderPage = (config: IPageParams & IUserActivityParams) => component((
   [changeRoute, changeRouteTether]: Behavior<any, string>,
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
 
@@ -22,11 +20,9 @@ export const $TraderPage = (
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 
   [modifySubscribeList, modifySubscribeListTether]: Behavior<IChangeSubscription>,
-  [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, bigint>,
-
 ) => {
 
-  const { activityTimeframe, selectedTradeRouteList, address, priceTickMapQuery, route, routeTypeListQuery, settledPositionListQuery, openPositionListQuery } = config
+  const { activityTimeframe, selectedTradeRouteList, priceTickMapQuery, route, routeTypeListQuery, settledPositionListQuery, openPositionListQuery } = config
 
 
   const positionListQuery = map(async (params) => {

@@ -5,44 +5,40 @@ import { $column, $row, layoutSheet } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, constant, empty, map, multicast, now, snapshot, switchLatest } from '@most/core'
 import { Stream } from "@most/types"
-import { disconnect } from "@wagmi/core"
-import { $Link, $anchor, $discord, $gitbook, $github, $icon, $infoLabeledValue, $infoTooltipLabel, $instagram, $intermediateMessage, $moreDots, $twitter, $intermediate$node, $infoLabel } from "ui-components"
+import { readableTokenAmountLabel, switchMap } from "common-utils"
+import * as GMX from 'gmx-middleware-const'
+import { getTokenDescription } from "gmx-middleware-utils"
+import { $Link, $anchor, $discord, $gitbook, $github, $icon, $infoLabel, $instagram, $intermediate$node, $moreDots, $twitter } from "ui-components"
 import { $bagOfCoinsCircle, $fileCheckCircle, $gmxLogo, $puppetLogo } from "../common/$icons.js"
 import { $stackedCoins, $trophy } from "../common/elements/$icons.js"
 import { dark, light } from "../common/theme.js"
-import { walletLink } from "../wallet/index.js"
+import { IWalletPageParams } from "../const/type"
+import { getPuppetDepositAmount } from "../logic/puppetLogic"
+import { $seperator2 } from "../pages/common"
+import { $disconnectedWalletDisplay, $profileDisplay } from "./$AccountProfile"
 import { $Popover } from "./$Popover.js"
 import { $Picker } from "./$ThemePicker.js"
 import { $WalletProfileDisplay } from "./$WalletProfileDisplay.js"
 import { $ButtonSecondary } from "./form/$Button.js"
-import { wagmiConfig } from "../wallet/walletLink"
-import { readableTokenAmountLabel, switchMap } from "common-utils"
-import { $disconnectedWalletDisplay, $profileDisplay } from "./$AccountProfile"
-import { $responsiveFlex } from "../common/elements/$common"
-import { getTokenDescription } from "gmx-middleware-utils"
-import * as GMX from 'gmx-middleware-const'
-import { getPuppetDepositAmount } from "../logic/puppetLogic"
-import { arbitrum } from "viem/chains"
-import { $seperator2 } from "../pages/common"
 
 
 
-interface MainMenu {
+interface MainMenu extends IWalletPageParams {
   parentRoute: Route
   showAccount?: boolean
 }
 
 
 
-export const $MainMenu = ({ parentRoute, showAccount = true }: MainMenu) => component((
+export const $MainMenu = (config: MainMenu) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
   [clickPopoverClaim, clickPopoverClaimTether]: Behavior<any, any>,
   [walletChange, walletChangeTether]: Behavior<any, any>,
 ) => {
 
-  const routeChangeMulticast = multicast(routeChange)
+  const { parentRoute, showAccount, walletClientQuery } = config
 
-  
+
 
 
   const $circleButtonAnchor = $anchor(
@@ -77,8 +73,8 @@ export const $MainMenu = ({ parentRoute, showAccount = true }: MainMenu) => comp
         })({}),
 
 
-        switchLatest(snapshot((_, wallet) => {
-          if (wallet === null) {
+        switchLatest(snapshot((_, walletQuery) => {
+          if (walletQuery === null) {
             return empty()
           }
 
@@ -89,18 +85,18 @@ export const $MainMenu = ({ parentRoute, showAccount = true }: MainMenu) => comp
               map(async xx => {
 
                 // Check if connection is already established
-                await disconnect(wagmiConfig)
+                // await disconnect(wagmiConfig)
 
               }),
               awaitPromises
             )
           })
-        }, walletChange, walletLink.wallet)),
+        }, walletChange, walletClientQuery)),
 
       ),
       clickPopoverClaim
     ),
-    dismiss: routeChangeMulticast,
+    dismiss: routeChange,
     $target: $circleButtonAnchor(
       $icon({
         svgOps: O(
@@ -152,8 +148,9 @@ export const $MainMenu = ({ parentRoute, showAccount = true }: MainMenu) => comp
             route: parentRoute.create({ fragment: 'wallet', title: 'Portfolio' }),
             // anchorOp: style({  }),
             url: `/app/wallet`,
-            $content: switchMap(wallet => {
+            $content: switchLatest(switchMap(async walletQuery => {
 
+              const wallet = await walletQuery
 
               if (wallet === null) {
                 return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', pointerEvents: 'none', paddingRight: '16px' }))(
@@ -164,7 +161,7 @@ export const $MainMenu = ({ parentRoute, showAccount = true }: MainMenu) => comp
               }
 
               const address = wallet.account.address
-              const depositQuery = now(address ? getPuppetDepositAmount(address, arbitrum.id) : Promise.resolve(0n))
+              const depositQuery = now(address ? getPuppetDepositAmount(wallet, address) : Promise.resolve(0n))
               
               return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', pointerEvents: 'none', paddingRight: '16px' }))(
                 address
@@ -194,7 +191,7 @@ export const $MainMenu = ({ parentRoute, showAccount = true }: MainMenu) => comp
                 //   }, depositQuery)
                 // )
               ) 
-            }, walletLink.wallet)
+            }, walletClientQuery))
           })({
             click: routeChangeTether(),
           })
@@ -237,17 +234,18 @@ export const $MainMenu = ({ parentRoute, showAccount = true }: MainMenu) => comp
     ),
 
     {
-      routeChange: routeChangeMulticast,
+      routeChange,
     }
   ]
 })
 
-export const $MainMenuMobile = ({ parentRoute, showAccount = true }: MainMenu) => component((
+export const $MainMenuMobile = (config: MainMenu) => component((
   [routeChange, routeChangeTether]: Behavior<string, string>,
   [clickPopoverClaim, clickPopoverClaimTether]: Behavior<any, any>,
   [walletChange, walletChangeTether]: Behavior<any, any>,
 ) => {
 
+  const { walletClientQuery, parentRoute, showAccount = true } = config
 
   const routeChangeMulticast = multicast(routeChange)
 
@@ -266,10 +264,6 @@ export const $MainMenuMobile = ({ parentRoute, showAccount = true }: MainMenu) =
     $icon({ $content: $iconPath, width: '16px', fill: pallete.foreground, svgOps: style({ minWidth: '36px' }), viewBox: '0 0 32 32' }),
     $text(text)
   )
-
-
-
-
 
 
   const $treasuryLinks = [
@@ -334,13 +328,13 @@ export const $MainMenuMobile = ({ parentRoute, showAccount = true }: MainMenu) =
               map(async xx => {
 
                 // Check if connection is already established
-                await disconnect(wagmiConfig)
+                // await disconnect(wagmiConfig)
 
               }),
               awaitPromises
             )
           })
-        }, walletChange, walletLink.wallet)),
+        }, walletChange, walletClientQuery)),
 
       ),
       clickPopoverClaim

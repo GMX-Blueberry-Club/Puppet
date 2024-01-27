@@ -4,7 +4,7 @@ import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, constant, empty, map, mergeArray, now, skipRepeats, snapshot, startWith } from "@most/core"
 import { Stream } from "@most/types"
-import { groupArrayMany, readableDate, readablePercentage, readableTokenAmountLabel, switchMap } from "common-utils"
+import { getMappedValue, groupArrayMany, readableDate, readablePercentage, readableTokenAmountLabel, switchMap } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import { getTokenDescription } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
@@ -16,24 +16,25 @@ import { $Popover } from "../$Popover.js"
 import { $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
 import { $card2, $iconCircular, $responsiveFlex } from "../../common/elements/$common.js"
-import { wagmiWriteContract } from "../../logic/common.js"
+import { writeContract } from "../../logic/common.js"
 import { getPuppetDepositAmount } from "../../logic/puppetLogic"
 import { $seperator2 } from "../../pages/common.js"
 import { fadeIn } from "../../transitions/enter.js"
 import { walletLink } from "../../wallet"
-import { IWalletClient, wallet } from "../../wallet/walletLink.js"
+import { IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $SubmitBar } from "../form/$Form"
 import { $AssetDepositEditor } from "./$AssetDepositEditor.js"
 import { IChangeSubscription } from "./$RouteSubscriptionEditor"
+import { IWalletPageParams } from "../../const/type"
 
-interface IRouteSubscribeDrawer {
+interface IRouteSubscribeDrawer extends IWalletPageParams {
   modifySubscriber: Stream<IChangeSubscription>
   modifySubscriptionList: Stream<IChangeSubscription[]>
   routeTypeListQuery: Stream<Promise<ISetRouteType[]>>
 }
 
-export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscriber, routeTypeListQuery }: IRouteSubscribeDrawer) => component((
+export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => component((
   [requestChangeSubscription, requestChangeSubscriptionTether]: Behavior<IWalletClient, Promise<viem.TransactionReceipt>>,
   [clickClose, clickCloseTether]: Behavior<any>,
   [clickRemoveSubsc, clickRemoveSubscTether]: Behavior<any, IChangeSubscription >,
@@ -41,31 +42,37 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
   [requestDepositAsset, requestDepositAssetTether]: Behavior<Promise<bigint>>, // delta amount
 ) => {
 
+  const { modifySubscriber, modifySubscriptionList, routeTypeListQuery, walletClientQuery } = config
+
   const openIfEmpty = skipRepeats(map(l => l.length > 0, modifySubscriptionList))
 
-  const depositAmount = switchMap(w3p => {
-    if (!w3p?.account?.address) {
-      return now(Promise.resolve(0n))
+
+  const initialDepositAmountQuery = map(async walletQuery => {
+    const wallet = await walletQuery
+
+    if (wallet === null) {
+      return 0n
     }
 
-    const address = w3p.account.address
-    const depositAmountQuery = getPuppetDepositAmount(address, w3p.chain.id)
+    return getPuppetDepositAmount(wallet, wallet.account.address)
+  }, walletClientQuery)
 
-    return startWith(
-      depositAmountQuery,
-      map(async added => await depositAmountQuery + await added, requestDepositAsset
-      )
-    )
-  }, wallet)
+  const depositAmountQuery = mergeArray([
+    initialDepositAmountQuery,  
+    map(async params => {
+      return await params.initialDepositAmountQuery + await params.requestDepositAsset
+    }, combineObject({ initialDepositAmountQuery, requestDepositAsset }))
+  ])
+
 
 
   const validationError = switchMap(async params => {
-    if (await params.depositAmount === 0n) {
+    if (await params.depositAmountQuery === 0n) {
       return 'You need to deposit funds to to enable mirroring'
     }
 
     return null
-  }, combineObject({ depositAmount }))
+  }, combineObject({ depositAmountQuery }))
 
   const depositToken = GMX.ARBITRUM_ADDRESS.USDC
   const depositTokenDescription = getTokenDescription(depositToken)
@@ -157,6 +164,7 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
             $Popover({
               open: constant(
                 $AssetDepositEditor({
+                  walletClientQuery,
                   token: depositToken
                 })({
                   requestDepositAsset: requestDepositAssetTether(),
@@ -167,7 +175,7 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
                 $responsiveFlex(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
                   $infoTooltipLabel($text('The amount utialised by traders you subscribe'), 'Balance'),
                   // $text(readableTokenAmountLabel(depositTokenDescription, amount))
-                  $intermediateMessage(map(async amount => readableTokenAmountLabel(depositTokenDescription, await amount), depositAmount)
+                  $intermediateMessage(map(async amount => readableTokenAmountLabel(depositTokenDescription, await amount), depositAmountQuery)
                   ),
                   $ButtonSecondary({
                     $container: $defaultMiniButtonSecondary,
@@ -180,6 +188,7 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
             
             $node(),
             $SubmitBar({
+              walletClientQuery,
               $content: $text(screenUtils.isDesktopScreen ? 'Save Changes' : 'Save'),
               txQuery: requestChangeSubscription,
               alert: validationError
@@ -191,8 +200,10 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
                   const traders = list.map(a => a.trader)
                   const routeTypeKeys = list.map(x => x.routeTypeKey)
 
-                  return wagmiWriteContract(walletLink.wagmiConfig, {
-                    ...PUPPET.CONTRACT[42161].Orchestrator,
+                  const contractDefs = getMappedValue(PUPPET.CONTRACT, w3p.chain.id).Orchestrator
+
+                  return writeContract(w3p, {
+                    ...contractDefs,
                     functionName: 'batchSubscribe',
                     args: [w3p.account.address, allowances, expiries, traders, routeTypeKeys]
                   })

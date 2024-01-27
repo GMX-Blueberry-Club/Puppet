@@ -4,14 +4,14 @@ import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { constant, map, mergeArray } from "@most/core"
 import { Stream } from "@most/types"
-import { StateStream, filterNull } from "common-utils"
+import { StateStreamStrict, filterNull } from "common-utils"
 import { IMarket } from "gmx-middleware-utils"
 import { IMirrorPositionOpen, latestPriceMap } from "puppet-middleware-utils"
 import { $IntermediatePromise } from "ui-components"
 import * as viem from "viem"
 import { $entry, $positionPnl, $sizeAndLiquidation } from "../../common/$common.js"
 import { $seperator2 } from "../../pages/common"
-import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
+import {  IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 
@@ -30,10 +30,10 @@ export type IRequestTrade = IRequestTradeParams & {
 
 
 interface IPositionListDetails {
-  chain: ISupportedChain
+  chain: viem.Chain
   wallet: Stream<IWalletClient>
   openPositionListQuery: Stream<Promise<IMirrorPositionOpen[]>>
-  tradeState: StateStream<ITradeParams>
+  tradeState: StateStreamStrict<ITradeParams>
   $container: NodeComposeFn<$Node>
   requestTrade: Stream<IRequestTrade>
   mirrorPosition: Stream<IMirrorPositionOpen | null>

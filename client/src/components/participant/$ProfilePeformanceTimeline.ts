@@ -11,11 +11,11 @@ import * as viem from "viem"
 import { $LastAtivity } from "../$LastActivity.js"
 import { $labelDisplay } from "../../common/$TextField.js"
 import { $route } from "../../common/$common.js"
-import { IPageGlobalParams, IUserActivityParams } from "../../const/type.js"
+import { IPageParams, IUserActivityParams } from "../../const/type.js"
 import { $DropMultiSelect } from "../form/$Dropdown.js"
 import { getPerformanceTimeline } from "../trade/$ProfilePerformanceGraph.js"
 
-export const $ProfilePeformanceTimeline = (config: IPageGlobalParams & IUserActivityParams & { puppet?: viem.Address }) => component((
+export const $ProfilePeformanceTimeline = (config: IPageParams & IUserActivityParams & { puppet?: viem.Address }) => component((
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,
@@ -24,7 +24,6 @@ export const $ProfilePeformanceTimeline = (config: IPageGlobalParams & IUserActi
   const { activityTimeframe, selectedTradeRouteList, puppet, priceTickMapQuery, routeTypeListQuery, settledPositionListQuery, openPositionListQuery } = config
 
   const positionParams = snapshot(async (params, sampleParams) => {
-    console.log('params', params)
     const settledPositionList = await sampleParams.settledPositionListQuery
     const openPositionList = await params.openPositionListQuery
 

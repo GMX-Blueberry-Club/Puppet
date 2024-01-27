@@ -1,14 +1,13 @@
-import { Behavior, combineObject, replayLatest } from "@aelea/core"
+import { Behavior, combineObject, fromCallback, replayLatest } from "@aelea/core"
 import { $element, $node, $text, component, eventElementTarget, style, styleBehavior } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { BLUEBERRY_REFFERAL_CODE } from "@gambitdao/gbc-middleware"
-import { constant, empty, fromPromise, map, merge, multicast, now, skipRepeats, startWith, take, tap } from '@most/core'
+import { awaitPromises, constant, empty, fromPromise, map, merge, mergeArray, multicast, now, skipRepeats, startWith, take, tap } from '@most/core'
 import { IntervalTime, filterNull, getTimeSince, readableUnitAmount, switchMap, unixTimestampNow } from "common-utils"
 import { ISetRouteType, queryLatestPriceTick, queryRouteTypeList, subgraphStatus } from "puppet-middleware-utils"
 import { $Tooltip, $alertContainer, $infoLabeledValue } from "ui-components"
-import * as uiStorage from "ui-storage"
 import { $midContainer } from "../common/$common.js"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu.js'
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
@@ -26,7 +25,15 @@ import { $WalletPage } from "./user/$Wallet.js"
 import { $rootContainer } from "./common"
 import { $Leaderboard } from "./leaderboard/$Leaderboard.js"
 import { getBlockNumber } from "@wagmi/core"
-
+import { indexDb, uiStorage } from "ui-storage"
+import { getInjectedTransport, initWalletLink } from "../wallet/initWallet"
+import { Stream } from "@most/types"
+import * as viem from "viem"
+import { store } from "../const/store.js"
+import { chains, publicTransportMap } from "../wallet/walletLink"
+import { arbitrum } from "viem/chains"
+import { EIP6963ProviderDetail } from "mipd"
+import { mipdStore } from "../components/$ConnectWallet"
 
 const popStateEvent = eventElementTarget('popstate', window)
 const initialLocation = now(document.location)
@@ -35,12 +42,12 @@ const locationChange = map((location) => {
   return location
 }, requestRouteChange)
 
-interface Website {
+interface IApp {
   baseRoute?: string
 }
 
 
-export const $Main = ({ baseRoute = '' }: Website) => component((
+export const $Main = ({ baseRoute = '' }: IApp) => component((
   [routeChanges, changeRouteTether]: Behavior<any, string>,
   [modifySubscriptionList, modifySubscriptionListTether]: Behavior<IChangeSubscription[]>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
@@ -48,6 +55,8 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
 
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<IntervalTime>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
+
+  [changeWallet, changeWalletTether]: Behavior<EIP6963ProviderDetail | null>,
 ) => {
 
   const changes = merge(locationChange, multicast(routeChanges))
@@ -90,6 +99,26 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
   }, subgraphStatus)
   const subgraphStatusColorOnce = take(1, subgraphBeaconStatusColor)
 
+  //  fromPromise(indexDb.get(store.global, 'wallet'))
+
+
+  const changeWalletProviderRdns = switchMap(async detail => {
+    return detail ? detail.info.rdns : null
+  }, changeWallet)
+
+  const walletRdnsStore = uiStorage.replayWrite(storeDb.store.global, changeWalletProviderRdns, 'wallet')
+  const walletProviderQuery = map(async rdns => rdns ? mipdStore.findProvider({ rdns })?.provider || null : null, walletRdnsStore)
+
+
+  const chainIdQuery = indexDb.get(store.global, 'chain')
+  const chainQuery: Stream<Promise<viem.Chain>> = now(chainIdQuery.then(id => chains.find(c => c.id === id) || arbitrum))
+
+  const { providerQuery, publicProviderQuery, walletClientQuery } = initWalletLink({ publicTransportMap, chainQuery, walletProviderQuery })
+
+  const block = switchMap(async query => (await query).getBlockNumber(), providerQuery)
+  const blockChange: Stream<bigint> = switchMap(query => fromCallback(async cb => (await query).watchBlockNumber({ onBlockNumber: bn => cb(bn) })), providerQuery)
+
+
   return [
     $column(
       switchMap(cb => {
@@ -120,27 +149,29 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
             )(
               switchMap(isDesktop => {
                 if (isDesktop) {
-                  return $MainMenu({ parentRoute: appRoute })({
+                  return $MainMenu({ parentRoute: appRoute, walletClientQuery })({
                     routeChange: changeRouteTether()
                   })
                 }
 
-                return $MainMenuMobile({ parentRoute: rootRoute })({
+                return $MainMenuMobile({ parentRoute: rootRoute, walletClientQuery })({
                   routeChange: changeRouteTether(),
                 })
               }, isDesktopScreen),
               router.contains(walletRoute)(
                 $midContainer(
-                  $WalletPage({ route: walletRoute, routeTypeListQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery, })({
+                  $WalletPage({ route: walletRoute, routeTypeListQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery, walletClientQuery })({
+                    changeWallet: changeWalletTether(),
                     modifySubscriber: modifySubscriberTether(),
                     changeRoute: changeRouteTether(),
                     changeActivityTimeframe: changeActivityTimeframeTether(),
                     selectTradeRouteList: selectTradeRouteListTether(),
-                  }))
+                  })
+                )
               ),
               router.match(leaderboardRoute)(
                 $midContainer(
-                  fadeIn($Leaderboard({ route: leaderboardRoute, activityTimeframe, selectedTradeRouteList, priceTickMapQuery, routeTypeListQuery })({
+                  fadeIn($Leaderboard({ route: leaderboardRoute, activityTimeframe, walletClientQuery, selectedTradeRouteList, priceTickMapQuery, routeTypeListQuery })({
                     changeActivityTimeframe: changeActivityTimeframeTether(),
                     selectTradeRouteList: selectTradeRouteListTether(),
                     routeChange: changeRouteTether(),
@@ -150,7 +181,7 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
               ),
               router.contains(profileRoute)(
                 $midContainer(
-                  fadeIn($PublicUserPage({ route: profileRoute, routeTypeListQuery, priceTickMapQuery, activityTimeframe, selectedTradeRouteList })({
+                  fadeIn($PublicUserPage({ route: profileRoute, walletClientQuery, routeTypeListQuery, priceTickMapQuery, activityTimeframe, selectedTradeRouteList })({
                     modifySubscriber: modifySubscriberTether(),
                     changeActivityTimeframe: changeActivityTimeframeTether(),
                     selectTradeRouteList: selectTradeRouteListTether(),
@@ -158,117 +189,116 @@ export const $Main = ({ baseRoute = '' }: Website) => component((
                   }))
                 )
               ),
-              router.match(tradeTermsAndConditions)(
-                fadeIn(
-                  $midContainer(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
-                    $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
-                    $node(),
-                    $text(style({ fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
-                    $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
-                    $element('ul')(layoutSheet.spacing, style({  }))(
-                      $liItem(
-                        $text(`I am not a United States person or entity;`),
-                      ),
-                      $liItem(
-                        $text(`I am not a resident, national, or agent of any country to which the United States, the United Kingdom, the United Nations, or the European Union embargoes goods or imposes similar sanctions, including without limitation the U.S. Office of Foreign Asset Control, Specifically Designated Nationals and Blocked Person List;`),
-                      ),
-                      $liItem(
-                        $text(`I am legally entitled to access the Interface under the laws of the jurisdiction where I am located;`),
-                      ),
-                      $liItem(
-                        $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
-                      ),
-                    ),
-                    $node(style({ height: '100px' }))(),
-                  )
-                ),
-              ),
-              
-              router.match(tradeRoute)(
-                switchMap(chain => {
-                  return $Trade({ 
-                    routeTypeListQuery,
-                    chain: chain, referralCode: BLUEBERRY_REFFERAL_CODE, parentRoute: tradeRoute
-                  })({
-                  // changeRoute: linkClickTether()
-                  })
-                }, walletLink.chain)  
-              ),
-              $row(layoutSheet.spacing, style({ position: 'fixed', zIndex: 100, right: '16px', bottom: '16px' }))(
-                $row(
-                  $Tooltip({
-                    // $dropContainer: $defaultDropContainer,
-                    $content: switchMap(params => {
-                      const blocksBehind = $text(
-                        map(blockChange => {
-                          return readableUnitAmount(Math.max(0, Number(blockChange) - params.subgraphStatus.block.number))
-                        }, walletLink.blockChange)
-                      )
-                      const timeSince = getTimeSince(Number(params.subgraphStatus.block.timestamp))
+              // router.match(tradeTermsAndConditions)(
+              //   fadeIn(
+              //     $midContainer(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
+              //       $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
+              //       $node(),
+              //       $text(style({ fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
+              //       $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
+              //       $element('ul')(layoutSheet.spacing, style({  }))(
+              //         $liItem(
+              //           $text(`I am not a United States person or entity;`),
+              //         ),
+              //         $liItem(
+              //           $text(`I am not a resident, national, or agent of any country to which the United States, the United Kingdom, the United Nations, or the European Union embargoes goods or imposes similar sanctions, including without limitation the U.S. Office of Foreign Asset Control, Specifically Designated Nationals and Blocked Person List;`),
+              //         ),
+              //         $liItem(
+              //           $text(`I am legally entitled to access the Interface under the laws of the jurisdiction where I am located;`),
+              //         ),
+              //         $liItem(
+              //           $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
+              //         ),
+              //       ),
+              //       $node(style({ height: '100px' }))(),
+              //     )
+              //   ),
+              // ),
+              // router.match(tradeRoute)(
+              //   switchMap(chain => {
+              //     return $Trade({ 
+              //       routeTypeListQuery,
+              //       chain: chain, referralCode: BLUEBERRY_REFFERAL_CODE, parentRoute: tradeRoute
+              //     })({
+              //     // changeRoute: linkClickTether()
+              //     })
+              //   }, awaitPromises(chainQuery))  
+              // ),
+              // $row(layoutSheet.spacing, style({ position: 'fixed', zIndex: 100, right: '16px', bottom: '16px' }))(
+              //   $row(
+              //     $Tooltip({
+              //       $content: switchMap(params => {
+              //         const blocksBehind = $text(
+              //           map(blockNumber => {
+              //             return readableUnitAmount(Math.max(0, Number(blockNumber) - params.subgraphStatus.block.number))
+              //           }, blockChange)
+              //         )
+              //         const timeSince = getTimeSince(Number(params.subgraphStatus.block.timestamp))
                       
 
-                      return $column(layoutSheet.spacingTiny)(
-                        $text('Subgraph Status'),
-                        $column(
-                          params.subgraphStatus.hasIndexingErrors
-                            ? $alertContainer($text('Indexing has experienced errors')) : empty(),
-                          $infoLabeledValue('Latest Sync', timeSince), 
-                          $infoLabeledValue('blocks behind', blocksBehind),
-                        )
-                      )
-                    }, combineObject({ subgraphStatus })),
-                    $anchor: $row(
-                      style({ width: '8px', height: '8px', borderRadius: '50%', outlineOffset: '4px', padding: '6px' }),
-                      styleBehavior(map(color => {
-                        return { backgroundColor: colorAlpha(color, .5), outlineColor: color }
-                      }, subgraphStatusColorOnce))
-                    )(
-                      $node(
-                        style({
-                          position: 'absolute', top: 'calc(50% - 20px)', left: 'calc(50% - 20px)', width: '40px', height: '40px',
-                          borderRadius: '50%', border: `1px solid rgba(74, 180, 240, 0.12)`, opacity: 0,
-                          animationName: 'signal', animationDuration: '2s',
-                          animationTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-                        }),
-                        styleBehavior(map(color => {
-                          return { backgroundColor: colorAlpha(color, .5), animationIterationCount: color === pallete.negative ? 'infinite' : 1 }
-                        }, subgraphStatusColorOnce))
-                      )()
-                    ),
-                  })({}),
-                ),
+              //         return $column(layoutSheet.spacingTiny)(
+              //           $text('Subgraph Status'),
+              //           $column(
+              //             params.subgraphStatus.hasIndexingErrors
+              //               ? $alertContainer($text('Indexing has experienced errors')) : empty(),
+              //             $infoLabeledValue('Latest Sync', timeSince), 
+              //             $infoLabeledValue('blocks behind', blocksBehind),
+              //           )
+              //         )
+              //       }, combineObject({ subgraphStatus })),
+              //       $anchor: $row(
+              //         style({ width: '8px', height: '8px', borderRadius: '50%', outlineOffset: '4px', padding: '6px' }),
+              //         styleBehavior(map(color => {
+              //           return { backgroundColor: colorAlpha(color, .5), outlineColor: color }
+              //         }, subgraphStatusColorOnce))
+              //       )(
+              //         $node(
+              //           style({
+              //             position: 'absolute', top: 'calc(50% - 20px)', left: 'calc(50% - 20px)', width: '40px', height: '40px',
+              //             borderRadius: '50%', border: `1px solid rgba(74, 180, 240, 0.12)`, opacity: 0,
+              //             animationName: 'signal', animationDuration: '2s',
+              //             animationTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+              //           }),
+              //           styleBehavior(map(color => {
+              //             return { backgroundColor: colorAlpha(color, .5), animationIterationCount: color === pallete.negative ? 'infinite' : 1 }
+              //           }, subgraphStatusColorOnce))
+              //         )()
+              //       ),
+              //     })({}),
+              //   ),
             
-                // switchMap(params => {
-                //   const refreshThreshold = import.meta.env.DEV ? 150 : 50
-                //   const blockDelta = params.syncBlock ? params.syncBlock - params.process.blockNumber : null
+              //   // switchMap(params => {
+              //   //   const refreshThreshold = import.meta.env.DEV ? 150 : 50
+              //   //   const blockDelta = params.syncBlock ? params.syncBlock - params.process.blockNumber : null
 
-                //   if (blockDelta === null || blockDelta < refreshThreshold) return empty()
+              //   //   if (blockDelta === null || blockDelta < refreshThreshold) return empty()
 
-                //   return fadeIn($row(style({ position: 'fixed', bottom: '18px', left: `50%` }))(
-                //     style({ transform: 'translateX(-50%)' })(
-                //       $column(layoutSheet.spacingTiny, style({
-                //         backgroundColor: pallete.horizon,
-                //         border: `1px solid`,
-                //         padding: '20px',
-                //         animation: `borderRotate var(--d) linear infinite forwards`,
-                //         borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
-                //       }))(
-                //         $text(`Syncing blocks of data: ${readableUnitAmount(Number(blockDelta))}`),
-                //         $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(
-                //           params.process.state.blockMetrics.timestamp === 0n
-                //             ? `Indexing for the first time, this may take a minute or two.`
-                //             : `${timeSince(Number(params.process.state.blockMetrics.timestamp))} old data is displayed`
-                //         ),
-                //       )
-                //     )
-                //   ))
-                // }, combineObject({ blockChange, subgraphStatus })),
-              ),
+              //   //   return fadeIn($row(style({ position: 'fixed', bottom: '18px', left: `50%` }))(
+              //   //     style({ transform: 'translateX(-50%)' })(
+              //   //       $column(layoutSheet.spacingTiny, style({
+              //   //         backgroundColor: pallete.horizon,
+              //   //         border: `1px solid`,
+              //   //         padding: '20px',
+              //   //         animation: `borderRotate var(--d) linear infinite forwards`,
+              //   //         borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
+              //   //       }))(
+              //   //         $text(`Syncing blocks of data: ${readableUnitAmount(Number(blockDelta))}`),
+              //   //         $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(
+              //   //           params.process.state.blockMetrics.timestamp === 0n
+              //   //             ? `Indexing for the first time, this may take a minute or two.`
+              //   //             : `${timeSince(Number(params.process.state.blockMetrics.timestamp))} old data is displayed`
+              //   //         ),
+              //   //       )
+              //   //     )
+              //   //   ))
+              //   // }, combineObject({ blockChange, subgraphStatus })),
+              // ),
             )
           ),
 
           $column(style({ maxWidth: '1000px', margin: '0 auto', width: '100%', zIndex: 10 }))(
             $RouteSubscriptionDrawer({
+              walletClientQuery,
               routeTypeListQuery,
               modifySubscriptionList: replayLatest(modifySubscriptionList, []),
               modifySubscriber,

@@ -7,17 +7,17 @@ import { countdownFn, unixTimestampNow } from "./utils.js"
 import { currentTime } from "@most/scheduler"
 
 
-export type StateOfStream<T> = {
+export type StateStream<T> = {
   [P in keyof T]?: Stream<T[P]> | T[P]
 }
-export type StateStream<T> = {
+export type StateStreamStrict<T> = {
   [P in keyof T]: Stream<T[P]>
 }
 
 
 type IStreamOrPromise<T> = Stream<T> | Promise<T>
 
-export function combineState<A, K extends keyof A = keyof A>(state: StateOfStream<A>): Stream<A> {
+export function combineState<A, K extends keyof A = keyof A>(state: StateStream<A>): Stream<A> {
   const entries = Object.entries(state) as [keyof A, Stream<A[K]>| A[K]][]
   const streams = entries.map(([_, stream]) => streamOf(stream))
 
@@ -47,11 +47,11 @@ export function streamOf<T>(maybeStream: T | Stream<T>): Stream<T> {
   return isStream(maybeStream) ? maybeStream : now(maybeStream)
 }
 
-export function replayState<A>(state: StateStream<A>): Stream<A> {
+export function replayState<A>(state: StateStreamStrict<A>): Stream<A> {
   return replayLatest(multicast(combineObject(state)))
 }
 
-export function zipState<A, K extends keyof A = keyof A>(state: StateStream<A>): Stream<A> {
+export function zipState<A, K extends keyof A = keyof A>(state: StateStreamStrict<A>): Stream<A> {
   const entries = Object.entries(state) as [keyof A, Stream<A[K]>][]
   const streams = entries.map(([_, stream]) => stream)
 

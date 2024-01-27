@@ -1,26 +1,24 @@
 import { O } from "@aelea/core"
-import { $Node, $node, $text, NodeComposeFn, component, style } from "@aelea/dom"
+import { $node, $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { map, now } from "@most/core"
 import { Stream } from "@most/types"
-import { IMirrorPositionOpen, IMirrorPositionSettled, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
+import { StateStreamStrict, getMappedValue, getTimeSince, getTokenUsd, readableDate, readableTokenPrice, readableUsd, switchMap, unixTimestampNow } from "common-utils"
+import { IPositionDecrease, IPositionIncrease, IPriceCandle, TEMP_MARKET_TOKEN_MARKET_MAP, getTokenDescription } from "gmx-middleware-utils"
+import { IMirrorPositionOpen } from "puppet-middleware-utils"
 import { $Table, $infoLabel, $txHashRef } from "ui-components"
 import * as viem from "viem"
-import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
+import { IWalletClient } from "../../wallet/walletLink.js"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
-import { StateStream, switchMap, unixTimestampNow, getTimeSince, readableDate, getMappedValue, readableTokenPrice, readableUsd, getTokenUsd } from "common-utils"
-import { IPriceCandle, IPositionIncrease, IPositionDecrease, TEMP_MARKET_TOKEN_MARKET_MAP, getTokenDescription } from "gmx-middleware-utils"
-import { $card2 } from "../../common/elements/$common"
 
 
 
 interface IPositionAdjustmentHistory {
-  chain: ISupportedChain
+  chain: viem.Chain
   wallet: Stream<IWalletClient>
   pricefeed: Stream<IPriceCandle[]>
-  tradeConfig: StateStream<ITradeConfig> // ITradeParams
-  tradeState: StateStream<ITradeParams>
+  tradeConfig: StateStreamStrict<ITradeConfig> // ITradeParams
+  tradeState: StateStreamStrict<ITradeParams>
   mirrorPosition: Stream<IMirrorPositionOpen | null>
 }
 

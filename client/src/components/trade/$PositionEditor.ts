@@ -12,10 +12,10 @@ import {
   switchLatest
 } from "@most/core"
 import { Stream } from "@most/types"
-import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, delta, div, filterNull, formatDiv, formatFixed, getBasisPoints, getTokenAmount, getTokenUsd, ITokenDescription, parseBps, parseFixed, parseReadableNumber, readableNumber, readableTokenAmountFromUsdAmount, readableTokenUsd, readableUnitAmount, readableUsd, StateStream, switchMap } from "common-utils"
+import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, delta, div, filterNull, formatDiv, formatFixed, getBasisPoints, getTokenAmount, getTokenUsd, ITokenDescription, parseBps, parseFixed, parseReadableNumber, readableNumber, readableTokenAmountFromUsdAmount, readableTokenUsd, readableUnitAmount, readableUsd, StateStreamStrict, switchMap } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import { getNativeTokenAddress, getNativeTokenDescription, getTokenDescription, IMarket, IMarketInfo, IMarketPrice, resolveAddress, TEMP_MARKET_LIST } from "gmx-middleware-utils"
-import { IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType, latestPriceMap } from "puppet-middleware-utils"
+import { IMirrorPositionOpen, ISetRouteType, latestPriceMap } from "puppet-middleware-utils"
 import {
   $bear, $bull,
   $ButtonToggle,
@@ -34,10 +34,9 @@ import { $heading2 } from "../../common/$text.js"
 import { $TextField } from "../../common/$TextField"
 import { boxShadow } from "../../common/elements/$common"
 import { $caretDown } from "../../common/elements/$icons.js"
-import { ITradeFocusMode } from "../../const/type.js"
+import { ITradeFocusMode, IWalletPageParams } from "../../const/type.js"
 import * as trade from "../../logic/traderLogic.js"
 import { walletLink } from "../../wallet"
-import { ISupportedChain } from "../../wallet/walletLink.js"
 import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown.js"
 
@@ -97,17 +96,17 @@ export interface ITradeConfig {
 }
 
 
-export interface IPositionEditorAbstractParams {
+export interface IPositionEditorAbstractParams extends IWalletPageParams {
   referralCode: viem.Hex
   routeTypeListQuery: Stream<Promise<ISetRouteType[]>>
   parentRoute: Route
-  chain: ISupportedChain
+  chain: viem.Chain
 }
 
 
 interface IPositionEditorConfig extends IPositionEditorAbstractParams {
-  tradeConfig: StateStream<ITradeConfig> // ITradeParams
-  tradeState: StateStream<ITradeParams>
+  tradeConfig: StateStreamStrict<ITradeConfig> // ITradeParams
+  tradeState: StateStreamStrict<ITradeParams>
   resetAdjustments: Stream<any>
   $container: NodeComposeFn<$Node>
 }

@@ -10,12 +10,12 @@ import * as viem from 'viem'
 import { $PuppetProfile } from "../../components/participant/$PuppetProfile.js"
 import { $PuppetSummary, $TraderSummary } from "../../components/participant/$Summary.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
-import { IPageGlobalParams } from "../../const/type.js"
+import { IPageParams } from "../../const/type.js"
 import { $TraderPage } from "./$Trader.js"
 
 
 
-export interface IProfile extends IPageGlobalParams {
+export interface IProfile extends IPageParams {
   route: router.Route
 }
 
@@ -88,7 +88,7 @@ export const $PublicUserPage = (config: IProfile) => component((
               return $column(layoutSheet.spacingBig)(
                 $TraderSummary({ ...config, address, settledPositionListQuery, openPositionListQuery })({}),
 
-                $TraderPage({ ...config, address, settledPositionListQuery, openPositionListQuery, })({
+                $TraderPage({ ...config, settledPositionListQuery, openPositionListQuery, })({
                   selectTradeRouteList: selectTradeRouteListTether(),
                   changeRoute: changeRouteTether(),
                   changeActivityTimeframe: changeActivityTimeframeTether(),

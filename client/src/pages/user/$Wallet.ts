@@ -2,21 +2,19 @@ import { Behavior, combineObject } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { awaitPromises, map } from "@most/core"
-import { disconnect } from "@wagmi/core"
-import { ADDRESS_ZERO, IntervalTime, ignoreAll, switchMap } from "common-utils"
+import { constant, map } from "@most/core"
+import { IntervalTime, switchMap } from "common-utils"
+import { EIP6963ProviderDetail } from "mipd"
 import { ISetRouteType, queryPuppetTradeRoute, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
 import { $ButtonToggle, $defaulButtonToggleContainer } from "ui-components"
-import * as uiStorage from "ui-storage"
+import { uiStorage } from "ui-storage"
 import { $IntermediateConnectButton } from "../../components/$ConnectWallet.js"
 import { $ButtonSecondary } from "../../components/form/$Button.js"
-import { $PuppetPage } from "./$Puppet.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
 import * as storeDb from "../../const/store.js"
-import { IPageGlobalParams, IUserType } from "../../const/type.js"
-import { walletLink } from "../../wallet/index.js"
+import { IPageParams, IUserType } from "../../const/type.js"
+import { $PuppetPage } from "./$Puppet.js"
 import { $TraderPage } from "./$Trader.js"
-
 
 const optionDisplay = {
   [IUserType.PUPPET]: {
@@ -30,23 +28,20 @@ const optionDisplay = {
 }
 
 
-export const $WalletPage = (config: IPageGlobalParams & { route: router.Route }) => component((
-  [walletChange, walletChangeTether]: Behavior<any, any>,
-
+export const $WalletPage = (config: IPageParams & { route: router.Route }) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [selectProfileMode, selectProfileModeTether]: Behavior<IUserType>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
 
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
+
+  [changeWallet, changeWalletTether]: Behavior<any, EIP6963ProviderDetail | null>,
 ) => {
 
-  const { route, routeTypeListQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery } = config
+  const { route, walletClientQuery, routeTypeListQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery } = config
 
   const profileMode = uiStorage.replayWrite(storeDb.store.wallet, selectProfileMode, 'selectedTab')
-
-
-
 
 
 
@@ -56,21 +51,18 @@ export const $WalletPage = (config: IPageGlobalParams & { route: router.Route })
       $node(),
 
       $row(style({ flex: 1, placeContent: 'center' }))(
-        ignoreAll(walletChange),
         $IntermediateConnectButton({
+          walletClientQuery,
           $$display: map(wallet => {
             return $ButtonSecondary({
               $content: $text('Disconnect')
             })({
-              click: walletChangeTether(
-                map(async xx => {
-                  await disconnect(walletLink.wagmiConfig)
-                }),
-                awaitPromises
-              )
+              click: changeWalletTether(constant(null))
             })
           })
-        })({}),
+        })({
+          changeWallet: changeWalletTether()
+        }),
       ),
 
       $row(
@@ -87,9 +79,13 @@ export const $WalletPage = (config: IPageGlobalParams & { route: router.Route })
       ),
 
       switchMap(params => {
-        const address = params.wallet?.account?.address || ADDRESS_ZERO
+        const address = switchMap(async walletQuery => {
+          return (await walletQuery)?.account.address || null
+        }, walletClientQuery)
+
         if (params.profileMode === IUserType.PUPPET) {
-          const puppetTradeRouteListQuery = queryPuppetTradeRoute({ address, activityTimeframe })
+          const puppetTradeRouteListQuery = queryPuppetTradeRoute({ address, activityTimeframe, selectedTradeRouteList })
+          
           const settledPositionListQuery = map(async tradeRoute => {
             return (await tradeRoute).map(x => x.settledList).flatMap(pp => pp.map(x => x.position))
           }, puppetTradeRouteListQuery)
@@ -98,8 +94,8 @@ export const $WalletPage = (config: IPageGlobalParams & { route: router.Route })
           }, puppetTradeRouteListQuery)
 
           return $PuppetPage({
-            route, priceTickMapQuery, openPositionListQuery, settledPositionListQuery, puppetTradeRouteListQuery,
-            address, activityTimeframe, selectedTradeRouteList, routeTypeListQuery,
+            walletClientQuery, route, priceTickMapQuery, openPositionListQuery, settledPositionListQuery, puppetTradeRouteListQuery,
+            activityTimeframe, selectedTradeRouteList, routeTypeListQuery,
           })({
             changeRoute: changeRouteTether(),
             modifySubscriber: modifySubscriberTether(),
@@ -107,21 +103,22 @@ export const $WalletPage = (config: IPageGlobalParams & { route: router.Route })
             selectTradeRouteList: selectTradeRouteListTether(),
           })
         }
+
         const settledPositionListQuery = queryTraderPositionSettled({ activityTimeframe, selectedTradeRouteList, address })
         const openPositionListQuery = queryTraderPositionOpen({ address, selectedTradeRouteList })
 
         return $column(layoutSheet.spacingTiny)(
-          $TraderPage({ ...config, openPositionListQuery, settledPositionListQuery, address })({ 
+          $TraderPage({ ...config, openPositionListQuery, settledPositionListQuery })({ 
             changeActivityTimeframe: changeActivityTimeframeTether(),
           })
         ) 
-      }, combineObject({ profileMode, wallet: walletLink.wallet }))
+      }, combineObject({ profileMode }))
 
 
     ),
 
     {
-      modifySubscriber, changeActivityTimeframe, selectTradeRouteList, changeRoute
+      modifySubscriber, changeActivityTimeframe, selectTradeRouteList, changeRoute, changeWallet
     }
   ]
 })

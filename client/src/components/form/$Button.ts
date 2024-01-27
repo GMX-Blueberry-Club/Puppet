@@ -10,6 +10,7 @@ import { $iconCircular } from "../../common/elements/$common.js"
 import { IWalletClient } from "../../wallet/walletLink"
 import { $ButtonCore, $defaultButtonCore, IButtonCore } from "./$ButtonCore.js"
 import { PromiseStatus, promiseState } from "common-utils"
+import { EIP6963ProviderDetail } from "mipd"
 
 
 
@@ -71,6 +72,7 @@ export const $ButtonSecondary = (config: IButtonCore) => {
 
 
 export interface IButtonPrimaryCtx extends Omit<IButtonCore, '$container'> {
+  walletClientQuery: Stream<Promise<IWalletClient | null>>
   txQuery: Stream<Promise<viem.TransactionReceipt>>
   alert?: Stream<string | null>
 }
@@ -78,10 +80,11 @@ export interface IButtonPrimaryCtx extends Omit<IButtonCore, '$container'> {
 
 
 export const $Submit = (config: IButtonPrimaryCtx) => component((
-  [click, clickTether]: Behavior<PointerEvent, IWalletClient>
+  [click, clickTether]: Behavior<PointerEvent, IWalletClient>,
+  [changeWallet, changeWalletTether]: Behavior<EIP6963ProviderDetail>,
 ) => {
 
-  const { alert = now(null), $content, txQuery, disabled = now(false) } = config
+  const { alert = now(null), $content, txQuery, disabled = now(false), walletClientQuery } = config
 
   const isTxPending = recoverWith(() => now(false), map(s => s.state === PromiseStatus.PENDING, promiseState(txQuery)))
   const isRequestPending = startWith(false, isTxPending)
@@ -89,6 +92,7 @@ export const $Submit = (config: IButtonPrimaryCtx) => component((
 
   return [
     $IntermediateConnectButton({
+      walletClientQuery,
       $$display: map(wallet => {
         return $ButtonCore({
           $container: $defaultButtonPrimary(style({
@@ -130,11 +134,13 @@ export const $Submit = (config: IButtonPrimaryCtx) => component((
           )
         })
       })
-    })({}),
+    })({
+      changeWallet: changeWalletTether()
+    }),
 
 
     {
-      click: multicast(click)
+      click: multicast(click), changeWallet
     }
   ]
 })

@@ -1,59 +1,60 @@
 
-import * as wagmi from "@wagmi/core"
+import { getMappedValue } from "common-utils"
+import * as GMX from "gmx-middleware-const"
 import * as PUPPET from "puppet-middleware-const"
-import { getPuppetAllowancesKey, getPuppetDepositAccountKey, getPuppetSubscriptionExpiryKey, getTradeRouteKey } from "puppet-middleware-utils"
+import { 
+  getPuppetAllowancesKey, getPuppetDepositAccountKey,
+  getPuppetSubscriptionExpiryKey, getTradeRouteKey
+} from "puppet-middleware-utils"
 import * as viem from "viem"
 import { } from "viem"
-import { arbitrum } from "viem/chains"
-import * as GMX from "gmx-middleware-const"
-import { wagmiConfig } from "../wallet/walletLink"
-import { walletLink } from "../wallet"
+import { readContract } from "viem/actions"
+import { IWalletClient } from "../wallet/walletLink"
 
 export async function getPuppetSubscriptionExpiry(
+  wallet: IWalletClient,
   puppet: viem.Address,
   trader: viem.Address,
   collateralToken: viem.Address,
   indexToken: viem.Address,
   isLong: boolean,
-  chainId = arbitrum.id
 ): Promise<bigint> {
 
-  const puppetContractMap = PUPPET.CONTRACT[chainId]
+  const puppetContractMap = getMappedValue(PUPPET.CONTRACT, wallet.chain.id)
   const routeKey = getTradeRouteKey(trader, collateralToken, indexToken, isLong)
   const puppetSubscriptionExpiryKey = getPuppetSubscriptionExpiryKey(puppet, routeKey)
   
-  return wagmi.readContract(wagmiConfig, {
+  return readContract(wallet, {
     ...puppetContractMap.Datastore,
+    
     functionName: 'getUint',
     args: [puppetSubscriptionExpiryKey],
   })
 }
 
 export async function getPuppetDepositAmount(
+  wallet: IWalletClient,
   address: viem.Address,
-  chainId = arbitrum.id,
   tokenAddress = GMX.ARBITRUM_ADDRESS.USDC
 ): Promise<bigint> {
+  const puppetContractMap = getMappedValue(PUPPET.CONTRACT, wallet.chain.id)
 
-  const puppetContractMap = PUPPET.CONTRACT[chainId]
-
-  return wagmi.readContract(wagmiConfig, {
+  return readContract(wallet, {
     ...puppetContractMap.Datastore,
     functionName: 'getUint',
     args: [getPuppetDepositAccountKey(address, tokenAddress)],
   })
 }
 
-
 export async function getPuppetAllowance(
+  wallet: IWalletClient,
   puppet: viem.Address,
   tradeRoute: viem.Address,
-  chainId = arbitrum.id
 ): Promise<bigint> {
 
-  const puppetContractMap = PUPPET.CONTRACT[chainId]
-
-  const [exists, factor] = await wagmi.readContract(walletLink.wagmiConfig, {
+  const puppetContractMap = getMappedValue(PUPPET.CONTRACT, wallet.chain.id)
+  
+  const [exists, factor] = await readContract(wallet, {
     ...puppetContractMap.Datastore,
     functionName: 'tryGetAddressToUintFor',
     args: [getPuppetAllowancesKey(puppet), tradeRoute]

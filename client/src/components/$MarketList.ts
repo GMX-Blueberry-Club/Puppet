@@ -4,20 +4,20 @@ import { $column } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { fromPromise, map, take } from "@most/core"
 import { Stream } from "@most/types"
+import { readContract } from '@wagmi/core'
+import { ADDRESS_ZERO, IntervalTime, getMappedValue, readableFactorPercentage } from 'common-utils'
 import * as GMX from "gmx-middleware-const"
 import { IMarket, IMarketFees, IMarketPrice, IMarketUsageInfo, TEMP_MARKET_LIST, getBorrowingFactorPerInterval, getFundingFactorPerInterval } from 'gmx-middleware-utils'
 import { latestPriceMap } from 'puppet-middleware-utils'
 import { $Table, $defaultTableRowContainer } from 'ui-components'
+import * as viem from 'viem'
 import { $marketSmallLabel } from '../common/$common'
 import { getMarketPoolUsage } from '../logic/tradeV2'
-import { ISupportedChain } from '../wallet/walletLink'
-import { ADDRESS_ZERO, IntervalTime, readableFactorPercentage } from 'common-utils'
-import { readContract } from '@wagmi/core'
 import { walletLink } from '../wallet'
 
 interface IMarketList {
   $container?: NodeComposeFn<$Node>
-  chain: ISupportedChain
+  chain: viem.Chain
   $rowCallback?: Op<{ market: IMarket, price: IMarketPrice }, NodeComposeFn<$Node>>
 }
 
@@ -27,7 +27,7 @@ export const $MarketInfoList = ({
   $rowCallback
 }: IMarketList) => component((
 ) => {
-  const gmxContractMap = GMX.CONTRACT[chain.id]
+  const gmxContractMap = getMappedValue(GMX.CONTRACT, chain.id)
 
   const marketParamList = map(params => {
     const data = TEMP_MARKET_LIST

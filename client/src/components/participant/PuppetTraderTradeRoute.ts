@@ -1,26 +1,25 @@
 import { Behavior, replayLatest } from "@aelea/core"
 import { $node, $text, component, nodeEvent, style } from "@aelea/dom"
+import * as router from "@aelea/router"
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
+import { pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map, multicast, snapshot, startWith } from "@most/core"
 import { IntervalTime, pagingQuery, readableLeverage, readableUsd, switchMap, unixTimestampNow } from "common-utils"
-import { IPuppetTradeRoute, ISetRouteType, accountSettledPositionListSummary, openPositionListPnl } from "puppet-middleware-utils"
-import { $TraderDisplay, $pnlDisplay, $puppets } from "../../common/$common.js"
-import { $RouteSubscriptionEditor, IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor.js"
-import { $ProfilePerformanceGraph } from "../trade/$ProfilePerformanceGraph.js"
-
-import * as router from "@aelea/router"
-import { pallete } from "@aelea/ui-components-theme"
 import { IPriceTickListMap } from "gmx-middleware-utils"
+import { IPuppetTradeRoute, ISetRouteType, accountSettledPositionListSummary, openPositionListPnl } from "puppet-middleware-utils"
 import { $Table, $caretDown, $infoLabeledValue, ScrollRequest } from "ui-components"
 import { $Popover } from "../$Popover"
+import { $TraderDisplay, $pnlDisplay, $puppets } from "../../common/$common.js"
 import { $puppetLogo } from "../../common/$icons"
 import { $iconCircular } from "../../common/elements/$common"
+import { IWalletPageParams } from "../../const/type"
 import { getPuppetSubscriptionExpiry } from "../../logic/puppetLogic"
-import { wallet } from "../../wallet/walletLink"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button"
+import { $RouteSubscriptionEditor, IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor.js"
 import { entryColumn, pnlColumn, positionTimeColumn, settledSizeColumn } from "../table/$TableColumn"
+import { $ProfilePerformanceGraph } from "../trade/$ProfilePerformanceGraph.js"
 
-export interface IPuppetTraderTradeRoute {
+export interface IPuppetTraderTradeRoute extends IWalletPageParams {
   puppetTradeRoute: IPuppetTradeRoute
   activityTimeframe: IntervalTime
   priceTickMap: IPriceTickListMap
@@ -30,29 +29,31 @@ export interface IPuppetTraderTradeRoute {
 
 export const $PuppetTraderTradeRoute = (config: IPuppetTraderTradeRoute) => component((
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
-
   [popRouteSubscriptionEditor, popRouteSubscriptionEditorTether]: Behavior<any, bigint>,
-  [modifySubscribeList, modifySubscribeListTether]: Behavior<IChangeSubscription>,
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
   [toggleHistoryPanel, toggleHistoryPanelTether]: Behavior<any, boolean>,
 
 ) => {
   
-  const { puppetTradeRoute, routeTypeList, route, activityTimeframe, priceTickMap } = config
+  const { puppetTradeRoute, routeTypeList, route, walletClientQuery, activityTimeframe, priceTickMap } = config
   const settledPositionList = puppetTradeRoute.settledList.map(x => x.position)
   const openPositionList = puppetTradeRoute.openList.map(x => x.position)
   const allPositionList = [...settledPositionList, ...openPositionList]
-  const routeType = routeTypeList.find(route => route.routeTypeKey === puppetTradeRoute.routeTypeKey)!
+  const routeType = routeTypeList.find(r => r.routeTypeKey === puppetTradeRoute.routeTypeKey)!
   const summary = accountSettledPositionListSummary([...settledPositionList, ...openPositionList], puppetTradeRoute.puppet)
   const pnl = map(openPnl => summary.pnl + openPnl, openPositionListPnl(openPositionList, puppetTradeRoute.puppet))
   const isPanelToggle = replayLatest(multicast(toggleHistoryPanel), false)
 
-  const puppetSubscriptionExpiry = switchMap(async w3p => {
-    return w3p
-      ? getPuppetSubscriptionExpiry(w3p.account.address, puppetTradeRoute.trader, routeType.collateralToken, routeType.indexToken, routeType.isLong)
-      : 0n
-  }, wallet)
+  const puppetSubscriptionExpiry = switchMap(async walletQuery => {
+    const wallet = await walletQuery
+
+    if (wallet === null) {
+      return 0n
+    }
+
+    return getPuppetSubscriptionExpiry(wallet, wallet.account.address, puppetTradeRoute.trader, routeType.collateralToken, routeType.indexToken, routeType.isLong)
+  }, walletClientQuery)
 
   const paging = startWith({ offset: 0, pageSize: 20 }, scrollRequest)
   const dataSource = map(req => {
@@ -79,16 +80,15 @@ export const $PuppetTraderTradeRoute = (config: IPuppetTraderTradeRoute) => comp
           route: config.route,
           trader: puppetTradeRoute.trader,
         })({
-          clickTrader: changeRouteTether(),
-          modifySubscribeList: modifySubscriberTether(),
+          click: changeRouteTether()
         }),
         $Popover({
           open: map((expiry) => {
-            return  $RouteSubscriptionEditor({ expiry, trader: puppetTradeRoute.trader, tradeRoute: config.puppetTradeRoute.tradeRoute, routeTypeKey: puppetTradeRoute.routeTypeKey })({
-              modifySubscribeList: modifySubscribeListTether()
+            return  $RouteSubscriptionEditor({ walletClientQuery, expiry, ...config.puppetTradeRoute })({
+              modifySubscriber: modifySubscriberTether()
             }) 
           }, popRouteSubscriptionEditor),
-          dismiss: modifySubscribeList,
+          dismiss: modifySubscriber,
           $target: switchMap(expiry => {
             return $ButtonSecondary({
               $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(

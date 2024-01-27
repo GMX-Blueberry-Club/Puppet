@@ -3,7 +3,7 @@ import { map, multicast } from '@most/core'
 import { Stream } from '@most/types'
 import { Client, ClientOptions, createClient, fetchExchange } from '@urql/core'
 import { makeDefaultStorage } from '@urql/exchange-graphcache/default-storage'
-import { IntervalTime, combineState, getClosestNumber, groupArrayManyMap, periodicRun, unixTimestampNow } from 'common-utils'
+import { IntervalTime, StateStream, combineState, getClosestNumber, groupArrayManyMap, periodicRun, unixTimestampNow } from 'common-utils'
 import * as GMX from "gmx-middleware-const"
 import { IPriceCandle, IPriceOracleMap, IPriceTickListMap, ISchema, schema as gmxSchema, parseQueryResults, querySignedPrices, querySubgraph } from "gmx-middleware-utils"
 import * as viem from "viem"
@@ -81,14 +81,14 @@ export const subgraphClient = createClient(clientConfig)
 
 type IQueryPosition = {
   address: viem.Address
-  selectedTradeRouteList?: Stream<ISetRouteType[]>
+  selectedTradeRouteList?: ISetRouteType[]
 }
 
 type IQueryTraderPositionOpen = IQueryPosition
-type IQueryPuppetTradeRoute = IQueryPosition & { activityTimeframe: Stream<IntervalTime> }
-type IQueryTraderPositionSettled = IQueryPosition & { activityTimeframe: Stream<IntervalTime> }
+type IQueryPuppetTradeRoute = IQueryPosition & { activityTimeframe: IntervalTime }
+type IQueryTraderPositionSettled = IQueryPosition & { activityTimeframe: IntervalTime }
 
-export function queryTraderPositionOpen(queryParams: IQueryTraderPositionOpen, ) {
+export function queryTraderPositionOpen(queryParams: StateStream<IQueryTraderPositionOpen>, ) {
   return map(async params => {
     const list = await querySubgraph(subgraphClient, {
       schema: schema.mirrorPositionOpen,
@@ -107,7 +107,7 @@ export function queryTraderPositionOpen(queryParams: IQueryTraderPositionOpen, )
   }, combineState(queryParams))
 }
 
-export function queryTraderPositionSettled(queryParams: IQueryTraderPositionSettled) {
+export function queryTraderPositionSettled(queryParams: StateStream<IQueryTraderPositionSettled>) {
   return map(async params => {
     const blockTimestamp_gt = unixTimestampNow() - params.activityTimeframe
     
@@ -129,9 +129,13 @@ export function queryTraderPositionSettled(queryParams: IQueryTraderPositionSett
   }, combineState(queryParams))
 }
 
-export function queryPuppetTradeRoute(queryParams: IQueryPuppetTradeRoute) {
+export function queryPuppetTradeRoute(queryParams: StateStream<IQueryPuppetTradeRoute>) {
   return map(async params => {
-    const list = await subgraphClient.query(__tempTradeRouteDoc(queryParams.address, params.activityTimeframe), {  }).toPromise().then(res => {
+    const list = await subgraphClient.query(__tempTradeRouteDoc(params.address, params.activityTimeframe), {  }).toPromise().then(res => {
+      if (res.error) {
+        throw res.error
+      }
+
       const puppetTradeRoutes = res.data.puppetTradeRoutes as any[]
       return puppetTradeRoutes.map(item => parseQueryResults(item, schema.puppetTradeRoute))
     }) as IPuppetTradeRoute[]
@@ -196,8 +200,8 @@ export const subgraphStatus: Stream<ISubgraphStatus> = replayLatest(multicast(pe
 
 
 type IQueryMarketHistory = {
-  selectedTradeRouteList: Stream<ISetRouteType[]>
-  activityTimeframe: Stream<IntervalTime>
+  selectedTradeRouteList: ISetRouteType[]
+  activityTimeframe: IntervalTime
 }
 
 const candleSchema: ISchema<{ id: string, timestamp: number; c: bigint; __typename: 'PriceCandle', token: viem.Address} > = {
@@ -208,7 +212,7 @@ const candleSchema: ISchema<{ id: string, timestamp: number; c: bigint; __typena
   __typename: 'PriceCandle',
 }
   
-export function queryLatestPriceTick(queryParams: IQueryMarketHistory, estTickAmout = 20) {
+export function queryLatestPriceTick(queryParams: StateStream<IQueryMarketHistory>, estTickAmout = 20) {
   return map(async params => {
     const interval = getClosestNumber(GMX.PRICEFEED_INTERVAL, params.activityTimeframe / estTickAmout)
     const timestamp_gte = unixTimestampNow() - params.activityTimeframe

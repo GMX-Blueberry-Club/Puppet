@@ -9,7 +9,7 @@ import { erc20Abi } from "abitype/abis"
 import {
   ADDRESS_ZERO,
   IntervalTime,
-  StateStream,
+  StateStreamStrict,
   USD_DECIMALS,
   applyFactor,
   div,
@@ -33,7 +33,6 @@ import { CandlestickData, Coordinate, LineStyle, Time } from "lightweight-charts
 import * as PUPPET from "puppet-middleware-const"
 import { IMirrorPositionOpen, getLastAdjustment, latestPriceMap, queryLatestTokenPriceFeed, queryTraderPositionOpen } from "puppet-middleware-utils"
 import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $intermediateMessage, $target, $intermediate$node } from "ui-components"
-import * as uiStorage from "ui-storage"
 import * as viem from "viem"
 import { $midContainer } from "../common/$common.js"
 import { $responsiveFlex } from "../common/elements/$common"
@@ -49,8 +48,8 @@ import { ITradeFocusMode } from "../const/type.js"
 import { getExecuteGasFee, getFullMarketInfo } from "../logic/tradeV2.js"
 import * as trade from "../logic/traderLogic.js"
 import { exchangesWebsocketPriceSource, getTraderTradeRoute } from "../logic/traderLogic.js"
-import { estimatedGasPrice, gasPrice, wagmiConfig, wallet } from "../wallet/walletLink.js"
 import { $seperator2 } from "./common.js"
+import { indexDb, uiStorage } from "ui-storage"
 
 
 
@@ -121,7 +120,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
 ) => {
 
-  const { routeTypeListQuery } = config
+  const { routeTypeListQuery, walletClientQuery } = config
   
   // const gmxContractMap = GMX.CONTRACT[config.chain.id]
 
@@ -221,14 +220,30 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const marketInfo: Stream<IMarketInfo> = replayLatest(multicast(awaitPromises(marketInfoQuery)))
 
-  const tradeRoute: Stream<viem.Address | null> = replayLatest(multicast(switchMap(params => {
-    const account = params.wallet?.account
-    if (!account) {
+  const tradeRoute: Stream<viem.Address | null> = replayLatest(multicast(switchMap(async params => {
+    const wallet = await params.walletClientQuery
+    if (wallet === null) {
       return now(null)
     }
 
-    return getTraderTradeRoute(account.address, params.collateralToken, params.indexToken, params.isLong, config.chain)
-  }, combineObject({ collateralToken, wallet, indexToken, isLong }))))
+    const storedRouteKeyMap = await indexDb.get(store.tradeBox, 'traderRouteMap')
+    const address = wallet.account.address
+    const routeAddress = storedRouteKeyMap[address]
+
+    if (routeAddress) {
+      return routeAddress
+    }
+
+    const res = await getTraderTradeRoute(wallet, address, params.collateralToken, params.indexToken, params.isLong)
+
+    if (res !== null) {
+      storedRouteKeyMap[address] = res
+    }
+  
+    await indexDb.set(store.tradeBox, 'traderRouteMap', storedRouteKeyMap)
+
+    return res
+  }, combineObject({ collateralToken, walletClientQuery, indexToken, isLong }))))
 
 
   const openPositionListQuery = multicast(replayLatest(switchMap(w3p => {
@@ -347,7 +362,7 @@ export const $Trade = (config: ITradeComponent) => component((
   ])))
 
   // [config]
-  const tradeConfig: StateStream<ITradeConfig> = {
+  const tradeConfig: StateStreamStrict<ITradeConfig> = {
     focusPrice: switchMap(focus => focus ? focusPrice : now(null), isFocused),
     market,
     indexToken,
@@ -470,7 +485,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
 
-  const tradeState: StateStream<ITradeParams> = {
+  const tradeState: StateStreamStrict<ITradeParams> = {
     tradeRoute,
     routeTypeKey,
 

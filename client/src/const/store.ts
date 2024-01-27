@@ -1,15 +1,19 @@
-import * as storeScope from 'ui-storage'
+
 import * as GMX from 'gmx-middleware-const'
-import { IUserType, ITradeFocusMode } from './type'
+import { IUserType, ITradeFocusMode } from './type.js'
 import { ISortBy } from 'ui-components'
 import { IMarketCreatedEvent, TEMP_MARKET_LIST } from 'gmx-middleware-utils'
 import * as viem from 'viem'
 import { ISetRouteType } from 'puppet-middleware-utils'
 import { IntervalTime } from 'common-utils'
+import { arbitrum } from 'viem/chains'
+import { uiStorage } from 'ui-storage'
 
-export const store = storeScope.createStoreDefinition('root', 3, {
+export const store = uiStorage.createStoreDefinition('root', 4, {
   global: {
     initialState: {
+      chain: arbitrum.id,
+      wallet: null as null | string,
       activityTimeframe: IntervalTime.MONTH,
       marketList: [] as IMarketCreatedEvent[],
       selectedTradeRouteList: [] as ISetRouteType[],
@@ -44,5 +48,6 @@ export const store = storeScope.createStoreDefinition('root', 3, {
     }
   }
 })
+
 
 

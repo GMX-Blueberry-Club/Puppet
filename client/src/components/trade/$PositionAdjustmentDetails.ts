@@ -5,23 +5,22 @@ import { pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, constant, empty, map, mergeArray, multicast, sample, skipRepeats, snapshot, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { erc20Abi } from "abitype/abis"
+import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, StateStreamStrict, abs, filterNull, getBasisPoints, getDenominator, getMappedValue, getTokenUsd, readableFactorPercentage, readablePercentage, readablePnl, readableTokenAmountLabel, readableUnitAmount, readableUsd, zipState } from "common-utils"
 import * as GMX from "gmx-middleware-const"
-import { $alert, $alertTooltip, $anchor, $infoLabeledValue, $infoTooltipLabel } from "ui-components"
+import { IPriceCandle, OrderType, getNativeTokenAddress, getNativeTokenDescription, getTokenDescription, resolveAddress } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { IMirrorPositionOpen, latestPriceMap } from "puppet-middleware-utils"
+import { $alert, $alertTooltip, $anchor, $infoLabeledValue, $infoTooltipLabel } from "ui-components"
 import * as viem from "viem"
 import { $Popover } from "../$Popover.js"
 import { $pnlDisplay } from "../../common/$common"
 import { $heading2 } from "../../common/$text.js"
-import { wagmiWriteContract } from "../../logic/common.js"
-import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
-import { $ButtonPrimary, $Submit, $ButtonSecondary } from "../form/$Button.js"
-import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
-import { StateStream, abs, filterNull, readablePercentage, readableUsd, getDenominator, getTokenUsd, zipState, readableTokenAmountLabel, readablePnl, getBasisPoints, readableFactorPercentage, readableUnitAmount, ADDRESS_ZERO, BASIS_POINTS_DIVISOR } from "common-utils"
-import { IPriceCandle, resolveAddress, OrderType, getTokenDescription, getNativeTokenAddress, getNativeTokenDescription } from "gmx-middleware-utils"
-import { walletLink } from "../../wallet"
+import { writeContract } from "../../logic/common.js"
 import { $seperator2 } from "../../pages/common"
+import { IWalletClient } from "../../wallet/walletLink.js"
+import { $ButtonPrimary, $ButtonSecondary } from "../form/$Button.js"
 import { $SubmitBar } from "../form/$Form"
+import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 
 
 
@@ -41,10 +40,10 @@ export type IRequestTrade = IRequestTradeParams & {
 
 
 interface IPositionAdjustmentDetails {
-  chain: ISupportedChain
+  chain: viem.Chain
   pricefeed: Stream<IPriceCandle[]>
-  tradeConfig: StateStream<ITradeConfig> // ITradeParams
-  tradeState: StateStream<ITradeParams>
+  tradeConfig: StateStreamStrict<ITradeConfig> // ITradeParams
+  tradeState: StateStreamStrict<ITradeParams>
   $container: NodeComposeFn<$Node>
 }
 
@@ -105,17 +104,18 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
     // }
 
     const executionFeeAfterBuffer = abs(params.executionFee * (params.executionFeeBuffer + BASIS_POINTS_DIVISOR) / BASIS_POINTS_DIVISOR) // params.executionFee
-    const orderVaultAddress = GMX.CONTRACT[config.chain.id].OrderVault.address
     const wntCollateralAmount = isNative ? params.collateralDeltaAmount : 0n
     const totalWntAmount = wntCollateralAmount + executionFeeAfterBuffer
     const orderType = params.isIncrease
       ? params.focusPrice ? OrderType.LimitIncrease : OrderType.MarketIncrease
       : params.focusPrice ? OrderType.LimitDecrease : OrderType.MarketDecrease
 
+      
+    const contractDefs = getMappedValue(PUPPET.CONTRACT, config.chain.id).Orchestrator
 
     const request = params.tradeRoute
-      ? wagmiWriteContract( walletLink.wagmiConfig, {
-        ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
+      ? writeContract(wallet, {
+        ...contractDefs,
         value: totalWntAmount,
         functionName: 'requestPosition',
         args: [
@@ -134,8 +134,8 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
           params.isIncrease
         ]
       })
-      : wagmiWriteContract(walletLink.wagmiConfig, {
-        ...PUPPET.CONTRACT[config.chain.id].Orchestrator,
+      : writeContract(wallet, {
+        ...contractDefs,
         value: totalWntAmount,
         functionName: 'registerRouteAndRequestPosition',
         args: [
@@ -159,11 +159,11 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
   }, combineObject({ ...config.tradeConfig, executionFee, indexPrice, tradeRoute, routeTypeKey }), clickProposeTrade))
 
   const requestApproveSpend = multicast(map(params => {
-    const recpt = wagmiWriteContract(walletLink.wagmiConfig, {
+    const recpt = writeContract(params.wallet, {
       address: params.primaryToken,
       abi: erc20Abi,
       functionName: 'approve',
-      args: [PUPPET.CONTRACT[config.chain.id].Orchestrator.address, 2n ** 256n - 1n]
+      args: [getMappedValue(PUPPET.CONTRACT, config.chain.id) .Orchestrator.address, 2n ** 256n - 1n]
     })
     return recpt
   }, clickApproveprimaryToken))

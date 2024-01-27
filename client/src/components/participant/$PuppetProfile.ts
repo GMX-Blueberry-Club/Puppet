@@ -9,14 +9,14 @@ import * as viem from "viem"
 import { $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
 import { $card, $card2 } from "../../common/elements/$common.js"
-import { IUserUserParams } from "../../const/type.js"
+import { IPageParams, IUserActivityParams } from "../../const/type.js"
 import { $seperator2 } from "../../pages/common.js"
 import { IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor.js"
 import { $ProfilePeformanceTimeline } from "./$ProfilePeformanceTimeline.js"
 import { $PuppetTraderTradeRoute } from "./PuppetTraderTradeRoute"
 
 
-export interface IPuppetProfile extends IUserUserParams {
+export interface IPuppetProfile extends IPageParams, IUserActivityParams {
   puppetTradeRouteListQuery: Stream<Promise<IPuppetTradeRoute[]>>
 }
 
@@ -28,14 +28,14 @@ export const $PuppetProfile = (config: IPuppetProfile) => component((
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 ) => {
   
-  const { activityTimeframe, address, priceTickMapQuery, puppetTradeRouteListQuery, selectedTradeRouteList, routeTypeListQuery, route } = config
+  const { activityTimeframe, walletClientQuery, openPositionListQuery, settledPositionListQuery, priceTickMapQuery, puppetTradeRouteListQuery, selectedTradeRouteList, routeTypeListQuery, route } = config
 
   return [
 
     $column(layoutSheet.spacingBig)(
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
         $card2(style({ padding: 0, height: screenUtils.isDesktopScreen ? '200px' : '200px', position: 'relative', margin: screenUtils.isDesktopScreen ? `-36px -36px 0` : `-12px -12px 0px` }))(
-          $ProfilePeformanceTimeline({ ...config, puppet: address })({
+          $ProfilePeformanceTimeline({ ...config })({
             selectTradeRouteList: selectTradeRouteListTether(),
             changeActivityTimeframe: changeActivityTimeframeTether(),
           }),
@@ -68,7 +68,7 @@ export const $PuppetProfile = (config: IPuppetProfile) => component((
                       $seperator2,
                       $column(layoutSheet.spacing, style({ flex: 1 }))( 
                         ...traderPuppetTradeRouteList.map(puppetTradeRoute => {
-                          return $PuppetTraderTradeRoute({ route, puppetTradeRoute, routeTypeList, activityTimeframe: params.activityTimeframe, priceTickMap })({
+                          return $PuppetTraderTradeRoute({ route, puppetTradeRoute, routeTypeList, walletClientQuery, activityTimeframe: params.activityTimeframe, priceTickMap })({
                             modifySubscriber: modifySubscriberTether(),
                             changeRoute: changeRouteTether(),
                           })

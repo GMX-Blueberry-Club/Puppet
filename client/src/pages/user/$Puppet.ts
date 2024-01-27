@@ -1,15 +1,14 @@
 import { Behavior, combineObject } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { awaitPromises, constant, map, mergeArray, now, startWith, switchLatest } from "@most/core"
+import { awaitPromises, constant, map, mergeArray, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { IntervalTime, groupArrayMany, readableTokenAmountLabel, readableUsd, switchMap } from "common-utils"
 import * as GMX from 'gmx-middleware-const'
 import { getTokenDescription } from "gmx-middleware-utils"
 import { IPuppetTradeRoute, ISetRouteType, getParticiapntMpPortion } from "puppet-middleware-utils"
-import { $infoTooltipLabel } from "ui-components"
+import { $infoTooltipLabel, $intermediateMessage } from "ui-components"
 import * as viem from "viem"
-import { arbitrum } from "viem/chains"
 import { $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
 import { $card, $card2, $responsiveFlex } from "../../common/elements/$common.js"
@@ -20,12 +19,12 @@ import { $PuppetTraderTradeRoute } from "../../components/participant/PuppetTrad
 import { $AssetDepositEditor } from "../../components/portfolio/$AssetDepositEditor.js"
 import { $AssetWithdrawEditor } from "../../components/portfolio/$AssetWithdrawEditor.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
-import { IUserUserParams } from "../../const/type.js"
 import { getPuppetDepositAmount } from "../../logic/puppetLogic.js"
 import { $seperator2 } from "../common.js"
+import { IPageParams, IUserActivityParams } from "../../const/type"
 
 
-export interface IPuppetPortfolio extends IUserUserParams {
+export interface IPuppetPortfolio extends IPageParams, IUserActivityParams {
   puppetTradeRouteListQuery: Stream<Promise<IPuppetTradeRoute[]>>
 }
 
@@ -36,30 +35,45 @@ export const $PuppetPage = (config: IPuppetPortfolio) => component((
   [openDepositPopover, openDepositPopoverTether]: Behavior<any>,
   [openWithdrawPopover, openWithdrawPopoverTether]: Behavior<any>,
   [requestDepositAsset, requestDepositAssetTether]: Behavior<Promise<bigint>>,
-  [requestWithdrawAsset, requestWithdrawAssetTether]: Behavior<Promise<viem.TransactionReceipt>>,
+  [requestWithdrawAsset, requestWithdrawAssetTether]: Behavior<Promise<bigint>>,
 
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 ) => {
   
-  const { activityTimeframe, address, priceTickMapQuery, puppetTradeRouteListQuery, openPositionListQuery, settledPositionListQuery, selectedTradeRouteList, routeTypeListQuery, route } = config
+  const { activityTimeframe, walletClientQuery, priceTickMapQuery, puppetTradeRouteListQuery, openPositionListQuery, settledPositionListQuery, selectedTradeRouteList, routeTypeListQuery, route } = config
 
-  const depositAmountQuery = getPuppetDepositAmount(address, arbitrum.id)
+  const initialDepositAmountQuery = map(async walletQuery => {
+    const wallet = await walletQuery
 
-  const readPuppetDeposit = startWith(
-    depositAmountQuery,  
-    map(async added =>  await depositAmountQuery + await added, requestDepositAsset)
-  )
+    if (wallet === null) {
+      return 0n
+    }
+
+    return getPuppetDepositAmount(wallet, wallet.account.address)
+  }, walletClientQuery)
+
+  const depositAmountQuery = mergeArray([
+    initialDepositAmountQuery,  
+    map(async params => {
+      return await params.initialDepositAmountQuery + await params.requestDepositAsset
+    }, combineObject({ initialDepositAmountQuery, requestDepositAsset })),
+    map(async params => {
+      return await params.initialDepositAmountQuery - await params.requestWithdrawAsset
+    }, combineObject({ initialDepositAmountQuery, requestWithdrawAsset }))
+  ])
 
   const depositToken = GMX.ARBITRUM_ADDRESS.USDC
   const depositTokenDescription = getTokenDescription(depositToken)
-
+  // switchMap(amount => {
+  //                 return 
+  //               }, awaitPromises(depositAmountQuery))
   return [
 
     $column(layoutSheet.spacingBig)(
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
         $card2(style({ padding: 0, height: screenUtils.isDesktopScreen ? '200px' : '200px', position: 'relative', margin: screenUtils.isDesktopScreen ? `-36px -36px 0` : `-12px -12px 0px` }))(
-          $ProfilePeformanceTimeline({ ...config, puppet: address })({
+          $ProfilePeformanceTimeline({ ...config })({
             selectTradeRouteList: selectTradeRouteListTether(),
             changeActivityTimeframe: changeActivityTimeframeTether(),
           }),
@@ -70,48 +84,51 @@ export const $PuppetPage = (config: IPuppetPortfolio) => component((
             $heading3('Active Trader Routes'),
             $node(style({ flex: 1 }))(),
             $row(layoutSheet.spacingBig, style({ alignItems: 'center', minWidth: '0', flexShrink: 0 }))(
-              switchMap(amount => {
-                return $Popover({
-                  open: mergeArray([
-                    constant(
-                      $AssetDepositEditor({
-                        token: depositToken
-                      })({
-                        requestDepositAsset: requestDepositAssetTether(),
-                      }),
-                      openDepositPopover
-                    ),
-                    constant(
-                      $AssetWithdrawEditor({
-                        token: depositToken,
-                        balance: amount
-                      })({
-                        requestDepositAsset: requestWithdrawAssetTether(),
-                      }),
-                      openWithdrawPopover
-                    ),
-                  ]),
-                  $target: $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
-                    $responsiveFlex(layoutSheet.spacingSmall)(
-                      $infoTooltipLabel($text('The available amount ready to be matched against'), 'Available balance'),
-                      $text(readableTokenAmountLabel(depositTokenDescription, amount))
-                    ),
-                    $ButtonSecondary({
-                      $container: $defaultMiniButtonSecondary,
-                      $content: $text('Deposit')
+
+              $Popover({
+                open: mergeArray([
+                  constant(
+                    $AssetDepositEditor({
+                      token: depositToken,
+                      walletClientQuery,
                     })({
-                      click: openDepositPopoverTether()
+                      requestDepositAsset: requestDepositAssetTether(),
                     }),
-                    $ButtonSecondary({
-                      $container: $defaultMiniButtonSecondary,
-                      $content: $text('Withdraw'),
-                      disabled: now(amount === 0n)
-                    })({
-                      click: openWithdrawPopoverTether()
-                    }),
+                    openDepositPopover
                   ),
-                })({})
-              }, awaitPromises(readPuppetDeposit)),
+                  constant(
+                    $AssetWithdrawEditor({
+                      walletClientQuery,
+                      token: depositToken,
+                      balanceQuery: depositAmountQuery
+                    })({
+                      requestDepositAsset: requestWithdrawAssetTether(),
+                    }),
+                    openWithdrawPopover
+                  ),
+                ]),
+                $target: $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
+                  $responsiveFlex(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+                    $infoTooltipLabel($text('The available amount ready to be matched against'), 'Available balance'),
+                    $intermediateMessage(map(async amount => {
+                      return readableTokenAmountLabel(depositTokenDescription, await amount)
+                    }, depositAmountQuery))
+                  ),
+                  $ButtonSecondary({
+                    $container: $defaultMiniButtonSecondary,
+                    $content: $text('Deposit')
+                  })({
+                    click: openDepositPopoverTether()
+                  }),
+                  $ButtonSecondary({
+                    $container: $defaultMiniButtonSecondary,
+                    $content: $text('Withdraw'),
+                    disabled: switchMap(async amount => await amount === 0n, depositAmountQuery)
+                  })({
+                    click: openWithdrawPopoverTether()
+                  }),
+                ),
+              })({}),
             ),
           ),
           switchLatest(awaitPromises(map(async params => {
@@ -135,14 +152,16 @@ export const $PuppetPage = (config: IPuppetPortfolio) => component((
                     $route(routeType),
                     $responsiveFlex(layoutSheet.spacingSmall)(
                       $infoTooltipLabel($text('The available amount ready to be matched against'), 'Used balance'),
-                      $text(
-                        startWith('-', awaitPromises(map(async query => {
-                          const balance = (await query).reduce((acc, pos) => {
-                            const collateralUsd = getParticiapntMpPortion(pos, pos.position.maxCollateralUsd, config.address)
+                      $intermediateMessage(
+                        map(async params => {
+                          const wallet = await params.walletClientQuery
+                          const openList = await params.openPositionListQuery
+                          const balance = openList.reduce((acc, pos) => {
+                            const collateralUsd = getParticiapntMpPortion(pos, pos.position.maxCollateralUsd, wallet?.account.address)
                             return acc + collateralUsd
                           }, 0n)
                           return readableUsd(balance)
-                        }, openPositionListQuery)))
+                        }, combineObject({ openPositionListQuery, walletClientQuery }))
                       )
                     ),
                     $node(style({ flex: 1 }))(),
@@ -154,7 +173,7 @@ export const $PuppetPage = (config: IPuppetPortfolio) => component((
 
                       $column(layoutSheet.spacing, style({ flex: 1 }))( 
                         ...traderPuppetTradeRouteList.map(puppetTradeRoute => {
-                          return $PuppetTraderTradeRoute({ route, puppetTradeRoute, routeTypeList, activityTimeframe: params.activityTimeframe, priceTickMap })({
+                          return $PuppetTraderTradeRoute({ route, walletClientQuery, puppetTradeRoute, routeTypeList, activityTimeframe: params.activityTimeframe, priceTickMap })({
                             modifySubscriber: modifySubscriberTether(),
                             changeRoute: changeRouteTether(),
                           })

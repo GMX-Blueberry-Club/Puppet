@@ -22,7 +22,7 @@ import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile.j
 import { $Popover } from "../components/$Popover.js"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button.js"
 import { $RouteSubscriptionEditor, IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor.js"
-import { IUserType } from "../const/type"
+import { IUserType, IWalletPageParams } from "../const/type.js"
 import { getPuppetSubscriptionExpiry } from "../logic/puppetLogic.js"
 import { $seperator2 } from "../pages/common.js"
 import { $puppetLogo } from "./$icons"
@@ -368,35 +368,33 @@ interface ITraderDisplay {
   route: router.Route
 }
 
-interface ITraderRouteDisplay {
+interface ITraderRouteDisplay extends IWalletPageParams {
   trader: viem.Address
   routeTypeKey: viem.Hex
   tradeRoute: viem.Hex
   summary: IMirrorPositionListSummary
-  // routeKey: viem.Address
-  // subscriptionList: Stream<IPuppetSubscritpion[]>
   positionParams: IAbstractPositionParams
 }
 
 
 
 export const $TraderDisplay =  (config: ITraderDisplay) => component((
-  [clickTrader, clickTraderTether]: Behavior<any, viem.Address>,
-  [modifySubscribeList, modifySubscribeListTether]: Behavior<IChangeSubscription>,
+  [click, clickTether]: Behavior<any, viem.Address>,
 ) => {
+
+  const { route, trader } = config
 
   return [
     $Link({
       $content: $profileDisplay({
-        address: config.trader,
+        address: trader,
       // $profileContainer: $defaultBerry(style({ width: '50px' }))
       }),
-      route: config.route.create({ fragment: 'baseRoute' }),
-      url: `/app/profile/${IUserType.TRADER.toLowerCase()}/${config.trader}`
-    })({ click: clickTraderTether() }),
+      route: route.create({ fragment: 'baseRoute' }),
+      url: `/app/profile/${IUserType.TRADER.toLowerCase()}/${trader}`
+    })({ click: clickTether() }),
 
-
-    { modifySubscribeList, clickTrader }
+    { click }
   ]
 })
 
@@ -407,32 +405,34 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
   [modifySubscribeList, modifySubscribeListTether]: Behavior<IChangeSubscription>,
 ) => {
 
-  const puppetSubscriptionParams = switchMap(async w3p => {
-    const puppet = w3p?.account.address
+  const { walletClientQuery, summary, positionParams, routeTypeKey, tradeRoute, trader } = config
 
-    if (!puppet) {
+  const puppetSubscriptionParams = switchMap(async walletQuery => {
+    const wallet = await walletQuery
+
+    if (wallet === null) {
       return 0n
     }
 
-    const expiry = await getPuppetSubscriptionExpiry(w3p.account.address, config.trader, config.positionParams.collateralToken, config.positionParams.indexToken, config.positionParams.isLong)
+    const expiry = await getPuppetSubscriptionExpiry(wallet, wallet.account.address, trader, positionParams.collateralToken, positionParams.indexToken, positionParams.isLong)
 
     return expiry
-  }, walletLink.wallet)
+  }, walletClientQuery)
 
   return [
     $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
       $Popover({
         open: map(expiry => {
-          return $RouteSubscriptionEditor({ expiry, trader: config.trader, tradeRoute: config.tradeRoute, routeTypeKey: config.routeTypeKey })({
-            modifySubscribeList: modifySubscribeListTether()
+          return $RouteSubscriptionEditor({ expiry, trader, tradeRoute, routeTypeKey, walletClientQuery })({
+            modifySubscriber: modifySubscribeListTether()
           }) 
         }, popRouteSubscriptionEditor),
         dismiss: modifySubscribeList,
         $target: switchMap(expiry => {
           return $ButtonSecondary({
             $content: $row(layoutSheet.spacingTiny, style({ alignItems: 'center' }))(
-              $route(config.positionParams, false),
-              $puppets(config.summary.puppets),
+              $route(positionParams, false),
+              $puppets(summary.puppets),
               $icon({ $content: $puppetLogo, width: '26px', svgOps: style({ backgroundColor: pallete.background, borderRadius: '50%', padding: '4px', border: `1px solid ${pallete.message}`, marginRight: '-18px' }), viewBox: '0 0 32 32' }),
             ),
             $container: $defaultMiniButtonSecondary(style({ borderRadius: '16px', padding: '6px 2px', borderColor: Number(expiry) > unixTimestampNow() ? pallete.primary : '' })) 

@@ -9,7 +9,6 @@ import { IntervalTime, getBasisPoints, getMappedValue, groupArrayMany, pagingQue
 import { IPriceTickListMap } from "gmx-middleware-utils"
 import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType, accountSettledPositionListSummary, openPositionListPnl, queryOpenPositionList, querySettledPositionList } from "puppet-middleware-utils"
 import { $Table, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "ui-components"
-import * as uiStorage from "ui-storage"
 import * as viem from "viem"
 import { $labelDisplay } from "../../common/$TextField.js"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlDisplay, $route, $size } from "../../common/$common.js"
@@ -19,10 +18,11 @@ import { IChangeSubscription } from "../../components/portfolio/$RouteSubscripti
 import { $tableHeader } from "../../components/table/$TableColumn.js"
 import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceGraph.js"
 import * as storeDb from "../../const/store.js"
-import { IPageGlobalParams } from "../../const/type.js"
+import { IPageParams, IWalletPageParams } from "../../const/type.js"
 import { $seperator2 } from "../common.js"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../../components/$LastActivity.js"
 import { $CardTable } from "../../components/$common"
+import { uiStorage } from "ui-storage"
 
 
 
@@ -36,9 +36,8 @@ type ITableRow = {
   pricefeedMap: IPriceTickListMap
 }
 
-export type ILeaderboard = IPageGlobalParams & { route: router.Route }
 
-export const $Leaderboard = (config: ILeaderboard) => component((
+export const $Leaderboard = (config: IPageParams & IWalletPageParams) => component((
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
   
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
@@ -51,7 +50,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
   [switchIsLong, switchIsLongTether]: Behavior<boolean | null>,
 ) => {
 
-  const { activityTimeframe, selectedTradeRouteList, priceTickMapQuery, route, routeTypeListQuery  } = config
+  const { activityTimeframe, selectedTradeRouteList, walletClientQuery, priceTickMapQuery, route, routeTypeListQuery  } = config
 
   const sortBy = uiStorage.replayWrite(storeDb.store.leaderboard, sortByChange, 'sortBy')
   const isLong = uiStorage.replayWrite(storeDb.store.leaderboard, switchIsLong, 'isLong')
@@ -198,6 +197,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
               $bodyCallback: map(pos => {
 
                 return $TraderRouteDisplay({
+                  walletClientQuery,
                   summary: pos.summary,
                   trader: pos.account,
                   tradeRoute: pos.positionList[0].tradeRoute,
@@ -218,7 +218,7 @@ export const $Leaderboard = (config: ILeaderboard) => component((
                   route: config.route,
                   trader: pos.account,
                 })({ 
-                  clickTrader: routeChangeTether()
+                  click: routeChangeTether()
                 })
               })
             },

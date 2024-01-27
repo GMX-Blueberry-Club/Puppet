@@ -1,22 +1,16 @@
 
 import { http } from "@aelea/ui-components"
-import { empty, fromPromise, map, mergeArray, now, scan, skip } from "@most/core"
+import { empty, map, mergeArray, now, scan, skip } from "@most/core"
 import { Stream } from "@most/types"
-import * as wagmi from "@wagmi/core"
-import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/abis"
 import { ADDRESS_ZERO, ITokenDescription, IntervalTime, USD_DECIMALS, filterNull, getDenominator, getMappedValue, parseFixed } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import { IPriceCandleDto, IRequestPricefeedApi, ITokenSymbol, getTokenDescription, resolveAddress } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { getRouteAddressKey, getTradeRouteKey } from "puppet-middleware-utils"
-import * as uiStorage from "ui-storage"
 import * as viem from "viem"
-import { } from "viem"
-import { arbitrum } from "viem/chains"
-import { store } from "../const/store.js"
-import { walletLink } from "../wallet"
-import { ISupportedChain } from "../wallet/walletLink.js"
+import { getBalance, readContract } from "viem/actions"
+import { IWalletClient } from "../wallet/walletLink"
 
 
 
@@ -135,28 +129,26 @@ export function latestPriceFromExchanges(tokendescription: ITokenDescription): S
 }
 
 
-export function getWalletErc20Balance(chain: ISupportedChain, token: viem.Address | typeof ADDRESS_ZERO, walletAddress: viem.Address): Stream<bigint> {
-
+export async function getWalletErc20Balance(wallet: IWalletClient, chain: viem.Chain, token: viem.Address | typeof ADDRESS_ZERO, walletAddress: viem.Address): Promise<bigint> {
   if (token === ADDRESS_ZERO) {
-    return fromPromise(wagmi.getBalance(walletLink.wagmiConfig, { address: walletAddress }).then(res => res.value))
+    return getBalance(wallet, { address: wallet.account.address })
   }
 
   const contractMapping = getMappedValue(GMX.TRADE_CONTRACT_MAPPING, chain.id)
 
   if (!contractMapping) {
-    return now(0n)
+    return 0n
   }
 
   const tokenAddress = resolveAddress(chain, token)
 
-  const erc20 = readContract(walletLink.wagmiConfig, {
+  const erc20 = readContract(wallet, {
     address: tokenAddress,
     abi: erc20Abi,
     functionName: 'balanceOf',
     args: [walletAddress]
   })
-
-  return fromPromise(erc20)
+  return erc20
 }
 
 
@@ -207,24 +199,18 @@ export const getGmxIoPricefeed = async (queryParams: IRequestPricefeedApi): Prom
 }
 
 export async function getTraderTradeRoute(
+  wallet: IWalletClient,
   trader: viem.Address,
   collateralToken: viem.Address,
   indexToken: viem.Address,
   isLong: boolean,
-  chain = arbitrum
 ): Promise<viem.Address | null> {
-  const puppetContractMap = PUPPET.CONTRACT[chain.id]
+  const puppetContractMap = getMappedValue(PUPPET.CONTRACT, wallet.chain.id)
   const routeKey = getTradeRouteKey(trader, collateralToken, indexToken, isLong)
   const routeAddressKey = getRouteAddressKey(routeKey)
-  const storedRouteKeyMap = await uiStorage.indexDb.get(store.tradeBox, 'traderRouteMap')
-  const routeAddress = storedRouteKeyMap[trader]
 
 
-  if (routeAddress) {
-    return storedRouteKeyMap[trader]
-  }
-
-  const queryAddress = await wagmi.readContract(walletLink.wagmiConfig, {
+  const queryAddress = await readContract(wallet, {
     ...puppetContractMap.Datastore,
     functionName: 'getAddress',
     args: [routeAddressKey],
@@ -233,10 +219,6 @@ export async function getTraderTradeRoute(
   if (queryAddress === ADDRESS_ZERO) {
     return null
   }
-  
-  storedRouteKeyMap[trader] = queryAddress
-  
-  await uiStorage.indexDb.set(store.tradeBox, 'traderRouteMap', storedRouteKeyMap)
 
   return queryAddress
 }
