@@ -234,7 +234,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
     constant(0n, config.resetAdjustments),
     snapshot((params) => {
       const positionSizeUsd = params.position ? params.position.position.sizeInUsd : 0n
-      const collateralDeltaUsd = params.collateralDeltaAmount * params.collateralPrice
+      const collateralDeltaUsd = params.collateralDeltaAmount * params.primaryPrice
       const totalCollateral = collateralDeltaUsd + params.netPositionValueUsd + params.adjustmentFeeUsd
      
       if (params.position) {
@@ -253,7 +253,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
       const nextSize = totalCollateral * params.leverage / BASIS_POINTS_DIVISOR
 
       return nextSize - positionSizeUsd
-    }, combineObject({ leverage, position, adjustmentFeeUsd, isIncrease, netPositionValueUsd, collateralPrice, collateralDeltaAmount }), sizeEffects)
+    }, combineObject({ leverage, position, adjustmentFeeUsd, isIncrease, netPositionValueUsd, primaryPrice, collateralDeltaAmount }), sizeEffects)
   ]))
 
 

@@ -1,23 +1,22 @@
 
 import { Behavior, combineObject, replayLatest } from "@aelea/core"
-import { $node, $text, component, style } from "@aelea/dom"
+import { $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { constant, empty, fromPromise, join, map, mergeArray, multicast, now, snapshot, startWith } from "@most/core"
+import { awaitPromises, constant, empty, fromPromise, join, map, mergeArray, multicast, now, snapshot, startWith } from "@most/core"
 import { readContract } from "@wagmi/core"
 import { erc20Abi } from "abitype/abis"
-import * as GMX from "gmx-middleware-const"
 import { getMappedValue, parseFixed, readableTokenAmount, readableTokenAmountLabel, switchMap } from "common-utils"
+import * as GMX from "gmx-middleware-const"
+import { getTokenDescription } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { $TextField } from "../../common/$TextField.js"
 import { wagmiWriteContract } from "../../logic/common.js"
 import { getWalletErc20Balance } from "../../logic/traderLogic.js"
-import { $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
-import { getTokenDescription } from "gmx-middleware-utils"
 import { walletLink } from "../../wallet"
-import * as wagmi from "@wagmi/core"
-import { $alertContainer } from "ui-components"
+import { $ButtonSecondary, $Submit, $defaultMiniButtonSecondary } from "../form/$Button.js"
+import { $SubmitBar } from "../form/$Form"
 
 
 interface IAssetDepositEditor {
@@ -54,8 +53,8 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
 
   return [
 
-    $column(layoutSheet.spacing)(
-      $text(style({ maxWidth: '310px' }))('The amount utialised by traders you subscribed'),
+    $column(layoutSheet.spacing, style({ maxWidth: '310px' }))(
+      $text('The amount utialised by traders you subscribed'),
 
       $row(layoutSheet.spacingSmall, style({ position: 'relative' }))(
         $TextField({
@@ -75,20 +74,13 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
         })
       ),
 
-      style({ placeSelf: 'flex-start' })(
-        $alertContainer(
-          $text('This is a beta version of the app has not been audited. Use at your own risk.'),
-        )
-      ),
-      
       switchMap(allow => {
         const amount = startWith('0', mergeArray([maxBalance, inputDepositAmount]))
 
-        return $row(style({ placeContent: 'space-between' }))(
-          $node(),
-          allow === 0n ? $ButtonPrimaryCtx({
+        return $column(layoutSheet.spacing)(
+          allow === 0n ? $Submit({
             $content: $text('Approve USDC'),
-            request: requestChangeSubscription
+            txQuery: requestChangeSubscription
           })({
             click: requestChangeSubscriptionTether(
               map(w3p => {
@@ -103,9 +95,9 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
               multicast
             )
           }) : empty(),
-          $ButtonPrimaryCtx({
+          $SubmitBar({
+            txQuery: requestDepositAsset,
             $content: $text('Deposit'),
-            request: requestDepositAsset,
             disabled: map(params => {
               if (!Number(params.amount) || allow === 0n) return true
 
@@ -113,13 +105,12 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
             }, combineObject({ amount }))
           })({
             click: requestDepositAssetTether(
-              snapshot((params, w3p) => {
+              snapshot(async (params, w3p) => {
                 const parsedFormatAmount = parseFixed(params.amount, indexToken.decimals)
 
                 return wagmiWriteContract(walletLink.wagmiConfig, {
                   ...PUPPET.CONTRACT[42161].Orchestrator,
                   functionName: 'deposit',
-                  // value: 0n,
                   args: [parsedFormatAmount, config.token, w3p.account.address] as const
                 })
               }, combineObject({ amount })),
@@ -131,7 +122,16 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
     ),                  
     
     {
-      requestDepositAsset
+      requestDepositAsset: map(async tx => {
+        const logs = viem.parseEventLogs({
+          abi: PUPPET.CONTRACT[42161].Orchestrator.abi,
+          logs: (await tx).logs
+        })
+
+        // @ts-ignore
+        const newLocal = logs.find(x => x.eventName === 'Deposit')!.args.amount
+        return newLocal as bigint
+      }, requestDepositAsset)
     }
 
   ]

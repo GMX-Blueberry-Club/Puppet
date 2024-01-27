@@ -57,6 +57,7 @@ export const $Home = (config: ITreasury) => component((
         style({
           // radial-gradient(circle at center 34vh, rgb(255, 255, 255) 0%, rgb(148, 164, 194) min(40vh, 370px), rgb(41, 44, 55) min(25vh, 370px), rgb(41, 44, 55) min(95vw, 670px), rgb(29, 32, 43) min(60vh, 670px), rgb(16, 18, 23) 90%) no-repeat local
           // background: `radial-gradient(circle at center 34vh, ${pallete.message} 0%, ${pallete.foreground} min(50vw, 370px), ${pallete.horizon} min(50vw, 370px), ${pallete.horizon} min(66vw, 670px), ${pallete.middleground} min(66vw, 670px), ${pallete.background} 90%)`,
+          // background: `radial-gradient(circle at center 34vh, ${pallete.message} 0%, ${pallete.foreground} min(50vw, 370px), ${pallete.horizon} min(50vw, 370px), ${pallete.horizon} min(66vw, 670px), ${pallete.middleground} min(66vw, 670px), ${pallete.background} 90%)`,
           width: '100vw',
           backgroundRepeat: 'no-repeat',
           backgroundAttachment: 'local',
@@ -64,7 +65,8 @@ export const $Home = (config: ITreasury) => component((
           position: 'relative',
           top: 0,
           height: `100vh`,
-          paddingBottom: '30vh'
+          paddingBottom: '30vh',
+          // color: 'black'
         })
       )(
         $row(style({  flex: 1, width: '50vh', perspective: '680px', position: 'absolute', bottom: 0 }))(

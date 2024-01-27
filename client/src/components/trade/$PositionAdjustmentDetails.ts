@@ -15,12 +15,13 @@ import { $pnlDisplay } from "../../common/$common"
 import { $heading2 } from "../../common/$text.js"
 import { wagmiWriteContract } from "../../logic/common.js"
 import { ISupportedChain, IWalletClient } from "../../wallet/walletLink.js"
-import { $ButtonPrimary, $ButtonPrimaryCtx, $ButtonSecondary } from "../form/$Button.js"
+import { $ButtonPrimary, $Submit, $ButtonSecondary } from "../form/$Button.js"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 import { StateStream, abs, filterNull, readablePercentage, readableUsd, getDenominator, getTokenUsd, zipState, readableTokenAmountLabel, readablePnl, getBasisPoints, readableFactorPercentage, readableUnitAmount, ADDRESS_ZERO, BASIS_POINTS_DIVISOR } from "common-utils"
 import { IPriceCandle, resolveAddress, OrderType, getTokenDescription, getNativeTokenAddress, getNativeTokenDescription } from "gmx-middleware-utils"
 import { walletLink } from "../../wallet"
 import { $seperator2 } from "../../pages/common"
+import { $SubmitBar } from "../form/$Form"
 
 
 
@@ -400,8 +401,8 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
               overlayClick: dismissEnableTradingOverlayTether(constant(false))
             })
             : isTokenEnabled
-              ? $ButtonPrimaryCtx({
-                request: map(req => req.request, requestTrade),
+              ? $SubmitBar({
+                txQuery: map(req => req.request, requestTrade),
                 disabled: map(params => {
                   const newLocal = !!params.validationError || params.sizeDeltaUsd === 0n && params.collateralDeltaAmount === 0n
                   return newLocal
@@ -428,8 +429,8 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
               })({
                 click: clickProposeTradeTether()
               })
-              : $ButtonPrimaryCtx({
-                request: requestApproveSpend,
+              : $SubmitBar({
+                txQuery: requestApproveSpend,
                 $content: $text(`Approve ${params.primaryDescription.symbol}`)
               })({
                 click: clickApproveprimaryTokenTether(

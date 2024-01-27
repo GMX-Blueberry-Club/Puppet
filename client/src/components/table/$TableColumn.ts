@@ -9,6 +9,7 @@ import * as viem from 'viem'
 import { arbitrum } from "viem/chains"
 import { $entry, $positionPnl, $puppets, $size, $sizeAndLiquidation } from "../../common/$common.js"
 import { $txnIconLink } from "../../common/elements/$common"
+import { isPositionSettled } from "gmx-middleware-utils"
 
 
 export const $tableHeader = (primaryLabel: string, secondaryLabel: string) => $column(style({ textAlign: 'right' }))(
@@ -70,6 +71,7 @@ export const positionTimeColumn: TableColumn<IMirrorPositionSettled | IMirrorPos
   $head: $text('Timestamp'),
   gridTemplate: 'minmax(110px, 120px)',
   $bodyCallback: map((pos) => {
+    // const isSettled = isPositionSettled(pos)
     const timestamp = Number(pos.blockTimestamp)
 
     return $column(layoutSheet.spacingTiny)(

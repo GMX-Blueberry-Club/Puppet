@@ -2,26 +2,20 @@ import { Behavior, combineObject } from "@aelea/core"
 import { $element, $node, $text, MOTION_NO_WOBBLE, component, motion, style } from "@aelea/dom"
 import { $NumberTicker, $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, debounce, empty, map, now, skipRepeatsWith, startWith, switchLatest } from "@most/core"
-import { Stream } from "@most/types"
-import * as GMX from 'gmx-middleware-const'
-import { $Baseline, $IntermediatePromise, $infoTooltipLabel, IMarker } from "ui-components"
-import { filterNull, parseReadableNumber, readableUsd, readableUnitAmount, IntervalTime, unixTimestampNow } from "common-utils"
+import { awaitPromises, empty, map, now, skipRepeatsWith, snapshot, startWith, switchLatest } from "@most/core"
+import { IntervalTime, filterNull, parseReadableNumber, readableUnitAmount, unixTimestampNow } from "common-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
-import { IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType, getOpenMpPnL } from "puppet-middleware-utils"
+import { ISetRouteType } from "puppet-middleware-utils"
+import { $Baseline, $IntermediatePromise, $infoTooltipLabel, IMarker } from "ui-components"
+import * as viem from "viem"
+import { $LastAtivity } from "../$LastActivity.js"
 import { $labelDisplay } from "../../common/$TextField.js"
 import { $route } from "../../common/$common.js"
-import { IPageGlobalParams } from "../../const/type.js"
-import { $LastAtivity } from "../$LastActivity.js"
+import { IPageGlobalParams, IUserActivityParams } from "../../const/type.js"
 import { $DropMultiSelect } from "../form/$Dropdown.js"
 import { getPerformanceTimeline } from "../trade/$ProfilePerformanceGraph.js"
-import * as viem from "viem"
 
-export const $ProfilePeformanceTimeline = (config: IPageGlobalParams & {
-  settledPositionListQuery: Stream<Promise<IMirrorPositionSettled[]>>
-  openPositionListQuery: Stream<Promise<IMirrorPositionOpen[]>>
-  puppet?: viem.Address
-}) => component((
+export const $ProfilePeformanceTimeline = (config: IPageGlobalParams & IUserActivityParams & { puppet?: viem.Address }) => component((
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,
@@ -29,23 +23,21 @@ export const $ProfilePeformanceTimeline = (config: IPageGlobalParams & {
 
   const { activityTimeframe, selectedTradeRouteList, puppet, priceTickMapQuery, routeTypeListQuery, settledPositionListQuery, openPositionListQuery } = config
 
-  const newLocal = debounce(50, combineObject({ activityTimeframe, routeTypeListQuery, priceTickMapQuery, settledPositionListQuery, openPositionListQuery }))
-  const positionParams = map(async (params) => {
-    const settledPositionList = await params.settledPositionListQuery
+  const positionParams = snapshot(async (params, sampleParams) => {
+    console.log('params', params)
+    const settledPositionList = await sampleParams.settledPositionListQuery
     const openPositionList = await params.openPositionListQuery
-    const priceTickMap = await params.priceTickMapQuery
 
     const timeline = getPerformanceTimeline({ 
       ...params,
-      puppet,
+      puppet, settledPositionList, openPositionList,
       tickCount: 100,
-      settledPositionList, openPositionList,
       activityTimeframe: params.activityTimeframe,
       priceTickMap: await params.priceTickMapQuery
     })
 
-    return { ...params, priceTickMap, settledPositionList, openPositionList, timeline }
-  }, newLocal)
+    return { timeline, openPositionList, settledPositionList }
+  }, combineObject({ activityTimeframe, routeTypeListQuery, priceTickMapQuery, openPositionListQuery }), combineObject({ settledPositionListQuery }))
 
 
   return [

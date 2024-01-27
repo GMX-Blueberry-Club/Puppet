@@ -1,14 +1,15 @@
-import { Behavior, O, combineArray } from "@aelea/core"
+import { Behavior, O, combineArray, combineObject } from "@aelea/core"
 import { $Branch, $element, $node, INode, attrBehavior, component, nodeEvent, style, styleBehavior, styleInline, stylePseudo } from "@aelea/dom"
 import { $row, Control, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, constant, empty, map, mergeArray, multicast, now } from "@most/core"
+import { awaitPromises, constant, empty, map, mergeArray, multicast, now, recoverWith, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import * as viem from "viem"
 import { $IntermediateConnectButton, } from "../$ConnectWallet.js"
 import { $iconCircular } from "../../common/elements/$common.js"
 import { IWalletClient } from "../../wallet/walletLink"
 import { $ButtonCore, $defaultButtonCore, IButtonCore } from "./$ButtonCore.js"
+import { PromiseStatus, promiseState } from "common-utils"
 
 
 
@@ -70,32 +71,21 @@ export const $ButtonSecondary = (config: IButtonCore) => {
 
 
 export interface IButtonPrimaryCtx extends Omit<IButtonCore, '$container'> {
-  request: Stream<Promise<viem.TransactionReceipt>>
+  txQuery: Stream<Promise<viem.TransactionReceipt>>
+  alert?: Stream<string | null>
 }
 
 
 
-export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
+export const $Submit = (config: IButtonPrimaryCtx) => component((
   [click, clickTether]: Behavior<PointerEvent, IWalletClient>
 ) => {
 
-  const duringRequest = multicast(mergeArray([
-    now(false),
-    constant(true, click),
-    awaitPromises(map(async req => {
-      try {
-        await req
-        return false
-      } catch (err) {
-        console.warn(err)
-        return false
-      }
-    }, config.request))
-  ]))
+  const { alert = now(null), $content, txQuery, disabled = now(false) } = config
 
-  const disabled = combineArray((isDisabled, isCtxPending) => {
-    return isDisabled || isCtxPending
-  }, config.disabled || now(false), duringRequest)
+  const isTxPending = recoverWith(() => now(false), map(s => s.state === PromiseStatus.PENDING, promiseState(txQuery)))
+  const isRequestPending = startWith(false, isTxPending)
+  
 
   return [
     $IntermediateConnectButton({
@@ -105,7 +95,9 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
             position: 'relative',
             overflow: 'hidden',
           })),
-          disabled: disabled,
+          disabled: combineArray(params => {
+            return params.alert !== null || params.disabled || params.isRequestPending
+          }, combineObject({ disabled, isRequestPending, alert })),
           $content: $row(
             $node(
               style({
@@ -116,7 +108,7 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
                 position: 'absolute',
                 background: `linear-gradient(115deg, ${pallete.negative}, ${pallete.primary}, ${pallete.positive}, ${pallete.primary}) 0% 0% / 50% 100%`,
               }),
-              styleInline(map(isDisabled => ({ visibility: isDisabled ? 'visible' : 'hidden' }), duringRequest))
+              styleInline(map(isDisabled => ({ visibility: isDisabled ? 'visible' : 'hidden' }), isRequestPending))
             )(),
             $node(
               style({
@@ -126,7 +118,7 @@ export const $ButtonPrimaryCtx = (config: IButtonPrimaryCtx) => component((
                 background: colorAlpha(pallete.background, .9),
                 borderRadius: '30px',
               }),
-              styleInline(map(isDisabled => ({ visibility: isDisabled ? 'visible' : 'hidden' }), duringRequest))
+              styleInline(map(isDisabled => ({ visibility: isDisabled ? 'visible' : 'hidden' }), isRequestPending))
             )(),
             style({ position: 'relative' })(
               config.$content

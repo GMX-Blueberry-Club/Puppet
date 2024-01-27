@@ -130,7 +130,7 @@ export const $Popover = ({ open, dismiss = empty(), margin = 10, padding = 76, $
     ),
     styleBehavior(
       merge(
-        constant({ zIndex: 100000, position: 'relative' }, openMulticast),
+        constant({ zIndex: 5000, position: 'relative' }, openMulticast),
         constant(null, dismissEvent)
       )
     )

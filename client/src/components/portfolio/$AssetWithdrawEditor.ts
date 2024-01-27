@@ -1,18 +1,19 @@
 
 import { Behavior, combineObject } from "@aelea/core"
-import { $node, $text, component, style } from "@aelea/dom"
+import { $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { constant, map, mergeArray, multicast, now, snapshot } from "@most/core"
 import { getMappedValue, parseFixed, readableTokenAmount, readableTokenAmountLabel } from "common-utils"
 import * as GMX from "gmx-middleware-const"
+import { getTokenDescription } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
 import { $TextField } from "../../common/$TextField.js"
 import { wagmiWriteContract } from "../../logic/common.js"
-import { IWalletClient } from "../../wallet/walletLink.js"
-import { $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
-import { getTokenDescription } from "gmx-middleware-utils"
 import { walletLink } from "../../wallet"
+import { IWalletClient } from "../../wallet/walletLink.js"
+import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
+import { $SubmitBar } from "../form/$Form"
 
 
 
@@ -55,26 +56,23 @@ export const $AssetWithdrawEditor = (config: IAssetWithdrawEditor) => component(
         })
       ),
       
-      $row(style({ placeContent: 'space-between' }))(
-        $node(),
-        $ButtonPrimaryCtx({
-          $content: $text('Withdraw'),
-          request: requestDepositAsset,
-          disabled: now(config.balance === 0n)
-        })({
-          click: requestDepositAssetTether(
-            snapshot((params, w3p) => {
+      $SubmitBar({
+        $content: $text('Withdraw'),
+        disabled: map(val => val === 0n, amount),
+        txQuery: requestDepositAsset
+      })({
+        click: requestDepositAssetTether(
+          snapshot((params, w3p) => {
 
-              return wagmiWriteContract(walletLink.wagmiConfig, {
-                ...PUPPET.CONTRACT[42161].Orchestrator,
-                functionName: 'withdraw',
-                args: [params.amount, config.token, w3p.account.address, false] as const
-              })
-            }, combineObject({ amount })),
-            multicast
-          )
-        })
-      ),
+            return wagmiWriteContract(walletLink.wagmiConfig, {
+              ...PUPPET.CONTRACT[42161].Orchestrator,
+              functionName: 'withdraw',
+              args: [params.amount, config.token, w3p.account.address, false] as const
+            })
+          }, combineObject({ amount })),
+          multicast
+        )
+      }),
     ),                  
     
     {

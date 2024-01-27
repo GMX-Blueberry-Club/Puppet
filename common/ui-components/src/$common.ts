@@ -4,7 +4,7 @@ import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { empty, fromPromise, join, map, skipRepeats, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { getExplorerUrl, getMappedValue, ITokenDescription, shortenTxAddress, switchMap } from "common-utils"
+import { getExplorerUrl, getMappedValue, ITokenDescription, promiseState, PromiseStatus, shortenTxAddress, switchMap } from "common-utils"
 import { Chain } from "viem/chains"
 import { $alertIcon, $arrowRight, $caretDblDown, $info, $tokenIconMap } from "./$icons.js"
 import { $defaultDropContainer, $Tooltip } from "./$Tooltip.js"
@@ -188,32 +188,14 @@ export const $icon = ({ $content, width = '24px', viewBox = `0 0 32 32`, fill = 
   )
 )
 
-
 export const $intermediate$node = (querySrc: Stream<Promise<$Node>>, hint = '-'): $Node => {
-  return switchLatest({
-    run(sink, scheduler) {
-      let failed = false
-
-      return querySrc.run({
-        event(time, res) {
-          sink.event(scheduler.currentTime(), $text(hint))
-
-          res.then(node => {
-            if (failed) return
-
-            sink.event(time, node)
-          })
-        },
-        error(time, err) {
-          failed = true
-          sink.error(time, err)
-        },
-        end(time) {
-          sink.end(time)
-        }
-      }, scheduler)
+  const state = promiseState(querySrc)
+  return switchMap(res => {
+    if (res.state === PromiseStatus.PENDING) {
+      return $text(hint)
     }
-  })
+    return res.value
+  }, state)
 }
 
 export const $intermediateMessage = (querySrc: Stream<Promise<string>>, hint = '-'): $Node => {

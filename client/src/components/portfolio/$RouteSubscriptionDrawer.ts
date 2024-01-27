@@ -2,13 +2,14 @@ import { Behavior, O, combineObject } from "@aelea/core"
 import { $node, $text, component, nodeEvent, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, constant, empty, fromPromise, map, mergeArray, now, skipRepeats, snapshot } from "@most/core"
+import { awaitPromises, constant, empty, map, mergeArray, now, skipRepeats, snapshot, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { groupArrayMany, readableDate, readablePercentage, readableTokenAmountLabel, switchMap } from "common-utils"
 import * as GMX from "gmx-middleware-const"
+import { getTokenDescription } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { ISetRouteType } from "puppet-middleware-utils"
-import { $alertContainer, $alertTooltip, $check, $infoLabeledValue, $infoTooltip, $infoTooltipLabel, $target, $xCross } from "ui-components"
+import { $check, $infoLabeledValue, $infoTooltip, $infoTooltipLabel, $intermediateMessage, $target, $xCross } from "ui-components"
 import * as viem from "viem"
 import { $profileDisplay } from "../$AccountProfile.js"
 import { $Popover } from "../$Popover.js"
@@ -19,12 +20,12 @@ import { wagmiWriteContract } from "../../logic/common.js"
 import { getPuppetDepositAmount } from "../../logic/puppetLogic"
 import { $seperator2 } from "../../pages/common.js"
 import { fadeIn } from "../../transitions/enter.js"
+import { walletLink } from "../../wallet"
 import { IWalletClient, wallet } from "../../wallet/walletLink.js"
-import { $ButtonCircular, $ButtonPrimaryCtx, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
+import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
+import { $SubmitBar } from "../form/$Form"
 import { $AssetDepositEditor } from "./$AssetDepositEditor.js"
 import { IChangeSubscription } from "./$RouteSubscriptionEditor"
-import { getTokenDescription } from "gmx-middleware-utils"
-import { walletLink } from "../../wallet"
 
 interface IRouteSubscribeDrawer {
   modifySubscriber: Stream<IChangeSubscription>
@@ -37,34 +38,34 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
   [clickClose, clickCloseTether]: Behavior<any>,
   [clickRemoveSubsc, clickRemoveSubscTether]: Behavior<any, IChangeSubscription >,
   [openDepositPopover, openDepositPopoverTether]: Behavior<any>,
-  [requestDepositAsset, requestDepositAssetTether]: Behavior<Promise<viem.TransactionReceipt>>,
+  [requestDepositAsset, requestDepositAssetTether]: Behavior<Promise<bigint>>, // delta amount
 ) => {
 
   const openIfEmpty = skipRepeats(map(l => l.length > 0, modifySubscriptionList))
 
-  const readPuppetDeposit = switchMap(w3p => {
+  const depositAmount = switchMap(w3p => {
     if (!w3p?.account?.address) {
-      return now(0n)
+      return now(Promise.resolve(0n))
     }
 
     const address = w3p.account.address
-    return mergeArray([
-      fromPromise(getPuppetDepositAmount(address, w3p.chain.id)),
-      switchMap(async txQuery =>  {
-        await txQuery
-        return getPuppetDepositAmount(address, w3p.chain.id)
-      }, requestDepositAsset)
-    ])
+    const depositAmountQuery = getPuppetDepositAmount(address, w3p.chain.id)
+
+    return startWith(
+      depositAmountQuery,
+      map(async added => await depositAmountQuery + await added, requestDepositAsset
+      )
+    )
   }, wallet)
 
 
-  const validationError = map(amount => {
-    if (amount == 0n) {
-      return 'Allow USDC spend amount'
+  const validationError = switchMap(async params => {
+    if (await params.depositAmount === 0n) {
+      return 'You need to deposit funds to to enable mirroring'
     }
 
     return null
-  }, readPuppetDeposit)
+  }, combineObject({ depositAmount }))
 
   const depositToken = GMX.ARBITRUM_ADDRESS.USDC
   const depositTokenDescription = getTokenDescription(depositToken)
@@ -151,46 +152,37 @@ export const $RouteSubscriptionDrawer = ({ modifySubscriptionList, modifySubscri
             )
           }, combineObject({ modifySubscriptionList, routeTypeList: awaitPromises(routeTypeListQuery) })),
 
-          style({ placeSelf: 'flex-end' })(
-            $alertContainer(
-              $text('This is a beta version of the app has not been audited. Use at your own risk.'),
-            )
-          ),
 
           $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between' }))(
-            switchMap(amount => {
-              return $row(layoutSheet.spacing, style({ alignItems: 'center', minWidth: '0' }))(
-                $Popover({
-                  open: constant(
-                    $AssetDepositEditor({
-                      token: depositToken
-                    })({
-                      requestDepositAsset: requestDepositAssetTether(),
-                    }),
-                    openDepositPopover
+            $Popover({
+              open: constant(
+                $AssetDepositEditor({
+                  token: depositToken
+                })({
+                  requestDepositAsset: requestDepositAssetTether(),
+                }),
+                openDepositPopover
+              ),
+              $target: $row(layoutSheet.spacing)(
+                $responsiveFlex(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+                  $infoTooltipLabel($text('The amount utialised by traders you subscribe'), 'Balance'),
+                  // $text(readableTokenAmountLabel(depositTokenDescription, amount))
+                  $intermediateMessage(map(async amount => readableTokenAmountLabel(depositTokenDescription, await amount), depositAmount)
                   ),
-                  $target: $row(layoutSheet.spacing)(
-                    $responsiveFlex(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-                      $infoTooltipLabel($text('The amount utialised by traders you subscribe'), 'Balance'),
-                      $text(readableTokenAmountLabel(depositTokenDescription, amount))
-                    ),
-                    $ButtonSecondary({
-                      $container: $defaultMiniButtonSecondary,
-                      $content: $text('Deposit')
-                    })({
-                      click: openDepositPopoverTether()
-                    }),
-                  ),
-                })({}),
-
-                amount === 0n ? $alertTooltip($text('You need to deposit funds to to enable mirroring')) : empty(),
-              )
-            }, readPuppetDeposit),
+                  $ButtonSecondary({
+                    $container: $defaultMiniButtonSecondary,
+                    $content: $text('Deposit')
+                  })({
+                    click: openDepositPopoverTether()
+                  }),
+                )),
+            })({}),
+            
             $node(),
-            $ButtonPrimaryCtx({
-              disabled: map(alert => alert !== null, validationError),
+            $SubmitBar({
               $content: $text(screenUtils.isDesktopScreen ? 'Save Changes' : 'Save'),
-              request: requestChangeSubscription
+              txQuery: requestChangeSubscription,
+              alert: validationError
             })({
               click: requestChangeSubscriptionTether(
                 snapshot((list, w3p) => {

@@ -42,7 +42,7 @@ export const $TraderPage = (
     $column(layoutSheet.spacingBig)(
       $card(layoutSheet.spacingBig, style({ flex: 1, width: '100%' }))(
         $card2(style({ padding: 0, height: screenUtils.isDesktopScreen ? '200px' : '200px', position: 'relative', margin: screenUtils.isDesktopScreen ? `-36px -36px 0` : `-12px -12px 0px` }))(
-          $ProfilePeformanceTimeline(config)({
+          $ProfilePeformanceTimeline({ ...config })({
             selectTradeRouteList: selectTradeRouteListTether(),
             changeActivityTimeframe: changeActivityTimeframeTether(),
           })
