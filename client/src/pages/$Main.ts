@@ -105,31 +105,32 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
 
 
   const walletRdnsStore = uiStorage.replayWrite(storeDb.store.global, changeWalletProviderRdns, 'wallet')
-  const walletProviderQuery = map(rdns => rdns ? mipdStore.findProvider({ rdns })?.provider || null : null, walletRdnsStore)
+  const initWalletProvider = map(rdns => rdns ? mipdStore.findProvider({ rdns }) || null : null, walletRdnsStore)
 
 
   // hanlde disconnect and account change
-  const walletProviderHandlerQuery = mergeArray([
-    walletProviderQuery,
-    switchMap(providerDetail => {
+  const walletProvider = switchMap(providerDetail => {
+    if (providerDetail === null) {
+      return now(null)
+    }
 
-      const reEmitProvider = constant(providerDetail, eip1193ProviderEventFn(providerDetail.provider, 'accountsChanged'))
-      const disconnect = constant(null, eip1193ProviderEventFn(providerDetail.provider, 'disconnect'))
 
-      providerDetail.provider.on('chainChanged', () => {
+    const reEmitProvider = constant(providerDetail.provider, eip1193ProviderEventFn(providerDetail.provider, 'accountsChanged'))
+    const disconnect = constant(null, eip1193ProviderEventFn(providerDetail.provider, 'disconnect'))
+
+    providerDetail.provider.on('chainChanged', () => {
       // TODO: handle chain change throught the app
-        window.location.reload()
-      })
+      window.location.reload()
+    })
 
-      return mergeArray([disconnect, reEmitProvider])
-    }, changeWallet)
-  ])
+    return startWith(providerDetail.provider, mergeArray([disconnect, reEmitProvider]))
+  }, mergeArray([initWalletProvider, changeWallet]))
 
 
   const chainIdQuery = indexDb.get(store.global, 'chain')
   const chainQuery: Stream<Promise<viem.Chain>> = now(chainIdQuery.then(id => chains.find(c => c.id === id) || arbitrum))
 
-  const { providerQuery, publicProviderQuery, walletClientQuery } = initWalletLink({ publicTransportMap, chainQuery, walletProvider: walletProviderHandlerQuery })
+  const { providerQuery, publicProviderQuery, walletClientQuery } = initWalletLink({ publicTransportMap, chainQuery, walletProvider })
 
   const block = switchMap(async query => (await query).getBlockNumber(), providerQuery)
   const latestBlock: Stream<bigint> = switchLatest(switchMap(async query => {
