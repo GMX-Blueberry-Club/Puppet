@@ -23,12 +23,13 @@ export async function getPuppetSubscriptionExpiry(
   const puppetContractMap = getMappedValue(PUPPET.CONTRACT, wallet.chain.id)
   const routeKey = getTradeRouteKey(trader, collateralToken, indexToken, isLong)
   const puppetSubscriptionExpiryKey = getPuppetSubscriptionExpiryKey(puppet, routeKey)
-  
+
   return readContract(wallet, {
     ...puppetContractMap.Datastore,
-    
     functionName: 'getUint',
     args: [puppetSubscriptionExpiryKey],
+  }).catch(err => {
+    return 0n
   })
 }
 
@@ -43,6 +44,8 @@ export async function getPuppetDepositAmount(
     ...puppetContractMap.Datastore,
     functionName: 'getUint',
     args: [getPuppetDepositAccountKey(address, tokenAddress)],
+  }).catch(err => {
+    return 0n
   })
 }
 

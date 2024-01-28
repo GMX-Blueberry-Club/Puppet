@@ -11,11 +11,11 @@ import * as viem from "viem"
 import { $LastAtivity } from "../$LastActivity.js"
 import { $labelDisplay } from "../../common/$TextField.js"
 import { $route } from "../../common/$common.js"
-import { IPageParams, IUserActivityParams } from "../../const/type.js"
+import { IPositionActivityParams, IUserActivityParams, IUserPositionPageParams } from "../../pages/type.js"
 import { $DropMultiSelect } from "../form/$Dropdown.js"
 import { getPerformanceTimeline } from "../trade/$ProfilePerformanceGraph.js"
 
-export const $ProfilePeformanceTimeline = (config: IPageParams & IUserActivityParams & { puppet?: viem.Address }) => component((
+export const $ProfilePeformanceTimeline = (config: IPositionActivityParams & IUserActivityParams & { puppet?: viem.Address }) => component((
   [crosshairMove, crosshairMoveTether]: Behavior<MouseEventParams>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,

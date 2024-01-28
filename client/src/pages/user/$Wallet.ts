@@ -1,9 +1,8 @@
 import { Behavior, combineObject } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
-import * as router from '@aelea/router'
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { constant, map } from "@most/core"
-import { IntervalTime, switchMap } from "common-utils"
+import { constant, empty, map } from "@most/core"
+import { ADDRESS_ZERO, IntervalTime, switchMap } from "common-utils"
 import { EIP6963ProviderDetail } from "mipd"
 import { ISetRouteType, queryPuppetTradeRoute, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
 import { $ButtonToggle, $defaulButtonToggleContainer } from "ui-components"
@@ -12,8 +11,8 @@ import { $IntermediateConnectButton } from "../../components/$ConnectWallet.js"
 import { $ButtonSecondary } from "../../components/form/$Button.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
 import * as storeDb from "../../const/store.js"
-import { IPageParams, IUserType } from "../../const/type.js"
-import { $PuppetPage } from "./$Puppet.js"
+import { IPageParams, IPositionActivityParams, IUserActivityParams, IUserPositionPageParams, IUserType } from "../type.js"
+import { $WalletPuppet } from "./$WalletPuppet.js"
 import { $TraderPage } from "./$Trader.js"
 
 const optionDisplay = {
@@ -28,7 +27,7 @@ const optionDisplay = {
 }
 
 
-export const $WalletPage = (config: IPageParams & { route: router.Route }) => component((
+export const $WalletPage = (config: IPageParams & IUserActivityParams) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [selectProfileMode, selectProfileModeTether]: Behavior<IUserType>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
@@ -36,10 +35,10 @@ export const $WalletPage = (config: IPageParams & { route: router.Route }) => co
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 
-  [changeWallet, changeWalletTether]: Behavior<any, EIP6963ProviderDetail | null>,
+  [changeWallet, changeWalletTether]: Behavior<any, EIP6963ProviderDetail>,
 ) => {
 
-  const { route, walletClientQuery, routeTypeListQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery } = config
+  const { route, walletClientQuery, routeTypeListQuery, publicProviderQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery } = config
 
   const profileMode = uiStorage.replayWrite(storeDb.store.wallet, selectProfileMode, 'selectedTab')
 
@@ -54,11 +53,12 @@ export const $WalletPage = (config: IPageParams & { route: router.Route }) => co
         $IntermediateConnectButton({
           walletClientQuery,
           $$display: map(wallet => {
-            return $ButtonSecondary({
-              $content: $text('Disconnect')
-            })({
-              click: changeWalletTether(constant(null))
-            })
+            return empty()
+            // return $ButtonSecondary({
+            //   $content: $text('Disconnect')
+            // })({
+            //   click: changeWalletTether(constant(null))
+            // })
           })
         })({
           changeWallet: changeWalletTether()
@@ -80,7 +80,7 @@ export const $WalletPage = (config: IPageParams & { route: router.Route }) => co
 
       switchMap(params => {
         const address = switchMap(async walletQuery => {
-          return (await walletQuery)?.account.address || null
+          return (await walletQuery)?.account.address || ADDRESS_ZERO
         }, walletClientQuery)
 
         if (params.profileMode === IUserType.PUPPET) {
@@ -93,9 +93,9 @@ export const $WalletPage = (config: IPageParams & { route: router.Route }) => co
             return (await tradeRoute).map(x => x.openList).flatMap(pp => pp.map(x => x.position))
           }, puppetTradeRouteListQuery)
 
-          return $PuppetPage({
+          return $WalletPuppet({
             walletClientQuery, route, priceTickMapQuery, openPositionListQuery, settledPositionListQuery, puppetTradeRouteListQuery,
-            activityTimeframe, selectedTradeRouteList, routeTypeListQuery,
+            activityTimeframe, selectedTradeRouteList, routeTypeListQuery, publicProviderQuery,
           })({
             changeRoute: changeRouteTether(),
             modifySubscriber: modifySubscriberTether(),

@@ -9,10 +9,10 @@ import { $card, $card2 } from "../../common/elements/$common.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
 import { entryColumn, pnlColumn, positionTimeColumn, puppetsColumn, settledSizeColumn } from "../../components/table/$TableColumn.js"
 import { $ProfilePeformanceTimeline } from "../../components/participant/$ProfilePeformanceTimeline.js"
-import { IPageParams, IUserActivityParams } from "../../const/type"
+import { IUserPositionPageParams } from "../type.js"
 
 
-export const $TraderPage = (config: IPageParams & IUserActivityParams) => component((
+export const $TraderPage = (config: IUserPositionPageParams) => component((
   [changeRoute, changeRouteTether]: Behavior<any, string>,
   [scrollRequest, scrollRequestTether]: Behavior<ScrollRequest>,
 

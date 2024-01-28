@@ -1,18 +1,22 @@
 import { style } from "@aelea/dom"
 import { $column, layoutSheet } from "@aelea/ui-components"
 import { now } from "@most/core"
-import * as GMX from 'gmx-middleware-const'
-import { queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
+import { Stream } from "@most/types"
+import { IntervalTime } from "common-utils"
+import { IPriceTickListMap } from "gmx-middleware-utils"
+import { ISetRouteType, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
 import * as viem from 'viem'
 import { $ProfilePeformanceTimeline } from "../components/participant/$ProfilePeformanceTimeline.js"
 import { $TraderSummary } from "../components/participant/$Summary.js"
-import { IOpengraphPageParams } from "./common"
-import { IntervalTime } from "common-utils"
 
 
 
-export const $trader = (config: IOpengraphPageParams) => {
-  const { priceTickMapQuery, routeTypeListQuery } = config
+interface ITrader {
+  routeTypeListQuery: Stream<Promise<ISetRouteType[]>>
+  priceTickMapQuery: Stream<Promise<IPriceTickListMap>>
+}
+
+export const $trader = (config: ITrader) => {
   const url = new URL(document.location.href)
 
   const address = viem.getAddress(String(url.searchParams.get('address'))) as viem.Address
@@ -24,13 +28,10 @@ export const $trader = (config: IOpengraphPageParams) => {
   
 
   return $column(layoutSheet.spacingBig, style({ placeContent: 'space-between', flex: 1 }))(
-    $TraderSummary({ address, settledPositionListQuery, openPositionListQuery })({}),
+    $TraderSummary({ ...config, address, settledPositionListQuery, openPositionListQuery })({}),
 
     $column(style({ position: 'relative' }))(
-      $ProfilePeformanceTimeline({ 
-        activityTimeframe, openPositionListQuery, priceTickMapQuery,
-        routeTypeListQuery, selectedTradeRouteList, settledPositionListQuery
-      })({ })
+      $ProfilePeformanceTimeline({ ...config, activityTimeframe, openPositionListQuery, selectedTradeRouteList, settledPositionListQuery })({ })
     )
   )
 }

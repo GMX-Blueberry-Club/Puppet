@@ -5,12 +5,13 @@ import { Stream } from "@most/types"
 import { erc20Abi } from "abitype/abis"
 import { ADDRESS_ZERO, ITokenDescription, IntervalTime, USD_DECIMALS, filterNull, getDenominator, getMappedValue, parseFixed } from "common-utils"
 import * as GMX from "gmx-middleware-const"
-import { IPriceCandleDto, IRequestPricefeedApi, ITokenSymbol, getTokenDescription, resolveAddress } from "gmx-middleware-utils"
+import { IPriceCandleDto, IRequestPricefeedApi, ITokenSymbol, getTokenDescription, hashData, resolveAddress } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { getRouteAddressKey, getTradeRouteKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { getBalance, readContract } from "viem/actions"
 import { IWalletClient } from "../wallet/walletLink"
+import { IPublicProvider } from "../wallet/initWallet"
 
 
 
@@ -129,25 +130,26 @@ export function latestPriceFromExchanges(tokendescription: ITokenDescription): S
 }
 
 
-export async function getWalletErc20Balance(wallet: IWalletClient, chain: viem.Chain, token: viem.Address | typeof ADDRESS_ZERO, walletAddress: viem.Address): Promise<bigint> {
+export async function getAddressTokenBalance(provider: viem.Client<viem.Transport, viem.Chain>, token: viem.Address | typeof ADDRESS_ZERO, address: viem.Address): Promise<bigint> {
   if (token === ADDRESS_ZERO) {
-    return getBalance(wallet, { address: wallet.account.address })
+    return getBalance(provider, { address })
   }
 
-  const contractMapping = getMappedValue(GMX.TRADE_CONTRACT_MAPPING, chain.id)
+  const contractMapping = getMappedValue(GMX.TRADE_CONTRACT_MAPPING, provider.chain.id)
 
   if (!contractMapping) {
     return 0n
   }
 
-  const tokenAddress = resolveAddress(chain, token)
+  const tokenAddress = resolveAddress(provider.chain, token)
 
-  const erc20 = readContract(wallet, {
+  const erc20 = await readContract(provider, {
     address: tokenAddress,
     abi: erc20Abi,
     functionName: 'balanceOf',
-    args: [walletAddress]
-  })
+    args: [address]
+  }).catch(() => 0n)
+  
   return erc20
 }
 
@@ -209,16 +211,30 @@ export async function getTraderTradeRoute(
   const routeKey = getTradeRouteKey(trader, collateralToken, indexToken, isLong)
   const routeAddressKey = getRouteAddressKey(routeKey)
 
+  try {
+    const queryAddress = await readContract(wallet, {
+      ...puppetContractMap.Datastore,
+      functionName: 'getAddress',
+      args: [routeAddressKey],
+    })
 
-  const queryAddress = await readContract(wallet, {
-    ...puppetContractMap.Datastore,
-    functionName: 'getAddress',
-    args: [routeAddressKey],
-  })
+    if (queryAddress === ADDRESS_ZERO) {
+      return null
+    }
 
-  if (queryAddress === ADDRESS_ZERO) {
+    return queryAddress
+  } catch (err) {
     return null
   }
+}
 
-  return queryAddress
+export async function getMinExecutionFee(wallet: IPublicProvider): Promise<bigint> {
+  const puppetContractMap = getMappedValue(PUPPET.CONTRACT, wallet.chain.id)
+  const minExecutionFeeKey = hashData(["string"], ["MIN_EXECUTION_FEE"])
+
+  return readContract(wallet, {
+    ...puppetContractMap.Datastore,
+    functionName: 'getUint',
+    args: [minExecutionFeeKey],
+  })
 }

@@ -1,17 +1,17 @@
 import { Behavior, Op } from "@aelea/core"
 import { $Node, $element, $text, attr, component, style } from "@aelea/dom"
 import { $icon, $row, layoutSheet } from "@aelea/ui-components"
-import { awaitPromises, map, now, switchLatest } from "@most/core"
+import { awaitPromises, constant, join, map, mergeArray, multicast, now } from "@most/core"
 import { Stream } from "@most/types"
 import { ignoreAll, switchMap } from "common-utils"
+import { EIP6963ProviderDetail, createStore } from "mipd"
 import { $infoLabel } from "ui-components"
 import { $walletConnectLogo } from "../common/$icons.js"
 import { walletLink } from "../wallet/index.js"
 import { IWalletClient } from "../wallet/walletLink"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "./form/$Button.js"
 import { IButtonCore } from "./form/$ButtonCore.js"
-import { EIP1193Provider } from "viem"
-import { EIP6963ProviderDetail, createStore } from "mipd"
+import { eip1193ProviderEventFn } from "../wallet/initWallet"
 
 
 // Set up a MIPD Store, and request Providers.
@@ -40,7 +40,7 @@ export const $IntermediateConnectButton = (config: IConnectWalletPopover) => com
         })
       }
 
-      return switchLatest(config.$$display(now(wallet)))
+      return join(config.$$display(now(wallet)))
     }, wallet),
 
     {
@@ -76,10 +76,19 @@ export const $ConnectChoiceList = () => component((
           )
         })({
           click: changeWalletTether(
+            // constant(providerDetail)
             map(async () => {
               const provider = providerDetail.provider
+              
 
-              await provider.request({ method: 'eth_requestAccounts' })
+              // await provider.request({
+              //   method: "wallet_switchEthereumChain",
+              //   params: [ { chainId: "0x64" } ]
+              // })
+              const requestAccountList = await provider.request({ method: 'eth_requestAccounts' })
+              
+              // const accountList = await provider.request({ method: 'eth_requestAccounts' })
+
               
               return providerDetail
             }),

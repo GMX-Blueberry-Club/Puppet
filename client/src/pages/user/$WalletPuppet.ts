@@ -1,7 +1,7 @@
 import { Behavior, combineObject } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { awaitPromises, constant, map, mergeArray, startWith, switchLatest } from "@most/core"
+import { awaitPromises, constant, map, mergeArray, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { IntervalTime, groupArrayMany, readableTokenAmountLabel, readableUsd, switchMap } from "common-utils"
 import * as GMX from 'gmx-middleware-const'
@@ -21,14 +21,14 @@ import { $AssetWithdrawEditor } from "../../components/portfolio/$AssetWithdrawE
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
 import { getPuppetDepositAmount } from "../../logic/puppetLogic.js"
 import { $seperator2 } from "../common.js"
-import { IPageParams, IUserActivityParams } from "../../const/type"
+import { IUserPositionPageParams } from "../type.js"
 
 
-export interface IPuppetPortfolio extends IPageParams, IUserActivityParams {
+interface IWalletPuppet extends IUserPositionPageParams {
   puppetTradeRouteListQuery: Stream<Promise<IPuppetTradeRoute[]>>
 }
 
-export const $PuppetPage = (config: IPuppetPortfolio) => component((
+export const $WalletPuppet = (config: IWalletPuppet) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
 
@@ -41,7 +41,7 @@ export const $PuppetPage = (config: IPuppetPortfolio) => component((
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 ) => {
   
-  const { activityTimeframe, walletClientQuery, priceTickMapQuery, puppetTradeRouteListQuery, openPositionListQuery, settledPositionListQuery, selectedTradeRouteList, routeTypeListQuery, route } = config
+  const { activityTimeframe, walletClientQuery, priceTickMapQuery, publicProviderQuery, puppetTradeRouteListQuery, openPositionListQuery, settledPositionListQuery, selectedTradeRouteList, routeTypeListQuery, route } = config
 
   const initialDepositAmountQuery = map(async walletQuery => {
     const wallet = await walletQuery
@@ -65,9 +65,8 @@ export const $PuppetPage = (config: IPuppetPortfolio) => component((
 
   const depositToken = GMX.ARBITRUM_ADDRESS.USDC
   const depositTokenDescription = getTokenDescription(depositToken)
-  // switchMap(amount => {
-  //                 return 
-  //               }, awaitPromises(depositAmountQuery))
+
+  
   return [
 
     $column(layoutSheet.spacingBig)(
@@ -90,6 +89,7 @@ export const $PuppetPage = (config: IPuppetPortfolio) => component((
                   constant(
                     $AssetDepositEditor({
                       token: depositToken,
+                      publicProviderQuery,
                       walletClientQuery,
                     })({
                       requestDepositAsset: requestDepositAssetTether(),
@@ -99,6 +99,7 @@ export const $PuppetPage = (config: IPuppetPortfolio) => component((
                   constant(
                     $AssetWithdrawEditor({
                       walletClientQuery,
+                      publicProviderQuery,
                       token: depositToken,
                       balanceQuery: depositAmountQuery
                     })({
@@ -132,6 +133,11 @@ export const $PuppetPage = (config: IPuppetPortfolio) => component((
             ),
           ),
           switchLatest(awaitPromises(map(async params => {
+            const wallet = await params.walletClientQuery
+
+            if (wallet === null) {
+              return $text('Connect wallet to view activity')
+            }
 
             const puppetTradeRouteList = await params.puppetTradeRouteListQuery
             const priceTickMap = await params.priceTickMapQuery
@@ -140,6 +146,11 @@ export const $PuppetPage = (config: IPuppetPortfolio) => component((
             if (puppetTradeRouteList.length === 0) {
               return $text('No activity found')
             }
+
+            const usedBalance = puppetTradeRouteList.flatMap(route => route.openList).reduce((acc, pos) => {
+              const collateralUsd = getParticiapntMpPortion(pos.position, pos.position.position.maxCollateralUsd, wallet.account.address)
+              return acc + collateralUsd
+            }, 0n)
 
             const tradeRouteList = Object.entries(groupArrayMany(puppetTradeRouteList, x => x.routeTypeKey)) as [viem.Address, IPuppetTradeRoute[]][]
 
@@ -152,17 +163,7 @@ export const $PuppetPage = (config: IPuppetPortfolio) => component((
                     $route(routeType),
                     $responsiveFlex(layoutSheet.spacingSmall)(
                       $infoTooltipLabel($text('The available amount ready to be matched against'), 'Used balance'),
-                      $intermediateMessage(
-                        map(async params => {
-                          const wallet = await params.walletClientQuery
-                          const openList = await params.openPositionListQuery
-                          const balance = openList.reduce((acc, pos) => {
-                            const collateralUsd = getParticiapntMpPortion(pos, pos.position.maxCollateralUsd, wallet?.account.address)
-                            return acc + collateralUsd
-                          }, 0n)
-                          return readableUsd(balance)
-                        }, combineObject({ openPositionListQuery, walletClientQuery }))
-                      )
+                      $text(readableUsd(usedBalance))
                     ),
                     $node(style({ flex: 1 }))(),
                   ),
@@ -173,7 +174,7 @@ export const $PuppetPage = (config: IPuppetPortfolio) => component((
 
                       $column(layoutSheet.spacing, style({ flex: 1 }))( 
                         ...traderPuppetTradeRouteList.map(puppetTradeRoute => {
-                          return $PuppetTraderTradeRoute({ route, walletClientQuery, puppetTradeRoute, routeTypeList, activityTimeframe: params.activityTimeframe, priceTickMap })({
+                          return $PuppetTraderTradeRoute({ route, walletClientQuery, puppetTradeRoute, publicProviderQuery, routeTypeList, activityTimeframe: params.activityTimeframe, priceTickMap })({
                             modifySubscriber: modifySubscriberTether(),
                             changeRoute: changeRouteTether(),
                           })
@@ -185,7 +186,7 @@ export const $PuppetPage = (config: IPuppetPortfolio) => component((
                 )
               })
             )
-          }, combineObject({ puppetTradeRouteListQuery, priceTickMapQuery, activityTimeframe, selectedTradeRouteList, routeTypeListQuery })))),
+          }, combineObject({ puppetTradeRouteListQuery, priceTickMapQuery, activityTimeframe, selectedTradeRouteList, routeTypeListQuery, walletClientQuery })))),
         ),
       ),
     ),

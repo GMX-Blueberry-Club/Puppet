@@ -10,12 +10,12 @@ import { $Table, $infoLabel, $txHashRef } from "ui-components"
 import * as viem from "viem"
 import { IWalletClient } from "../../wallet/walletLink.js"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
+import { IWalletPageParams } from "../../pages/type.js"
 
 
 
-interface IPositionAdjustmentHistory {
+interface IPositionAdjustmentHistory extends IWalletPageParams {
   chain: viem.Chain
-  wallet: Stream<IWalletClient>
   pricefeed: Stream<IPriceCandle[]>
   tradeConfig: StateStreamStrict<ITradeConfig> // ITradeParams
   tradeState: StateStreamStrict<ITradeParams>
@@ -38,7 +38,7 @@ export type IRequestTrade = IRequestTradeParams & {
 export const $PositionDetails = (config: IPositionAdjustmentHistory) => component((
 ) => {
 
-  const { chain, wallet, pricefeed, tradeConfig, tradeState, mirrorPosition } = config
+  const { chain, walletClientQuery, pricefeed, tradeConfig, tradeState, mirrorPosition } = config
 
   // const settledPositionListQuery = queryTraderPositionSettled({ address, activityTimeframe, selectedTradeRouteList })
 

@@ -12,14 +12,14 @@ import { $Popover } from "../$Popover"
 import { $TraderDisplay, $pnlDisplay, $puppets } from "../../common/$common.js"
 import { $puppetLogo } from "../../common/$icons"
 import { $iconCircular } from "../../common/elements/$common"
-import { IWalletPageParams } from "../../const/type"
+import { IPageParams } from "../../pages/type.js"
 import { getPuppetSubscriptionExpiry } from "../../logic/puppetLogic"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button"
 import { $RouteSubscriptionEditor, IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor.js"
 import { entryColumn, pnlColumn, positionTimeColumn, settledSizeColumn } from "../table/$TableColumn"
 import { $ProfilePerformanceGraph } from "../trade/$ProfilePerformanceGraph.js"
 
-export interface IPuppetTraderTradeRoute extends IWalletPageParams {
+export interface IPuppetTraderTradeRoute extends IPageParams {
   puppetTradeRoute: IPuppetTradeRoute
   activityTimeframe: IntervalTime
   priceTickMap: IPriceTickListMap

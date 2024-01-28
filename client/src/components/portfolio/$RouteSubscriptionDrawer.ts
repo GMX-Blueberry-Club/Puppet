@@ -2,7 +2,7 @@ import { Behavior, O, combineObject } from "@aelea/core"
 import { $node, $text, component, nodeEvent, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, constant, empty, map, mergeArray, now, skipRepeats, snapshot, startWith } from "@most/core"
+import { awaitPromises, constant, empty, map, mergeArray, skipRepeats, snapshot } from "@most/core"
 import { Stream } from "@most/types"
 import { getMappedValue, groupArrayMany, readableDate, readablePercentage, readableTokenAmountLabel, switchMap } from "common-utils"
 import * as GMX from "gmx-middleware-const"
@@ -19,16 +19,16 @@ import { $card2, $iconCircular, $responsiveFlex } from "../../common/elements/$c
 import { writeContract } from "../../logic/common.js"
 import { getPuppetDepositAmount } from "../../logic/puppetLogic"
 import { $seperator2 } from "../../pages/common.js"
+import { IComponentPageParams } from "../../pages/type.js"
 import { fadeIn } from "../../transitions/enter.js"
-import { walletLink } from "../../wallet"
 import { IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $SubmitBar } from "../form/$Form"
 import { $AssetDepositEditor } from "./$AssetDepositEditor.js"
 import { IChangeSubscription } from "./$RouteSubscriptionEditor"
-import { IWalletPageParams } from "../../const/type"
+import { EIP6963ProviderDetail } from "mipd"
 
-interface IRouteSubscribeDrawer extends IWalletPageParams {
+interface IRouteSubscribeDrawer extends IComponentPageParams {
   modifySubscriber: Stream<IChangeSubscription>
   modifySubscriptionList: Stream<IChangeSubscription[]>
   routeTypeListQuery: Stream<Promise<ISetRouteType[]>>
@@ -40,9 +40,10 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
   [clickRemoveSubsc, clickRemoveSubscTether]: Behavior<any, IChangeSubscription >,
   [openDepositPopover, openDepositPopoverTether]: Behavior<any>,
   [requestDepositAsset, requestDepositAssetTether]: Behavior<Promise<bigint>>, // delta amount
+  [changeWallet, changeWalletTether]: Behavior<EIP6963ProviderDetail>,
 ) => {
 
-  const { modifySubscriber, modifySubscriptionList, routeTypeListQuery, walletClientQuery } = config
+  const { modifySubscriber, modifySubscriptionList, publicProviderQuery, routeTypeListQuery, walletClientQuery } = config
 
   const openIfEmpty = skipRepeats(map(l => l.length > 0, modifySubscriptionList))
 
@@ -164,6 +165,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
             $Popover({
               open: constant(
                 $AssetDepositEditor({
+                  publicProviderQuery,
                   walletClientQuery,
                   token: depositToken
                 })({
@@ -193,6 +195,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
               txQuery: requestChangeSubscription,
               alert: validationError
             })({
+              changeWallet: changeWalletTether(),
               click: requestChangeSubscriptionTether(
                 snapshot((list, w3p) => {
                   const allowances = list.map(x => x.allowance)
@@ -218,6 +221,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
     }, openIfEmpty),
 
     {
+      changeWallet,
       modifySubscriptionList: mergeArray([
         snapshot((list, modify) => {
           const index = list.findIndex(x =>
@@ -246,10 +250,6 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
         }, modifySubscriptionList, clickRemoveSubsc),
         constant([], clickClose)
       ])
-      // changeSubscribeList: mergeArray([
-      //   modifySubscribeList,
-      //   constant([], clickClose)
-      // ])
     }
   ]
 })

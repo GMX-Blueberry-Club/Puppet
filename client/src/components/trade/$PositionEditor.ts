@@ -12,7 +12,7 @@ import {
   switchLatest
 } from "@most/core"
 import { Stream } from "@most/types"
-import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, delta, div, filterNull, formatDiv, formatFixed, getBasisPoints, getTokenAmount, getTokenUsd, ITokenDescription, parseBps, parseFixed, parseReadableNumber, readableNumber, readableTokenAmountFromUsdAmount, readableTokenUsd, readableUnitAmount, readableUsd, StateStreamStrict, switchMap } from "common-utils"
+import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, delta, div, filterNull, formatDiv, formatFixed, getBasisPoints, getTokenAmount, getTokenUsd, ITokenDescription, parseBps, parseFixed, parseReadableNumber, readableNumber, readableTokenAmountFromUsdAmount, readableTokenAmountLabel, readableTokenUsd, readableUnitAmount, readableUsd, StateStreamStrict, switchMap } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import { getNativeTokenAddress, getNativeTokenDescription, getTokenDescription, IMarket, IMarketInfo, IMarketPrice, resolveAddress, TEMP_MARKET_LIST } from "gmx-middleware-utils"
 import { IMirrorPositionOpen, ISetRouteType, latestPriceMap } from "puppet-middleware-utils"
@@ -22,6 +22,7 @@ import {
   $defaultTableRowContainer,
   $hintNumChange, $infoLabel,
   $infoTooltipLabel,
+  $intermediateMessage,
   $moreDots,
   $tokenIconMap, $tokenLabelFromSummary
 } from "ui-components"
@@ -34,9 +35,8 @@ import { $heading2 } from "../../common/$text.js"
 import { $TextField } from "../../common/$TextField"
 import { boxShadow } from "../../common/elements/$common"
 import { $caretDown } from "../../common/elements/$icons.js"
-import { ITradeFocusMode, IWalletPageParams } from "../../const/type.js"
 import * as trade from "../../logic/traderLogic.js"
-import { walletLink } from "../../wallet"
+import { IComponentPageParams, ITradeFocusMode } from "../../pages/type.js"
 import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown.js"
 
@@ -76,8 +76,6 @@ export interface ITradeParams {
 }
 
 
-
-
 export interface ITradeConfig {
   focusPrice: number | null
   market: IMarket
@@ -96,7 +94,7 @@ export interface ITradeConfig {
 }
 
 
-export interface IPositionEditorAbstractParams extends IWalletPageParams {
+export interface IPositionEditorAbstractParams extends IComponentPageParams {
   referralCode: viem.Hex
   routeTypeListQuery: Stream<Promise<ISetRouteType[]>>
   parentRoute: Route
@@ -137,6 +135,8 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
   [clickPrimary, clickPrimaryTether]: Behavior<any>,
 ) => {
+
+  const { walletClientQuery, publicProviderQuery } = config
 
 
   const {
@@ -446,26 +446,30 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
               selector: {
                 value: config.tradeConfig.primaryToken,
                 $container: $defaultSelectContainer(style({ minWidth: '290px', right: 0, left: 'auto' })),
-                $$option: snapshot((w3p, option) => {
-                  const address = w3p?.account.address
+                $$option: map(option => {
                   const token = resolveAddress(config.chain, option)
-                  const balanceAmount = address ? trade.getWalletErc20Balance(config.chain, option, address) : now(0n)
+                  const balanceAmountQuery = map(async walletQuery => {
+                    const wallet = await walletQuery
+                    if (wallet === null) {
+                      return 0n
+                    }
+
+                    return trade.getAddressTokenBalance(wallet, option, wallet.account.address)
+                  }, walletClientQuery)
                   const tokenDesc = option === ADDRESS_ZERO ? getNativeTokenDescription(config.chain) : getTokenDescription(option)
+
 
                   return $row(style({ placeContent: 'space-between', flex: 1 }))(
                     $tokenLabelFromSummary(tokenDesc),
                     $column(style({ alignItems: 'flex-end' }))(
-                      $text(style({ whiteSpace: 'nowrap' }))(map(bn => readableUnitAmount(formatFixed(bn, tokenDesc.decimals)) + ` ${tokenDesc.symbol}`, balanceAmount)),
-                      $text(
-                        map(params => {
-                          const price = params.latestPriceMap[token]
-
-                          return readableTokenUsd(price.min, params.balanceAmount)
-                        }, combineObject({ balanceAmount, latestPriceMap }))
-                      ),
+                      $intermediateMessage(map(async amount => readableTokenAmountLabel(tokenDesc, await amount), balanceAmountQuery)),
+                      $intermediateMessage(map(async params => {
+                        const price = params.latestPriceMap[token]
+                        return readableTokenUsd(price.max, await params.balanceAmountQuery)
+                      }, combineObject({ balanceAmountQuery, latestPriceMap }))),
                     )
                   )
-                }, walletLink.wallet),
+                }),
                 list: [
                   ADDRESS_ZERO,
                   ...TEMP_MARKET_LIST.map(m => m.indexToken),
@@ -672,6 +676,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
             $Popover({
               open: constant(
                 $MarketInfoList({
+                  publicProviderQuery,
                   chain: config.chain,
                   $rowCallback: map(params => {
                     return $defaultTableRowContainer(style({ borderTop: `1px solid ${colorAlpha(pallete.foreground, .20)}` }))(

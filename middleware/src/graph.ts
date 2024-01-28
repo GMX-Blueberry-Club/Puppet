@@ -3,7 +3,7 @@ import { map, multicast } from '@most/core'
 import { Stream } from '@most/types'
 import { Client, ClientOptions, createClient, fetchExchange } from '@urql/core'
 import { makeDefaultStorage } from '@urql/exchange-graphcache/default-storage'
-import { IntervalTime, StateStream, combineState, getClosestNumber, groupArrayManyMap, periodicRun, unixTimestampNow } from 'common-utils'
+import { ADDRESS_ZERO, IntervalTime, StateStream, combineState, getClosestNumber, groupArrayManyMap, periodicRun, unixTimestampNow } from 'common-utils'
 import * as GMX from "gmx-middleware-const"
 import { IPriceCandle, IPriceOracleMap, IPriceTickListMap, ISchema, schema as gmxSchema, parseQueryResults, querySignedPrices, querySubgraph } from "gmx-middleware-utils"
 import * as viem from "viem"
@@ -88,7 +88,7 @@ type IQueryTraderPositionOpen = IQueryPosition
 type IQueryPuppetTradeRoute = IQueryPosition & { activityTimeframe: IntervalTime }
 type IQueryTraderPositionSettled = IQueryPosition & { activityTimeframe: IntervalTime }
 
-export function queryTraderPositionOpen(queryParams: StateStream<IQueryTraderPositionOpen>, ) {
+export function queryTraderPositionOpen(queryParams: StateStream<IQueryTraderPositionOpen>) {
   return map(async params => {
     const list = await querySubgraph(subgraphClient, {
       schema: schema.mirrorPositionOpen,
@@ -131,6 +131,10 @@ export function queryTraderPositionSettled(queryParams: StateStream<IQueryTrader
 
 export function queryPuppetTradeRoute(queryParams: StateStream<IQueryPuppetTradeRoute>) {
   return map(async params => {
+    if (params.address === ADDRESS_ZERO) {
+      return []
+    }
+
     const list = await subgraphClient.query(__tempTradeRouteDoc(params.address, params.activityTimeframe), {  }).toPromise().then(res => {
       if (res.error) {
         throw res.error
@@ -177,11 +181,8 @@ const metaDataClient = createClient({
   exchanges: [fetchExchange],
 })
 
-export const subgraphStatus: Stream<ISubgraphStatus> = replayLatest(multicast(periodicRun({
-  startImmediate: true,
-  interval: 2500,
-  actionOp: map(async count => {
-    const newLocal = await metaDataClient.query(`
+export const getSubgraphStatus = async (): Promise<ISubgraphStatus>  => {
+  const query = await metaDataClient.query(`
     {
       _meta {
         block {
@@ -194,8 +195,14 @@ export const subgraphStatus: Stream<ISubgraphStatus> = replayLatest(multicast(pe
       }
     }
   `, {  }, { requestPolicy: 'network-only' }).toPromise()
-    return newLocal.data._meta
-  }),
+
+  return query.data._meta
+}
+
+export const subgraphStatus: Stream<ISubgraphStatus> = replayLatest(multicast(periodicRun({
+  startImmediate: true,
+  interval: 2500,
+  actionOp: map(getSubgraphStatus),
 })))
 
 

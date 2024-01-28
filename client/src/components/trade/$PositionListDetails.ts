@@ -31,7 +31,6 @@ export type IRequestTrade = IRequestTradeParams & {
 
 interface IPositionListDetails {
   chain: viem.Chain
-  wallet: Stream<IWalletClient>
   openPositionListQuery: Stream<Promise<IMirrorPositionOpen[]>>
   tradeState: StateStreamStrict<ITradeParams>
   $container: NodeComposeFn<$Node>
@@ -47,7 +46,7 @@ export const $PositionListDetails = (config: IPositionListDetails) => component(
   [switchIsIncrease, switchIsIncreaseTether]: Behavior<boolean>,
 ) => {
 
-  const { chain, wallet, openPositionListQuery, tradeState, $container, requestTrade, mirrorPosition } = config
+  const { chain, openPositionListQuery, tradeState, $container, requestTrade, mirrorPosition } = config
 
 
   return [

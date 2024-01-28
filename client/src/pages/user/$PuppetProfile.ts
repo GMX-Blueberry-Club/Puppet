@@ -9,14 +9,14 @@ import * as viem from "viem"
 import { $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
 import { $card, $card2 } from "../../common/elements/$common.js"
-import { IPageParams, IUserActivityParams } from "../../const/type.js"
-import { $seperator2 } from "../../pages/common.js"
-import { IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor.js"
-import { $ProfilePeformanceTimeline } from "./$ProfilePeformanceTimeline.js"
-import { $PuppetTraderTradeRoute } from "./PuppetTraderTradeRoute"
+import { $seperator2 } from "../common.js"
+import { IUserPositionPageParams } from "../type.js"
+import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
+import { $ProfilePeformanceTimeline } from "../../components/participant/$ProfilePeformanceTimeline.js"
+import { $PuppetTraderTradeRoute } from "../../components/participant/PuppetTraderTradeRoute.js"
 
 
-export interface IPuppetProfile extends IPageParams, IUserActivityParams {
+export interface IPuppetProfile extends IUserPositionPageParams {
   puppetTradeRouteListQuery: Stream<Promise<IPuppetTradeRoute[]>>
 }
 
@@ -28,7 +28,7 @@ export const $PuppetProfile = (config: IPuppetProfile) => component((
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 ) => {
   
-  const { activityTimeframe, walletClientQuery, openPositionListQuery, settledPositionListQuery, priceTickMapQuery, puppetTradeRouteListQuery, selectedTradeRouteList, routeTypeListQuery, route } = config
+  const { activityTimeframe, walletClientQuery, publicProviderQuery, priceTickMapQuery, puppetTradeRouteListQuery, selectedTradeRouteList, routeTypeListQuery, route } = config
 
   return [
 
@@ -68,7 +68,7 @@ export const $PuppetProfile = (config: IPuppetProfile) => component((
                       $seperator2,
                       $column(layoutSheet.spacing, style({ flex: 1 }))( 
                         ...traderPuppetTradeRouteList.map(puppetTradeRoute => {
-                          return $PuppetTraderTradeRoute({ route, puppetTradeRoute, routeTypeList, walletClientQuery, activityTimeframe: params.activityTimeframe, priceTickMap })({
+                          return $PuppetTraderTradeRoute({ route, puppetTradeRoute, publicProviderQuery, routeTypeList, walletClientQuery, activityTimeframe: params.activityTimeframe, priceTickMap })({
                             modifySubscriber: modifySubscriberTether(),
                             changeRoute: changeRouteTether(),
                           })

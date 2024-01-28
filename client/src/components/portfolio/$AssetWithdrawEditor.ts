@@ -14,11 +14,11 @@ import { writeContract } from "../../logic/common.js"
 import { IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $SubmitBar } from "../form/$Form"
-import { IWalletPageParams } from "../../const/type"
+import { IComponentPageParams } from "../../pages/type.js"
 
 
 
-interface IAssetWithdrawEditor extends IWalletPageParams {
+interface IAssetWithdrawEditor extends IComponentPageParams {
   token: viem.Address
   balanceQuery: Stream<Promise<bigint>>
 }

@@ -3,28 +3,22 @@ import { $Branch, $Node, $element, $text, StyleCSS, attr, component, nodeEvent, 
 import { $RouterAnchor, IAnchor, Route } from '@aelea/router'
 import { $column, $row, layoutSheet } from '@aelea/ui-components'
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, constant, empty, map, multicast, now, snapshot, switchLatest } from '@most/core'
+import { awaitPromises, constant, empty, map, multicast, snapshot, switchLatest } from '@most/core'
 import { Stream } from "@most/types"
-import { readableTokenAmountLabel, switchMap } from "common-utils"
-import * as GMX from 'gmx-middleware-const'
-import { getTokenDescription } from "gmx-middleware-utils"
-import { $Link, $anchor, $discord, $gitbook, $github, $icon, $infoLabel, $instagram, $intermediate$node, $moreDots, $twitter } from "ui-components"
+import { $Link, $anchor, $discord, $gitbook, $github, $icon, $instagram, $moreDots, $twitter } from "ui-components"
 import { $bagOfCoinsCircle, $fileCheckCircle, $gmxLogo, $puppetLogo } from "../common/$icons.js"
 import { $stackedCoins, $trophy } from "../common/elements/$icons.js"
 import { dark, light } from "../common/theme.js"
-import { IWalletPageParams } from "../const/type"
-import { getPuppetDepositAmount } from "../logic/puppetLogic"
-import { $seperator2 } from "../pages/common"
-import { $disconnectedWalletDisplay, $profileDisplay } from "./$AccountProfile"
+import { IPageParams } from "../pages/type.js"
 import { $Popover } from "./$Popover.js"
 import { $Picker } from "./$ThemePicker.js"
-import { $WalletProfileDisplay } from "./$WalletProfileDisplay.js"
+import { $walletProfileDisplay } from "./$WalletProfileDisplay.js"
 import { $ButtonSecondary } from "./form/$Button.js"
 
 
 
-interface MainMenu extends IWalletPageParams {
-  parentRoute: Route
+interface MainMenu extends IPageParams {
+  route: Route
   showAccount?: boolean
 }
 
@@ -36,7 +30,7 @@ export const $MainMenu = (config: MainMenu) => component((
   [walletChange, walletChangeTether]: Behavior<any, any>,
 ) => {
 
-  const { parentRoute, showAccount, walletClientQuery } = config
+  const { route, showAccount, walletClientQuery } = config
 
 
 
@@ -117,8 +111,6 @@ export const $MainMenu = (config: MainMenu) => component((
     // overlayClick: clickPopoverClaimTether()
   })
 
-  const depositToken = GMX.ARBITRUM_ADDRESS.USDC
-  const depositTokenDescription = getTokenDescription(depositToken)
 
   return [
 
@@ -135,7 +127,7 @@ export const $MainMenu = (config: MainMenu) => component((
       $column(layoutSheet.spacingBig, style({ flex: 1, alignItems: 'flex-start' }))(
         $RouterAnchor({
           url: '/',
-          route: parentRoute,
+          route: route,
           $anchor: $element('a')(style({ padding: '8px', margin: '8px' }))($icon({ $content: $puppetLogo, width: '45px', viewBox: '0 0 32 32' }))
         })({
           click: routeChangeTether()
@@ -145,53 +137,10 @@ export const $MainMenu = (config: MainMenu) => component((
       $row(layoutSheet.spacingBig, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
         style({ padding: 0 })(
           $pageLink({
-            route: parentRoute.create({ fragment: 'wallet', title: 'Portfolio' }),
+            route: route.create({ fragment: 'wallet', title: 'Portfolio' }),
             // anchorOp: style({  }),
             url: `/app/wallet`,
-            $content: switchLatest(switchMap(async walletQuery => {
-
-              const wallet = await walletQuery
-
-              if (wallet === null) {
-                return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', pointerEvents: 'none', paddingRight: '16px' }))(
-                  $disconnectedWalletDisplay(),
-                  $seperator2,
-                  style({ fontSize: '.85rem', color: pallete.foreground })($infoLabel('Click to Connect'))
-                )
-              }
-
-              const address = wallet.account.address
-              const depositQuery = now(address ? getPuppetDepositAmount(wallet, address) : Promise.resolve(0n))
-              
-              return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', pointerEvents: 'none', paddingRight: '16px' }))(
-                address
-                  ? $profileDisplay({ address })
-                  : style({ cursor: 'pointer' }, $disconnectedWalletDisplay()),
-
-                $seperator2,
-
-                $column(
-                  $infoLabel(
-                    'Balance'
-                  ),
-                  $intermediate$node(
-                    map(async amount => {
-                      return $text(style({ whiteSpace: 'nowrap' }))(readableTokenAmountLabel(depositTokenDescription, await amount))
-                    }, depositQuery)
-                  ),
-                  // $intermediateMessage(
-                  //   map(async amount => {
-                  //     return readableTokenAmountLabel(depositTokenDescription, await amount)
-                  //   }, depositQuery)
-                  // )
-                )
-                // $intermediateMessage(
-                //   map(async amount => {
-                //     return readableTokenAmountLabel(depositTokenDescription, await amount)
-                //   }, depositQuery)
-                // )
-              ) 
-            }, walletClientQuery))
+            $content: $walletProfileDisplay({ walletClientQuery })
           })({
             click: routeChangeTether(),
           })
@@ -201,7 +150,7 @@ export const $MainMenu = (config: MainMenu) => component((
             $icon({ $content: $trophy, svgOps: style({ width: '28px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),
             $text(style({ fontSize: '1.15rem' }))('Leaderboard')
           ),
-          route: parentRoute.create({ fragment: 'leaderboard' }),
+          route: route.create({ fragment: 'leaderboard' }),
           url: '/app/leaderboard',
         })({
           click: routeChangeTether()
@@ -211,7 +160,7 @@ export const $MainMenu = (config: MainMenu) => component((
             $icon({ $content: $gmxLogo, svgOps: style({ width: '28px', aspectRatio: `1 / 1` }), viewBox: '0 0 32 32' }),
             $text(style({ fontSize: '1.15rem' }))('Trade')
           ), 
-          route: parentRoute.create({ fragment: 'trade' }),
+          route: route.create({ fragment: 'trade' }),
           url: '/app/trade',
         })({
           click: routeChangeTether()
@@ -245,7 +194,7 @@ export const $MainMenuMobile = (config: MainMenu) => component((
   [walletChange, walletChangeTether]: Behavior<any, any>,
 ) => {
 
-  const { walletClientQuery, parentRoute, showAccount = true } = config
+  const { walletClientQuery, route, showAccount = true } = config
 
   const routeChangeMulticast = multicast(routeChange)
 
@@ -260,14 +209,14 @@ export const $MainMenuMobile = (config: MainMenu) => component((
 
 
 
-  const $pageLink = ($iconPath: $Branch<SVGPathElement>, text: string | Stream<string>) => $row(style({ alignItems: 'center', cursor: 'pointer' }))(
+  const $popoverPageLink = ($iconPath: $Branch<SVGPathElement>, text: string | Stream<string>) => $row(style({ alignItems: 'center', cursor: 'pointer' }))(
     $icon({ $content: $iconPath, width: '16px', fill: pallete.foreground, svgOps: style({ minWidth: '36px' }), viewBox: '0 0 32 32' }),
     $text(text)
   )
 
 
   const $treasuryLinks = [
-    $Link({ $content: $govItem('Treasury', $bagOfCoinsCircle, 'GBC Community-Led Portfolio'), url: '/app/treasury', route: parentRoute })({
+    $Link({ $content: $govItem('Treasury', $bagOfCoinsCircle, 'GBC Community-Led Portfolio'), url: '/app/treasury', route: route })({
       click: routeChangeTether()
     }),
     $anchor(style({ textDecoration: 'none' }), attr({ href: 'https://snapshot.org/#/gbc-nft.eth' }))(
@@ -282,11 +231,11 @@ export const $MainMenuMobile = (config: MainMenu) => component((
   const $extraMenuPopover = $Popover({
     open: constant(
       $column(layoutSheet.spacingBig, style({ marginTop: '-40px' }))(
-        $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+        $Link({ $content: $popoverPageLink($gmxLogo, 'Trade'), url: '/app/trade', route: route.create({ fragment: 'feefwefwe' }) })({
         // $Link({ $content: $pageLink($gmxLogo, 'Trade'), url: '/app/trade', disabled: now(false), route: parentRoute.create({ fragment: 'feefwefwe' }) })({
           click: routeChangeTether()
         }),
-        $Link({ $content: $pageLink($stackedCoins, 'Leaderboard'), url: '/app/leaderboard', route: parentRoute.create({ fragment: 'feefwefwe' }) })({
+        $Link({ $content: $popoverPageLink($stackedCoins, 'Leaderboard'), url: '/app/leaderboard', route: route.create({ fragment: 'feefwefwe' }) })({
           click: routeChangeTether()
         }),
 
@@ -365,18 +314,20 @@ export const $MainMenuMobile = (config: MainMenu) => component((
 
     $row(layoutSheet.spacingBig, style({ padding: '14px', flexShrink: 0, alignItems: 'flex-end', borderRadius: '30px', placeContent: 'space-between' }))(
       $row(layoutSheet.spacingBig, style({ alignItems: 'center', flex: 1 }))(
-        $RouterAnchor({ url: '/', route: parentRoute, $anchor: $element('a')($icon({ $content: $puppetLogo, width: '45px', viewBox: '0 0 32 32' })) })({
+        $RouterAnchor({ url: '/', route: route, $anchor: $element('a')($icon({ $content: $puppetLogo, width: '45px', viewBox: '0 0 32 32' })) })({
           click: routeChangeTether()
         }),
       ),
 
       $row(layoutSheet.spacing, style({ flex: 1, alignItems: 'center', placeContent: 'center' }))(
 
-        $WalletProfileDisplay({
-          $container: $row(style({ minHeight: '38px' })),
-          parentRoute
+        $pageLink({
+          route: route.create({ fragment: 'wallet', title: 'Portfolio' }),
+          // anchorOp: style({  }),
+          url: `/app/wallet`,
+          $content: $walletProfileDisplay({ walletClientQuery })
         })({
-          routeChange: routeChangeTether(),
+          click: routeChangeTether(),
         }),
       ),
 

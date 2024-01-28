@@ -2,7 +2,7 @@ import { Behavior, O, combineArray, combineObject } from "@aelea/core"
 import { $Branch, $element, $node, INode, attrBehavior, component, nodeEvent, style, styleBehavior, styleInline, stylePseudo } from "@aelea/dom"
 import { $row, Control, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, constant, empty, map, mergeArray, multicast, now, recoverWith, startWith } from "@most/core"
+import { awaitPromises, constant, empty, map, mergeArray, multicast, now, recoverWith, startWith, tap } from "@most/core"
 import { Stream } from "@most/types"
 import * as viem from "viem"
 import { $IntermediateConnectButton, } from "../$ConnectWallet.js"
@@ -16,8 +16,7 @@ import { EIP6963ProviderDetail } from "mipd"
 
 export const $defaultButtonPrimary = $defaultButtonCore(
   style({
-    color: pallete.message, whiteSpace: 'nowrap', fill: 'white', borderRadius: '30px',
-    borderWidth: '1px', alignSelf: 'flex-end',
+    color: pallete.message, whiteSpace: 'nowrap', fill: 'white', borderRadius: '30px', alignSelf: 'flex-end',
     padding: '15px 24px', fontWeight: 'bold', border: 'none', backgroundColor: pallete.primary,
   }),
   // stylePseudo(':hover', { backgroundColor: colorAlpha(pallete.primary, .5) })
@@ -26,13 +25,13 @@ export const $defaultButtonPrimary = $defaultButtonCore(
 const secondaryButtonStyle = style({
   color: pallete.message, whiteSpace: 'nowrap', fill: 'white', borderRadius: '30px', borderStyle: 'solid', backgroundColor: pallete.background,
   alignSelf: 'flex-start',
-  padding: '15px 24px', fontWeight: 'bold', border: 'none', borderColor: pallete.message
+  padding: '15px 24px', fontWeight: 'bold', border: '1px solid', borderColor: pallete.message
 })
 
 
 export const $defaultButtonSecondary = $defaultButtonCore(
   secondaryButtonStyle,
-  stylePseudo(':hover', { borderColor: pallete.foreground }),
+  stylePseudo(':hover', { borderColor: pallete.foreground, borderWidth: '1px' }),
   style({ fontSize: '.85em' })
 )
 

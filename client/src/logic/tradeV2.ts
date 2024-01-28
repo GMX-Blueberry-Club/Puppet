@@ -1,8 +1,8 @@
-import * as wagmi from "@wagmi/core"
+import { factor, getMappedValue } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import { hashData, IMarket, IMarketConfig, IMarketFees, IMarketInfo, IMarketPool, IMarketPrice, IMarketUsageInfo } from "gmx-middleware-utils"
-import { factor, getMappedValue } from "common-utils"
-import * as viem from 'viem'
+import { readContract } from "viem/actions"
+import { IPublicProvider } from "../wallet/initWallet"
 
 
 
@@ -30,286 +30,286 @@ const ESTIMATED_GAS_FEE_MULTIPLIER_FACTOR = "ESTIMATED_GAS_FEE_MULTIPLIER_FACTOR
 
 
 export async function getMarketPoolUsage(
-  chain: viem.Chain,
+  provider: IPublicProvider,
   market: IMarket
 ): Promise<IMarketUsageInfo> {
-  const datastoreContract = getMappedValue(GMX.CONTRACT, chain.id).Datastore
+  const datastoreContract = getMappedValue(GMX.CONTRACT, provider.chain.id).Datastore
   // const v2Reader = contractReader(readerV2)
 
 
-  // const isDisabled = wagmi.readContract(wagmiConfig, {
+  // const isDisabled = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getBool',
   //   args: [hashData(["bytes32", "address"], [hashKey(IS_MARKET_DISABLED_KEY), market.marketToken])],
   // })
 
-  // const longPoolAmount = wagmi.readContract(wagmiConfig, {
+  // const longPoolAmount = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "address"], [hashKey(POOL_AMOUNT_KEY), market.marketToken, market.longToken])],
   // })
 
 
-  // const shortPoolAmount = wagmi.readContract(wagmiConfig, {
+  // const shortPoolAmount = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "address"], [hashKey(POOL_AMOUNT_KEY), market.marketToken, market.shortToken])],
   // })
 
 
-  // const maxLongPoolAmount = wagmi.readContract(wagmiConfig, {
+  // const maxLongPoolAmount = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "address"], [hashKey(MAX_POOL_AMOUNT_KEY), market.marketToken, market.longToken])],
   // })
 
-  // const maxShortPoolAmount = wagmi.readContract(wagmiConfig, {
+  // const maxShortPoolAmount = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "address"], [hashKey(MAX_POOL_AMOUNT_KEY), market.marketToken, market.shortToken])],
   // })
 
-  // const longPoolAmountAdjustment = wagmi.readContract(wagmiConfig, {
+  // const longPoolAmountAdjustment = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "address"], [hashKey(POOL_AMOUNT_ADJUSTMENT_KEY), market.marketToken, market.longToken])],
   // })
   
-  // const shortPoolAmountAdjustment = wagmi.readContract(wagmiConfig, {
+  // const shortPoolAmountAdjustment = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "address"], [hashKey(POOL_AMOUNT_ADJUSTMENT_KEY), market.marketToken, market.shortToken])],
   // })
 
-  // const reserveFactorLong = wagmi.readContract(wagmiConfig, {
+  // const reserveFactorLong = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(RESERVE_FACTOR_KEY), market.marketToken, true])],
   // })
 
-  // const reserveFactorShort = wagmi.readContract(wagmiConfig, {
+  // const reserveFactorShort = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(RESERVE_FACTOR_KEY), market.marketToken, false])],
   // })
 
-  // const openInterestReserveFactorLong = wagmi.readContract(wagmiConfig, {
+  // const openInterestReserveFactorLong = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(OPEN_INTEREST_RESERVE_FACTOR_KEY), market.marketToken, true])],
   // })
 
-  // const openInterestReserveFactorShort = wagmi.readContract(wagmiConfig, {
+  // const openInterestReserveFactorShort = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(OPEN_INTEREST_RESERVE_FACTOR_KEY), market.marketToken, false])],
   // })
 
-  const positionImpactPoolAmount = wagmi.readContract(wagmiConfig, {
+  const positionImpactPoolAmount = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address"], [hashKey(POSITION_IMPACT_POOL_AMOUNT_KEY), market.marketToken])],
   })
 
-  // const swapImpactPoolAmountLong = wagmi.readContract(wagmiConfig, {
+  // const swapImpactPoolAmountLong = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "address"], [hashKey(SWAP_IMPACT_POOL_AMOUNT_KEY), market.marketToken, market.longToken])],
   // })
 
-  // const swapImpactPoolAmountShort = wagmi.readContract(wagmiConfig, {
+  // const swapImpactPoolAmountShort = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "address"], [hashKey(SWAP_IMPACT_POOL_AMOUNT_KEY), market.marketToken, market.shortToken])],
   // })
 
-  // const borrowingFactorLong = wagmi.readContract(wagmiConfig, {
+  // const borrowingFactorLong = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(BORROWING_FACTOR_KEY), market.marketToken, true])],
   // })
 
-  // const borrowingFactorShort = wagmi.readContract(wagmiConfig, {
+  // const borrowingFactorShort = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(BORROWING_FACTOR_KEY), market.marketToken, false])],
   // })
 
-  // const borrowingExponentFactorLong = wagmi.readContract(wagmiConfig, {
+  // const borrowingExponentFactorLong = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(BORROWING_EXPONENT_FACTOR_KEY), market.marketToken, true])],
   // })
 
-  // const borrowingExponentFactorShort = wagmi.readContract(wagmiConfig, {
+  // const borrowingExponentFactorShort = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(BORROWING_EXPONENT_FACTOR_KEY), market.marketToken, false])],
   // })
 
-  // const fundingFactor = wagmi.readContract(wagmiConfig, {
+  // const fundingFactor = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address"], [hashKey(FUNDING_FACTOR_KEY), market.marketToken])],
   // })
 
-  // const fundingExponentFactor = wagmi.readContract(wagmiConfig, {
+  // const fundingExponentFactor = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address"], [hashKey(FUNDING_EXPONENT_FACTOR_KEY), market.marketToken])],
   // })
 
-  // const maxPnlFactorForTradersLong = wagmi.readContract(wagmiConfig, {
+  // const maxPnlFactorForTradersLong = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "bytes32", "address", "bool"], [hashKey(MAX_PNL_FACTOR_KEY), hashKey(MAX_PNL_FACTOR_FOR_TRADERS_KEY), market.marketToken, true])],
   // })
 
-  // const maxPnlFactorForTradersShort = wagmi.readContract(wagmiConfig, {
+  // const maxPnlFactorForTradersShort = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "bytes32", "address", "bool"], [hashKey(MAX_PNL_FACTOR_KEY), hashKey(MAX_PNL_FACTOR_FOR_TRADERS_KEY), market.marketToken, false])],
   // })
 
-  // const positionFeeFactorForPositiveImpact = wagmi.readContract(wagmiConfig, {
+  // const positionFeeFactorForPositiveImpact = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(POSITION_FEE_FACTOR_KEY), market.marketToken, true])],
   // })
 
-  // const positionFeeFactorForNegativeImpact = wagmi.readContract(wagmiConfig, {
+  // const positionFeeFactorForNegativeImpact = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(POSITION_FEE_FACTOR_KEY), market.marketToken, false])],
   // })
 
-  // const positionImpactFactorPositive = wagmi.readContract(wagmiConfig, {
+  // const positionImpactFactorPositive = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(POSITION_IMPACT_FACTOR_KEY), market.marketToken, true])],
   // })
 
-  // const positionImpactFactorNegative = wagmi.readContract(wagmiConfig, {
+  // const positionImpactFactorNegative = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(POSITION_IMPACT_FACTOR_KEY), market.marketToken, false])],
   // })
 
-  // const maxPositionImpactFactorPositive = wagmi.readContract(wagmiConfig, {
+  // const maxPositionImpactFactorPositive = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(MAX_POSITION_IMPACT_FACTOR_KEY), market.marketToken, true])],
   // })
 
-  // const maxPositionImpactFactorNegative = wagmi.readContract(wagmiConfig, {
+  // const maxPositionImpactFactorNegative = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(MAX_POSITION_IMPACT_FACTOR_KEY), market.marketToken, false])],
   // })
 
-  // const maxPositionImpactFactorForLiquidations = wagmi.readContract(wagmiConfig, {
+  // const maxPositionImpactFactorForLiquidations = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address"], [hashKey(MAX_POSITION_IMPACT_FACTOR_FOR_LIQUIDATIONS_KEY), market.marketToken])],
   // })
 
-  // const minCollateralFactor = wagmi.readContract(wagmiConfig, {
+  // const minCollateralFactor = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address"], [hashKey(MIN_COLLATERAL_FACTOR_KEY), market.marketToken])],
   // })
 
-  // const minCollateralFactorForOpenInterestLong = wagmi.readContract(wagmiConfig, {
+  // const minCollateralFactorForOpenInterestLong = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(MIN_COLLATERAL_FACTOR_FOR_OPEN_INTEREST_MULTIPLIER_KEY), market.marketToken, true])],
   // })
 
-  // const minCollateralFactorForOpenInterestShort = wagmi.readContract(wagmiConfig, {
+  // const minCollateralFactorForOpenInterestShort = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(MIN_COLLATERAL_FACTOR_FOR_OPEN_INTEREST_MULTIPLIER_KEY), market.marketToken, false])],
   // })
 
-  // const positionImpactExponentFactor = wagmi.readContract(wagmiConfig, {
+  // const positionImpactExponentFactor = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address"], [hashKey(POSITION_IMPACT_EXPONENT_FACTOR_KEY), market.marketToken])],
   // })
 
-  // const swapFeeFactorForPositiveImpact = wagmi.readContract(wagmiConfig, {
+  // const swapFeeFactorForPositiveImpact = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(SWAP_FEE_FACTOR_KEY), market.marketToken, true])],
   // })
 
-  // const swapFeeFactorForNegativeImpact = wagmi.readContract(wagmiConfig, {
+  // const swapFeeFactorForNegativeImpact = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(SWAP_FEE_FACTOR_KEY), market.marketToken, false])],
   // })
 
-  // const swapImpactFactorPositive = wagmi.readContract(wagmiConfig, {
+  // const swapImpactFactorPositive = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(SWAP_IMPACT_FACTOR_KEY), market.marketToken, true])],
   // })
 
-  // const swapImpactFactorNegative = wagmi.readContract(wagmiConfig, {
+  // const swapImpactFactorNegative = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address", "bool"], [hashKey(SWAP_IMPACT_FACTOR_KEY), market.marketToken, false])],
   // })
 
-  // const swapImpactExponentFactor = wagmi.readContract(wagmiConfig, {
+  // const swapImpactExponentFactor = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getUint',
   //   args: [hashData(["bytes32", "address"], [hashKey(SWAP_IMPACT_EXPONENT_FACTOR_KEY), market.marketToken])],
   // })
 
-  const longInterestUsingLongToken = wagmi.readContract(wagmiConfig, {
+  const longInterestUsingLongToken = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_KEY), market.marketToken, market.longToken, true])],
   })
 
-  const longInterestUsingShortToken = wagmi.readContract(wagmiConfig, {
+  const longInterestUsingShortToken = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_KEY), market.marketToken, market.shortToken, true])],
   })
 
-  const shortInterestUsingLongToken = wagmi.readContract(wagmiConfig, {
+  const shortInterestUsingLongToken = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_KEY), market.marketToken, market.longToken, false])],
   })
 
-  const shortInterestUsingShortToken = wagmi.readContract(wagmiConfig, {
+  const shortInterestUsingShortToken = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_KEY), market.marketToken, market.shortToken, false])],
   })
 
-  const longInterestInTokensUsingLongToken = wagmi.readContract(wagmiConfig, {
+  const longInterestInTokensUsingLongToken = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_IN_TOKENS_KEY), market.marketToken, market.longToken, true])],
   })
 
-  const longInterestInTokensUsingShortToken = wagmi.readContract(wagmiConfig, {
+  const longInterestInTokensUsingShortToken = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_IN_TOKENS_KEY), market.marketToken, market.shortToken, true])],
   })
 
-  const shortInterestInTokensUsingLongToken = wagmi.readContract(wagmiConfig, {
+  const shortInterestInTokensUsingLongToken = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_IN_TOKENS_KEY), market.marketToken, market.longToken, false])],
   })
 
-  const shortInterestInTokensUsingShortToken = wagmi.readContract(wagmiConfig, {
+  const shortInterestInTokensUsingShortToken = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "address", "bool"], [hashKey(OPEN_INTEREST_IN_TOKENS_KEY), market.marketToken, market.shortToken, false])],
@@ -328,19 +328,19 @@ export async function getMarketPoolUsage(
     shortInterestInTokensUsingShortToken: await shortInterestInTokensUsingShortToken,
     positionImpactPoolAmount: await positionImpactPoolAmount,
   }
-  // const virtualMarketId = wagmi.readContract(wagmiConfig, {
+  // const virtualMarketId = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getBytes32',
   //   args: [hashData(["bytes32", "address"], [hashKey(VIRTUAL_MARKET_ID_KEY), market.marketToken])],
   // })
 
-  // const virtualLongTokenId = wagmi.readContract(wagmiConfig, {
+  // const virtualLongTokenId = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getBytes32',
   //   args: [hashData(["bytes32", "address"], [hashKey(VIRTUAL_TOKEN_ID_KEY), market.longToken])],
   // })
 
-  // const virtualShortTokenId = wagmi.readContract(wagmiConfig, {
+  // const virtualShortTokenId = readContract(wallet, {
   //   ...datastoreContract,
   //   functionName: 'getBytes32',
   //   args: [hashData(["bytes32", "address"], [hashKey(VIRTUAL_TOKEN_ID_KEY), market.shortToken])],
@@ -353,87 +353,87 @@ export async function getMarketPoolUsage(
 }
 
 export async function getMarketConfig(
-  chain: viem.Chain,
+  provider: IPublicProvider,
   market: IMarket,
 ): Promise<IMarketConfig> {
-  const datastoreContract = getMappedValue(GMX.CONTRACT, chain.id).Datastore
+  const datastoreContract = getMappedValue(GMX.CONTRACT, provider.chain.id).Datastore
  
 
-  const reserveFactorLong = wagmi.readContract(wagmiConfig, {
+  const reserveFactorLong = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "bool"], [hashKey(RESERVE_FACTOR_KEY), market.marketToken, true])],
   })
 
-  const reserveFactorShort = wagmi.readContract(wagmiConfig, {
+  const reserveFactorShort = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "bool"], [hashKey(RESERVE_FACTOR_KEY), market.marketToken, false])],
   })
 
-  const openInterestReserveFactorLong = wagmi.readContract(wagmiConfig, {
+  const openInterestReserveFactorLong = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "bool"], [hashKey(OPEN_INTEREST_RESERVE_FACTOR_KEY), market.marketToken, true])],
   })
 
-  const openInterestReserveFactorShort = wagmi.readContract(wagmiConfig, {
+  const openInterestReserveFactorShort = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "bool"], [hashKey(OPEN_INTEREST_RESERVE_FACTOR_KEY), market.marketToken, false])],
   })
 
 
-  const maxPnlFactorForTradersLong = wagmi.readContract(wagmiConfig, {
+  const maxPnlFactorForTradersLong = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "bytes32", "address", "bool"], [hashKey(MAX_PNL_FACTOR_KEY), hashKey(MAX_PNL_FACTOR_FOR_TRADERS_KEY), market.marketToken, true])],
   })
 
-  const maxPnlFactorForTradersShort = wagmi.readContract(wagmiConfig, {
+  const maxPnlFactorForTradersShort = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "bytes32", "address", "bool"], [hashKey(MAX_PNL_FACTOR_KEY), hashKey(MAX_PNL_FACTOR_FOR_TRADERS_KEY), market.marketToken, false])],
   })
 
-  const positionFeeFactorForPositiveImpact = wagmi.readContract(wagmiConfig, {
+  const positionFeeFactorForPositiveImpact = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "bool"], [hashKey(POSITION_FEE_FACTOR_KEY), market.marketToken, true])],
   })
 
-  const positionFeeFactorForNegativeImpact = wagmi.readContract(wagmiConfig, {
+  const positionFeeFactorForNegativeImpact = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "bool"], [hashKey(POSITION_FEE_FACTOR_KEY), market.marketToken, false])],
   })
 
-  const positionImpactFactorPositive = wagmi.readContract(wagmiConfig, {
+  const positionImpactFactorPositive = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "bool"], [hashKey(POSITION_IMPACT_FACTOR_KEY), market.marketToken, true])],
   })
 
-  const positionImpactFactorNegative = wagmi.readContract(wagmiConfig, {
+  const positionImpactFactorNegative = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "bool"], [hashKey(POSITION_IMPACT_FACTOR_KEY), market.marketToken, false])],
   })
 
-  const maxPositionImpactFactorPositive = wagmi.readContract(wagmiConfig, {
+  const maxPositionImpactFactorPositive = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address", "bool"], [hashKey(MAX_POSITION_IMPACT_FACTOR_KEY), market.marketToken, true])],
   })
 
 
-  const maxPositionImpactFactorForLiquidations = wagmi.readContract(wagmiConfig, {
+  const maxPositionImpactFactorForLiquidations = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address"], [hashKey(MAX_POSITION_IMPACT_FACTOR_FOR_LIQUIDATIONS_KEY), market.marketToken])],
   })
 
-  const minCollateralFactor = wagmi.readContract(wagmiConfig, {
+  const minCollateralFactor = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address"], [hashKey(MIN_COLLATERAL_FACTOR_KEY), market.marketToken])],
@@ -441,7 +441,7 @@ export async function getMarketConfig(
 
 
 
-  const positionImpactExponentFactor = wagmi.readContract(wagmiConfig, {
+  const positionImpactExponentFactor = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashData(["bytes32", "address"], [hashKey(POSITION_IMPACT_EXPONENT_FACTOR_KEY), market.marketToken])],
@@ -476,13 +476,12 @@ export async function getMarketConfig(
   }
 }
 
-export async function getFullMarketInfo(chain: viem.Chain, market: IMarket, price: IMarketPrice): Promise<IMarketInfo> {
-
-  const gmxContractMap = getMappedValue(GMX.CONTRACT, chain.id)
+export async function getFullMarketInfo(provider: IPublicProvider, market: IMarket, price: IMarketPrice): Promise<IMarketInfo> {
+  const gmxContractMap = getMappedValue(GMX.CONTRACT, provider.chain.id)
   const datastoreContract = gmxContractMap.Datastore
-  const usageQuery: Promise<IMarketUsageInfo> = getMarketPoolUsage(chain, market)
-  const configQuery: Promise<IMarketConfig> = getMarketConfig(chain, market)
-  const poolQuery: Promise<IMarketPool> = wagmi.readContract(wagmiConfig, {
+  const usageQuery: Promise<IMarketUsageInfo> = getMarketPoolUsage(provider, market)
+  const configQuery: Promise<IMarketConfig> = getMarketConfig(provider, market)
+  const poolQuery: Promise<IMarketPool> = readContract(provider, {
     ...gmxContractMap.ReaderV2,
     functionName: 'getMarketTokenPrice',
     args: [
@@ -497,7 +496,7 @@ export async function getFullMarketInfo(chain: viem.Chain, market: IMarket, pric
     
   }).then(([res, pool]) => pool)
 
-  const feesQuery: Promise<IMarketFees> = wagmi.readContract(wagmiConfig, {
+  const feesQuery: Promise<IMarketFees> = readContract(provider, {
     ...gmxContractMap.ReaderV2,
     functionName: 'getMarketInfo',
     args: [
@@ -512,15 +511,14 @@ export async function getFullMarketInfo(chain: viem.Chain, market: IMarket, pric
   return { market, price, usage, config, pool, fees }
 }
 
-export async function getPositionOrderGasLimit(chain: viem.Chain) {
-  const datastoreContract = GMX.CONTRACT[chain.id].Datastore
-
-  const increaseGasLimit =  wagmi.readContract(wagmiConfig, {
+export async function getPositionOrderGasLimit(provider: IPublicProvider) {
+  const datastoreContract = getMappedValue(GMX.CONTRACT, provider.chain.id).Datastore
+  const increaseGasLimit =  readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashKey(INCREASE_ORDER_GAS_LIMIT_KEY)],
   })
-  const decreaseGasLimit =  wagmi.readContract(wagmiConfig, {
+  const decreaseGasLimit =  readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashKey(INCREASE_ORDER_GAS_LIMIT_KEY)],
@@ -529,26 +527,26 @@ export async function getPositionOrderGasLimit(chain: viem.Chain) {
   return { increaseGasLimit, decreaseGasLimit }
 }
 
-export async function getExecuteGasFee(chain: viem.Chain) {
-  const datastoreContract = GMX.CONTRACT[chain.id].Datastore
+export async function getExecuteGasFee(provider: IPublicProvider) {
+  const datastoreContract = getMappedValue(GMX.CONTRACT, provider.chain.id).Datastore
 
-  const estimatedFeeBaseGasLimit =  wagmi.readContract(wagmiConfig, {
+  const estimatedFeeBaseGasLimit =  readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashKey('ESTIMATED_GAS_FEE_BASE_AMOUNT')],
   })
-  const estimatedFeeMultiplierFactor =  wagmi.readContract(wagmiConfig, {
+  const estimatedFeeMultiplierFactor =  readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashKey('ESTIMATED_GAS_FEE_MULTIPLIER_FACTOR')],
   })
 
-  const increaseGasLimit =  wagmi.readContract(wagmiConfig, {
+  const increaseGasLimit =  readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashKey('INCREASE_ORDER_GAS_LIMIT')],
   })
-  const decreaseGasLimit =  wagmi.readContract(wagmiConfig, {
+  const decreaseGasLimit =  readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashKey('DECREASE_ORDER_GAS_LIMIT')],

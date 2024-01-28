@@ -1,6 +1,6 @@
 
 import * as GMX from 'gmx-middleware-const'
-import { IUserType, ITradeFocusMode } from './type.js'
+import { IUserType, ITradeFocusMode } from '../pages/type.js'
 import { ISortBy } from 'ui-components'
 import { IMarketCreatedEvent, TEMP_MARKET_LIST } from 'gmx-middleware-utils'
 import * as viem from 'viem'

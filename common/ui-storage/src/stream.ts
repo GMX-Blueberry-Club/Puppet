@@ -1,7 +1,7 @@
 import { awaitPromises, continueWith, debounce, map, now } from "@most/core"
 import { Stream } from "@most/types"
-import * as indexDB from './indexDB.js'
-import { openDatabase } from "./indexDB.js"
+import * as indexDB from './storage.js'
+import { openDatabase } from "./storage.js"
 
 
 export const createStoreDefinition = <T, TDefinition extends { [P in keyof T]: indexDB.IStoreDefinition<any> }>(

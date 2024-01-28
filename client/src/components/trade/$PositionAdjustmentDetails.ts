@@ -21,6 +21,8 @@ import { IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonSecondary } from "../form/$Button.js"
 import { $SubmitBar } from "../form/$Form"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
+import { IWalletPageParams } from "../../pages/type.js"
+import { EIP6963ProviderDetail } from "mipd"
 
 
 
@@ -39,7 +41,7 @@ export type IRequestTrade = IRequestTradeParams & {
 
 
 
-interface IPositionAdjustmentDetails {
+interface IPositionAdjustmentDetails extends IWalletPageParams {
   chain: viem.Chain
   pricefeed: Stream<IPriceCandle[]>
   tradeConfig: StateStreamStrict<ITradeConfig> // ITradeParams
@@ -55,8 +57,11 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
   [clickApproveprimaryToken, clickApproveprimaryTokenTether]: Behavior<IWalletClient, { wallet: IWalletClient, route: viem.Address, primaryToken: viem.Address }>,
   [clickResetPosition, clickResetPositionTether]: Behavior<any, IMirrorPositionOpen | null>,
   [clickProposeTrade, clickProposeTradeTether]: Behavior<IWalletClient>,
+  [changeWallet, changeWalletTether]: Behavior<EIP6963ProviderDetail>,
 
 ) => {
+
+  const { walletClientQuery } = config
 
   const {
     collateralDeltaAmount, collateralToken, market, isUsdCollateralToken, focusMode,
@@ -159,11 +164,12 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
   }, combineObject({ ...config.tradeConfig, executionFee, indexPrice, tradeRoute, routeTypeKey }), clickProposeTrade))
 
   const requestApproveSpend = multicast(map(params => {
+    const orchestrator = getMappedValue(PUPPET.CONTRACT, config.chain.id)
     const recpt = writeContract(params.wallet, {
       address: params.primaryToken,
       abi: erc20Abi,
       functionName: 'approve',
-      args: [getMappedValue(PUPPET.CONTRACT, config.chain.id) .Orchestrator.address, 2n ** 256n - 1n]
+      args: [orchestrator.Orchestrator.address, 2n ** 256n - 1n]
     })
     return recpt
   }, clickApproveprimaryToken))
@@ -402,6 +408,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
             })
             : isTokenEnabled
               ? $SubmitBar({
+                walletClientQuery,
                 txQuery: map(req => req.request, requestTrade),
                 disabled: map(params => {
                   const newLocal = !!params.validationError || params.sizeDeltaUsd === 0n && params.collateralDeltaAmount === 0n
@@ -427,12 +434,15 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
                   }, combineObject({ position, sizeDeltaUsd, isIncrease, focusPrice }))
                 )
               })({
+                changeWallet: changeWalletTether(),
                 click: clickProposeTradeTether()
               })
               : $SubmitBar({
+                walletClientQuery,
                 txQuery: requestApproveSpend,
                 $content: $text(`Approve ${params.primaryDescription.symbol}`)
               })({
+                changeWallet: changeWalletTether(),
                 click: clickApproveprimaryTokenTether(
                   map(wallet => ({ wallet, route: params.tradeRoute, primaryToken: params.primaryToken }))
                 )
@@ -444,6 +454,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
     ),
 
     {
+      changeWallet,
       requestTrade,
       clickResetPosition,
       enableTrading: mergeArray([

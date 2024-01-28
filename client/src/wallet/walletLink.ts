@@ -11,13 +11,12 @@ const projectId = import.meta.env.VITE_WC_PROJECT_ID || 'fdc797f2e6a68e01b9e1784
 // const llamaRpc = import.meta.env.VITE_LLAMANODES_PROJECT_ID || '01HCB0CBBH06TE3XSM6ZE4YYAD'
 
 export const publicTransportMap = {
-  [arbitrum.id]: viem.webSocket(),
+  [arbitrum.id]: viem.fallback([
+    viem.webSocket('wss://arb-mainnet.g.alchemy.com/v2/RBsflxWv6IhITsLxAWcQlhCqSuxV7Low'),
+    viem.http('https://arb1.arbitrum.io/rpc')
+  ]),
   // [CHAIN.AVALANCHE]: avaGlobalProvider,
 }
-
-
-// const publicTransportQuery = getPublicTransport(publicTransportMap, chainQuery)
-// const client = getPublicClient(publicTransportQuery, walletTransportQuery, chainQuery)
 
 
 const metadata = {
@@ -44,34 +43,6 @@ const metadata = {
 //   //   }
 //   // }
 // })
-
-
-
-
-// export const account: Stream<GetAccountReturnType> = replayLatest(multicast(switchMap(connection => {
-//   return fromCallback(cb => {
-//     return watchAccount(wagmiConfig, {
-//       onChange(res) {
-//         return cb(res)
-//       }
-//     })
-//   })
-// }, connectionQuery))) 
-
-
-
-// const intialPublicClient = getPublicClient(wagmiConfig)
-
-
-// export const nativeBalance = switchMap(async params => {
-//   if (params.wallet === null) return 0n
-
-//   return params.publicClient.getBalance({ address: params.wallet.account.address })
-// }, combineObject({ publicClient, wallet }))
-
-// export const gasPrice = awaitPromises(map(pc => pc.getGasPrice(), publicClient))
-// export const estimatedGasPrice = awaitPromises(map(pc => pc.estimateFeesPerGas({ chain: arbitrum }), publicClient))
-
 
 
 

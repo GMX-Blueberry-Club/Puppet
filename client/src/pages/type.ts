@@ -12,18 +12,33 @@ export interface IWalletPageParams {
   walletClientQuery: Stream<Promise<IWalletClient | null>>
 }
 
+export interface IComponentPageParams extends IWalletPageParams {
+  publicProviderQuery: Stream<Promise<viem.PublicClient<viem.Transport, viem.Chain>>>
+}
+
+export interface IPageParams extends IComponentPageParams {
+  route: router.Route
+}
+
+export interface IUserActivityPageParams extends IPageParams, IUserActivityParams {
+}
+
+export interface IUserPositionPageParams extends IPageParams, IPositionActivityParams, IUserActivityParams {}
+
+
 export interface IUserActivityParams {
+  routeTypeListQuery: Stream<Promise<ISetRouteType[]>>
+  selectedTradeRouteList: Stream<ISetRouteType[]>
+  activityTimeframe: Stream<IntervalTime>
+  priceTickMapQuery: Stream<Promise<IPriceTickListMap>>
+}
+
+export interface IPositionActivityParams {
   settledPositionListQuery: Stream<Promise<IMirrorPositionSettled[]>>
   openPositionListQuery: Stream<Promise<IMirrorPositionOpen[]>>
 }
 
-export interface IPageParams extends IWalletPageParams {
-  route: router.Route
-  priceTickMapQuery: Stream<Promise<IPriceTickListMap>>
-  routeTypeListQuery: Stream<Promise<ISetRouteType[]>>
-  activityTimeframe: Stream<IntervalTime>
-  selectedTradeRouteList: Stream<ISetRouteType[]>
-}
+
 
 
 export enum ITradeFocusMode {

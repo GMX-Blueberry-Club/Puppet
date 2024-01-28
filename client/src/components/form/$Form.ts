@@ -1,13 +1,14 @@
 import { Behavior, O } from "@aelea/core"
 import { $Branch, $node, $text, INode, attrBehavior, component, nodeEvent, style, styleBehavior } from "@aelea/dom"
 import { $row, Control, layoutSheet } from "@aelea/ui-components"
-import { awaitPromises, empty, map, mergeArray, multicast, never, switchLatest } from "@most/core"
+import { awaitPromises, empty, map, mergeArray, multicast, never, switchLatest, tap } from "@most/core"
 import { Stream } from "@most/types"
 import { $alertTooltip } from "ui-components"
 import * as viem from "viem"
 import { $iconCircular } from "../../common/elements/$common.js"
 import { IWalletClient } from "../../wallet/walletLink"
 import { $Submit, IButtonPrimaryCtx } from "./$Button"
+import { EIP6963ProviderDetail } from "mipd"
 
 
 
@@ -19,10 +20,11 @@ export interface IForm extends IButtonPrimaryCtx  {
 
 
 export const $SubmitBar = (config: IForm) => component((
-  [click, clickTether]: Behavior<IWalletClient>
+  [click, clickTether]: Behavior<IWalletClient>,
+  [changeWallet, changeWalletTether]: Behavior<EIP6963ProviderDetail>,
 ) => {
   const { alert = empty(), txQuery } = config
-  const multicastRequest = multicast(txQuery)
+const multicastRequest = multicast(txQuery)
 
   const transactionError = awaitPromises(map(async query => {
     try {
@@ -56,14 +58,12 @@ export const $SubmitBar = (config: IForm) => component((
         ...config,
         txQuery: multicastRequest
       })({
+        changeWallet: changeWalletTether(),
         click: clickTether()
       })
     ),
 
-
-    {
-      click
-    }
+    { click, changeWallet }
   ]
 })
 

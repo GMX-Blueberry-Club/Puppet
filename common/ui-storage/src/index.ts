@@ -1,2 +1,2 @@
-export * as indexDb from './indexDB.js'
-export * as uiStorage from './storeScope.js'
+export * as indexDb from './storage.js'
+export * as uiStorage from './stream.js'

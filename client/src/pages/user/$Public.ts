@@ -7,10 +7,10 @@ import { ETH_ADDRESS_REGEXP, IntervalTime } from "common-utils"
 import { ISetRouteType, queryPuppetTradeRoute, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
 import { $ButtonToggle, $defaulButtonToggleContainer } from "ui-components"
 import * as viem from 'viem'
-import { $PuppetProfile } from "../../components/participant/$PuppetProfile.js"
+import { $PuppetProfile } from "./$PuppetProfile.js"
 import { $PuppetSummary, $TraderSummary } from "../../components/participant/$Summary.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
-import { IPageParams } from "../../const/type.js"
+import { IPageParams, IUserActivityPageParams, IUserPositionPageParams } from "../type.js"
 import { $TraderPage } from "./$Trader.js"
 
 
@@ -26,7 +26,7 @@ type IRouteOption = {
 }
 
 
-export const $PublicUserPage = (config: IProfile) => component((
+export const $PublicUserPage = (config: IUserActivityPageParams) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
   [selectProfileMode, selectProfileModeTether]: Behavior<IRouteOption, IRouteOption>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
@@ -115,17 +115,11 @@ export const $PublicUserPage = (config: IProfile) => component((
               }, puppetTradeRouteListQuery)
 
               return  $column(layoutSheet.spacingBig)(
-                $PuppetSummary({
-                  settledPositionListQuery,
-                  openPositionListQuery,
-                  address,
-                  puppet: address,
-                })({}),
+                $PuppetSummary({ ...config, address, puppet: address, openPositionListQuery, settledPositionListQuery })({}),
 
                 $column(layoutSheet.spacingTiny)(
                   $PuppetProfile({
                     ...config,
-                    address,
                     openPositionListQuery,
                     settledPositionListQuery,
                     puppetTradeRouteListQuery,

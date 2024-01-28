@@ -22,7 +22,7 @@ import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile.j
 import { $Popover } from "../components/$Popover.js"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button.js"
 import { $RouteSubscriptionEditor, IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor.js"
-import { IUserType, IWalletPageParams } from "../const/type.js"
+import { IUserType, IWalletPageParams } from "../pages/type.js"
 import { getPuppetSubscriptionExpiry } from "../logic/puppetLogic.js"
 import { $seperator2 } from "../pages/common.js"
 import { $puppetLogo } from "./$icons"

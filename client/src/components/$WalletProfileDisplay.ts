@@ -1,71 +1,61 @@
 import { Behavior } from "@aelea/core"
-import { $Node, NodeComposeFn, component, style, styleBehavior } from "@aelea/dom"
+import { $Node, $text, NodeComposeFn, component, style, styleBehavior } from "@aelea/dom"
 import { Route } from "@aelea/router"
-import { $column, $row } from "@aelea/ui-components"
+import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { map, switchLatest } from "@most/core"
-import { $Link } from "ui-components"
+import { map, now, switchLatest } from "@most/core"
+import { $Link, $infoLabel, $intermediate$node } from "ui-components"
 import { walletLink } from "../wallet"
 import { $disconnectedWalletDisplay, $profileDisplay } from "./$AccountProfile.js"
+import { IWalletPageParams } from "../pages/type"
+import { readableTokenAmountLabel, switchMap } from "common-utils"
+import { getPuppetDepositAmount } from "../logic/puppetLogic"
+import { $seperator2 } from "../pages/common"
+import { getTokenDescription } from "gmx-middleware-utils"
+import * as GMX from "gmx-middleware-const"
 
-
-export interface IWalletDisplay {
-  parentRoute: Route,
-  $container?: NodeComposeFn<$Node>
+export interface IWalletDisplay extends IWalletPageParams {
 }
 
-export const $WalletProfileDisplay = ({ $container = $row, parentRoute }: IWalletDisplay) => component((
-  [routeChange, routeChangeTether]: Behavior<any, string>,
-  [walletChange, walletChangeTether]: Behavior<any, string>,
-  [isActive, isActiveTether]: Behavior<boolean>,
-) => {
+export const $walletProfileDisplay = (config: IWalletDisplay) => {
+  const depositToken = GMX.ARBITRUM_ADDRESS.USDC
+  const depositTokenDescription = getTokenDescription(depositToken)
+  const { walletClientQuery } = config
 
 
-  const walletRoute = parentRoute.create({ fragment: 'wallet', title: 'Portfolio' })
+  return switchLatest(switchMap(async walletQuery => {
+    const wallet = await walletQuery
 
-
-  return [
-    $container(
-      styleBehavior(map(active => ({ backgroundColor: active ? pallete.background : 'none' }), isActive)),
-      style({ border: `1px solid ${ colorAlpha(pallete.foreground, .2) }`,  borderRadius: '30px', placeContent: 'center', fontFamily: `var(--font-monospace)` })
-    )(
-      switchLatest(map(wallet => {
-        const address = wallet?.account?.address
-        const $display = address
-          ? style({ paddingRight: '16px' })($profileDisplay({ $labelContainer: $column(style({ padding: '0 8px 0 4px' })), address, $container }))
-          : style({ paddingRight: '18px' }, $disconnectedWalletDisplay($container))
-
-        return $Link({
-          route: walletRoute,
-          // anchorOp: style({  }),
-          url: `/app/wallet`,
-          $content: $display
-        })({
-          click: routeChangeTether(),
-          active: isActiveTether()
-        })
-        
-        // return  walletChangeTether(
-        //   nodeEvent('click'),
-        //   map(async () => {
-        //     await connect(wagmiConfig, {
-        //       connector: wcConnector
-        //     }).catch(e => {
-        //       console.error(e)
-        //     })
-        //     return `walletConnect`
-        //   }),
-        //   awaitPromises
-        // )(
-        //   style({ paddingRight: '18px', cursor: 'pointer' }, $disconnectedWalletDisplay($container))
-        // )
-      }, walletLink.wallet))
-    ),
-
-    {
-      routeChange
+    if (wallet === null) {
+      return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', pointerEvents: 'none', paddingRight: '16px' }))(
+        $disconnectedWalletDisplay(),
+        $seperator2,
+        style({ fontSize: '.85rem', color: pallete.foreground })($infoLabel('Click to Connect'))
+      )
     }
-  ]
-})
+
+    const address = wallet.account.address
+    const depositQuery = now(address ? getPuppetDepositAmount(wallet, address) : Promise.resolve(0n))
+              
+    return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', pointerEvents: 'none', paddingRight: '16px' }))(
+      address
+        ? $profileDisplay({ address })
+        : style({ cursor: 'pointer' }, $disconnectedWalletDisplay()),
+
+      $seperator2,
+
+      $column(
+        $infoLabel(
+          'Balance'
+        ),
+        $intermediate$node(
+          map(async amount => {
+            return $text(style({ whiteSpace: 'nowrap' }))(readableTokenAmountLabel(depositTokenDescription, await amount))
+          }, depositQuery)
+        ),
+      )
+    ) 
+  }, walletClientQuery))
+}
 
 

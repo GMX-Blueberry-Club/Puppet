@@ -2,23 +2,19 @@ import { $node, $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { map } from "@most/core"
-import { Stream } from "@most/types"
-import { readableLeverage, readableUsd, switchMap, zipState } from "common-utils"
-import { IMirrorPositionOpen, IMirrorPositionSettled, accountSettledPositionListSummary } from "puppet-middleware-utils"
+import { readableLeverage, readableUsd, zipState } from "common-utils"
+import { accountSettledPositionListSummary } from "puppet-middleware-utils"
 import { $intermediate$node } from "ui-components"
 import * as viem from 'viem'
 import { $profileDisplay } from "../$AccountProfile.js"
 import { $heading2 } from "../../common/$text.js"
+import { IPositionActivityParams, IUserPositionPageParams } from "../../pages/type"
 
 
-export interface IAccountSummary {
+export interface IAccountSummary extends IPositionActivityParams {
   address: viem.Address
-  settledPositionListQuery: Stream<Promise<IMirrorPositionSettled[]>>
-  openPositionListQuery: Stream<Promise<IMirrorPositionOpen[]>>
   puppet?: viem.Address
 }
-
-
 
 
 export const $TraderSummary = (config: IAccountSummary) => component((
@@ -84,7 +80,9 @@ export const $TraderSummary = (config: IAccountSummary) => component((
   ]
 })
 
-export const $PuppetSummary = ({ address, openPositionListQuery, settledPositionListQuery, puppet }: IAccountSummary) => component(() => {
+export const $PuppetSummary = (config: IAccountSummary) => component(() => {
+
+  const { address, openPositionListQuery, settledPositionListQuery, puppet,  } = config
 
   const metricsQuery = map(async params => {
     const allPositions = [...await params.settledPositionListQuery, ...await params.openPositionListQuery]

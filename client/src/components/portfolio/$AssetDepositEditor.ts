@@ -2,25 +2,24 @@
 import { Behavior, combineObject, replayLatest } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { awaitPromises, constant, empty, fromPromise, join, map, mergeArray, multicast, now, snapshot, startWith } from "@most/core"
+import { constant, empty, join, map, mergeArray, multicast, snapshot, startWith } from "@most/core"
 import { erc20Abi } from "abitype/abis"
 import { getMappedValue, parseFixed, readableTokenAmount, readableTokenAmountLabel, switchMap } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import { getTokenDescription } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
-import { arbitrum } from "viem/chains"
+import { readContract } from "viem/actions"
 import { $TextField } from "../../common/$TextField.js"
 import { writeContract } from "../../logic/common.js"
-import { getWalletErc20Balance } from "../../logic/traderLogic.js"
+import { getAddressTokenBalance } from "../../logic/traderLogic.js"
+import { IComponentPageParams } from "../../pages/type.js"
 import { walletLink } from "../../wallet"
 import { $ButtonSecondary, $Submit, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $SubmitBar } from "../form/$Form"
-import { IWalletPageParams } from "../../const/type"
-import { readContract } from "viem/actions"
 
 
-interface IAssetDepositEditor extends IWalletPageParams {
+interface IAssetDepositEditor extends IComponentPageParams {
   token: viem.Address
 }
 
@@ -41,7 +40,7 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
       return 0n
     }
 
-    return getWalletErc20Balance(wallet, arbitrum, config.token, wallet.account.address)
+    return getAddressTokenBalance(wallet, config.token, wallet.account.address)
   }, walletClientQuery)
   const indexToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION_MAP, config.token)
   const maxBalance = multicast(join(constant(map(amount => readableTokenAmount(tokenDescription, amount), balance), clickMaxDeposit)))

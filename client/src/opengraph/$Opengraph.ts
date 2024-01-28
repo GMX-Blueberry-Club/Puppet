@@ -48,7 +48,7 @@ export const $Opengraph = (parentRoute: router.Route) => component(() => {
     $rootContainer(
       $column(layoutSheet.spacingBig, style({ placeContent: 'space-between', flex: 1, paddingTop: '36px' }))(
         router.contains(traderRoute)(
-          $trader({ priceTickMapQuery, routeTypeListQuery })
+          $trader({ priceTickMapQuery, routeTypeListQuery,  })
         ),
       ),
     ),
