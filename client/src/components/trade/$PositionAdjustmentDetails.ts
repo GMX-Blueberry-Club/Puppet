@@ -171,6 +171,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
       functionName: 'approve',
       args: [orchestrator.Orchestrator.address, 2n ** 256n - 1n]
     })
+
     return recpt
   }, clickApproveprimaryToken))
 

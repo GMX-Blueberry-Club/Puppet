@@ -24,7 +24,7 @@ export const $SubmitBar = (config: IForm) => component((
   [changeWallet, changeWalletTether]: Behavior<EIP6963ProviderDetail>,
 ) => {
   const { alert = empty(), txQuery } = config
-const multicastRequest = multicast(txQuery)
+  const multicastRequest = multicast(txQuery)
 
   const transactionError = awaitPromises(map(async query => {
     try {

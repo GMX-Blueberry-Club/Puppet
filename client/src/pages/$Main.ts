@@ -109,22 +109,7 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
 
 
   // hanlde disconnect and account change
-  const walletProvider = switchMap(providerDetail => {
-    if (providerDetail === null) {
-      return now(null)
-    }
-
-
-    const reEmitProvider = constant(providerDetail.provider, eip1193ProviderEventFn(providerDetail.provider, 'accountsChanged'))
-    const disconnect = constant(null, eip1193ProviderEventFn(providerDetail.provider, 'disconnect'))
-
-    providerDetail.provider.on('chainChanged', () => {
-      // TODO: handle chain change throught the app
-      window.location.reload()
-    })
-
-    return startWith(providerDetail.provider, mergeArray([disconnect, reEmitProvider]))
-  }, mergeArray([initWalletProvider, changeWallet]))
+  const walletProvider = map(d => d.provider, mergeArray([initWalletProvider, changeWallet]))
 
 
   const chainIdQuery = indexDb.get(store.global, 'chain')

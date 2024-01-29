@@ -4,6 +4,7 @@ import * as viem from "viem"
 
 import { getTransactionReceipt } from "viem/actions"
 import { IWalletClient } from "../wallet/walletLink"
+import { arbitrum } from "viem/chains"
 
 
 
@@ -15,7 +16,7 @@ export const writeContract = async <
 >(
   walletClient: IWalletClient,
   writeParams: Omit<viem.WriteContractParameters<TAbi, TFunctionName, TArgs, TChain>, 'account'>
-): Promise<viem.FormattedTransactionReceipt<TChain>> => {
+): Promise<viem.FormattedTransactionReceipt<typeof arbitrum>> => {
   const hash = await walletClient.writeContract({ ...writeParams, account: walletClient.account } as any)
   const recpt = await getTransactionReceipt(walletClient, { hash })
   

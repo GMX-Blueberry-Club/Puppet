@@ -1,5 +1,5 @@
 import { combineObject, fromCallback, replayLatest } from "@aelea/core"
-import { map, multicast } from "@most/core"
+import { constant, map, mergeArray, multicast, now, startWith } from "@most/core"
 import { disposeWith } from "@most/disposable"
 import { Stream } from "@most/types"
 import { EthereumProvider } from "@walletconnect/ethereum-provider"
@@ -7,6 +7,7 @@ import * as viem from 'viem'
 import { IWalletClient } from "./walletLink"
 import { EIP1193Provider } from "mipd"
 import { switchMap } from "common-utils"
+import { arbitrum } from "viem/chains"
 
 export type IPublicProvider = viem.PublicClient<viem.Transport, viem.Chain>
 
@@ -26,7 +27,24 @@ interface IWalletLinkConfig {
 
 
 export function initWalletLink(config: IWalletLinkConfig): IWalletLink {
-  const { chainQuery, walletProvider, publicTransportMap } = config
+  const { chainQuery, publicTransportMap } = config
+
+  const walletProvider: Stream<EIP1193Provider | null> = switchMap(provider => {
+    if (provider === null) {
+      return now(null)
+    }
+
+
+    const reEmitProvider = constant(provider, eip1193ProviderEventFn(provider, 'accountsChanged'))
+    const disconnect = constant(null, eip1193ProviderEventFn(provider, 'disconnect'))
+
+    provider.on('chainChanged', () => {
+      // TODO: handle chain change throught the app
+      window.location.reload()
+    })
+
+    return startWith(provider, mergeArray([disconnect, reEmitProvider]))
+  }, config.walletProvider )
 
   const providerList = Object.values(publicTransportMap)
   if (providerList.length === 0) {
@@ -47,14 +65,21 @@ export function initWalletLink(config: IWalletLinkConfig): IWalletLink {
   }, combineObject({ publicTransportParamsQuery }))))
 
   const walletClientQuery: Stream<Promise<IWalletClient | null>> = replayLatest(multicast(map(async params => {
-    const walletProvider = params.walletProvider
     const { chain, transport } = await params.publicTransportParamsQuery
 
-    if (walletProvider === null) {
+    if (params.walletProvider === null) {
       return null
     }
 
-    const accountList = await walletProvider.request({ method: 'eth_accounts' })
+    const accountList = await params.walletProvider.request({ method: 'eth_accounts' })
+
+    // await params.walletProvider.request({
+    //   method: "wallet_switchEthereumChain",
+    //   params: [ { chainId: viem.toHex(arbitrum.id) } ]
+    // })
+
+    const chainId = await params.walletProvider.request({ method: 'eth_chainId' })
+    
 
     if (accountList.length === 0) {
       return null
@@ -63,7 +88,7 @@ export function initWalletLink(config: IWalletLinkConfig): IWalletLink {
     const walletClient: IWalletClient = viem.createWalletClient({
       account: viem.getAddress(accountList[0]),
       chain,
-      transport: viem.fallback([viem.custom(walletProvider), transport]),
+      transport: viem.fallback([viem.custom(params.walletProvider), transport]),
     }) as any
 
     const addressList = await walletClient.getAddresses()

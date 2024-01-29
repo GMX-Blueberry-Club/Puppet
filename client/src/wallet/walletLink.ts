@@ -1,5 +1,5 @@
-import { arbitrum } from "@wagmi/core/chains"
 import * as viem from 'viem'
+import { arbitrum } from 'viem/chains'
 
 export const chains = [ arbitrum ] as const
 

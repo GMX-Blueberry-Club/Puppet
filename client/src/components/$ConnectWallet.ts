@@ -81,10 +81,6 @@ export const $ConnectChoiceList = () => component((
               const provider = providerDetail.provider
               
 
-              // await provider.request({
-              //   method: "wallet_switchEthereumChain",
-              //   params: [ { chainId: "0x64" } ]
-              // })
               const requestAccountList = await provider.request({ method: 'eth_requestAccounts' })
               
               // const accountList = await provider.request({ method: 'eth_requestAccounts' })
