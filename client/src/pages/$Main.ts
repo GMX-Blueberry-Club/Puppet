@@ -105,11 +105,11 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
 
 
   const walletRdnsStore = uiStorage.replayWrite(storeDb.store.global, changeWalletProviderRdns, 'wallet')
-  const initWalletProvider = map(rdns => rdns ? mipdStore.findProvider({ rdns }) || null : null, walletRdnsStore)
+  const initWalletProvider: Stream<EIP6963ProviderDetail | null> = map(rdns => rdns ? mipdStore.findProvider({ rdns }) || null : null, walletRdnsStore)
 
 
   // hanlde disconnect and account change
-  const walletProvider = map(d => d.provider, mergeArray([initWalletProvider, changeWallet]))
+  const walletProvider = map(d => d?.provider || null, mergeArray([initWalletProvider, changeWallet]))
 
 
   const chainIdQuery = indexDb.get(store.global, 'chain')
