@@ -67,7 +67,7 @@ export const $Popover = ({ open, dismiss = empty(), margin = 10, padding = 76, $
       top: 0, left: 0, right: 0, bottom: 0, // visibility: 'hidden',
     }),
     overlayClickTether(
-      nodeEvent('click'),
+      nodeEvent('pointerdown'),
       filter(ev => {
         if (ev.target instanceof HTMLElement) {
           const computedStyle = getComputedStyle(ev.target)

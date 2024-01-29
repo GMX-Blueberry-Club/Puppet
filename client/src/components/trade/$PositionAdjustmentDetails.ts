@@ -290,12 +290,12 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
         $seperator2,
         style({ placeContent: 'space-between' })(
           $infoLabeledValue(
-            'Est Puppet Reward',
+            'Est Reward',
             $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
               $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(map(factor => {
                 return `(${readableFactorPercentage(factor)} size)`
               }, positionFeeFactor)),
-              $pnlDisplay(0n, false)
+              $text('WIP')
             )
           )
         )
