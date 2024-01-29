@@ -1,19 +1,18 @@
 import { Behavior, combineObject } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { constant, empty, map } from "@most/core"
+import { empty, map } from "@most/core"
 import { ADDRESS_ZERO, IntervalTime, switchMap } from "common-utils"
 import { EIP6963ProviderDetail } from "mipd"
 import { ISetRouteType, queryPuppetTradeRoute, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
 import { $ButtonToggle, $defaulButtonToggleContainer } from "ui-components"
 import { uiStorage } from "ui-storage"
 import { $IntermediateConnectButton } from "../../components/$ConnectWallet.js"
-import { $ButtonSecondary } from "../../components/form/$Button.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
 import * as storeDb from "../../const/store.js"
-import { IPageParams, IPositionActivityParams, IUserActivityParams, IUserPositionPageParams, IUserType } from "../type.js"
-import { $WalletPuppet } from "./$WalletPuppet.js"
+import { IPageParams, IUserActivityParams, IUserType } from "../type.js"
 import { $TraderPage } from "./$Trader.js"
+import { $WalletPuppet } from "./$WalletPuppet.js"
 
 const optionDisplay = {
   [IUserType.PUPPET]: {

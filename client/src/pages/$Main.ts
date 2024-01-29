@@ -29,7 +29,7 @@ import { $Home } from "./$Home.js"
 import { $Trade } from "./$Trade.js"
 import { $rootContainer } from "./common"
 import { $Leaderboard } from "./leaderboard/$Leaderboard.js"
-import { $PublicUserPage } from "./user/$Public.js"
+import { $PublicUserPage } from "./user/$PublicUser.js"
 import { $WalletPage } from "./user/$Wallet.js"
 
 const popStateEvent = eventElementTarget('popstate', window)

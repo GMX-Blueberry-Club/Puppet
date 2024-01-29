@@ -2,7 +2,7 @@ import { Behavior } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, layoutSheet } from "@aelea/ui-components"
-import { map, mergeArray, now } from "@most/core"
+import { map, mergeArray, multicast, now } from "@most/core"
 import { ETH_ADDRESS_REGEXP, IntervalTime } from "common-utils"
 import { ISetRouteType, queryPuppetTradeRoute, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
 import { $ButtonToggle, $defaulButtonToggleContainer } from "ui-components"

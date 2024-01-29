@@ -1,8 +1,8 @@
 import { $node, $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { map } from "@most/core"
-import { readableLeverage, readableUsd, zipState } from "common-utils"
+import { map, multicast } from "@most/core"
+import { combineState, readableLeverage, readableUsd, zipState } from "common-utils"
 import { accountSettledPositionListSummary } from "puppet-middleware-utils"
 import { $intermediate$node } from "ui-components"
 import * as viem from 'viem'
@@ -22,11 +22,11 @@ export const $TraderSummary = (config: IAccountSummary) => component((
 
   const { address, openPositionListQuery, settledPositionListQuery, puppet } = config
 
-  const metricsQuery = map(async params => {
+  const metricsQuery = multicast(map(async params => {
     const allPositions = [...await params.settledPositionListQuery, ...await params.openPositionListQuery]
 
     return accountSettledPositionListSummary(allPositions, puppet)
-  }, zipState({ openPositionListQuery, settledPositionListQuery }))
+  }, combineState({ openPositionListQuery, settledPositionListQuery })))
 
   return [
 
@@ -84,11 +84,11 @@ export const $PuppetSummary = (config: IAccountSummary) => component(() => {
 
   const { address, openPositionListQuery, settledPositionListQuery, puppet,  } = config
 
-  const metricsQuery = map(async params => {
+  const metricsQuery = multicast(map(async params => {
     const allPositions = [...await params.settledPositionListQuery, ...await params.openPositionListQuery]
 
     return accountSettledPositionListSummary(allPositions, puppet)
-  }, zipState({ openPositionListQuery, settledPositionListQuery }))
+  }, combineState({ openPositionListQuery, settledPositionListQuery })))
 
   return [
 
