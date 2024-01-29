@@ -2,7 +2,7 @@ import { Behavior, combineObject } from "@aelea/core"
 import { $element, $node, $text, MOTION_NO_WOBBLE, component, motion, style } from "@aelea/dom"
 import { $NumberTicker, $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, empty, map, now, skipRepeatsWith, snapshot, startWith, switchLatest } from "@most/core"
+import { awaitPromises, empty, map, multicast, now, skipRepeatsWith, snapshot, startWith, switchLatest } from "@most/core"
 import { IntervalTime, filterNull, parseReadableNumber, readableUnitAmount, unixTimestampNow } from "common-utils"
 import { BaselineData, MouseEventParams, Time } from "lightweight-charts"
 import { ISetRouteType } from "puppet-middleware-utils"
@@ -23,7 +23,7 @@ export const $ProfilePeformanceTimeline = (config: IPositionActivityParams & IUs
 
   const { activityTimeframe, selectedTradeRouteList, puppet, priceTickMapQuery, routeTypeListQuery, settledPositionListQuery, openPositionListQuery } = config
 
-  const positionParams = snapshot(async (params, sampleParams) => {
+  const positionParams = multicast(snapshot(async (params, sampleParams) => {
     const settledPositionList = await sampleParams.settledPositionListQuery
     const openPositionList = await params.openPositionListQuery
 
@@ -36,7 +36,7 @@ export const $ProfilePeformanceTimeline = (config: IPositionActivityParams & IUs
     })
 
     return { timeline, openPositionList, settledPositionList }
-  }, combineObject({ activityTimeframe, routeTypeListQuery, priceTickMapQuery, openPositionListQuery }), combineObject({ settledPositionListQuery }))
+  }, combineObject({ activityTimeframe, routeTypeListQuery, priceTickMapQuery, openPositionListQuery }), combineObject({ settledPositionListQuery })))
 
 
   return [

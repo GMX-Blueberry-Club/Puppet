@@ -142,7 +142,7 @@ export const $ProfilePerformanceGraph = (config: IPerformanceTimeline & { $conta
       position: 'inBar',
       color: pnl < 0 ? pallete.negative : pallete.positive,
       time: unixTimestampNow() as Time,
-              size: 1.5,
+      size: 1.5,
       shape: 'circle'
     }
   })
