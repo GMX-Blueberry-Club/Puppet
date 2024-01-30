@@ -49,6 +49,9 @@
       "path": "../common/ui-router"
     },
     {
+      "path": "../common/wallet"
+    },
+    {
       "path": "../common/ui-storage"
     },
     {
