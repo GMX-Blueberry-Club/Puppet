@@ -2,7 +2,7 @@ import { factor, getMappedValue } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import { hashData, IMarket, IMarketConfig, IMarketFees, IMarketInfo, IMarketPool, IMarketPrice, IMarketUsageInfo } from "gmx-middleware-utils"
 import { readContract } from "viem/actions"
-import { IPublicProvider } from "../wallet/initWallet"
+import * as walletLink from "wallet"
 
 
 
@@ -30,7 +30,7 @@ const ESTIMATED_GAS_FEE_MULTIPLIER_FACTOR = "ESTIMATED_GAS_FEE_MULTIPLIER_FACTOR
 
 
 export async function getMarketPoolUsage(
-  provider: IPublicProvider,
+  provider: walletLink.IPublicProvider,
   market: IMarket
 ): Promise<IMarketUsageInfo> {
   const datastoreContract = getMappedValue(GMX.CONTRACT, provider.chain.id).Datastore
@@ -353,7 +353,7 @@ export async function getMarketPoolUsage(
 }
 
 export async function getMarketConfig(
-  provider: IPublicProvider,
+  provider: walletLink.IPublicProvider,
   market: IMarket,
 ): Promise<IMarketConfig> {
   const datastoreContract = getMappedValue(GMX.CONTRACT, provider.chain.id).Datastore
@@ -476,7 +476,7 @@ export async function getMarketConfig(
   }
 }
 
-export async function getFullMarketInfo(provider: IPublicProvider, market: IMarket, price: IMarketPrice): Promise<IMarketInfo> {
+export async function getFullMarketInfo(provider: walletLink.IPublicProvider, market: IMarket, price: IMarketPrice): Promise<IMarketInfo> {
   const gmxContractMap = getMappedValue(GMX.CONTRACT, provider.chain.id)
   const datastoreContract = gmxContractMap.Datastore
   const usageQuery: Promise<IMarketUsageInfo> = getMarketPoolUsage(provider, market)
@@ -511,7 +511,7 @@ export async function getFullMarketInfo(provider: IPublicProvider, market: IMark
   return { market, price, usage, config, pool, fees }
 }
 
-export async function getPositionOrderGasLimit(provider: IPublicProvider) {
+export async function getPositionOrderGasLimit(provider: walletLink.IPublicProvider) {
   const datastoreContract = getMappedValue(GMX.CONTRACT, provider.chain.id).Datastore
   const increaseGasLimit =  readContract(provider, {
     ...datastoreContract,
@@ -527,26 +527,26 @@ export async function getPositionOrderGasLimit(provider: IPublicProvider) {
   return { increaseGasLimit, decreaseGasLimit }
 }
 
-export async function getExecuteGasFee(provider: IPublicProvider) {
+export async function getExecuteGasFee(provider: walletLink.IPublicProvider) {
   const datastoreContract = getMappedValue(GMX.CONTRACT, provider.chain.id).Datastore
 
-  const estimatedFeeBaseGasLimit =  readContract(provider, {
+  const estimatedFeeBaseGasLimit = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashKey('ESTIMATED_GAS_FEE_BASE_AMOUNT')],
   })
-  const estimatedFeeMultiplierFactor =  readContract(provider, {
+  const estimatedFeeMultiplierFactor = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashKey('ESTIMATED_GAS_FEE_MULTIPLIER_FACTOR')],
   })
 
-  const increaseGasLimit =  readContract(provider, {
+  const increaseGasLimit = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashKey('INCREASE_ORDER_GAS_LIMIT')],
   })
-  const decreaseGasLimit =  readContract(provider, {
+  const decreaseGasLimit = readContract(provider, {
     ...datastoreContract,
     functionName: 'getUint',
     args: [hashKey('DECREASE_ORDER_GAS_LIMIT')],

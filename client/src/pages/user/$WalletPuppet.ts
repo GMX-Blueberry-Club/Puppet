@@ -103,7 +103,7 @@ export const $WalletPuppet = (config: IWalletPuppet) => component((
                       token: depositToken,
                       balanceQuery: depositAmountQuery
                     })({
-                      requestDepositAsset: requestWithdrawAssetTether(),
+                      requestWithdrawAsset: requestWithdrawAssetTether(),
                     }),
                     openWithdrawPopover
                   ),

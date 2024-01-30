@@ -1,11 +1,11 @@
 import { combineObject, isStream, O, Op } from "@aelea/core"
-import { $element, $Node, $svg, $text, attr, IBranch, style, styleBehavior, stylePseudo } from "@aelea/dom"
+import { $element, $node, $Node, $svg, $text, attr, IBranch, style, styleBehavior, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { pallete } from "@aelea/ui-components-theme"
+import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { empty, fromPromise, join, map, skipRepeats, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import { getExplorerUrl, getMappedValue, ITokenDescription, promiseState, PromiseStatus, shortenTxAddress, switchMap } from "common-utils"
-import { Chain } from "viem/chains"
+import { arbitrum, Chain } from "viem/chains"
 import { $alertIcon, $arrowRight, $caretDblDown, $info, $tokenIconMap } from "./$icons.js"
 import { $defaultDropContainer, $Tooltip } from "./$Tooltip.js"
 import { disposeNone } from "@most/disposable"
@@ -24,13 +24,44 @@ export const $anchor = $element('a')(
   }),
 )
 
-export const $alertContainer = $row(layoutSheet.spacingSmall, style({
+export const $alertNegativeContainer = $row(layoutSheet.spacingSmall, style({
   minWidth: 0, maxWidth: '100%',
   borderRadius: '100px', alignItems: 'center', fontSize: '.85rem',
   border: `1px dashed ${pallete.negative}`, padding: '8px 12px',
 }))
 
-export const $alert = ($content: $Node) => $alertContainer(style({ alignSelf: 'flex-start' }))(
+export const $alertPositiveContainer = $row(layoutSheet.spacingSmall, style({
+  minWidth: 0, maxWidth: '100%',
+  borderRadius: '100px', alignItems: 'center', fontSize: '.85rem',
+  border: `1px dashed ${pallete.positive}`, padding: '8px 12px',
+}))
+
+export const $alertIntermediateContainer = (...$content: $Node[]) => $row(layoutSheet.spacingSmall, style({
+  minWidth: 0, maxWidth: '100%',
+  borderRadius: '100px', alignItems: 'center', fontSize: '.85rem',
+  padding: '9px 12px', position: 'relative', overflow: 'hidden',
+}))(
+  $node(
+    style({
+      inset: 0,
+      width: '200%',
+      animation: `borderRotate .75s linear infinite`,
+      position: 'absolute',
+      background: `linear-gradient(115deg, ${pallete.negative}, ${pallete.primary}, ${pallete.positive}, ${pallete.primary}) 0% 0% / 50% 100%`,
+    }),
+  )(),
+  $node(
+    style({
+      inset: '1px',
+      position: 'absolute',
+      background: colorAlpha(pallete.background, .9),
+      borderRadius: '100px',
+    }),
+  )(),
+  ...$content,
+)
+
+export const $alert = ($content: $Node) => $alertNegativeContainer(style({ alignSelf: 'flex-start' }))(
   $icon({ $content: $alertIcon, viewBox: '0 0 24 24', width: '18px', svgOps: style({ minWidth: '18px' }) }),
   $content,
 )
@@ -39,9 +70,31 @@ export const $alertTooltip = ($content: $Node) => {
   return $Tooltip({
     $content: $content,
     // $dropContainer: $defaultDropContainer,
-    $anchor: $alertContainer(
+    $anchor: $alertNegativeContainer(
       $icon({ $content: $alertIcon, viewBox: '0 0 24 24', width: '18px', svgOps: style({ minWidth: '18px' }) }),
       style({ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' })($content),
+    ),
+  })({})
+}
+
+export const $alertPositiveTooltip = ($content: $Node) => {
+  return $Tooltip({
+    $content: $content,
+    // $dropContainer: $defaultDropContainer,
+    $anchor: $alertPositiveContainer(
+      $icon({ $content: $alertIcon, viewBox: '0 0 24 24', width: '18px', svgOps: style({ minWidth: '18px' }) }),
+      style({ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' })($content),
+    ),
+  })({})
+}
+
+export const $intermediateTooltip = ($content: $Node) => {
+  return $Tooltip({
+    $content: $content,
+    // $dropContainer: $defaultDropContainer,
+    $anchor: $alertIntermediateContainer(
+      $icon({ $content: $alertIcon, viewBox: '0 0 24 24', width: '18px', svgOps: style({ minWidth: '18px', position: 'relative' }) }),
+      style({ position: 'relative', whiteSpace: 'nowrap', textOverflow: 'ellipsis' })($content),
     ),
   })({})
 }
@@ -122,7 +175,7 @@ export const $tokenLabelFromSummary = (token: ITokenDescription, $label?: $Node)
 }
 
 
-export function $txHashRef(txHash: string, chain: Chain) {
+export function $txHashRef(txHash: string, chain: Chain = arbitrum) {
   const href = getExplorerUrl(chain) + "/tx/" + txHash
 
   return $anchor(attr({ href }))($text(shortenTxAddress(txHash)))

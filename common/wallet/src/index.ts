@@ -2,14 +2,13 @@ import { combineObject, fromCallback, replayLatest } from "@aelea/core"
 import { constant, map, mergeArray, multicast, now, startWith } from "@most/core"
 import { disposeWith } from "@most/disposable"
 import { Stream } from "@most/types"
-import { EthereumProvider } from "@walletconnect/ethereum-provider"
-import * as viem from 'viem'
-import { IWalletClient } from "./walletLink"
-import { EIP1193Provider } from "mipd"
+import type { EIP1193Provider } from "mipd"
 import { switchMap } from "common-utils"
-import { arbitrum } from "viem/chains"
+import { Account, Chain, CustomTransport, EIP1193EventMap, PublicClient, Transport, WalletClient, createPublicClient, createWalletClient, custom, fallback, getAddress } from "viem"
+import { EthereumProvider } from "@walletconnect/ethereum-provider"
 
-export type IPublicProvider = viem.PublicClient<viem.Transport, viem.Chain>
+export type IPublicProvider = PublicClient<Transport, Chain>
+export type IWalletClient = WalletClient<Transport, Chain, Account>
 
 export interface IWalletLink {
   publicProviderQuery: Stream<Promise<IPublicProvider>>
@@ -20,9 +19,9 @@ export interface IWalletLink {
 
 
 interface IWalletLinkConfig {
-  publicTransportMap: Partial<Record<number, viem.Transport>>
+  publicTransportMap: Partial<Record<number, Transport>>
   walletProvider: Stream<EIP1193Provider | null>,
-  chainQuery: Stream<Promise<viem.Chain>>,
+  chainQuery: Stream<Promise<Chain>>,
 }
 
 
@@ -61,7 +60,7 @@ export function initWalletLink(config: IWalletLinkConfig): IWalletLink {
   const providerQuery = replayLatest(multicast(map(async params => {
     const { chain, transport } = await params.publicTransportParamsQuery
 
-    return viem.createPublicClient({ chain, transport })
+    return createPublicClient({ chain, transport })
   }, combineObject({ publicTransportParamsQuery }))))
 
   const walletClientQuery: Stream<Promise<IWalletClient | null>> = replayLatest(multicast(map(async params => {
@@ -75,7 +74,7 @@ export function initWalletLink(config: IWalletLinkConfig): IWalletLink {
 
     // await params.walletProvider.request({
     //   method: "wallet_switchEthereumChain",
-    //   params: [ { chainId: viem.toHex(arbitrum.id) } ]
+    //   params: [ { chainId: toHex(arbitrum.id) } ]
     // })
 
     const chainId = await params.walletProvider.request({ method: 'eth_chainId' })
@@ -85,10 +84,10 @@ export function initWalletLink(config: IWalletLinkConfig): IWalletLink {
       return null
     }
 
-    const walletClient: IWalletClient = viem.createWalletClient({
-      account: viem.getAddress(accountList[0]),
+    const walletClient: IWalletClient = createWalletClient({
+      account: getAddress(accountList[0]),
       chain,
-      transport: viem.fallback([viem.custom(params.walletProvider), transport]),
+      transport: fallback([custom(params.walletProvider), transport]),
     }) as any
 
     const addressList = await walletClient.getAddresses()
@@ -104,7 +103,7 @@ export function initWalletLink(config: IWalletLinkConfig): IWalletLink {
   const publicProviderQuery = replayLatest(multicast(map(async params => {
     const { chain, transport } = await params.publicTransportParamsQuery
 
-    return viem.createPublicClient({ chain, transport })
+    return createPublicClient({ chain, transport })
   }, combineObject({ publicTransportParamsQuery }))))
 
 
@@ -113,9 +112,9 @@ export function initWalletLink(config: IWalletLinkConfig): IWalletLink {
 
 
 export function getPublicTransport(
-  publicTransportMap: Partial<Record<number, viem.Transport>>,
-  chain: viem.Chain
-): viem.Transport {
+  publicTransportMap: Partial<Record<number, Transport>>,
+  chain: Chain
+): Transport {
   const providerList = Object.values(publicTransportMap)
 
   if (providerList.length === 0) {
@@ -135,23 +134,23 @@ export function getPublicTransport(
 }
 
 export async function getPublicClient(
-  publicTransportQuery: Promise<viem.Transport>,
+  publicTransportQuery: Promise<Transport>,
   walletProviderQuery: Promise<EIP1193Provider | null>,
-  chainQuery: Promise<viem.Chain>
-) {
+  chainQuery: Promise<Chain>
+): Promise<PublicClient> {
 
   const walletProvider = await walletProviderQuery
   const publicTransport = await publicTransportQuery
   const chain = await chainQuery
 
-  const transport = walletProvider ? [viem.custom(walletProvider), publicTransport] : [publicTransport]
-  return viem.createPublicClient({
+  const transport = walletProvider ? [custom(walletProvider), publicTransport] : [publicTransport]
+  return createPublicClient({
     chain,
-    transport: viem.fallback(transport)
+    transport: fallback(transport)
   })
 }
 
-export async function walletConnectConnector(chainList: viem.Chain[], projectId: string) {
+export async function walletConnectConnector(chainList: Chain[], projectId: string) {
   const ethereumProvider = await EthereumProvider.init({
     chains: chainList.map(chain => chain.id) as any,
     projectId,
@@ -182,7 +181,7 @@ export const getInjectedProviderList = (): EthereumProvider[] => {
   return providerList
 }
 
-export const getInjectedTransport = (name: string) => {
+export const getInjectedTransport = (name: string): CustomTransport | null => {
   const providerList: EthereumProvider[] = (window as any)?.ethereum?.providers
 
   if (!providerList) {
@@ -195,11 +194,11 @@ export const getInjectedTransport = (name: string) => {
     return null
   }
 
-  return viem.custom(match)
+  return custom(match)
 }
 
 
-export const eip1193ProviderEventFn = <TEvent extends keyof viem.EIP1193EventMap>(provider: EIP1193Provider, eventName: TEvent) => fromCallback<any, any>(
+export const eip1193ProviderEventFn = <TEvent extends keyof EIP1193EventMap>(provider: EIP1193Provider, eventName: TEvent) => fromCallback<any, any>(
   (cb) => {
     provider.on(eventName as any, cb)
     return disposeWith(() => provider.removeListener(eventName, cb), null)
@@ -209,13 +208,13 @@ export const eip1193ProviderEventFn = <TEvent extends keyof viem.EIP1193EventMap
   }
 )
 
-export const getGasPrice = (clientQuerySource: Stream<Promise<viem.PublicClient>>) => {
+export const getGasPrice = (clientQuerySource: Stream<Promise<PublicClient>>) => {
   return switchMap(async (clientQuery) => {
     return (await clientQuery).getGasPrice()
   }, clientQuerySource)
 }
 
-export const getEstimatedGasPrice = (clientQuerySource: Stream<Promise<viem.PublicClient>>) => {
+export const getEstimatedGasPrice = (clientQuerySource: Stream<Promise<PublicClient>>) => {
   return switchMap(async (clientQuery) => {
     return (await clientQuery).estimateFeesPerGas()
   }, clientQuerySource)

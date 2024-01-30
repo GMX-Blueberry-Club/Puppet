@@ -9,7 +9,7 @@ import { Stream } from "@most/types"
 import { IntervalTime, filterNull, getTimeSince, readableUnitAmount, switchMap, unixTimestampNow, zipState } from "common-utils"
 import { EIP6963ProviderDetail } from "mipd"
 import { ISetRouteType, queryLatestPriceTick, queryRouteTypeList, subgraphStatus } from "puppet-middleware-utils"
-import { $Tooltip, $alertContainer, $infoLabeledValue } from "ui-components"
+import { $Tooltip, $alertPositiveContainer, $infoLabeledValue } from "ui-components"
 import { indexDb, uiStorage } from "ui-storage"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
@@ -23,14 +23,15 @@ import * as storeDb from "../const/store.js"
 import { store } from "../const/store.js"
 import { newUpdateInvoke } from "../sw/swUtils"
 import { fadeIn } from "../transitions/enter.js"
-import { eip1193ProviderEventFn, initWalletLink } from "../wallet/initWallet"
-import { chains, publicTransportMap } from "../wallet/walletLink"
+import * as walletLink from "wallet"
+import { chains, publicTransportMap } from "../logic/walletLink.js"
 import { $Home } from "./$Home.js"
 import { $Trade } from "./$Trade.js"
 import { $rootContainer } from "./common"
 import { $Leaderboard } from "./leaderboard/$Leaderboard.js"
 import { $PublicUserPage } from "./user/$PublicUser.js"
 import { $WalletPage } from "./user/$Wallet.js"
+import { $heading2 } from "../common/$text"
 
 const popStateEvent = eventElementTarget('popstate', window)
 const initialLocation = now(document.location)
@@ -115,7 +116,7 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
   const chainIdQuery = indexDb.get(store.global, 'chain')
   const chainQuery: Stream<Promise<viem.Chain>> = now(chainIdQuery.then(id => chains.find(c => c.id === id) || arbitrum))
 
-  const { providerQuery, publicProviderQuery, walletClientQuery } = initWalletLink({ publicTransportMap, chainQuery, walletProvider })
+  const { providerQuery, publicProviderQuery, walletClientQuery } = walletLink.initWalletLink({ publicTransportMap, chainQuery, walletProvider })
 
   const block = switchMap(async query => (await query).getBlockNumber(), providerQuery)
   const latestBlock: Stream<bigint> = switchLatest(switchMap(async query => {
@@ -133,7 +134,7 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
     $column(
       switchMap(cb => {
         return fadeIn(
-          $alertContainer(style({ backgroundColor: pallete.horizon }))(
+          $alertPositiveContainer(style({ backgroundColor: pallete.horizon }))(
             filterNull(constant(null, clickUpdateVersion)) as any,
 
             $text('New version Available'),
@@ -202,10 +203,10 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
               router.match(tradeTermsAndConditions)(
                 fadeIn(
                   $midContainer(layoutSheet.spacing, style({ maxWidth: '680px', alignSelf: 'center' }))(
-                    $text(style({ fontSize: '3em', textAlign: 'center' }))('GBC Trading'),
+                    $heading2(style({ fontSize: '3em', textAlign: 'center' }))('Puppet DAO'),
                     $node(),
                     $text(style({ fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold' }))('Terms And Conditions'),
-                    $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host} is an interface (hereinafter the "Interface") to interact with external GMX smart contracts, and does not have access to my funds. I represent and warrant the following:`),
+                    $text(style({ whiteSpace: 'pre-wrap' }))(`By accessing, I agree that ${document.location.host} is not responsible for any loss of funds, and I agree to the following terms and conditions:`),
                     $element('ul')(layoutSheet.spacing, style({  }))(
                       $liItem(
                         $text(`I am not a United States person or entity;`),
@@ -217,7 +218,7 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
                         $text(`I am legally entitled to access the Interface under the laws of the jurisdiction where I am located;`),
                       ),
                       $liItem(
-                        $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of GMX smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
+                        $text(`I am responsible for the risks using the Interface, including, but not limited to, the following: (i) the use of Puppet smart contracts; (ii) leverage trading, the risk may result in the total loss of my deposit.`),
                       ),
                     ),
                     $node(style({ height: '100px' }))(),
@@ -248,7 +249,7 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
                         $text('Subgraph Status'),
                         $column(
                           params.subgraphStatus.hasIndexingErrors
-                            ? $alertContainer($text('Indexing has experienced errors')) : empty(),
+                            ? $alertPositiveContainer($text('Indexing has experienced errors')) : empty(),
                           $infoLabeledValue('Latest Sync', timeSince), 
                           $infoLabeledValue('blocks behind', blocksBehind),
                         )

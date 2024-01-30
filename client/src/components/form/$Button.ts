@@ -2,15 +2,15 @@ import { Behavior, O, combineArray, combineObject } from "@aelea/core"
 import { $Branch, $element, $node, INode, attrBehavior, component, nodeEvent, style, styleBehavior, styleInline, stylePseudo } from "@aelea/dom"
 import { $row, Control, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { awaitPromises, constant, empty, map, mergeArray, multicast, now, recoverWith, startWith, tap } from "@most/core"
+import { constant, empty, map, multicast, now, recoverWith, startWith } from "@most/core"
 import { Stream } from "@most/types"
-import * as viem from "viem"
-import { $IntermediateConnectButton, } from "../$ConnectWallet.js"
-import { $iconCircular } from "../../common/elements/$common.js"
-import { IWalletClient } from "../../wallet/walletLink"
-import { $ButtonCore, $defaultButtonCore, IButtonCore } from "./$ButtonCore.js"
 import { PromiseStatus, promiseState } from "common-utils"
 import { EIP6963ProviderDetail } from "mipd"
+import * as viem from "viem"
+import * as walletLink from "wallet"
+import { $IntermediateConnectButton, } from "../$ConnectWallet.js"
+import { $iconCircular } from "../../common/elements/$common.js"
+import { $ButtonCore, $defaultButtonCore, IButtonCore } from "./$ButtonCore.js"
 
 
 
@@ -71,15 +71,15 @@ export const $ButtonSecondary = (config: IButtonCore) => {
 
 
 export interface IButtonPrimaryCtx extends Omit<IButtonCore, '$container'> {
-  walletClientQuery: Stream<Promise<IWalletClient | null>>
-  txQuery: Stream<Promise<viem.TransactionReceipt>>
+  walletClientQuery: Stream<Promise<walletLink.IWalletClient | null>>
+  txQuery: Stream<Promise<any>>
   alert?: Stream<string | null>
 }
 
 
 
 export const $Submit = (config: IButtonPrimaryCtx) => component((
-  [click, clickTether]: Behavior<PointerEvent, IWalletClient>,
+  [click, clickTether]: Behavior<PointerEvent, walletLink.IWalletClient>,
   [changeWallet, changeWalletTether]: Behavior<EIP6963ProviderDetail>,
 ) => {
 

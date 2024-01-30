@@ -4,40 +4,37 @@ import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, constant, empty, map, mergeArray, multicast, sample, skipRepeats, snapshot, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { erc20Abi } from "abitype/abis"
-import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, StateStreamStrict, abs, filterNull, getBasisPoints, getDenominator, getMappedValue, getTokenUsd, readableFactorPercentage, readablePercentage, readablePnl, readableTokenAmountLabel, readableUnitAmount, readableUsd, zipState } from "common-utils"
+import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, StateStreamStrict, abs, filterNull, getBasisPoints, getDenominator, getMappedValue, getTokenUsd, readableFactorPercentage, readablePercentage, readablePnl, readableTokenAmountLabel, readableUnitAmount, readableUsd, switchMap, zipState } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import { IPriceCandle, OrderType, getNativeTokenAddress, getNativeTokenDescription, getTokenDescription, resolveAddress } from "gmx-middleware-utils"
+import { EIP6963ProviderDetail } from "mipd"
 import * as PUPPET from "puppet-middleware-const"
 import { IMirrorPositionOpen, latestPriceMap } from "puppet-middleware-utils"
 import { $alert, $alertTooltip, $anchor, $infoLabeledValue, $infoTooltipLabel } from "ui-components"
 import * as viem from "viem"
+import * as walletLink from "wallet"
 import { $Popover } from "../$Popover.js"
 import { $pnlDisplay } from "../../common/$common"
-import { $heading2 } from "../../common/$text.js"
-import { writeContract } from "../../logic/common.js"
+import { $heading3 } from "../../common/$text.js"
+import { IWriteContractReturnQuery, writeContract, approveSpend, IApproveSpendReturnType } from "../../logic/commonLogic.js"
 import { $seperator2 } from "../../pages/common"
-import { IWalletClient } from "../../wallet/walletLink.js"
-import { $ButtonPrimary, $ButtonSecondary } from "../form/$Button.js"
+import { IWalletPageParams } from "../../pages/type.js"
+import { $ButtonPrimary, $ButtonSecondary, $Submit } from "../form/$Button.js"
 import { $SubmitBar } from "../form/$Form"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
-import { IWalletPageParams } from "../../pages/type.js"
-import { EIP6963ProviderDetail } from "mipd"
 
 
 
 
 
-export type IRequestTradeParams = ITradeConfig & { wallet: IWalletClient }
+export type IRequestTradeParams = ITradeConfig & { wallet: walletLink.IWalletClient }
 export type IRequestTrade = IRequestTradeParams & {
   executionFee: bigint
   indexPrice: bigint
   acceptablePrice: bigint
   swapRoute: string[]
-  request: Promise<viem.TransactionReceipt>
+  request: IWriteContractReturnQuery<typeof PUPPET['CONTRACT']['42161']['Orchestrator']['abi']>
 }
-
-
 
 
 
@@ -54,9 +51,9 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
   [dismissEnableTradingOverlay, dismissEnableTradingOverlayTether]: Behavior<any, false>,
 
   [approveTrading, approveTradingTether]: Behavior<PointerEvent, true>,
-  [clickApproveprimaryToken, clickApproveprimaryTokenTether]: Behavior<IWalletClient, { wallet: IWalletClient, route: viem.Address, primaryToken: viem.Address }>,
+  [requestTokenSpend, requestTokenSpendTether]: Behavior<walletLink.IWalletClient, IApproveSpendReturnType>,
   [clickResetPosition, clickResetPositionTether]: Behavior<any, IMirrorPositionOpen | null>,
-  [clickProposeTrade, clickProposeTradeTether]: Behavior<IWalletClient>,
+  [clickProposeTrade, clickProposeTradeTether]: Behavior<walletLink.IWalletClient>,
   [changeWallet, changeWalletTether]: Behavior<EIP6963ProviderDetail>,
 
 ) => {
@@ -69,12 +66,10 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
   } = config.tradeConfig
   const {
     averagePrice, collateralDescription, collateralPrice, executionFee,
-    indexDescription, indexPrice, primaryPrice, primaryDescription, isPrimaryApproved, marketPrice,
+    indexDescription, indexPrice, primaryPrice, primaryDescription, primarySpendAmount, marketPrice,
     isTradingEnabled, liquidationPrice, marginFeeUsd, tradeRoute, marketInfo,
-    position, walletBalance, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
+    mirrorPosition, walletBalance, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
   } = config.tradeState
-
-
 
 
   const requestTrade: Stream<IRequestTrade> = multicast(snapshot((params, wallet) => {
@@ -93,20 +88,6 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
     
     const acceptablePrice = params.indexPrice * (allowedSlippage + BASIS_POINTS_DIVISOR) / BASIS_POINTS_DIVISOR
     const isNative = params.primaryToken === ADDRESS_ZERO
-
-
-    // const swapParams = {
-    //   amount: req.collateralDelta,
-    //   minOut: 0n,
-    //   path: swapRoute
-    // }
-    // const tradeParams = {
-    //   acceptablePrice,
-    //   amountIn: 0n,
-    //   collateralDelta: req.collateralDelta,
-    //   minOut: 0n,
-    //   sizeDelta: abs(req.sizeDeltaUsd)
-    // }
 
     const executionFeeAfterBuffer = abs(params.executionFee * (params.executionFeeBuffer + BASIS_POINTS_DIVISOR) / BASIS_POINTS_DIVISOR) // params.executionFee
     const wntCollateralAmount = isNative ? params.collateralDeltaAmount : 0n
@@ -163,33 +144,18 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
     return { ...params, acceptablePrice, request, swapRoute, wallet }
   }, combineObject({ ...config.tradeConfig, executionFee, indexPrice, tradeRoute, routeTypeKey }), clickProposeTrade))
 
-  const requestApproveSpend = multicast(map(params => {
-    const orchestrator = getMappedValue(PUPPET.CONTRACT, config.chain.id)
-    const recpt = writeContract(params.wallet, {
-      address: params.primaryToken,
-      abi: erc20Abi,
-      functionName: 'approve',
-      args: [orchestrator.Orchestrator.address, 2n ** 256n - 1n]
-    })
 
-    return recpt
-  }, clickApproveprimaryToken))
-
-  const requestTradeError = filterNull(awaitPromises(map(async req => {
-    try {
-      await req.request
-      return null
-    } catch (err) {
-
-      if (err instanceof viem.ContractFunctionExecutionError && err.cause instanceof viem.ContractFunctionRevertedError) {
-        return String(err.cause.reason || err.shortMessage || err.message)
-      }
-
-      return null
+  const displayTokenApproval = skipRepeats(map(params => {
+    if (params.primarySpendAmount === null) {
+      return true
     }
-  }, requestTrade)))
 
+    if (params.collateralDeltaAmount === 0n) {
+      return true
+    }
 
+    return params.primarySpendAmount > params.collateralDeltaAmount
+  }, combineObject({ primarySpendAmount, collateralDeltaAmount, walletBalance })))
 
   const validationError = replayLatest(
     skipRepeats(map(state => {
@@ -232,14 +198,19 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
       //   }
       // }
 
-      if (!state.isIncrease && state.position === null) {
+      if (!state.isIncrease && state.mirrorPosition === null) {
         return `No ${state.indexDescription.symbol} position to reduce`
       }
 
       const indexPriceUsd = state.indexPrice * getDenominator(getTokenDescription(state.market.indexToken).decimals)
 
-      if (state.position && state.liquidationPrice && (state.isLong ? state.liquidationPrice > indexPriceUsd : state.liquidationPrice < indexPriceUsd)) {
+      if (state.mirrorPosition && state.liquidationPrice && (state.isLong ? state.liquidationPrice > indexPriceUsd : state.liquidationPrice < indexPriceUsd)) {
         return `Exceeding liquidation price`
+      }
+
+      if (state.primarySpendAmount && state.primarySpendAmount < state.collateralDeltaAmount) {
+        // show a message that shows the current primary spend amount and the collateral required
+        return `The approved amount ${readableTokenAmountLabel(state.primaryDescription, state.primarySpendAmount)} is less than the required collateral ${readableTokenAmountLabel(state.collateralDescription, state.collateralDeltaAmount)}`
       }
 
       return null
@@ -343,115 +314,118 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
         )
       ),
 
-      $row(layoutSheet.spacingSmall, style({ alignItems: 'center', flex: 1 }))(
-        $row(style({ flex: 1, minWidth: 0 }))(
-          switchLatest(map(error => {
-            if (error === null) {
-              return empty()
-            }
+      switchLatest(map(isEnabled => {
+        if (isEnabled) {
+          return $column(layoutSheet.spacingSmall)(
+            switchMap(params => {
+              const isDisplay = params.displayTokenApproval
 
-            return $alertTooltip(
-              $text(style({ whiteSpace: 'pre-wrap' }))(error)
-            )
-          }, mergeArray([requestTradeError, validationError, constant(null, clickResetPosition)])))
-        ),
-        style({ padding: '8px', alignSelf: 'center' })(
-          $ButtonSecondary({ 
-            $content: $text('Reset'),
-            disabled: map(params => {
-              return params.sizeDeltaUsd === 0n && params.collateralDeltaAmount === 0n && params.isIncrease
-            }, combineObject({ sizeDeltaUsd, collateralDeltaAmount, isIncrease }))
-          })({
-            click: clickResetPositionTether(
-              sample(position)
-            )
-          })
-        ),
-        switchLatest(map(params => {
-          const isTokenEnabled = params.isPrimaryApproved
-          const $primary = !params.isTradingEnabled
-            ? $Popover({
-              open: constant(
-                $column(layoutSheet.spacing, style({ maxWidth: '400px' }))(
-                  $heading2(`By using Puppet, I agree to the following Disclaimer`),
-                  $text(style({}))(`By accessing, I agree that ${document.location.href} is an interface that interacts with external GMX smart contracts, and does not have access to my funds.`),
-                  $alert(
-                    $node(
-                      $text('This beta version may contain bugs. Feedback and issue reports are greatly appreciated.'),
-                      $anchor(attr({ href: 'https://discord.com/channels/941356283234250772/1068946527021695168' }))($text('discord'))
-                    )
-                  ),
-                  $node(
-                    $text(style({ whiteSpace: 'pre-wrap' }))(`By clicking Agree you accept the `),
-                    $anchor(attr({ href: '/app/trading-terms-and-conditions' }))($text('Terms & Conditions'))
-                  ),
-                  $ButtonPrimary({
-                    $content: $text('Approve T&C'),
-                  })({
-                    click: approveTradingTether(constant(true))
-                  })
-                ),
-                openEnableTradingPopover
-              ),
-              $target: $row(style({ placeContent: 'flex-end' }))(
-                $ButtonSecondary({
-                  $content: $text('Enable Trading'),
-                  disabled: startWith(false, mergeArray([
-                    dismissEnableTradingOverlay,
-                    openEnableTradingPopover
-                  ]))
+              return isDisplay
+                ? empty()
+                : $Submit({
+                  walletClientQuery,
+                  txQuery: requestTokenSpend,
+                  $content: $text(`Approve ${params.primaryDescription.symbol}`)
                 })({
-                  click: openEnableTradingPopoverTether()
+                  changeWallet: changeWalletTether(),
+                  click: requestTokenSpendTether(
+                    map(async wallet => {
+                      const amount = approveSpend(wallet, params.primaryToken) 
+
+                      return amount
+                    })
+                  )
+                })
+            }, combineObject({ displayTokenApproval, primaryToken, primaryDescription })),
+            $SubmitBar({
+              walletClientQuery,
+              alert: mergeArray([validationError, constant(null, clickResetPosition)]),
+              $barContent: style({ padding: '8px', alignSelf: 'center' })(
+                $ButtonSecondary({ 
+                  $content: $text('Reset'),
+                  disabled: map(params => {
+                    return params.sizeDeltaUsd === 0n && params.collateralDeltaAmount === 0n && params.isIncrease
+                  }, combineObject({ sizeDeltaUsd, collateralDeltaAmount, isIncrease }))
+                })({
+                  click: clickResetPositionTether(
+                    sample(mirrorPosition)
+                  )
                 })
               ),
-            })({
-              overlayClick: dismissEnableTradingOverlayTether(constant(false))
-            })
-            : isTokenEnabled
-              ? $SubmitBar({
-                walletClientQuery,
-                txQuery: map(req => req.request, requestTrade),
-                disabled: map(params => {
-                  const newLocal = !!params.validationError || params.sizeDeltaUsd === 0n && params.collateralDeltaAmount === 0n
-                  return newLocal
-                }, combineObject({ validationError, sizeDeltaUsd, collateralDeltaAmount })),
-                $content: $text(
-                  map(_params => {
-                    let modLabel: string
+              txQuery: map(req => req.request, requestTrade),
+              disabled: map(params => {
+                const newLocal = !!params.validationError || params.sizeDeltaUsd === 0n && params.collateralDeltaAmount === 0n
+                return newLocal
+              }, combineObject({ validationError, sizeDeltaUsd, collateralDeltaAmount })),
+              $content: $text(
+                map(_params => {
+                  let modLabel: string
 
-                    if (_params.position) {
-                      if (_params.isIncrease) {
-                        modLabel = 'Increase'
-                      } else {
-                        modLabel = (_params.sizeDeltaUsd + _params.position.position.sizeInUsd === 0n) ? 'Close' : 'Reduce'
-                      }
+                  if (_params.mirrorPosition) {
+                    if (_params.isIncrease) {
+                      modLabel = 'Increase'
                     } else {
-                      modLabel = 'Open'
+                      modLabel = (_params.sizeDeltaUsd + _params.mirrorPosition.position.sizeInUsd === 0n) ? 'Close' : 'Reduce'
                     }
+                  } else {
+                    modLabel = 'Open'
+                  }
 
-                    const focusPriceLabel = _params.focusPrice ? ` @ ${readableUnitAmount(_params.focusPrice)}` : ''
+                  const focusPriceLabel = _params.focusPrice ? ` @ ${readableUnitAmount(_params.focusPrice)}` : ''
 
-                    return modLabel + focusPriceLabel
-                  }, combineObject({ position, sizeDeltaUsd, isIncrease, focusPrice }))
+                  return modLabel + focusPriceLabel
+                }, combineObject({ mirrorPosition, sizeDeltaUsd, isIncrease, focusPrice }))
+              )
+            })({
+              changeWallet: changeWalletTether(),
+              click: clickProposeTradeTether()
+            })
+          )
+        }
+
+        return $Popover({
+          open: constant(
+            $column(layoutSheet.spacing, style({ maxWidth: '400px' }))(
+              $heading3(`Dsclaimer & Risk Warning`),
+              $text(`Puppet is an experimental protocol and is provided “as is” without any warranty of any kind. The protocol is in beta and may contain bugs that may result in unexpected loss of funds.`),
+              $alert(
+                $node(
+                  $text('Feedback and issue reports are greatly appreciated.'),
+                  $anchor(attr({ href: 'https://discord.com/channels/941356283234250772/1068946527021695168' }))($text('discord'))
                 )
-              })({
-                changeWallet: changeWalletTether(),
-                click: clickProposeTradeTether()
-              })
-              : $SubmitBar({
-                walletClientQuery,
-                txQuery: requestApproveSpend,
-                $content: $text(`Approve ${params.primaryDescription.symbol}`)
-              })({
-                changeWallet: changeWalletTether(),
-                click: clickApproveprimaryTokenTether(
-                  map(wallet => ({ wallet, route: params.tradeRoute, primaryToken: params.primaryToken }))
-                )
-              })
+              ),
+              $row(style({ placeContent: 'space-between', alignItems: 'center' }))(
+                $node(
+                  $text('By using Puppet, i agree to the '),
+                  $anchor(attr({ href: '/app/terms-and-conditions' }))($text('Terms & Conditions'))
+                ),
+                $ButtonPrimary({
+                  $content: $text('Agree'),
+                })({
+                  click: approveTradingTether(constant(true))
+                })
+              )
+            ),
+            openEnableTradingPopover
+          ),
+          $target: $row(style({ placeContent: 'flex-end' }))(
+            $ButtonSecondary({
+              $content: $text('Enable Trading'),
+              disabled: startWith(false, mergeArray([
+                dismissEnableTradingOverlay,
+                openEnableTradingPopover
+              ]))
+            })({
+              click: openEnableTradingPopoverTether()
+            })
+          ),
+        })({
+          overlayClick: dismissEnableTradingOverlayTether(constant(false))
+        })
+            
 
-          return $primary
-        }, combineObject({ isPrimaryApproved, tradeRoute, isTradingEnabled, primaryToken, primaryDescription })))
-      ),
+          
+      }, isTradingEnabled)),
     ),
 
     {
@@ -469,14 +443,14 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
         //   }
         // }, requestEnablePlugin)))
       ]),
-      approvePrimaryToken: filterNull(awaitPromises(map(async (ctx) => {
+      primarySpendAmount: awaitPromises(map(async (ctx) => {
         try {
-          await ctx
-          return true
+          const amount = await ctx
+          return amount.events.filter(e => e.eventName === 'Approval')[0].args.value || null
         } catch (err) {
           return null
         }
-      }, requestApproveSpend))),
+      }, requestTokenSpend)),
 
       // collateralDeltaUsd: constant(0n, clickResetPosition),
       // collateralSizeUsd: constant(0n, clickResetPosition),

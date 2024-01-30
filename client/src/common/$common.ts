@@ -26,7 +26,6 @@ import { IUserType, IWalletPageParams } from "../pages/type.js"
 import { getPuppetSubscriptionExpiry } from "../logic/puppetLogic.js"
 import { $seperator2 } from "../pages/common.js"
 import { $puppetLogo } from "./$icons"
-import { walletLink } from "../wallet"
 
 
 export const $midContainer = $column(

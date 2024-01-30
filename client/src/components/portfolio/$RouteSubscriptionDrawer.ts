@@ -4,29 +4,27 @@ import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, constant, empty, map, mergeArray, skipRepeats, snapshot } from "@most/core"
 import { Stream } from "@most/types"
-import { getMappedValue, groupArrayMany, readableDate, readablePercentage, readableTokenAmountLabel, switchMap } from "common-utils"
+import { groupArrayMany, readableDate, readablePercentage, readableTokenAmountLabel, switchMap } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import { getTokenDescription } from "gmx-middleware-utils"
-import * as PUPPET from "puppet-middleware-const"
+import { EIP6963ProviderDetail } from "mipd"
 import { ISetRouteType } from "puppet-middleware-utils"
 import { $check, $infoLabeledValue, $infoTooltip, $infoTooltipLabel, $intermediateMessage, $target, $xCross } from "ui-components"
 import * as viem from "viem"
+import * as walletLink from "wallet"
 import { $profileDisplay } from "../$AccountProfile.js"
 import { $Popover } from "../$Popover.js"
 import { $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
 import { $card2, $iconCircular, $responsiveFlex } from "../../common/elements/$common.js"
-import { writeContract } from "../../logic/common.js"
-import { getPuppetDepositAmount } from "../../logic/puppetLogic"
+import { IBatchSubscribeReturnType, batchSubscribe, getPuppetDepositAmount } from "../../logic/puppetLogic"
 import { $seperator2 } from "../../pages/common.js"
 import { IComponentPageParams } from "../../pages/type.js"
 import { fadeIn } from "../../transitions/enter.js"
-import { IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $SubmitBar } from "../form/$Form"
 import { $AssetDepositEditor } from "./$AssetDepositEditor.js"
 import { IChangeSubscription } from "./$RouteSubscriptionEditor"
-import { EIP6963ProviderDetail } from "mipd"
 
 interface IRouteSubscribeDrawer extends IComponentPageParams {
   modifySubscriber: Stream<IChangeSubscription>
@@ -35,7 +33,7 @@ interface IRouteSubscribeDrawer extends IComponentPageParams {
 }
 
 export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => component((
-  [requestChangeSubscription, requestChangeSubscriptionTether]: Behavior<IWalletClient, Promise<viem.TransactionReceipt>>,
+  [requestChangeSubscription, requestChangeSubscriptionTether]: Behavior<walletLink.IWalletClient, IBatchSubscribeReturnType>,
   [clickClose, clickCloseTether]: Behavior<any>,
   [clickRemoveSubsc, clickRemoveSubscTether]: Behavior<any, IChangeSubscription >,
   [openDepositPopover, openDepositPopoverTether]: Behavior<any>,
@@ -198,23 +196,12 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
               changeWallet: changeWalletTether(),
               click: requestChangeSubscriptionTether(
                 snapshot((list, w3p) => {
-                  const allowances = list.map(x => x.allowance)
-                  const expiries = list.map(x => x.expiry)
-                  const traders = list.map(a => a.trader)
-                  const routeTypeKeys = list.map(x => x.routeTypeKey)
-
-                  const contractDefs = getMappedValue(PUPPET.CONTRACT, w3p.chain.id).Orchestrator
-
-                  return writeContract(w3p, {
-                    ...contractDefs,
-                    functionName: 'batchSubscribe',
-                    args: [w3p.account.address, allowances, expiries, traders, routeTypeKeys]
-                  })
+                  const tx = batchSubscribe(w3p, list)
+                  return tx
                 }, modifySubscriptionList)
               )
             }),
           )
-
         )
       ))
       

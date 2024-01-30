@@ -11,22 +11,11 @@ import { $IntermediatePromise } from "ui-components"
 import * as viem from "viem"
 import { $entry, $positionPnl, $sizeAndLiquidation } from "../../common/$common.js"
 import { $seperator2 } from "../../pages/common"
-import {  IWalletClient } from "../../wallet/walletLink.js"
 import { $ButtonPrimary, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
-import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
+import { IRequestTrade } from "./$PositionAdjustmentDetails"
+import { ITradeParams } from "./$PositionEditor.js"
 
 
-
-
-export type IRequestTradeParams = ITradeConfig & { wallet: IWalletClient }
-export type IRequestTrade = IRequestTradeParams & {
-  // key: viem.Hex
-  executionFee: bigint
-  indexPrice: bigint
-  acceptablePrice: bigint
-  swapRoute: string[]
-  request: Promise<viem.TransactionReceipt>
-}
 
 
 interface IPositionListDetails {

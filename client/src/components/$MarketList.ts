@@ -12,12 +12,11 @@ import { $Table, $defaultTableRowContainer } from 'ui-components'
 import * as viem from 'viem'
 import { $marketSmallLabel } from '../common/$common'
 import { getMarketPoolUsage } from '../logic/tradeV2'
-import { walletLink } from '../wallet'
-import { IPublicProvider } from '../wallet/initWallet'
+import * as walletLink from "wallet"
 import { readContract } from 'viem/actions'
 
 interface IMarketList {
-  publicProviderQuery: Stream<Promise<IPublicProvider>>
+  publicProviderQuery: Stream<Promise<walletLink.IPublicProvider>>
   $container?: NodeComposeFn<$Node>
   chain: viem.Chain
   $rowCallback?: Op<{ market: IMarket, price: IMarketPrice }, NodeComposeFn<$Node>>

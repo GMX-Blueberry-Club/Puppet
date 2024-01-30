@@ -5,11 +5,11 @@ import * as GMX from 'gmx-middleware-const'
 import { IPriceTickListMap } from 'gmx-middleware-utils'
 import { IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType } from 'puppet-middleware-utils'
 import * as viem from 'viem'
-import { IWalletClient } from '../wallet/walletLink'
+import * as walletLink from "wallet"
 
 
 export interface IWalletPageParams {
-  walletClientQuery: Stream<Promise<IWalletClient | null>>
+  walletClientQuery: Stream<Promise<walletLink.IWalletClient | null>>
 }
 
 export interface IComponentPageParams extends IWalletPageParams {

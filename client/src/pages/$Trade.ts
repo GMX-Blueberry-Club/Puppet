@@ -4,42 +4,39 @@ import { $column, $icon, $row, layoutSheet, observer, screenUtils } from "@aelea
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, constant, debounce, empty, map, mergeArray, multicast, now, scan, skipRepeats, snapshot, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { erc20Abi } from "abitype/abis"
 import {
-  ADDRESS_ZERO, IntervalTime, StateStreamStrict, USD_DECIMALS, div, filterNull, formatFixed, getMappedValue,
+  ADDRESS_ZERO, IntervalTime, StateStreamStrict, USD_DECIMALS, applyFactor, div, filterNull, formatFixed, getMappedValue,
   getTokenAmount, getTokenDenominator, getTokenUsd,
   readableAccountingAmount, readableFactorPercentage, readableTokenAmountLabel, readableTokenPrice, readableUsd, switchMap, unixTimestampNow, zipState
 } from "common-utils"
-import * as GMX from "gmx-middleware-const"
 import {
   IMarketInfo, IMarketPrice, TEMP_MARKET_TOKEN_MARKET_MAP,
   getAvailableReservedUsd, getBorrowingFactorPerInterval, getFundingFactorPerInterval, getLiquidationPrice, getMarginFee, getNativeTokenDescription,
   getPositionKey, getPriceImpactForPosition, getTokenDescription, resolveAddress,
 } from "gmx-middleware-utils"
 import { CandlestickData, Coordinate, LineStyle, Time } from "lightweight-charts"
+import { EIP6963ProviderDetail } from "mipd"
 import * as PUPPET from "puppet-middleware-const"
 import { IMirrorPositionOpen, getLastAdjustment, latestPriceMap, queryLatestTokenPriceFeed, queryTraderPositionOpen } from "puppet-middleware-utils"
 import { $ButtonToggle, $CandleSticks, $infoLabel, $infoLabeledValue, $intermediate$node, $intermediateMessage, $target } from "ui-components"
 import { indexDb, uiStorage } from "ui-storage"
 import * as viem from "viem"
-import { readContract } from "viem/actions"
+import * as walletLink from "wallet"
 import { $midContainer } from "../common/$common.js"
 import { $responsiveFlex } from "../common/elements/$common"
 import { $caretDown } from "../common/elements/$icons.js"
 import { $ButtonSecondary } from "../components/form/$Button.js"
 import { $Dropdown } from "../components/form/$Dropdown.js"
-import { $PositionAdjustmentDetails } from "../components/trade/$PositionAdjustmentDetails"
+import { $PositionAdjustmentDetails, IRequestTrade } from "../components/trade/$PositionAdjustmentDetails"
 import { $PositionDetails } from "../components/trade/$PositionDetails.js"
 import { $PositionEditor, IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "../components/trade/$PositionEditor.js"
-import { $PositionListDetails, IRequestTrade } from "../components/trade/$PositionListDetails.js"
+import { $PositionListDetails } from "../components/trade/$PositionListDetails.js"
 import { store } from "../const/store.js"
-import { getFullMarketInfo } from "../logic/tradeV2.js"
+import { getExecuteGasFee, getFullMarketInfo } from "../logic/tradeV2.js"
 import * as trade from "../logic/traderLogic.js"
-import { exchangesWebsocketPriceSource, getMinExecutionFee, getTraderTradeRoute } from "../logic/traderLogic.js"
-import { getEstimatedGasPrice, getGasPrice } from "../wallet/initWallet"
+import { exchangesWebsocketPriceSource, getTokenSpendAmount, getTraderTradeRoute } from "../logic/traderLogic.js"
 import { $seperator2 } from "./common.js"
 import { ITradeFocusMode } from "./type.js"
-import { EIP6963ProviderDetail } from "mipd"
 
 
 
@@ -68,7 +65,6 @@ const TIME_INTERVAL_LABEL_MAP = {
 export const $Trade = (config: ITradeComponent) => component((
   [selectTimeFrame, selectTimeFrameTether]: Behavior<IntervalTime>,
   [changeWallet, changeWalletTether]: Behavior<EIP6963ProviderDetail>,
-
   [changePrimaryToken, changePrimaryTokenTether]: Behavior<viem.Address>,
 
   [changeMarketToken, changeMarketTokenTether]: Behavior<viem.Address>,
@@ -76,35 +72,26 @@ export const $Trade = (config: ITradeComponent) => component((
   [switchFocusMode, switchFocusModeTether]: Behavior<ITradeFocusMode>,
   [switchIsLong, switchIsLongTether]: Behavior<boolean>,
   [switchIsIncrease, switchIsIncreaseTether]: Behavior<boolean>,
-  // [changeTradeRoute, changeTradeRouteTether]: Behavior<viem.Address | null>,
 
   [changeCollateralDeltaAmount, changeCollateralDeltaAmountTether]: Behavior<bigint>,
   [changeSizeDeltaUsd, changeSizeDeltaUsdTether]: Behavior<bigint>,
 
-  // [requestAccountTradeList, requestAccountTradeListTether]: Behavior<IAccountTradeListParamApi, IAccountTradeListParamApi>,
   [changeLeverage, changeLeverageTether]: Behavior<bigint>,
-
   [changeSlippage, changeSlippageTether]: Behavior<bigint>,
   [changeExecutionFeeBuffer, changeExecutionFeeBufferTether]: Behavior<bigint>,
 
-  [changeInputTokenApproved, changeInputTokenApprovedTether]: Behavior<boolean>,
+  [approvePrimarySpendAmount, approvePrimarySpendAmountTether]: Behavior<bigint | null>,
 
   [enableTrading, enableTradingTether]: Behavior<boolean>,
 
   [switchPosition, switchPositionTether]: Behavior<IMirrorPositionOpen>,
   [requestTrade, requestTradeTether]: Behavior<IRequestTrade>,
 
-  // [focusPriceAxisPoint, focusPriceAxisPointTether]: Behavior<Coordinate | null>,
-  // [chartClick, chartClickTether]: Behavior<MouseEventParams>,
-  // [chartCrosshairMove, chartCrosshairMoveTether]: Behavior<MouseEventParams, MouseEventParams>,
-
   [changeYAxisCoords, changeYAxisCoordsTether]: Behavior<Coordinate>,
   [changefocusPrice, changefocusPriceTether]: Behavior<number | null>,
   [changeIsFocused, changeIsFocusedTether]: Behavior<boolean>,
   
   [changeFeeDisplayRate, changeFeeDisplayRateTether]: Behavior<IntervalTime>,
-  
-  // [chartVisibleLogicalRangeChange, chartVisibleLogicalRangeChangeTether]: Behavior<LogicalRange | null>,
 
   [clickResetPositionQuery, clickResetPositionTether]: Behavior<IMirrorPositionOpen | null>,
 
@@ -112,12 +99,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
   const { routeTypeListQuery, walletClientQuery, chain, publicProviderQuery, parentRoute, referralCode } = config
   
-  // const gmxContractMap = GMX.CONTRACT[config.chain.id]
 
-  // const orderCancelled = listenContract({
-  //   abi: gmxContractMap.EventEmitter.abi,
-  //   address: gmxContractMap.EventEmitter.address
-  // })('EventLog2', { eventNameHash: GMX.OrderEvent.OrderCancelled })
   const focusMode = replayLatest(switchFocusMode, ITradeFocusMode.collateral)
 
   const chartInterval = uiStorage.replayWrite(store.tradeBox, selectTimeFrame, 'chartInterval')
@@ -306,11 +288,6 @@ export const $Trade = (config: ITradeComponent) => component((
     // return params.marginFeeUsd + params.swapFee + params.priceImpactUsd
   }, combineObject({ marginFeeUsd, priceImpactUsd }))
 
-  // const collateralDelta = map(params => {
-  //   return getTokenAmount(params.primaryPrice, params.collateralDeltaUsd)
-  // }, combineObject({ primaryPrice, collateralDeltaAmount }))
-
-
   const netPositionValueUsd = replayLatest(multicast(map(params => {
     const mirroredPosition = params.mirrorPosition
 
@@ -400,38 +377,31 @@ export const $Trade = (config: ITradeComponent) => component((
     return lp
   }, zipState({ mirrorPosition, collateralPrice, indexPrice, sizeDeltaUsd, collateralDeltaAmount, marketInfo, isLong, collateralToken, indexToken })))
 
-  const isPrimaryApproved = mergeArray([
-    changeInputTokenApproved,
-    skipRepeats(awaitPromises(snapshot(async (collateralAmount, params) => {
+  const primarySpendAmount = mergeArray([
+    approvePrimarySpendAmount,
+    skipRepeats(switchMap(async params => {
+      if (!params.isTradingEnabled || params.primaryToken === ADDRESS_ZERO || !params.isIncrease) {
+        return null
+      }
+
       const wallet = await params.walletClientQuery
 
-      if (wallet === null || params.primaryToken === ADDRESS_ZERO || !params.isIncrease) {
-        return true
+      if (wallet === null) {
+        return null
       }
 
-      const contractAddress = getMappedValue(GMX.TRADE_CONTRACT_MAPPING, config.chain.id).Router
-
-      if (contractAddress === null) {
-        return false
-      }
-
-      const orchAddress = getMappedValue(PUPPET.CONTRACT, wallet.chain.id).Orchestrator
+      const orchestratorAddress = getMappedValue(PUPPET.CONTRACT, wallet.chain.id).Orchestrator
 
       try {
-        const allowedSpendAmount = await readContract(wallet, {
-          address: params.primaryToken,
-          abi: erc20Abi,
-          functionName: 'allowance',
-          args: [wallet.account.address, orchAddress.address]
-        })
+        const allowedSpendAmount = await getTokenSpendAmount(wallet, params.primaryToken, orchestratorAddress.address, wallet.account.address)
 
-        return allowedSpendAmount > collateralAmount
+        return allowedSpendAmount
       } catch (err) {
-        return false
+        return null
       }
-
-    }, collateralDeltaAmount, combineObject({ walletClientQuery, primaryToken, isIncrease, tradeRoute }))))
+    }, combineObject({ walletClientQuery, isTradingEnabled, primaryToken, isIncrease })))
   ])
+
 
   const marketAvailableLiquidityUsdQuery = replayLatest(multicast(map(async params => {
     const mktInfo = await params.marketInfoQuery
@@ -459,28 +429,29 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ chartInterval, indexToken })))))
 
 
-  const gasPrice = getGasPrice(publicProviderQuery)
-  const estimatedGasPrice = getEstimatedGasPrice(publicProviderQuery)
+  const gasPrice = walletLink.getGasPrice(publicProviderQuery)
+  const estimatedGasPrice = walletLink.getEstimatedGasPrice(publicProviderQuery)
+  const executeGasLimit = switchMap(async provider => getExecuteGasFee(await provider), publicProviderQuery)
 
-  // const executionFee = replayLatest(multicast(map(params => {
-  //   const estGasLimit = params.isIncrease ? params.executeGasLimit.increaseGasLimit : params.executeGasLimit.decreaseGasLimit
+  const executionFee = replayLatest(multicast(map(params => {
+    const keerperGasLimit = params.isIncrease ? params.executeGasLimit.increaseGasLimit : params.executeGasLimit.decreaseGasLimit
 
-  //   const adjustedGasLimit = params.executeGasLimit.estimatedFeeBaseGasLimit + applyFactor(estGasLimit, params.executeGasLimit.estimatedFeeMultiplierFactor)
-  //   const feeTokenAmount = adjustedGasLimit * params.estimatedGasPrice.maxFeePerGas!
+    const adjustedGasLimit = params.executeGasLimit.estimatedFeeBaseGasLimit + applyFactor(keerperGasLimit, params.executeGasLimit.estimatedFeeMultiplierFactor)
+    const feeTokenAmount = adjustedGasLimit * params.estimatedGasPrice.maxFeePerGas!
 
-  //   return -feeTokenAmount
-  // }, combineObject({ walletClientQuery, executeGasLimit, isIncrease, estimatedGasPrice, gasPrice }))))
-  const executionFee = replayLatest(multicast(switchMap(async params => {
-    const provider = await params.publicProviderQuery
+    return -feeTokenAmount
+  }, combineObject({ walletClientQuery, executeGasLimit, isIncrease, estimatedGasPrice, gasPrice }))))
+  // const executionFee = replayLatest(multicast(switchMap(async params => {
+  //   const provider = await params.publicProviderQuery
 
-    if (provider === null) {
-      return 0n
-    }
+  //   if (provider === null) {
+  //     return 0n
+  //   }
 
-    const estGasLimit = await getMinExecutionFee(provider)
+  //   const estGasLimit = await getMinExecutionFee(provider)
 
-    return -estGasLimit
-  }, combineObject({ publicProviderQuery }))))
+  //   return -estGasLimit
+  // }, combineObject({ publicProviderQuery }))))
 
 
 
@@ -489,11 +460,11 @@ export const $Trade = (config: ITradeComponent) => component((
     tradeRoute,
     routeTypeKey,
 
-    position: mirrorPosition,
+    mirrorPosition,
     netPositionValueUsd,
 
     isTradingEnabled,
-    isPrimaryApproved,
+    primarySpendAmount,
 
     marketPrice,
     collateralPrice,
@@ -574,7 +545,7 @@ export const $Trade = (config: ITradeComponent) => component((
             // paddingLeft: '26px'
           })
           : style({}),
-        style({ height: '45vh', minHeight: '460px', position: 'relative', backgroundColor: pallete.background }),
+        style({ height: '45vh', minHeight: '480px', position: 'relative', backgroundColor: pallete.background }),
         // screenUtils.isDesktopScreen
         //   ? style({ height: '500px' })
         //   : style({ height: '500px' })
@@ -881,7 +852,7 @@ export const $Trade = (config: ITradeComponent) => component((
             })({
               changeWallet: changeWalletTether(),
               clickResetPosition: clickResetPositionTether(),
-              approvePrimaryToken: changeInputTokenApprovedTether(),
+              primarySpendAmount: approvePrimarySpendAmountTether(),
               enableTrading: enableTradingTether(),
               requestTrade: requestTradeTether(),
               // leverage: changeLeverageTether(),

@@ -7,14 +7,13 @@ import { Stream } from "@most/types"
 import { getMappedValue, parseFixed, readableTokenAmount, readableTokenAmountLabel, switchMap } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import { getTokenDescription } from "gmx-middleware-utils"
-import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
+import * as walletLink from "wallet"
 import { $TextField } from "../../common/$TextField.js"
-import { writeContract } from "../../logic/common.js"
-import { IWalletClient } from "../../wallet/walletLink.js"
+import { IWithdrawFundsReturnType, withdrawFunds } from "../../logic/puppetLogic"
+import { IComponentPageParams } from "../../pages/type.js"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $SubmitBar } from "../form/$Form"
-import { IComponentPageParams } from "../../pages/type.js"
 
 
 
@@ -24,7 +23,7 @@ interface IAssetWithdrawEditor extends IComponentPageParams {
 }
 
 export const $AssetWithdrawEditor = (config: IAssetWithdrawEditor) => component((
-  [requestDepositAsset, requestDepositAssetTether]: Behavior<IWalletClient, Promise<viem.TransactionReceipt>>,
+  [requestDepositAsset, requestDepositAssetTether]: Behavior<walletLink.IWalletClient, IWithdrawFundsReturnType>,
   [inputDepositAmount, inputDepositAmountTether]: Behavior<string, bigint>,
   [clickMaxDeposit, clickMaxDepositTether]: Behavior<any>,
 ) => {
@@ -67,11 +66,7 @@ export const $AssetWithdrawEditor = (config: IAssetWithdrawEditor) => component(
       })({
         click: requestDepositAssetTether(
           snapshot((params, w3p) => {
-            return writeContract(w3p, {
-              ...PUPPET.CONTRACT[w3p.chain.id].Orchestrator,
-              functionName: 'withdraw',
-              args: [params.amount, config.token, w3p.account.address, false] as const
-            })
+            return withdrawFunds(w3p, token, params.amount)
           }, combineObject({ amount })),
           multicast
         )
@@ -79,15 +74,8 @@ export const $AssetWithdrawEditor = (config: IAssetWithdrawEditor) => component(
     ),                  
     
     {
-      requestDepositAsset: map(async tx => {
-        const logs = viem.parseEventLogs({
-          abi: PUPPET.CONTRACT[42161].Orchestrator.abi,
-          logs: (await tx).logs
-        })
-
-        // @ts-ignore
-        const newLocal = logs.find(x => x.eventName === 'Withdraw')!.args.amount
-        return newLocal as bigint
+      requestWithdrawAsset: map(async tx => {
+        return (await tx).events[0].args.amountOut
       }, requestDepositAsset)
     }
 

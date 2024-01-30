@@ -1,65 +1,96 @@
-import { Behavior, O } from "@aelea/core"
-import { $Branch, $node, $text, INode, attrBehavior, component, nodeEvent, style, styleBehavior } from "@aelea/dom"
+import { Behavior, O, combineArray, combineObject } from "@aelea/core"
+import { $Branch, $Node, $text, INode, attrBehavior, component, nodeEvent, style, styleBehavior } from "@aelea/dom"
 import { $row, Control, layoutSheet } from "@aelea/ui-components"
-import { awaitPromises, empty, map, mergeArray, multicast, never, switchLatest, tap } from "@most/core"
+import { constant, empty, map, mergeArray, multicast, now, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { $alertTooltip } from "ui-components"
-import * as viem from "viem"
-import { $iconCircular } from "../../common/elements/$common.js"
-import { IWalletClient } from "../../wallet/walletLink"
-import { $Submit, IButtonPrimaryCtx } from "./$Button"
+import { PromiseStateError, PromiseStatus, promiseState } from "common-utils"
 import { EIP6963ProviderDetail } from "mipd"
+import { $alertPositiveTooltip, $alertTooltip, $intermediateTooltip, $txHashRef } from "ui-components"
+import * as viem from "viem"
+import * as walletLink from "wallet"
+import { $IntermediateConnectButton } from "../$ConnectWallet"
+import { $iconCircular } from "../../common/elements/$common.js"
+import { IWriteContractReturnQuery } from "../../logic/commonLogic"
+import { $defaultButtonPrimary } from "./$Button"
+import { $ButtonCore } from "./$ButtonCore"
 
 
-
-
-export interface IForm extends IButtonPrimaryCtx  {
+export interface IForm {
+  walletClientQuery: Stream<Promise<walletLink.IWalletClient | null>>
+  txQuery: Stream<IWriteContractReturnQuery>
   alert?: Stream<string | null>
+  $content: $Node
+  $barContent?: $Node
+  disabled?: Stream<boolean>
 }
 
-
-
 export const $SubmitBar = (config: IForm) => component((
-  [click, clickTether]: Behavior<IWalletClient>,
+  [click, clickTether]: Behavior<PointerEvent, walletLink.IWalletClient>,
   [changeWallet, changeWalletTether]: Behavior<EIP6963ProviderDetail>,
 ) => {
-  const { alert = empty(), txQuery } = config
-  const multicastRequest = multicast(txQuery)
+  const { $barContent, disabled = now(false), alert = now(null), txQuery, $content, walletClientQuery } = config
 
-  const transactionError = awaitPromises(map(async query => {
-    try {
-      await query
-      return null
-    } catch (err) {
-
-      if (err instanceof viem.ContractFunctionExecutionError && err.cause instanceof viem.ContractFunctionRevertedError) {
-        return String(err.cause.reason || err.shortMessage || err.message)
-      }
-
-      return null
-    }
-  }, multicastRequest))
-
-  const alertMessage: Stream<string | null> = mergeArray([alert, transactionError])
+  const multicastTxQuery = multicast(promiseState(txQuery))
+  const requestStatus = mergeArray([
+    multicastTxQuery,
+    map(a => a ? { state: PromiseStatus.ERROR, error: new Error(a) } as PromiseStateError: null, alert)
+  ])
+  const isRequestPending = startWith(false, map(s => s.state === PromiseStatus.PENDING, multicastTxQuery))
 
   return [
-    $row(layoutSheet.spacingSmall, style({ placeContent: 'space-between', minWidth: 0 }))(
-      switchLatest(map(error => {
-        if (error === null) {
+    $row(layoutSheet.spacingSmall, style({ minWidth: 0, alignItems: 'center', placeContent: 'flex-end' }))(
+      switchLatest(map(status => {
+        if (status === null) {
           return empty()
         }
 
-        return $alertTooltip(
-          $text(style({ whiteSpace: 'pre-wrap' }))(error)
+        if (status.state === PromiseStatus.PENDING) {
+          return $intermediateTooltip($text('Awaiting confirmation'))
+        } else if (status.state === PromiseStatus.ERROR) {
+          const err = status.error
+          let message: string | undefined
+
+          if (err instanceof viem.TransactionExecutionError) {
+            message = err.shortMessage || err.message
+          }
+
+          if (err instanceof viem.ContractFunctionExecutionError && err.cause instanceof viem.ContractFunctionRevertedError) {
+            message = err.cause.reason || err.shortMessage || err.message
+          }
+
+          return $alertTooltip(
+            $text(style({ whiteSpace: 'pre-wrap' }))(message || err.message || 'Transaction failed')
+          )
+        }
+
+        return $alertPositiveTooltip(
+          $row(layoutSheet.spacingSmall)(
+            $text('Transaction confirmed'),
+            $txHashRef(status.value.transactionReceipt.transactionHash)
+          )
         )
-      }, alertMessage)),
-      $node(),
-      $Submit({
-        ...config,
-        txQuery: multicastRequest
+      }, requestStatus)),
+      $barContent ?? empty(),
+      $IntermediateConnectButton({
+        walletClientQuery,
+        $$display: map(wallet => {
+          return $ButtonCore({
+            $container: $defaultButtonPrimary(style({
+              position: 'relative',
+              overflow: 'hidden',
+            })),
+            disabled: combineArray(params => {
+              return params.alert !== null || params.disabled || params.isRequestPending
+            }, combineObject({ disabled, isRequestPending, alert })),
+            $content: $row(style({ position: 'relative' })(config.$content))
+          })({
+            click: clickTether(
+              constant(wallet)
+            )
+          })
+        })
       })({
-        changeWallet: changeWalletTether(),
-        click: clickTether()
+        changeWallet: changeWalletTether()
       })
     ),
 

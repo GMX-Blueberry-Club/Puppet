@@ -1,0 +1,26 @@
+{
+    "name": "wallet",
+    "main": ".dist/cjs/index.js",
+    "module": ".dist/esm/index.js",
+    "types": ".dist/types/index.d.ts",
+    "type": "module",
+    "sideEffects": false,
+    "files": [
+        ".dist"
+    ],
+    "scripts": {
+        "clean": "rm -fr .dist/*",
+        "build": "bun tsc -b"
+    },
+    "dependencies": {
+        "viem": "^2.5.0",
+        "mipd": "^0.0.5",
+        "@walletconnect/ethereum-provider": "^2.11.0",
+        "@aelea/core": "^1.3.2",
+        "@most/core": "^1.6.1",
+        "@most/disposable": "^1.3.0",
+        "@most/prelude": "^1.8.0",
+        "@most/scheduler": "^1.3.0",
+        "@most/types": "^1.1.0"
+    }
+}

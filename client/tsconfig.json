@@ -57,5 +57,5 @@
   ],
   "include": [
     "src"
-, "src/sw.ts", "../utils/router", "../utils/indexer/scope", "../utils/indexer/process"  ]
+, "src/sw.ts", "../utils/router", "../utils/indexer/scope", "../utils/indexer/process", "../common/wallet/src"  ]
 }

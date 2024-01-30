@@ -8,9 +8,10 @@ import { IPositionDecrease, IPositionIncrease, IPriceCandle, TEMP_MARKET_TOKEN_M
 import { IMirrorPositionOpen } from "puppet-middleware-utils"
 import { $Table, $infoLabel, $txHashRef } from "ui-components"
 import * as viem from "viem"
-import { IWalletClient } from "../../wallet/walletLink.js"
+import * as walletLink from "wallet"
 import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 import { IWalletPageParams } from "../../pages/type.js"
+import { IRequestTrade } from "./$PositionAdjustmentDetails"
 
 
 
@@ -22,15 +23,6 @@ interface IPositionAdjustmentHistory extends IWalletPageParams {
   mirrorPosition: Stream<IMirrorPositionOpen | null>
 }
 
-export type IRequestTradeParams = ITradeConfig & { wallet: IWalletClient }
-export type IRequestTrade = IRequestTradeParams & {
-  // key: viem.Hex
-  executionFee: bigint
-  indexPrice: bigint
-  acceptablePrice: bigint
-  swapRoute: string[]
-  request: Promise<viem.TransactionReceipt>
-}
 
 
 

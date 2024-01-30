@@ -2,19 +2,18 @@
 import { Behavior, combineObject, replayLatest } from "@aelea/core"
 import { $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
-import { constant, empty, join, map, mergeArray, multicast, snapshot, startWith } from "@most/core"
-import { erc20Abi } from "abitype/abis"
+import { empty, map, mergeArray, multicast, now, sample, skipRepeats, snapshot, startWith } from "@most/core"
 import { getMappedValue, parseFixed, readableTokenAmount, readableTokenAmountLabel, switchMap } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import { getTokenDescription } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
-import { readContract } from "viem/actions"
+import * as walletLink from "wallet"
 import { $TextField } from "../../common/$TextField.js"
-import { writeContract } from "../../logic/common.js"
-import { getAddressTokenBalance } from "../../logic/traderLogic.js"
+import { IApproveSpendReturnType, approveSpend } from "../../logic/commonLogic.js"
+import { IDepositFundsReturnType, depositFunds } from "../../logic/puppetLogic"
+import { getAddressTokenBalance, getTokenSpendAmount } from "../../logic/traderLogic.js"
 import { IComponentPageParams } from "../../pages/type.js"
-import { walletLink } from "../../wallet"
 import { $ButtonSecondary, $Submit, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $SubmitBar } from "../form/$Form"
 
@@ -23,17 +22,28 @@ interface IAssetDepositEditor extends IComponentPageParams {
   token: viem.Address
 }
 
+
+
 export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
-  [requestChangeSubscription, requestChangeSubscriptionTether]: Behavior<walletLink.IWalletClient, Promise<viem.TransactionReceipt>>,
-  [requestDepositAsset, requestDepositAssetTether]: Behavior<walletLink.IWalletClient, Promise<viem.TransactionReceipt>>,
+  [approveTokenSpend, approveTokenSpendTether]: Behavior<walletLink.IWalletClient, IApproveSpendReturnType>,
+  [requestDepositAsset, requestDepositAssetTether]: Behavior<walletLink.IWalletClient, IDepositFundsReturnType>,
   [inputDepositAmount, inputDepositAmountTether]: Behavior<string>,
   [clickMaxDeposit, clickMaxDepositTether]: Behavior<any>,
 ) => {
 
   const { walletClientQuery } = config
 
+  //   const tx = await 
+
+  // const value = tx.events[0].args.value
+
+  // if (typeof value !== 'bigint') {
+  //   throw new Error('Invalid spend amount')
+  // }
+
+
   const tokenDescription = getTokenDescription(config.token)
-  const balance = switchMap(async walletQuery => {
+  const walletBalance = switchMap(async walletQuery => {
     const wallet = await walletQuery
 
     if (wallet == null) {
@@ -43,21 +53,31 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
     return getAddressTokenBalance(wallet, config.token, wallet.account.address)
   }, walletClientQuery)
   const indexToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION_MAP, config.token)
-  const maxBalance = multicast(join(constant(map(amount => readableTokenAmount(tokenDescription, amount), balance), clickMaxDeposit)))
-  const allowance = replayLatest(multicast(switchMap(async walletQuery => {
-    const wallet = await walletQuery
+  
+  const allowance = mergeArray([
+    replayLatest(multicast(switchMap(async walletQuery => {
+      const wallet = await walletQuery
 
-    if (wallet == null) {
-      return 0n
-    }
+      if (wallet == null) {
+        return 0n
+      }
 
-    return readContract(wallet, {
-      address: config.token,
-      abi: erc20Abi,
-      functionName: 'allowance',
-      args: [wallet.account?.address, PUPPET.CONTRACT[42161].Orchestrator.address]
-    })
-  }, config.walletClientQuery)))
+      const puppetContractMap = getMappedValue(PUPPET.CONTRACT, wallet.chain.id)
+
+      return getTokenSpendAmount(wallet, config.token, puppetContractMap.Orchestrator.address, wallet.account.address)
+    }, config.walletClientQuery)))
+  ])
+
+  const maxBalance = sample(walletBalance, clickMaxDeposit)
+  const amount = startWith(0n, mergeArray([
+    maxBalance,
+    map(str => parseFixed(str, indexToken.decimals), inputDepositAmount)
+  ]))
+
+
+  const isAllowanceRequired = skipRepeats(map(params => {
+    return params.allowance ? params.allowance > params.amount : false
+  }, combineObject({ allowance, amount })))
 
 
 
@@ -69,9 +89,9 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
       $row(layoutSheet.spacingSmall, style({ position: 'relative' }))(
         $TextField({
           label: 'Amount',
-          value: maxBalance,
+          value: map(val => readableTokenAmount(tokenDescription, val), maxBalance),
           placeholder: 'Enter amount',
-          hint: map(amount => `Balance: ${readableTokenAmountLabel(tokenDescription, amount)}`, balance),
+          hint: map(amount => `Balance: ${readableTokenAmountLabel(tokenDescription, amount)}`, walletBalance),
         })({
           change: inputDepositAmountTether()
         }),
@@ -84,66 +104,41 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
         })
       ),
 
-      switchMap(allow => {
-        const amount = startWith('0', mergeArray([maxBalance, inputDepositAmount]))
-
+      switchMap(allowed => {
         return $column(layoutSheet.spacing)(
-          allow === 0n ? $Submit({
+          // $labeledDivider('2. Deposit USDC'),
+
+          allowed ? empty() : $Submit({
             walletClientQuery,
             $content: $text('Approve USDC'),
-            txQuery: requestChangeSubscription
+            txQuery: approveTokenSpend
           })({
-            click: requestChangeSubscriptionTether(
-              map(w3p => {
-                const newLocal = writeContract(w3p, {
-                  address: GMX.ARBITRUM_ADDRESS.USDC,
-                  abi: erc20Abi,
-                  functionName: 'approve',
-                  args: [PUPPET.CONTRACT[w3p.chain.id].Orchestrator.address, 2n ** 256n - 1n]
-                })
-                return newLocal
+            click: approveTokenSpendTether(
+              map(async w3p => {
+                return approveSpend(w3p, GMX.ARBITRUM_ADDRESS.USDC)
               }),
               multicast
             )
-          }) : empty(),
+          }),
           $SubmitBar({
             walletClientQuery,
             txQuery: requestDepositAsset,
             $content: $text('Deposit'),
-            disabled: map(params => {
-              if (!Number(params.amount) || allow === 0n) return true
-
-              return false
-            }, combineObject({ amount }))
+            disabled: now(!allowed)
           })({
             click: requestDepositAssetTether(
               snapshot(async (params, w3p) => {
-                const parsedFormatAmount = parseFixed(params.amount, indexToken.decimals)
-
-                return writeContract(w3p, {
-                  ...PUPPET.CONTRACT[w3p.chain.id].Orchestrator,
-                  functionName: 'deposit',
-                  args: [parsedFormatAmount, config.token, w3p.account.address] as const
-                })
+                return depositFunds(w3p, config.token, params.amount)
               }, combineObject({ amount })),
               multicast
             )
           })
         )
-      }, allowance),
+      }, isAllowanceRequired),
     ),                  
     
     {
-      requestDepositAsset: map(async tx => {
-        const logs = viem.parseEventLogs({
-          abi: PUPPET.CONTRACT[42161].Orchestrator.abi,
-          logs: (await tx).logs
-        })
-
-        // @ts-ignore
-        const newLocal = logs.find(x => x.eventName === 'Deposit')!.args.amount
-        return newLocal as bigint
-      }, requestDepositAsset)
+      requestDepositAsset: map(async tx => (await tx).events[0].args.amount, requestDepositAsset)
     }
 
   ]

@@ -10,8 +10,7 @@ import * as PUPPET from "puppet-middleware-const"
 import { getRouteAddressKey, getTradeRouteKey } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { getBalance, readContract } from "viem/actions"
-import { IWalletClient } from "../wallet/walletLink"
-import { IPublicProvider } from "../wallet/initWallet"
+import * as walletLink from "wallet"
 
 
 
@@ -201,7 +200,7 @@ export const getGmxIoPricefeed = async (queryParams: IRequestPricefeedApi): Prom
 }
 
 export async function getTraderTradeRoute(
-  wallet: IWalletClient,
+  wallet: walletLink.IWalletClient,
   trader: viem.Address,
   collateralToken: viem.Address,
   indexToken: viem.Address,
@@ -228,7 +227,7 @@ export async function getTraderTradeRoute(
   }
 }
 
-export async function getMinExecutionFee(wallet: IPublicProvider): Promise<bigint> {
+export async function getMinExecutionFee(wallet: walletLink.IPublicProvider): Promise<bigint> {
   const puppetContractMap = getMappedValue(PUPPET.CONTRACT, wallet.chain.id)
   const minExecutionFeeKey = hashData(["string"], ["MIN_EXECUTION_FEE"])
 
@@ -237,4 +236,15 @@ export async function getMinExecutionFee(wallet: IPublicProvider): Promise<bigin
     functionName: 'getUint',
     args: [minExecutionFeeKey],
   })
+}
+
+
+export async function getTokenSpendAmount(provider: walletLink.IWalletClient, token: viem.Address, spender: viem.Address, address: viem.Address): Promise<bigint> {
+  const allowedSpendAmount = await readContract(provider, {
+    address: token,
+    abi: erc20Abi,
+    functionName: 'allowance',
+    args: [address, spender]
+  })
+  return allowedSpendAmount
 }

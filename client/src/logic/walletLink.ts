@@ -4,7 +4,6 @@ import { arbitrum } from 'viem/chains'
 export const chains = [ arbitrum ] as const
 
 export type ISupportedChain = typeof chains[number]
-export type IWalletClient = viem.WalletClient<viem.Transport, ISupportedChain, viem.Account>
 
 // const storage = createStorage({ storage: window.localStorage, key: 'walletLink' })
 const projectId = import.meta.env.VITE_WC_PROJECT_ID || 'fdc797f2e6a68e01b9e17843c939673e'
