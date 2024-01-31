@@ -31,7 +31,7 @@ export const CONTRACT = {
       abi: flashLoanHandler,
     },
     VotingEscrow: {
-      address: "0xE85389C50CBa4953174236be6C864901BB2dCA61",
+      address: "0xFcdc2af1b2cA1581CD0f4995F459DD774257f5C8",
       abi: votingEscrow,
     },
     GaugeController: {

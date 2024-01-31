@@ -1,9 +1,9 @@
 import { Bytes, ethereum, log } from "@graphprotocol/graph-ts"
-import { EventLog } from "../generated/EventEmitter/EventEmitter"
-import { MarketCreated, OrderCreated, OrderStatus, PositionDecrease, PositionFeesCollected, PositionIncrease, PositionOpen, PositionSettled } from "../generated/schema"
-import { OrderExecutionStatus, ZERO_BI } from "./utils/const"
-import { getAddressItem, getBoolItem, getBytes32Item, getIntItem, getUintItem } from "./utils/datastore"
-import { getIdFromEvent, getIndexToken } from "./utils/utils"
+import { EventLog } from "../../generated/EventEmitter/EventEmitter"
+import { MarketCreated, OrderCreated, OrderStatus, PositionDecrease, PositionFeesCollected, PositionIncrease, PositionOpen, PositionSettled } from "../../generated/schema"
+import { OrderExecutionStatus, ZERO_BI } from "./const"
+import { getAddressItem, getBoolItem, getBytes32Item, getIntItem, getUintItem } from "./datastore"
+import { getIdFromEvent, getIndexToken } from "./utils"
 
 
 

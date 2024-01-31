@@ -8,7 +8,7 @@ import { currentTime } from "@most/scheduler"
 
 
 export type StateStream<T> = {
-  [P in keyof T]?: Stream<T[P]> | T[P]
+  [P in keyof T]: Stream<T[P]> | T[P]
 }
 export type StateStreamStrict<T> = {
   [P in keyof T]: Stream<T[P]>
@@ -19,6 +19,11 @@ type IStreamOrPromise<T> = Stream<T> | Promise<T>
 
 export function combineState<A, K extends keyof A = keyof A>(state: StateStream<A>): Stream<A> {
   const entries = Object.entries(state) as [keyof A, Stream<A[K]>| A[K]][]
+
+  if (entries.length === 0) {
+    return now({} as A)
+  }
+
   const streams = entries.map(([_, stream]) => streamOf(stream))
 
   const zipped = combineArray((...arrgs: A[K][]) => {

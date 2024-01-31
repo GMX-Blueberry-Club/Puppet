@@ -277,7 +277,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
             $column(layoutSheet.spacingSmall)(
               style({ placeContent: 'space-between' })(
                 $infoLabeledValue(
-                  'Transaction Cost',
+                  'Network cost',
                   $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
                     $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(map(params => {
                       return `${readableTokenAmountLabel(getNativeTokenDescription(config.chain), params.executionFeeAfterBuffer)}`
@@ -286,7 +286,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
                       return readablePnl(params.executionFeeAfterBufferUsd)
                     }, combineObject({ executionFeeAfterBufferUsd, executionFeeAfterBuffer })))
                   )
-                ),
+                ), 
               ),
               $seperator2,
               style({ placeContent: 'space-between' })(

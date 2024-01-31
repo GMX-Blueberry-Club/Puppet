@@ -4,6 +4,7 @@
   "search.exclude": {
     "**/.dist": true,
     "**/node_modules": true,
+    "**/lib": true,
     "**/generated": true,
     "**/tsconfig.tsbuildinfo": true
   },

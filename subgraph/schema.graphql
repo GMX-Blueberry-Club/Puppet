@@ -376,7 +376,8 @@ type MirrorPositionOpen @entity {
   id: ID!
   link: MirrorPositionLink!
 
-  position: PositionOpen!
+  position: PositionOpen
+  positionKey: Bytes!
 
   trader: Bytes!
   tradeRoute: Bytes!
@@ -400,6 +401,7 @@ type MirrorPositionSettled @entity(immutable: true) {
   link: MirrorPositionLink!
 
   position: PositionSettled!
+  positionKey: Bytes!
 
   trader: Bytes!
   tradeRoute: Bytes!
@@ -560,6 +562,28 @@ type MarketCreated @entity(immutable: true) {
   shortToken: Bytes!
   marketToken: Bytes!
   salt: Bytes!
+}
+
+type CreditPuppet @entity(immutable: true) {
+  id: Bytes!
+  amount: BigInt! # uint256
+  asset: Bytes! # address
+  puppet: Bytes! # address
+  caller: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type DebitPuppet @entity(immutable: true) {
+  id: Bytes!
+  amount: BigInt! # uint256
+  asset: Bytes! # address
+  puppet: Bytes! # address
+  caller: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
 }
 
 
@@ -736,46 +760,115 @@ type MarketCreated @entity(immutable: true) {
 #   transactionHash: Bytes!
 # }
 
-# type CreditPuppet @entity(immutable: true) {
-#   id: Bytes!
-#   amount: BigInt! # uint256
-#   asset: Bytes! # address
-#   puppet: Bytes! # address
-#   caller: Bytes! # address
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
 
-# type DebitPuppet @entity(immutable: true) {
-#   id: Bytes!
-#   amount: BigInt! # uint256
-#   asset: Bytes! # address
-#   puppet: Bytes! # address
-#   caller: Bytes! # address
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
 
-# type Initialize @entity(immutable: true) {
-#   id: Bytes!
-#   keeper: Bytes! # address
-#   platformFeeRecipient: Bytes! # address
-#   routeFactory: Bytes! # address
-#   gauge: Bytes! # address
-#   routeSetter: Bytes! # address
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
+# OptionPuppet
+type AddRewards @entity(immutable: true) {
+  id: Bytes!
+  amount: BigInt! # uint256
+  gauge: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
 
-# type LiquidatePosition @entity(immutable: true) {
-#   id: Bytes!
-#   tradeRoute: Bytes! # address
-#   routeKey: Bytes! # bytes32
-#   positionKey: Bytes! # bytes32
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
+
+type Exercise @entity(immutable: true) {
+  id: Bytes!
+  amount: BigInt! # uint256
+  strike: BigInt! # uint256
+  OptionPuppet_id: BigInt! # uint256
+  receiver: Bytes! # address
+  sender: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Mint @entity(immutable: true) {
+  id: Bytes!
+  price: BigInt! # uint256
+  amount: BigInt! # uint256
+  strike: BigInt! # uint256
+  expiry: BigInt! # uint256
+  OptionPuppet_id: BigInt! # uint256
+  gauge: Bytes! # address
+  receiver: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Refund @entity(immutable: true) {
+  id: Bytes!
+  sender: Bytes! # address
+  receiver: Bytes! # address
+  amount: BigInt! # uint256
+  strike: BigInt! # uint256
+  OptionPuppet_id: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type SetDiscount @entity(immutable: true) {
+  id: Bytes!
+  discount: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}type AuthorityUpdated @entity(immutable: true) {
+  id: Bytes!
+  user: Bytes! # address
+  newAuthority: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Claim @entity(immutable: true) {
+  id: Bytes!
+  epoch: BigInt! # uint256
+  userReward: BigInt! # uint256
+  user: Bytes! # address
+  receiver: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type DepositRewards @entity(immutable: true) {
+  id: Bytes!
+  amount: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type OwnershipTransferred @entity(immutable: true) {
+  id: Bytes!
+  user: Bytes! # address
+  newOwner: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type UserScoreUpdate @entity(immutable: true) {
+  id: Bytes!
+  user: Bytes! # address
+  volume: BigInt! # uint256
+  profit: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type WeightsUpdate @entity(immutable: true) {
+  id: Bytes!
+  profitWeight: BigInt! # uint256
+  volumeWeight: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}

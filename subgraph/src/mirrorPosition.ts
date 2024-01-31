@@ -7,6 +7,8 @@ import {
   SetRouteType as SetRouteTypeEvent,
   SharesIncrease as SharesIncreaseEvent,
   Subscribe as SubscribeRouteEvent,
+  CreditPuppet as CreditPuppetEvent,
+  DebitPuppet as DebitPuppetEvent,
   Withdraw as WithdrawEvent,
 } from "../generated/Orchestrator/Orchestrator"
 import {
@@ -25,8 +27,10 @@ import {
   SharesIncrease,
   SubscribeTradeRoute,
   Withdraw,
+  CreditPuppet,
+  DebitPuppet,
 } from "../generated/schema"
-import { getPuppetTradeRouteKey } from "./utils/utils"
+import { getPuppetTradeRouteKey } from "./common/utils"
 
 export function handleOpenPosition(event: OpenPositionEvent): void {
   const requestMirrorPosition = new RequestMirrorPosition(event.params.requestKey)
@@ -108,7 +112,9 @@ export function handleExecutePosition(event: ExecutePositionEvent): void {
       mirrorPositionOpen = new MirrorPositionOpen(executePosition.tradeRoute.toHex())
 
       mirrorPositionOpen.link = executePosition.requestKey
+
       mirrorPositionOpen.position = requestMirrorPosition.positionKey.toHex()
+      mirrorPositionOpen.positionKey = requestMirrorPosition.positionKey
 
       mirrorPositionOpen.trader = requestMirrorPosition.trader
       mirrorPositionOpen.tradeRoute = requestMirrorPosition.tradeRoute
@@ -157,7 +163,7 @@ export function handleExecutePosition(event: ExecutePositionEvent): void {
       return
     }
 
-    if (PositionOpen.load(mirrorPositionOpen.position) !== null) {
+    if (mirrorPositionOpen.position && PositionOpen.load(mirrorPositionOpen.position!) !== null) {
       log.error("PositionOpen exists", [])
       return
     }
@@ -341,37 +347,37 @@ export function handleAdjustPosition(event: AdjustPositionEvent): void {
 //   entity.save()
 // }
 
-// export function handleCreditPuppet(event: CreditPuppetEvent): void {
-//   const entity = new CreditPuppet(
-//     event.transaction.hash.concatI32(event.logIndex.toI32())
-//   )
-//   entity.amount = event.params.amount
-//   entity.asset = event.params.asset
-//   entity.puppet = event.params.puppet
-//   entity.caller = event.params.caller
+export function handleCreditPuppet(event: CreditPuppetEvent): void {
+  const entity = new CreditPuppet(
+    event.transaction.hash.concatI32(event.logIndex.toI32())
+  )
+  entity.amount = event.params.amount
+  entity.asset = event.params.asset
+  entity.puppet = event.params.puppet
+  entity.caller = event.params.caller
 
-//   entity.blockNumber = event.block.number
-//   entity.blockTimestamp = event.block.timestamp
-//   entity.transactionHash = event.transaction.hash
+  entity.blockNumber = event.block.number
+  entity.blockTimestamp = event.block.timestamp
+  entity.transactionHash = event.transaction.hash
 
-//   entity.save()
-// }
+  entity.save()
+}
 
-// export function handleDebitPuppet(event: DebitPuppetEvent): void {
-//   const entity = new DebitPuppet(
-//     event.transaction.hash.concatI32(event.logIndex.toI32())
-//   )
-//   entity.amount = event.params.amount
-//   entity.asset = event.params.asset
-//   entity.puppet = event.params.puppet
-//   entity.caller = event.params.caller
+export function handleDebitPuppet(event: DebitPuppetEvent): void {
+  const entity = new DebitPuppet(
+    event.transaction.hash.concatI32(event.logIndex.toI32())
+  )
+  entity.amount = event.params.amount
+  entity.asset = event.params.asset
+  entity.puppet = event.params.puppet
+  entity.caller = event.params.caller
 
-//   entity.blockNumber = event.block.number
-//   entity.blockTimestamp = event.block.timestamp
-//   entity.transactionHash = event.transaction.hash
+  entity.blockNumber = event.block.number
+  entity.blockTimestamp = event.block.timestamp
+  entity.transactionHash = event.transaction.hash
 
-//   entity.save()
-// }
+  entity.save()
+}
 
 
 // export function handleInitialize(event: InitializeEvent): void {
@@ -391,20 +397,6 @@ export function handleAdjustPosition(event: AdjustPositionEvent): void {
 //   entity.save()
 // }
 
-// export function handleLiquidatePosition(event: LiquidatePositionEvent): void {
-//   const entity = new LiquidatePosition(
-//     event.transaction.hash.concatI32(event.logIndex.toI32())
-//   )
-//   entity.route = event.params.route
-//   entity.routeKey = event.params.routeKey
-//   entity.positionKey = event.params.positionKey
-
-//   entity.blockNumber = event.block.number
-//   entity.blockTimestamp = event.block.timestamp
-//   entity.transactionHash = event.transaction.hash
-
-//   entity.save()
-// }
 
 
 // export function handleRescueRouteFunds(event: RescueRouteFundsEvent): void {

@@ -71,7 +71,7 @@ const cache = cacheExchange({
 
 
 const clientConfig: ClientOptions = {
-  url: 'https://gateway-arbitrum.network.thegraph.com/api/93134a5862bb37886897aafefac71e5c/subgraphs/id/72Xqc2HrxT78FcUYSC8C9E2hfTmUjXzzzPLkNqxiMdTY',
+  url: 'https://api.studio.thegraph.com/query/112/puppet/version/latest',
   exchanges: [cache, fetchExchange],
   fetchSubscriptions: true,
   requestPolicy: 'cache-and-network',
@@ -80,7 +80,7 @@ export const subgraphClient = createClient(clientConfig)
 
 
 type IQueryPosition = {
-  address: viem.Address
+  address?: viem.Address
   selectedTradeRouteList?: ISetRouteType[]
 }
 
@@ -100,16 +100,17 @@ export function queryTraderPositionOpen(queryParams: StateStream<IQueryTraderPos
     if (params.selectedTradeRouteList?.length) {
       const routeTypeKeyList = params.selectedTradeRouteList.map(route => route.routeTypeKey)
 
-      return list.filter(position => routeTypeKeyList.indexOf(position.routeTypeKey) !== -1)
+      return list.filter(position => position.position && routeTypeKeyList.indexOf(position.routeTypeKey) !== -1)
     }
 
-    return list
+    // TODO: remove this filter
+    return list.filter(position => position.position)
   }, combineState(queryParams))
 }
 
 export function queryTraderPositionSettled(queryParams: StateStream<IQueryTraderPositionSettled>) {
   return map(async params => {
-    const blockTimestamp_gt = unixTimestampNow() - params.activityTimeframe
+    const blockTimestamp_gt = unixTimestampNow() - (params.activityTimeframe || 0)
     
     const list = await querySubgraph(subgraphClient, {
       schema: schema.mirrorPositionSettled,
@@ -154,10 +155,6 @@ export function queryPuppetTradeRoute(queryParams: StateStream<IQueryPuppetTrade
 }
 
 
-interface IQueryLatestPriceTick {
-  token?: viem.Address
-  activityTimeframe: Stream<IntervalTime>
-}
 
 interface IQueryPriceCandle {
   interval: IntervalTime
@@ -273,41 +270,7 @@ export async function queryLatestTokenPriceFeed(filter: IQueryPriceCandle = { in
   return list 
 }
 
-export async function queryOpenPositionList() {
-  const openPositionListQuery = querySubgraph(subgraphClient, {
-    schema: schema.mirrorPositionOpen,
-  })
-  
-  return openPositionListQuery
-}
 
-export async function querySettledPositionList() {
-  const settledPositionListQuery = querySubgraph(subgraphClient, {
-    schema: schema.mirrorPositionSettled,
-    filter: {
-      // blockTimestamp_gt: 0,
-    }
-  })
-
-  return settledPositionListQuery
-}
-
-export async function queryLeaderboard() {
-  const settledTradeListQuery = querySubgraph(subgraphClient, {
-    schema: schema.mirrorPositionSettled,
-    filter: {
-      // blockTimestamp_gt: 0,
-    }
-  })
-  const settledTradeOpenQuery = querySubgraph(subgraphClient, {
-    schema: schema.mirrorPositionOpen,
-  })
-
-  const [settledTradeList, settledTradeOpen] = await Promise.all([settledTradeListQuery, settledTradeOpenQuery])
-  const sortedList = [...settledTradeList, ...settledTradeOpen].sort((a, b) => Number(a.blockTimestamp - b.blockTimestamp))
-  
-  return sortedList
-}
 
 export async function queryRouteTypeList() {
   const query = await querySubgraph(subgraphClient, {

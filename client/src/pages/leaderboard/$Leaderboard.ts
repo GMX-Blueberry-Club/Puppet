@@ -1,28 +1,27 @@
 import { Behavior, combineObject } from "@aelea/core"
 import { $element, $text, component, style } from "@aelea/dom"
-import * as router from '@aelea/router'
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
-import { colorAlpha, pallete } from "@aelea/ui-components-theme"
+import { pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, empty, map, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { IntervalTime, getBasisPoints, getMappedValue, groupArrayMany, pagingQuery, readablePercentage, switchMap, unixTimestampNow } from "common-utils"
 import { IPriceTickListMap } from "gmx-middleware-utils"
-import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType, accountSettledPositionListSummary, openPositionListPnl, queryOpenPositionList, querySettledPositionList } from "puppet-middleware-utils"
-import { $Table, ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "ui-components"
+import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled, ISetRouteType, accountSettledPositionListSummary, openPositionListPnl, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
+import { ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "ui-components"
+import { uiStorage } from "ui-storage"
 import * as viem from "viem"
 import { $labelDisplay } from "../../common/$TextField.js"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlDisplay, $route, $size } from "../../common/$common.js"
-import { $card, $card2, $responsiveFlex } from "../../common/elements/$common.js"
+import { $card2, $responsiveFlex } from "../../common/elements/$common.js"
+import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../../components/$LastActivity.js"
+import { $CardTable } from "../../components/$common"
 import { $DropMultiSelect } from "../../components/form/$Dropdown.js"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor"
 import { $tableHeader } from "../../components/table/$TableColumn.js"
 import { $ProfilePerformanceGraph } from "../../components/trade/$ProfilePerformanceGraph.js"
 import * as storeDb from "../../const/store.js"
-import { IPageParams, IUserActivityPageParams, IWalletPageParams } from "../type.js"
 import { $seperator2 } from "../common.js"
-import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../../components/$LastActivity.js"
-import { $CardTable } from "../../components/$common"
-import { uiStorage } from "ui-storage"
+import { IUserActivityPageParams } from "../type.js"
 
 
 
@@ -58,13 +57,14 @@ export const $Leaderboard = (config: IUserActivityPageParams) => component((
 
   const pageParms = map(params => {
     const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
-    const paging = startWith(requestPage, scrollRequest)
+    const page = startWith(requestPage, scrollRequest)
+    const openPositionListQuery = queryTraderPositionOpen({})
+    const settledPositionListQuery = queryTraderPositionSettled({ activityTimeframe: params.activityTimeframe})
 
-    const dataSource: Stream<TablePageResponse<ITableRow>> = awaitPromises(map(async req => {
-      const openPositionListQuery = queryOpenPositionList()
-      const settledPositionListQuery = querySettledPositionList()
-      const openPositionList = await openPositionListQuery
-      const settledPositionList = await settledPositionListQuery
+
+    const dataSource: Stream<TablePageResponse<ITableRow>> = awaitPromises(map(async reqParams => {
+      const openPositionList = await reqParams.openPositionListQuery
+      const settledPositionList = await reqParams.settledPositionListQuery
       const pricefeedMap = await params.priceTickMapQuery
       const allPositionList = [...openPositionList, ...settledPositionList]
       const filterStartTime = unixTimestampNow() - params.activityTimeframe
@@ -94,8 +94,8 @@ export const $Leaderboard = (config: IUserActivityPageParams) => component((
         return { account: positionList[0].trader, summary, openPositionList, settledPositionList, positionList, pricefeedMap }
       })
 
-      return pagingQuery({ ...params.sortBy, ...req }, filterestPosList)
-    }, paging))
+      return pagingQuery({ ...reqParams.page, ...reqParams }, filterestPosList)
+    }, combineObject({ page, openPositionListQuery, settledPositionListQuery })))
 
 
     return { ...params, dataSource }

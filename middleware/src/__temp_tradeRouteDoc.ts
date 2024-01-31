@@ -1,13 +1,13 @@
-import { IntervalTime, unixTimestampNow } from 'common-utils'
+import { unixTimestampNow } from 'common-utils'
 import * as viem from 'viem'
 
-export default (puppet: viem.Address, activityTimeframe: IntervalTime) => {
+export default (puppet?: viem.Address, activityTimeframe = 0) => {
   const blockTimestamp_gt = unixTimestampNow() - activityTimeframe
 
   return `{
   puppetTradeRoutes(
     first: 1000
-    where: { puppet: "${puppet}" }
+    ${puppet ? `where: { puppet: "${puppet}" }` : ''}
   ) {
     id
     routeTypeKey

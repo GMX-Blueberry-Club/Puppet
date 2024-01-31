@@ -1,10 +1,10 @@
 import { Value, log, store } from "@graphprotocol/graph-ts"
 import { EventLog1, EventLog2 } from "../generated/EventEmitter/EventEmitter"
 import { OrderCollateralDeltaAmountAutoUpdated, OrderCreated, OrderSizeDeltaAutoUpdated, PositionLink, PositionOpen, PriceCandle, PriceCandleSeed } from "../generated/schema"
-import * as dto from "./dto"
-import { IntervalUnixTime, OrderExecutionStatus, ZERO_BI } from "./utils/const"
-import { getAddressItem, getAddressItemList, getBoolItem, getBytes32Item, getStringItem, getUintItem } from "./utils/datastore"
-import { getIdFromEvent } from "./utils/utils"
+import * as dto from "./common/dto"
+import { IntervalUnixTime, OrderExecutionStatus, ZERO_BI } from "./common/const"
+import { getAddressItem, getAddressItemList, getBoolItem, getBytes32Item, getStringItem, getUintItem } from "./common/datastore"
+import { getIdFromEvent } from "./common/utils"
 
 export function handleEventLog1(event: EventLog1): void {
   if (event.params.eventName == "OraclePriceUpdate") {
