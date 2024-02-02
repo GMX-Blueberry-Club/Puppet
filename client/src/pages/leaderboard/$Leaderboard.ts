@@ -10,7 +10,7 @@ import { IMirrorPositionListSummary, IMirrorPositionOpen, IMirrorPositionSettled
 import { ISortBy, ScrollRequest, TableColumn, TablePageResponse } from "ui-components"
 import { uiStorage } from "ui-storage"
 import * as viem from "viem"
-import { $labelDisplay } from "../../common/$TextField.js"
+import { $labelDisplay } from "ui-components"
 import { $TraderDisplay, $TraderRouteDisplay, $pnlDisplay, $route, $size } from "../../common/$common.js"
 import { $card2, $responsiveFlex } from "../../common/elements/$common.js"
 import { $LastAtivity, LAST_ACTIVITY_LABEL_MAP } from "../../components/$LastActivity.js"
@@ -59,7 +59,7 @@ export const $Leaderboard = (config: IUserActivityPageParams) => component((
     const requestPage = { ...params.sortBy, offset: 0, pageSize: 20 }
     const page = startWith(requestPage, scrollRequest)
     const openPositionListQuery = queryTraderPositionOpen({})
-    const settledPositionListQuery = queryTraderPositionSettled({ activityTimeframe: params.activityTimeframe})
+    const settledPositionListQuery = queryTraderPositionSettled({ activityTimeframe: params.activityTimeframe })
 
 
     const dataSource: Stream<TablePageResponse<ITableRow>> = awaitPromises(map(async reqParams => {

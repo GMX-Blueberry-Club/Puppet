@@ -10,14 +10,13 @@ import * as viem from "viem"
 import * as walletLink from "wallet"
 import { $IntermediateConnectButton } from "../$ConnectWallet"
 import { $iconCircular } from "../../common/elements/$common.js"
-import { IWriteContractReturnQuery } from "../../logic/commonLogic"
 import { $defaultButtonPrimary } from "./$Button"
 import { $ButtonCore } from "./$ButtonCore"
 
 
 export interface IForm {
   walletClientQuery: Stream<Promise<walletLink.IWalletClient | null>>
-  txQuery: Stream<IWriteContractReturnQuery>
+  txQuery: Stream<walletLink.IWriteContractReturn>
   alert?: Stream<string | null>
   $content: $Node
   $barContent?: $Node
@@ -55,7 +54,7 @@ export const $SubmitBar = (config: IForm) => component((
           }
 
           if (err instanceof viem.ContractFunctionExecutionError && err.cause instanceof viem.ContractFunctionRevertedError) {
-            message = err.cause.reason || err.shortMessage || err.message
+            message = err.cause.reason || err.cause.message
           }
 
           return $alertTooltip(

@@ -86,7 +86,7 @@ export const readablePercentage = (amount: bigint) => readableUnitAmount(formatF
 export const readableFactorPercentage = (amount: bigint) => readableUnitAmount(formatFixed(amount, FACTOR_PERCISION) * 100) + '%'
 export const readableLeverage = (a: bigint, b: bigint) => (b ? readableUnitAmount(formatFixed(a * BASIS_POINTS_DIVISOR / b, 4)) : 0n) + 'x'
 export const readableUsd = (ammount: bigint) => readableUSD(formatFixed(ammount, USD_DECIMALS))
-export const readablePnl = (ammount: bigint) => readableNumber({ signDisplay: "exceptZero" })(formatFixed(ammount, USD_DECIMALS))
+export const readablePnl = (ammount: bigint, decimals = USD_DECIMALS) => readableNumber({ signDisplay: "exceptZero" })(formatFixed(ammount, decimals))
 export const readableTokenAmountFromUsdAmount = (decimals: number, price: bigint, amount: bigint) => readableUnitAmount(formatFixed(getTokenAmount(price, amount), decimals))
 export const readableTokenUsd = (price: bigint, amount: bigint) => readableUsd(getTokenUsd(price, amount))
 export const readableTokenAmount = (tokenDesc: ITokenDescription, amount: bigint) => readableUnitAmount(formatFixed(amount, tokenDesc.decimals))

@@ -9,10 +9,11 @@ import { getTokenDescription } from "gmx-middleware-utils"
 import * as PUPPET from "puppet-middleware-const"
 import * as viem from "viem"
 import * as walletLink from "wallet"
-import { $TextField } from "../../common/$TextField.js"
-import { IApproveSpendReturnType, approveSpend } from "../../logic/commonLogic.js"
-import { IDepositFundsReturnType, depositFunds } from "../../logic/puppetLogic"
-import { getAddressTokenBalance, getTokenSpendAmount } from "../../logic/traderLogic.js"
+import { $FieldLabeled } from "ui-components"
+import { IApproveSpendReturn } from "../../logic/commonWrite.js"
+import { writeApproveSpend } from "../../logic/commonWrite.js"
+import { IDepositFundsReturnType, writeDepositFunds } from "../../logic/puppetWrite.js"
+import { readAddressTokenBalance, readTokenSpendAmount } from "../../logic/traderRead.js"
 import { IComponentPageParams } from "../../pages/type.js"
 import { $ButtonSecondary, $Submit, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $SubmitBar } from "../form/$Form"
@@ -25,7 +26,7 @@ interface IAssetDepositEditor extends IComponentPageParams {
 
 
 export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
-  [approveTokenSpend, approveTokenSpendTether]: Behavior<walletLink.IWalletClient, IApproveSpendReturnType>,
+  [approveTokenSpend, approveTokenSpendTether]: Behavior<walletLink.IWalletClient, IApproveSpendReturn>,
   [requestDepositAsset, requestDepositAssetTether]: Behavior<walletLink.IWalletClient, IDepositFundsReturnType>,
   [inputDepositAmount, inputDepositAmountTether]: Behavior<string>,
   [clickMaxDeposit, clickMaxDepositTether]: Behavior<any>,
@@ -50,7 +51,7 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
       return 0n
     }
 
-    return getAddressTokenBalance(wallet, config.token, wallet.account.address)
+    return readAddressTokenBalance(wallet, config.token, wallet.account.address)
   }, walletClientQuery)
   const indexToken = getMappedValue(GMX.TOKEN_ADDRESS_DESCRIPTION_MAP, config.token)
   
@@ -64,7 +65,7 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
 
       const puppetContractMap = getMappedValue(PUPPET.CONTRACT, wallet.chain.id)
 
-      return getTokenSpendAmount(wallet, config.token, puppetContractMap.Orchestrator.address, wallet.account.address)
+      return readTokenSpendAmount(wallet, config.token, puppetContractMap.Orchestrator.address, wallet.account.address)
     }, config.walletClientQuery)))
   ])
 
@@ -87,7 +88,7 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
       $text('The amount utialised by traders you subscribed'),
 
       $row(layoutSheet.spacingSmall, style({ position: 'relative' }))(
-        $TextField({
+        $FieldLabeled({
           label: 'Amount',
           value: map(val => readableTokenAmount(tokenDescription, val), maxBalance),
           placeholder: 'Enter amount',
@@ -115,7 +116,7 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
           })({
             click: approveTokenSpendTether(
               map(async w3p => {
-                return approveSpend(w3p, GMX.ARBITRUM_ADDRESS.USDC)
+                return writeApproveSpend(w3p, GMX.ARBITRUM_ADDRESS.USDC)
               }),
               multicast
             )
@@ -128,7 +129,7 @@ export const $AssetDepositEditor = (config: IAssetDepositEditor) => component((
           })({
             click: requestDepositAssetTether(
               snapshot(async (params, w3p) => {
-                return depositFunds(w3p, config.token, params.amount)
+                return writeDepositFunds(w3p, config.token, params.amount)
               }, combineObject({ amount })),
               multicast
             )

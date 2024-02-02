@@ -9,7 +9,7 @@ import { IPriceCandleDto, IRequestPricefeedApi, ITokenSymbol, getTokenDescriptio
 import * as PUPPET from "puppet-middleware-const"
 import { getRouteAddressKey, getTradeRouteKey } from "puppet-middleware-utils"
 import * as viem from "viem"
-import { getBalance, readContract } from "viem/actions"
+import { getBalance } from "viem/actions"
 import * as walletLink from "wallet"
 
 
@@ -129,7 +129,7 @@ export function latestPriceFromExchanges(tokendescription: ITokenDescription): S
 }
 
 
-export async function getAddressTokenBalance(provider: viem.Client<viem.Transport, viem.Chain>, token: viem.Address | typeof ADDRESS_ZERO, address: viem.Address): Promise<bigint> {
+export async function readAddressTokenBalance(provider: walletLink.IClient, token: viem.Address | typeof ADDRESS_ZERO, address: viem.Address): Promise<bigint> {
   if (token === ADDRESS_ZERO) {
     return getBalance(provider, { address })
   }
@@ -142,7 +142,8 @@ export async function getAddressTokenBalance(provider: viem.Client<viem.Transpor
 
   const tokenAddress = resolveAddress(provider.chain, token)
 
-  const erc20 = await readContract(provider, {
+  const erc20 = await walletLink.readContract({
+    provider,
     address: tokenAddress,
     abi: erc20Abi,
     functionName: 'balanceOf',
@@ -200,19 +201,20 @@ export const getGmxIoPricefeed = async (queryParams: IRequestPricefeedApi): Prom
 }
 
 export async function getTraderTradeRoute(
-  wallet: walletLink.IWalletClient,
+  provider: walletLink.IClient,
   trader: viem.Address,
   collateralToken: viem.Address,
   indexToken: viem.Address,
   isLong: boolean,
 ): Promise<viem.Address | null> {
-  const puppetContractMap = getMappedValue(PUPPET.CONTRACT, wallet.chain.id)
+  const puppetContractMap = getMappedValue(PUPPET.CONTRACT, provider.chain.id)
   const routeKey = getTradeRouteKey(trader, collateralToken, indexToken, isLong)
   const routeAddressKey = getRouteAddressKey(routeKey)
 
   try {
-    const queryAddress = await readContract(wallet, {
+    const queryAddress = await walletLink.readContract({
       ...puppetContractMap.Datastore,
+      provider,
       functionName: 'getAddress',
       args: [routeAddressKey],
     })
@@ -227,20 +229,22 @@ export async function getTraderTradeRoute(
   }
 }
 
-export async function getMinExecutionFee(wallet: walletLink.IPublicProvider): Promise<bigint> {
+export async function readMinExecutionFee(wallet: walletLink.IClient): Promise<bigint> {
   const puppetContractMap = getMappedValue(PUPPET.CONTRACT, wallet.chain.id)
   const minExecutionFeeKey = hashData(["string"], ["MIN_EXECUTION_FEE"])
 
-  return readContract(wallet, {
+  return walletLink.readContract({
     ...puppetContractMap.Datastore,
+    provider: wallet,
     functionName: 'getUint',
     args: [minExecutionFeeKey],
   })
 }
 
 
-export async function getTokenSpendAmount(provider: walletLink.IWalletClient, token: viem.Address, spender: viem.Address, address: viem.Address): Promise<bigint> {
-  const allowedSpendAmount = await readContract(provider, {
+export async function readTokenSpendAmount(provider: walletLink.IClient, token: viem.Address, spender: viem.Address, address: viem.Address): Promise<bigint> {
+  const allowedSpendAmount = await walletLink.readContract({
+    provider,
     address: token,
     abi: erc20Abi,
     functionName: 'allowance',

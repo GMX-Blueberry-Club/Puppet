@@ -32,9 +32,9 @@ import { $PositionDetails } from "../components/trade/$PositionDetails.js"
 import { $PositionEditor, IPositionEditorAbstractParams, ITradeConfig, ITradeParams } from "../components/trade/$PositionEditor.js"
 import { $PositionListDetails } from "../components/trade/$PositionListDetails.js"
 import { store } from "../const/store.js"
-import { getExecuteGasFee, getFullMarketInfo } from "../logic/tradeV2.js"
-import * as trade from "../logic/traderLogic.js"
-import { exchangesWebsocketPriceSource, getTokenSpendAmount, getTraderTradeRoute } from "../logic/traderLogic.js"
+import { readExecuteGasFee, readFullMarketInfo } from "../logic/tradeRead.js"
+import * as trade from "../logic/traderRead.js"
+import { exchangesWebsocketPriceSource, readTokenSpendAmount, getTraderTradeRoute } from "../logic/traderRead.js"
 import { $seperator2 } from "./common.js"
 import { ITradeFocusMode } from "./type.js"
 
@@ -97,7 +97,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
 ) => {
 
-  const { routeTypeListQuery, walletClientQuery, chain, publicProviderQuery, parentRoute, referralCode } = config
+  const { routeTypeListQuery, walletClientQuery, chain, providerQuery, parentRoute, referralCode } = config
   
 
   const focusMode = replayLatest(switchFocusMode, ITradeFocusMode.collateral)
@@ -136,7 +136,7 @@ export const $Trade = (config: ITradeComponent) => component((
       return 0n
     }
 
-    return trade.getAddressTokenBalance(wallet, params.primaryToken, wallet.account.address)
+    return trade.readAddressTokenBalance(wallet, params.primaryToken, wallet.account.address)
   }, combineObject({ primaryToken, walletClientQuery }))))
 
   
@@ -188,9 +188,9 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ collateralToken, indexToken, isLong, routeTypeListQuery })))))
 
   const marketInfoQuery = map(async params => {
-    const provider = await params.publicProviderQuery
-    return getFullMarketInfo(provider, params.market, params.marketPrice)
-  }, combineObject({ market, marketPrice, publicProviderQuery }))
+    const provider = await params.providerQuery
+    return readFullMarketInfo(provider, params.market, params.marketPrice)
+  }, combineObject({ market, marketPrice, providerQuery }))
 
   const marketInfo: Stream<IMarketInfo> = replayLatest(multicast(awaitPromises(marketInfoQuery)))
 
@@ -393,7 +393,7 @@ export const $Trade = (config: ITradeComponent) => component((
       const orchestratorAddress = getMappedValue(PUPPET.CONTRACT, wallet.chain.id).Orchestrator
 
       try {
-        const allowedSpendAmount = await getTokenSpendAmount(wallet, params.primaryToken, orchestratorAddress.address, wallet.account.address)
+        const allowedSpendAmount = await readTokenSpendAmount(wallet, params.primaryToken, orchestratorAddress.address, wallet.account.address)
 
         return allowedSpendAmount
       } catch (err) {
@@ -429,9 +429,9 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ chartInterval, indexToken })))))
 
 
-  const gasPrice = walletLink.getGasPrice(publicProviderQuery)
-  const estimatedGasPrice = walletLink.getEstimatedGasPrice(publicProviderQuery)
-  const executeGasLimit = switchMap(async provider => getExecuteGasFee(await provider), publicProviderQuery)
+  const gasPrice = walletLink.getGasPrice(providerQuery)
+  const estimatedGasPrice = walletLink.getEstimatedGasPrice(providerQuery)
+  const executeGasLimit = switchMap(async provider => readExecuteGasFee(await provider), providerQuery)
 
   const executionFee = replayLatest(multicast(map(params => {
     const keerperGasLimit = params.isIncrease ? params.executeGasLimit.increaseGasLimit : params.executeGasLimit.decreaseGasLimit
@@ -491,7 +491,7 @@ export const $Trade = (config: ITradeComponent) => component((
   }
 
   const $tradebox = $PositionEditor({
-    publicProviderQuery,
+    providerQuery,
     walletClientQuery,
     tradeConfig,
     routeTypeListQuery: config.routeTypeListQuery,

@@ -9,8 +9,8 @@ import * as GMX from "gmx-middleware-const"
 import { getTokenDescription } from "gmx-middleware-utils"
 import * as viem from "viem"
 import * as walletLink from "wallet"
-import { $TextField } from "../../common/$TextField.js"
-import { IWithdrawFundsReturnType, withdrawFunds } from "../../logic/puppetLogic"
+import { $FieldLabeled } from "ui-components"
+import { IWithdrawFundsReturnType, writeWithdrawFunds } from "../../logic/puppetWrite.js"
 import { IComponentPageParams } from "../../pages/type.js"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $SubmitBar } from "../form/$Form"
@@ -41,7 +41,7 @@ export const $AssetWithdrawEditor = (config: IAssetWithdrawEditor) => component(
       $text(style({ maxWidth: '310px' }))('Remove available funds from your portfolio'),
 
       $row(layoutSheet.spacingSmall, style({ position: 'relative' }))(
-        $TextField({
+        $FieldLabeled({
           label: 'Amount',
           value: map(n => readableTokenAmount(tokenDescription, n), amount),
           placeholder: 'Enter amount',
@@ -66,7 +66,7 @@ export const $AssetWithdrawEditor = (config: IAssetWithdrawEditor) => component(
       })({
         click: requestDepositAssetTether(
           snapshot((params, w3p) => {
-            return withdrawFunds(w3p, token, params.amount)
+            return writeWithdrawFunds(w3p, token, params.amount)
           }, combineObject({ amount })),
           multicast
         )

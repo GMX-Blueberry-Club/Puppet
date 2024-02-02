@@ -32,10 +32,10 @@ import { $Popover } from "../$Popover"
 import { $Slider } from "../$Slider.js"
 import { $gmxLogo } from "../../common/$icons"
 import { $heading2 } from "../../common/$text.js"
-import { $TextField } from "../../common/$TextField"
+import { $FieldLabeled } from "ui-components"
 import { boxShadow } from "../../common/elements/$common"
 import { $caretDown } from "../../common/elements/$icons.js"
-import * as trade from "../../logic/traderLogic.js"
+import * as trade from "../../logic/traderRead.js"
 import { IComponentPageParams, ITradeFocusMode } from "../../pages/type.js"
 import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button.js"
 import { $defaultSelectContainer, $Dropdown } from "../form/$Dropdown.js"
@@ -136,7 +136,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   [clickPrimary, clickPrimaryTether]: Behavior<any>,
 ) => {
 
-  const { walletClientQuery, publicProviderQuery } = config
+  const { walletClientQuery, providerQuery } = config
 
 
   const {
@@ -326,7 +326,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
           open: constant(
             $column(layoutSheet.spacing, style({ width: '300px' }))(
 
-              $TextField({
+              $FieldLabeled({
                 label: 'Slippage %',
                 value: map(x => formatFixed(x, 4) * 100, config.tradeConfig.slippage),
                 hint: 'the difference between the expected price of the trade and the execution price',
@@ -348,7 +348,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 )
               }),
 
-              $TextField({
+              $FieldLabeled({
                 label: 'Execution Fee Buffer %',
                 value: map(x => formatFixed(x, 4) * 100, config.tradeConfig.executionFeeBuffer),
                 hint: 'higher value to handle potential increases in gas price during order execution',
@@ -454,7 +454,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                       return 0n
                     }
 
-                    return trade.getAddressTokenBalance(wallet, option, wallet.account.address)
+                    return trade.readAddressTokenBalance(wallet, option, wallet.account.address)
                   }, walletClientQuery)
                   const tokenDesc = option === ADDRESS_ZERO ? getNativeTokenDescription(config.chain) : getTokenDescription(option)
 
@@ -676,7 +676,8 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
             $Popover({
               open: constant(
                 $MarketInfoList({
-                  publicProviderQuery,
+                  providerQuery,
+                  walletClientQuery,
                   chain: config.chain,
                   $rowCallback: map(params => {
                     return $defaultTableRowContainer(style({ borderTop: `1px solid ${colorAlpha(pallete.foreground, .20)}` }))(

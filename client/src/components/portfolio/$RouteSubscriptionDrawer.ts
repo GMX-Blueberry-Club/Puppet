@@ -17,7 +17,7 @@ import { $Popover } from "../$Popover.js"
 import { $route } from "../../common/$common.js"
 import { $heading3 } from "../../common/$text.js"
 import { $card2, $iconCircular, $responsiveFlex } from "../../common/elements/$common.js"
-import { IBatchSubscribeReturnType, batchSubscribe, getPuppetDepositAmount } from "../../logic/puppetLogic"
+import { IBatchSubscribeReturnType, writeBatchSubscribe } from "../../logic/puppetWrite.js"
 import { $seperator2 } from "../../pages/common.js"
 import { IComponentPageParams } from "../../pages/type.js"
 import { fadeIn } from "../../transitions/enter.js"
@@ -25,6 +25,7 @@ import { $ButtonCircular, $ButtonSecondary, $defaultMiniButtonSecondary } from "
 import { $SubmitBar } from "../form/$Form"
 import { $AssetDepositEditor } from "./$AssetDepositEditor.js"
 import { IChangeSubscription } from "./$RouteSubscriptionEditor"
+import { readPuppetDepositAmount } from "../../logic/puppetRead.js"
 
 interface IRouteSubscribeDrawer extends IComponentPageParams {
   modifySubscriber: Stream<IChangeSubscription>
@@ -41,7 +42,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
   [changeWallet, changeWalletTether]: Behavior<EIP6963ProviderDetail>,
 ) => {
 
-  const { modifySubscriber, modifySubscriptionList, publicProviderQuery, routeTypeListQuery, walletClientQuery } = config
+  const { modifySubscriber, modifySubscriptionList, providerQuery, routeTypeListQuery, walletClientQuery } = config
 
   const openIfEmpty = skipRepeats(map(l => l.length > 0, modifySubscriptionList))
 
@@ -53,7 +54,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
       return 0n
     }
 
-    return getPuppetDepositAmount(wallet, wallet.account.address)
+    return readPuppetDepositAmount(wallet, wallet.account.address)
   }, walletClientQuery)
 
   const depositAmountQuery = mergeArray([
@@ -163,7 +164,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
             $Popover({
               open: constant(
                 $AssetDepositEditor({
-                  publicProviderQuery,
+                  providerQuery,
                   walletClientQuery,
                   token: depositToken
                 })({
@@ -196,7 +197,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
               changeWallet: changeWalletTether(),
               click: requestChangeSubscriptionTether(
                 snapshot((list, w3p) => {
-                  const tx = batchSubscribe(w3p, list)
+                  const tx = writeBatchSubscribe(w3p, list)
                   return tx
                 }, modifySubscriptionList)
               )

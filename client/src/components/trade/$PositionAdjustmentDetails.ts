@@ -16,7 +16,8 @@ import * as walletLink from "wallet"
 import { $Popover } from "../$Popover.js"
 import { $pnlDisplay } from "../../common/$common"
 import { $heading3 } from "../../common/$text.js"
-import { IWriteContractReturnQuery, writeContract, approveSpend, IApproveSpendReturnType } from "../../logic/commonLogic.js"
+import { IApproveSpendReturn } from "../../logic/commonWrite.js"
+import { writeApproveSpend } from "../../logic/commonWrite.js"
 import { $seperator2 } from "../../pages/common"
 import { IWalletPageParams } from "../../pages/type.js"
 import { $ButtonPrimary, $ButtonSecondary, $Submit } from "../form/$Button.js"
@@ -25,15 +26,13 @@ import { ITradeConfig, ITradeParams } from "./$PositionEditor.js"
 
 
 
-
-
-export type IRequestTradeParams = ITradeConfig & { wallet: walletLink.IWalletClient }
-export type IRequestTrade = IRequestTradeParams & {
+export type IRequestTrade = ITradeConfig & {
+  walletClient: walletLink.IWalletClient
   executionFee: bigint
   indexPrice: bigint
   acceptablePrice: bigint
   swapRoute: string[]
-  request: IWriteContractReturnQuery<typeof PUPPET['CONTRACT']['42161']['Orchestrator']['abi']>
+  request: walletLink.IWriteContractReturn<typeof PUPPET['CONTRACT']['42161']['Orchestrator']['abi']>
 }
 
 
@@ -51,7 +50,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
   [dismissEnableTradingOverlay, dismissEnableTradingOverlayTether]: Behavior<any, false>,
 
   [approveTrading, approveTradingTether]: Behavior<PointerEvent, true>,
-  [requestTokenSpend, requestTokenSpendTether]: Behavior<walletLink.IWalletClient, IApproveSpendReturnType>,
+  [requestTokenSpend, requestTokenSpendTether]: Behavior<walletLink.IWalletClient, IApproveSpendReturn>,
   [clickResetPosition, clickResetPositionTether]: Behavior<any, IMirrorPositionOpen | null>,
   [clickProposeTrade, clickProposeTradeTether]: Behavior<walletLink.IWalletClient>,
   [changeWallet, changeWalletTether]: Behavior<EIP6963ProviderDetail>,
@@ -71,8 +70,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
     mirrorPosition, walletBalance, priceImpactUsd, adjustmentFeeUsd, routeTypeKey
   } = config.tradeState
 
-
-  const requestTrade: Stream<IRequestTrade> = multicast(snapshot((params, wallet) => {
+  const requestTrade: Stream<IRequestTrade> = multicast(snapshot((params, walletClient) => {
     const resolvedPrimaryAddress = resolveAddress(config.chain, params.primaryToken)
     const from = params.isIncrease ? resolvedPrimaryAddress : params.isLong ? params.market.indexToken : params.collateralToken
     const to = params.isIncrease ? params.isLong ? params.market.indexToken : params.collateralToken : resolvedPrimaryAddress
@@ -100,8 +98,9 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
     const contractDefs = getMappedValue(PUPPET.CONTRACT, config.chain.id).Orchestrator
 
     const request = params.tradeRoute
-      ? writeContract(wallet, {
+      ? walletLink.writeContract({
         ...contractDefs,
+        walletClient,
         value: totalWntAmount,
         functionName: 'requestPosition',
         args: [
@@ -120,8 +119,9 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
           params.isIncrease
         ]
       })
-      : writeContract(wallet, {
+      : walletLink.writeContract({
         ...contractDefs,
+        walletClient,
         value: totalWntAmount,
         functionName: 'registerRouteAndRequestPosition',
         args: [
@@ -141,7 +141,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
       })
 
 
-    return { ...params, acceptablePrice, request, swapRoute, wallet }
+    return { ...params, acceptablePrice, request, swapRoute, walletClient }
   }, combineObject({ ...config.tradeConfig, executionFee, indexPrice, tradeRoute, routeTypeKey }), clickProposeTrade))
 
 
@@ -330,7 +330,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
                   changeWallet: changeWalletTether(),
                   click: requestTokenSpendTether(
                     map(async wallet => {
-                      const amount = approveSpend(wallet, params.primaryToken) 
+                      const amount = writeApproveSpend(wallet, params.primaryToken) 
 
                       return amount
                     })

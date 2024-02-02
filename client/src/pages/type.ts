@@ -13,7 +13,7 @@ export interface IWalletPageParams {
 }
 
 export interface IComponentPageParams extends IWalletPageParams {
-  publicProviderQuery: Stream<Promise<viem.PublicClient<viem.Transport, viem.Chain>>>
+  providerQuery: Stream<Promise<walletLink.IPublicProvider>>
 }
 
 export interface IPageParams extends IComponentPageParams {
@@ -46,7 +46,14 @@ export enum ITradeFocusMode {
   size,
 }
 
-export enum IUserType {
+
+export enum IWalletTab {
   TRADER = 'Trader',
   PUPPET = 'Puppet',
+  EARN = "Earn"
+}
+
+export enum VestingLockMode {
+  CONTINUOUS = 'Continuous',
+  SHORT_TERM = 'Short Term'
 }

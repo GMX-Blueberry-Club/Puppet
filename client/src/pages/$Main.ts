@@ -24,7 +24,6 @@ import { store } from "../const/store.js"
 import { newUpdateInvoke } from "../sw/swUtils"
 import { fadeIn } from "../transitions/enter.js"
 import * as walletLink from "wallet"
-import { chains, publicTransportMap } from "../logic/walletLink.js"
 import { $Home } from "./$Home.js"
 import { $Trade } from "./$Trade.js"
 import { $rootContainer } from "./common"
@@ -32,6 +31,7 @@ import { $Leaderboard } from "./leaderboard/$Leaderboard.js"
 import { $PublicUserPage } from "./user/$PublicUser.js"
 import { $WalletPage } from "./user/$Wallet.js"
 import { $heading2 } from "../common/$text"
+import { $Admin } from "./$Admin"
 
 const popStateEvent = eventElementTarget('popstate', window)
 const initialLocation = now(document.location)
@@ -42,6 +42,30 @@ const locationChange = map((location) => {
 
 interface IApp {
   baseRoute?: string
+}
+
+
+const chains = [ arbitrum ] as const
+
+
+// const storage = createStorage({ storage: window.localStorage, key: 'walletLink' })
+const projectId = import.meta.env.VITE_WC_PROJECT_ID || 'fdc797f2e6a68e01b9e17843c939673e'
+// const llamaRpc = import.meta.env.VITE_LLAMANODES_PROJECT_ID || '01HCB0CBBH06TE3XSM6ZE4YYAD'
+
+export const publicTransportMap = {
+  [arbitrum.id]: viem.fallback([
+    viem.webSocket('wss://arb-mainnet.g.alchemy.com/v2/RBsflxWv6IhITsLxAWcQlhCqSuxV7Low'),
+    viem.http('https://arb1.arbitrum.io/rpc')
+  ]),
+  // [CHAIN.AVALANCHE]: avaGlobalProvider,
+}
+
+
+const metadata = {
+  name: '__APP_NAME__',
+  description: '__APP_DESC_SHORT__',
+  url: '__WEBSITE__',
+  icons: ['https://imagedelivery.net/_aTEfDRm7z3tKgu9JhfeKA/5a7df101-00dc-4856-60a9-921b2879e200/lg']
 }
 
 
@@ -76,6 +100,7 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
   const tradeTermsAndConditions = appRoute.create({ fragment: 'terms-and-conditions' })
 
   const leaderboardRoute = appRoute.create({ fragment: 'leaderboard' })
+  const adminRoute = appRoute.create({ fragment: 'admin' })
 
   const opengraph = rootRoute.create({ fragment: 'og' })
 
@@ -160,18 +185,18 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
             )(
               switchMap(isDesktop => {
                 if (isDesktop) {
-                  return $MainMenu({ route: appRoute, walletClientQuery, publicProviderQuery })({
+                  return $MainMenu({ route: appRoute, walletClientQuery, providerQuery })({
                     routeChange: changeRouteTether()
                   })
                 }
 
-                return $MainMenuMobile({ route: rootRoute, walletClientQuery, publicProviderQuery })({
+                return $MainMenuMobile({ route: rootRoute, walletClientQuery, providerQuery })({
                   routeChange: changeRouteTether(),
                 })
               }, isDesktopScreen),
               router.contains(walletRoute)(
                 $midContainer(
-                  $WalletPage({ route: walletRoute, routeTypeListQuery, publicProviderQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery, walletClientQuery })({
+                  $WalletPage({ route: walletRoute, routeTypeListQuery, providerQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery, walletClientQuery })({
                     changeWallet: changeWalletTether(),
                     modifySubscriber: modifySubscriberTether(),
                     changeRoute: changeRouteTether(),
@@ -182,7 +207,7 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
               ),
               router.match(leaderboardRoute)(
                 $midContainer(
-                  fadeIn($Leaderboard({ route: leaderboardRoute, publicProviderQuery, activityTimeframe, walletClientQuery, selectedTradeRouteList, priceTickMapQuery, routeTypeListQuery })({
+                  fadeIn($Leaderboard({ route: leaderboardRoute, providerQuery, activityTimeframe, walletClientQuery, selectedTradeRouteList, priceTickMapQuery, routeTypeListQuery })({
                     changeActivityTimeframe: changeActivityTimeframeTether(),
                     selectTradeRouteList: selectTradeRouteListTether(),
                     routeChange: changeRouteTether(),
@@ -192,13 +217,18 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
               ),
               router.contains(profileRoute)(
                 $midContainer(
-                  fadeIn($PublicUserPage({ route: profileRoute,  walletClientQuery, routeTypeListQuery, priceTickMapQuery, activityTimeframe, selectedTradeRouteList, publicProviderQuery })({
+                  fadeIn($PublicUserPage({ route: profileRoute,  walletClientQuery, routeTypeListQuery, priceTickMapQuery, activityTimeframe, selectedTradeRouteList, providerQuery })({
                     modifySubscriber: modifySubscriberTether(),
                     changeActivityTimeframe: changeActivityTimeframeTether(),
                     selectTradeRouteList: selectTradeRouteListTether(),
                     changeRoute: changeRouteTether(),
                   }))
                 )
+              ),
+              router.contains(adminRoute)(
+                $Admin({ walletClientQuery, providerQuery })({
+                  changeWallet: changeWalletTether(),
+                })
               ),
               router.match(tradeTermsAndConditions)(
                 fadeIn(
@@ -228,7 +258,7 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
               router.match(tradeRoute)(
                 switchMap(chain => {
                   return $Trade({
-                    publicProviderQuery,
+                    providerQuery,
                     walletClientQuery,
                     routeTypeListQuery,
                     chain: chain, referralCode: BLUEBERRY_REFFERAL_CODE, parentRoute: tradeRoute
@@ -275,39 +305,14 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
                     ),
                   })({}),
                 ),
-            
-                // switchMap(params => {
-                //   const refreshThreshold = import.meta.env.DEV ? 150 : 50
-                //   const blockDelta = params.syncBlock ? params.syncBlock - params.process.blockNumber : null
 
-                //   if (blockDelta === null || blockDelta < refreshThreshold) return empty()
-
-                //   return fadeIn($row(style({ position: 'fixed', bottom: '18px', left: `50%` }))(
-                //     style({ transform: 'translateX(-50%)' })(
-                //       $column(layoutSheet.spacingTiny, style({
-                //         backgroundColor: pallete.horizon,
-                //         border: `1px solid`,
-                //         padding: '20px',
-                //         animation: `borderRotate var(--d) linear infinite forwards`,
-                //         borderImage: `conic-gradient(from var(--angle), ${colorAlpha(pallete.indeterminate, .25)}, ${pallete.indeterminate} 0.1turn, ${pallete.indeterminate} 0.15turn, ${colorAlpha(pallete.indeterminate, .25)} 0.25turn) 30`
-                //       }))(
-                //         $text(`Syncing blocks of data: ${readableUnitAmount(Number(blockDelta))}`),
-                //         $text(style({ color: pallete.foreground, fontSize: '.85rem' }))(
-                //           params.process.state.blockMetrics.timestamp === 0n
-                //             ? `Indexing for the first time, this may take a minute or two.`
-                //             : `${timeSince(Number(params.process.state.blockMetrics.timestamp))} old data is displayed`
-                //         ),
-                //       )
-                //     )
-                //   ))
-                // }, combineObject({ blockChange, subgraphStatus })),
               ),
             )
           ),
 
           $column(style({ maxWidth: '1000px', margin: '0 auto', width: '100%', zIndex: 10 }))(
             $RouteSubscriptionDrawer({
-              publicProviderQuery,
+              providerQuery,
               walletClientQuery,
               routeTypeListQuery,
               modifySubscriptionList: replayLatest(modifySubscriptionList, []),

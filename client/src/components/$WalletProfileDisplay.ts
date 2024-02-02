@@ -6,10 +6,10 @@ import { readableTokenAmountLabel, switchMap } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import { getTokenDescription } from "gmx-middleware-utils"
 import { $infoLabel, $intermediate$node } from "ui-components"
-import { getPuppetDepositAmount } from "../logic/puppetLogic"
 import { $seperator2 } from "../pages/common"
 import { IWalletPageParams } from "../pages/type"
 import { $disconnectedWalletDisplay, $profileDisplay } from "./$AccountProfile.js"
+import { readPuppetDepositAmount } from "../logic/puppetRead.js"
 
 export interface IWalletDisplay extends IWalletPageParams {
 }
@@ -32,7 +32,7 @@ export const $walletProfileDisplay = (config: IWalletDisplay) => {
     }
 
     const address = wallet.account.address
-    const depositQuery = now(address ? getPuppetDepositAmount(wallet, address) : Promise.resolve(0n))
+    const depositQuery = now(address ? readPuppetDepositAmount(wallet, address) : Promise.resolve(0n))
               
     return $row(layoutSheet.spacingSmall, style({ alignItems: 'center', pointerEvents: 'none', paddingRight: '16px' }))(
       address

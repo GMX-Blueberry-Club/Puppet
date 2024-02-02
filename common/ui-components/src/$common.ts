@@ -2,13 +2,12 @@ import { combineObject, isStream, O, Op } from "@aelea/core"
 import { $element, $node, $Node, $svg, $text, attr, IBranch, style, styleBehavior, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { empty, fromPromise, join, map, skipRepeats, startWith, switchLatest } from "@most/core"
+import { empty, fromPromise, map, skipRepeats, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { getExplorerUrl, getMappedValue, ITokenDescription, promiseState, PromiseStatus, shortenTxAddress, switchMap } from "common-utils"
 import { arbitrum, Chain } from "viem/chains"
 import { $alertIcon, $arrowRight, $caretDblDown, $info, $tokenIconMap } from "./$icons.js"
 import { $defaultDropContainer, $Tooltip } from "./$Tooltip.js"
-import { disposeNone } from "@most/disposable"
 
 
 
@@ -258,4 +257,8 @@ export const $intermediateMessage = (querySrc: Stream<Promise<string>>, hint = '
   }, querySrc)
   return $text(text)
 }
+export const $label = $element('label')(
+  layoutSheet.spacingSmall,
+  style({ color: pallete.foreground, cursor: 'pointer', display: 'flex' })
+)
 

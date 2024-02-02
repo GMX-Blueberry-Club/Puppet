@@ -28,7 +28,7 @@ export const $PuppetProfile = (config: IPuppetProfile) => component((
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 ) => {
   
-  const { activityTimeframe, walletClientQuery, publicProviderQuery, priceTickMapQuery, puppetTradeRouteListQuery, selectedTradeRouteList, routeTypeListQuery, route } = config
+  const { activityTimeframe, walletClientQuery, providerQuery, priceTickMapQuery, puppetTradeRouteListQuery, selectedTradeRouteList, routeTypeListQuery, route } = config
 
   return [
 
@@ -68,7 +68,7 @@ export const $PuppetProfile = (config: IPuppetProfile) => component((
                       $seperator2,
                       $column(layoutSheet.spacing, style({ flex: 1 }))( 
                         ...traderPuppetTradeRouteList.map(puppetTradeRoute => {
-                          return $PuppetTraderTradeRoute({ route, puppetTradeRoute, publicProviderQuery, routeTypeList, walletClientQuery, activityTimeframe: params.activityTimeframe, priceTickMap })({
+                          return $PuppetTraderTradeRoute({ route, puppetTradeRoute, providerQuery, routeTypeList, walletClientQuery, activityTimeframe: params.activityTimeframe, priceTickMap })({
                             modifySubscriber: modifySubscriberTether(),
                             changeRoute: changeRouteTether(),
                           })

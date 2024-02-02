@@ -1,25 +1,34 @@
 import { Behavior, combineObject } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
+import { pallete } from "@aelea/ui-components-theme"
 import { empty, map } from "@most/core"
 import { ADDRESS_ZERO, IntervalTime, switchMap } from "common-utils"
 import { EIP6963ProviderDetail } from "mipd"
 import { ISetRouteType, queryPuppetTradeRoute, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
-import { $ButtonToggle, $defaulButtonToggleContainer } from "ui-components"
+import { $ButtonToggle, $defaulButtonToggleContainer, $infoLabeledValue, $infoTooltipLabel } from "ui-components"
 import { uiStorage } from "ui-storage"
+import { $heading2, $heading3 } from "../../common/$text"
+import { $card, $responsiveFlex } from "../../common/elements/$common"
 import { $IntermediateConnectButton } from "../../components/$ConnectWallet.js"
+import { $VestingDetails } from "../../components/$VestingDetails"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
 import * as storeDb from "../../const/store.js"
-import { IPageParams, IUserActivityParams, IUserType } from "../type.js"
+import { $seperator2 } from "../common"
+import { IPageParams, IUserActivityParams, IWalletTab } from "../type.js"
 import { $TraderPage } from "./$Trader.js"
 import { $WalletPuppet } from "./$WalletPuppet.js"
 
 const optionDisplay = {
-  [IUserType.PUPPET]: {
+  [IWalletTab.EARN]: {
+    label: 'Earn',
+    url: '/earn'
+  },
+  [IWalletTab.PUPPET]: {
     label: 'Puppet',
     url: '/puppet'
   },
-  [IUserType.TRADER]: {
+  [IWalletTab.TRADER]: {
     label: 'Trader',
     url: '/trader'
   },
@@ -28,7 +37,7 @@ const optionDisplay = {
 
 export const $WalletPage = (config: IPageParams & IUserActivityParams) => component((
   [changeRoute, changeRouteTether]: Behavior<string, string>,
-  [selectProfileMode, selectProfileModeTether]: Behavior<IUserType>,
+  [selectProfileMode, selectProfileModeTether]: Behavior<IWalletTab>,
   [modifySubscriber, modifySubscriberTether]: Behavior<IChangeSubscription>,
 
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,
@@ -37,7 +46,7 @@ export const $WalletPage = (config: IPageParams & IUserActivityParams) => compon
   [changeWallet, changeWalletTether]: Behavior<any, EIP6963ProviderDetail>,
 ) => {
 
-  const { route, walletClientQuery, routeTypeListQuery, publicProviderQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery } = config
+  const { route, walletClientQuery, routeTypeListQuery, providerQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery } = config
 
   const profileMode = uiStorage.replayWrite(storeDb.store.wallet, selectProfileMode, 'selectedTab')
 
@@ -69,7 +78,7 @@ export const $WalletPage = (config: IPageParams & IUserActivityParams) => compon
         $ButtonToggle({
           $container: $defaulButtonToggleContainer(style({ alignSelf: 'center', })),
           selected: profileMode,
-          options: [IUserType.PUPPET, IUserType.TRADER],
+          options: [IWalletTab.EARN, IWalletTab.PUPPET, IWalletTab.TRADER],
           $$option: map(option => {
             return $text(optionDisplay[option].label)
           })
@@ -82,7 +91,7 @@ export const $WalletPage = (config: IPageParams & IUserActivityParams) => compon
           return (await walletQuery)?.account.address || ADDRESS_ZERO
         }, walletClientQuery)
 
-        if (params.profileMode === IUserType.PUPPET) {
+        if (params.profileMode === IWalletTab.PUPPET) {
           const puppetTradeRouteListQuery = queryPuppetTradeRoute({ address, activityTimeframe, selectedTradeRouteList })
           
           const settledPositionListQuery = map(async tradeRoute => {
@@ -94,23 +103,93 @@ export const $WalletPage = (config: IPageParams & IUserActivityParams) => compon
 
           return $WalletPuppet({
             walletClientQuery, route, priceTickMapQuery, openPositionListQuery, settledPositionListQuery, puppetTradeRouteListQuery,
-            activityTimeframe, selectedTradeRouteList, routeTypeListQuery, publicProviderQuery,
+            activityTimeframe, selectedTradeRouteList, routeTypeListQuery, providerQuery,
           })({
             changeRoute: changeRouteTether(),
             modifySubscriber: modifySubscriberTether(),
             changeActivityTimeframe: changeActivityTimeframeTether(),
             selectTradeRouteList: selectTradeRouteListTether(),
           })
+        } else if (params.profileMode === IWalletTab.TRADER) {
+          const settledPositionListQuery = queryTraderPositionSettled({ activityTimeframe, selectedTradeRouteList, address })
+          const openPositionListQuery = queryTraderPositionOpen({ address, selectedTradeRouteList })
+
+          return $column(layoutSheet.spacingTiny)(
+            $TraderPage({ ...config, openPositionListQuery, settledPositionListQuery })({ 
+              changeActivityTimeframe: changeActivityTimeframeTether(),
+            })
+          ) 
         }
 
-        const settledPositionListQuery = queryTraderPositionSettled({ activityTimeframe, selectedTradeRouteList, address })
-        const openPositionListQuery = queryTraderPositionOpen({ address, selectedTradeRouteList })
 
-        return $column(layoutSheet.spacingTiny)(
-          $TraderPage({ ...config, openPositionListQuery, settledPositionListQuery })({ 
-            changeActivityTimeframe: changeActivityTimeframeTether(),
-          })
-        ) 
+        return $card(layoutSheet.spacingBig)(
+          
+          $responsiveFlex(layoutSheet.spacingBig)(
+
+            $column(layoutSheet.spacing, style({ flex: 1 }))(
+              $heading3('Vesting Details'),
+              $VestingDetails({ ...config })({ 
+              })
+            ),
+            $seperator2,
+            $column(layoutSheet.spacing, style({ flex: 1 }))(
+              $heading3('Protocol Flywheel'),
+              style({ placeContent: 'space-between' })(
+                $infoLabeledValue(
+                  'Price',
+                  $text(`$1`)
+                )
+              ),
+              style({ placeContent: 'space-between' })(
+                $infoLabeledValue(
+                  $infoTooltipLabel('This week emission amount that will be distributed anyone who uses PUPPET', 'Current Emissions'),
+                  $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+                    $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(`(21,383 PUPPET)`),
+                    $text(`27,383 / Week`)
+                  ),
+                )
+              ),
+              style({ placeContent: 'space-between' })(
+                $infoLabeledValue(
+                  $infoTooltipLabel('This week emission amount that will be distributed anyone who uses PUPPET', 'Current Revenue'),
+                  $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+                    $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(`($36,137)`),
+                    $text(`21,383 / Week`)
+                  ),
+                )
+              ),
+              style({ placeContent: 'space-between' })(
+                $infoLabeledValue(
+                  $infoTooltipLabel('Total amount of PUPPET that has been emitted over the lifetime of the protocol. Each subsequent year, the number of new tokens minted will decrease by about 16%,', 'Total Emissions'),
+                  $text(`42,766`),
+                )
+              ),
+              style({ placeContent: 'space-between' })(
+                $infoLabeledValue(
+                  $infoTooltipLabel('The total value of all PUPPET in circulation', 'Market Cap'),
+                  $text('10,000,000'),
+                )
+              ),
+              $seperator2,
+              style({ placeContent: 'space-between' })(
+                $infoLabeledValue(
+                  $text('Average lock time'),
+                  $text('3.85 years'),
+                )
+              ),
+              style({ placeContent: 'space-between' })(
+                $infoLabeledValue(
+                  $text('Exit / Lock'),
+                  $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+                    $text(style({ color: pallete.foreground, fontSize: '.75rem' }))(`(66% Lock)`),
+                    $text(`14,112 / 28,654`)
+                  ),
+                )
+              ),
+            ),
+            
+          ),
+        )
       }, combineObject({ profileMode }))
 
 

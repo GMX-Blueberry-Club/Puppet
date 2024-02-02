@@ -587,179 +587,6 @@ type DebitPuppet @entity(immutable: true) {
 }
 
 
-# type OwnershipTransferred @entity(immutable: true) {
-#   id: Bytes!
-#   user: Bytes! # address
-#   newOwner: Bytes! # address
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-# type Pause @entity(immutable: true) {
-#   id: Bytes!
-#   paused: Boolean! # bool
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-
-# type RegisterRouteAccount @entity(immutable: true) {
-#   id: Bytes!
-#   trader: Bytes! # address
-#   tradeRoute: Bytes! # address
-#   routeTypeKey: Bytes! # bytes32
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-# type RescueRouteFunds @entity(immutable: true) {
-#   id: Bytes!
-#   amount: BigInt! # uint256
-#   token: Bytes! # address
-#   receiver: Bytes! # address
-#   tradeRoute: Bytes! # address
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-# type SetFees @entity(immutable: true) {
-#   id: Bytes!
-#   managmentFee: BigInt! # uint256
-#   withdrawalFee: BigInt! # uint256
-#   performanceFee: BigInt! # uint256
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-# type SetFeesRecipient @entity(immutable: true) {
-#   id: Bytes!
-#   recipient: Bytes! # address
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-# type SetThrottleLimit @entity(immutable: true) {
-#   id: Bytes!
-#   puppet: Bytes! # address
-#   routeType: Bytes! # bytes32
-#   throttleLimit: BigInt! # uint256
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-# type TransferRouteFunds @entity(immutable: true) {
-#   id: Bytes!
-#   amount: BigInt! # uint256
-#   asset: Bytes! # address
-#   receiver: Bytes! # address
-#   caller: Bytes! # address
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-# type UpdateKeeper @entity(immutable: true) {
-#   id: Bytes!
-#   keeper: Bytes! # address
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-# type UpdateMultiSubscriber @entity(immutable: true) {
-#   id: Bytes!
-#   multiSubscriber: Bytes! # address
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-# type UpdateOpenTimestamp @entity(immutable: true) {
-#   id: Bytes!
-#   puppets: [Bytes!]!
-#   routeType: Bytes!
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-# type UpdateReferralCode @entity(immutable: true) {
-#   id: Bytes!
-#   referralCode: Bytes! # bytes32
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-# type UpdateRouteFactory @entity(immutable: true) {
-#   id: Bytes!
-#   routeFactory: Bytes! # address
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-# type UpdateScoreGauge @entity(immutable: true) {
-#   id: Bytes!
-#   scoreGauge: Bytes! # address
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-# type WithdrawPlatformFees @entity(immutable: true) {
-#   id: Bytes!
-#   amount: BigInt! # uint256
-#   asset: Bytes! # address
-#   caller: Bytes! # address
-#   platformFeeRecipient: Bytes! # address
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-
-
-
-# type AdjustTargetLeverage @entity(immutable: true) {
-#   id: Bytes!
-#   tradeRoute: Bytes! # address
-#   requestKey: Bytes! # bytes32
-#   routeKey: Bytes! # bytes32
-#   positionKey: Bytes! # bytes32
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-# type AuthorityUpdated @entity(immutable: true) {
-#   id: Bytes!
-#   user: Bytes! # address
-#   newAuthority: Bytes! # address
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
-# type CreditPlatform @entity(immutable: true) {
-#   id: Bytes!
-#   amount: BigInt! # uint256
-#   asset: Bytes! # address
-#   puppet: Bytes! # address
-#   caller: Bytes! # address
-#   isWithdraw: Boolean! # bool
-#   blockNumber: BigInt!
-#   blockTimestamp: BigInt!
-#   transactionHash: Bytes!
-# }
-
 
 
 # OptionPuppet
@@ -817,14 +644,8 @@ type SetDiscount @entity(immutable: true) {
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
-}type AuthorityUpdated @entity(immutable: true) {
-  id: Bytes!
-  user: Bytes! # address
-  newAuthority: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
 }
+
 
 type Claim @entity(immutable: true) {
   id: Bytes!
@@ -845,24 +666,16 @@ type DepositRewards @entity(immutable: true) {
   transactionHash: Bytes!
 }
 
-type OwnershipTransferred @entity(immutable: true) {
-  id: Bytes!
-  user: Bytes! # address
-  newOwner: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
 
-type UserScoreUpdate @entity(immutable: true) {
-  id: Bytes!
-  user: Bytes! # address
-  volume: BigInt! # uint256
-  profit: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
+# type UserScoreUpdate @entity(immutable: true) {
+#   id: Bytes!
+#   user: Bytes! # address
+#   volume: BigInt! # uint256
+#   profit: BigInt! # uint256
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
 
 type WeightsUpdate @entity(immutable: true) {
   id: Bytes!

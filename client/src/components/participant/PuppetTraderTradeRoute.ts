@@ -13,11 +13,11 @@ import { $TraderDisplay, $pnlDisplay, $puppets } from "../../common/$common.js"
 import { $puppetLogo } from "../../common/$icons"
 import { $iconCircular } from "../../common/elements/$common"
 import { IPageParams } from "../../pages/type.js"
-import { getPuppetSubscriptionExpiry } from "../../logic/puppetLogic"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../form/$Button"
 import { $RouteSubscriptionEditor, IChangeSubscription } from "../portfolio/$RouteSubscriptionEditor.js"
 import { entryColumn, pnlColumn, positionTimeColumn, settledSizeColumn } from "../table/$TableColumn"
 import { $ProfilePerformanceGraph } from "../trade/$ProfilePerformanceGraph.js"
+import { readPuppetSubscriptionExpiry } from "../../logic/puppetRead.js"
 
 export interface IPuppetTraderTradeRoute extends IPageParams {
   puppetTradeRoute: IPuppetTradeRoute
@@ -52,7 +52,7 @@ export const $PuppetTraderTradeRoute = (config: IPuppetTraderTradeRoute) => comp
       return 0n
     }
 
-    return getPuppetSubscriptionExpiry(wallet, wallet.account.address, puppetTradeRoute.trader, routeType.collateralToken, routeType.indexToken, routeType.isLong)
+    return readPuppetSubscriptionExpiry(wallet, wallet.account.address, puppetTradeRoute.trader, routeType.collateralToken, routeType.indexToken, routeType.isLong)
   }, walletClientQuery)
 
   const paging = startWith({ offset: 0, pageSize: 20 }, scrollRequest)

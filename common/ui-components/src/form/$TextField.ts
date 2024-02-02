@@ -4,7 +4,7 @@ import { $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { empty } from "@most/core"
 import { Stream } from "@most/types"
-import { $Field, Field } from "ui-components"
+import { $Field, Field } from "./$Field.js"
 
 
 export interface TextField extends Field {
@@ -47,7 +47,7 @@ const overideInputStyle = O(
 )
 
 
-export const $TextField = (config: TextField) => component((
+export const $FieldLabeled = (config: TextField) => component((
   [change, sampleValue]: Behavior<string, string>
 ) => {
 

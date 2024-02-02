@@ -22,8 +22,8 @@ import { $profileAvatar, $profileDisplay } from "../components/$AccountProfile.j
 import { $Popover } from "../components/$Popover.js"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button.js"
 import { $RouteSubscriptionEditor, IChangeSubscription } from "../components/portfolio/$RouteSubscriptionEditor.js"
-import { IUserType, IWalletPageParams } from "../pages/type.js"
-import { getPuppetSubscriptionExpiry } from "../logic/puppetLogic.js"
+import { IWalletTab, IWalletPageParams } from "../pages/type.js"
+import { readPuppetSubscriptionExpiry } from "../logic/puppetRead"
 import { $seperator2 } from "../pages/common.js"
 import { $puppetLogo } from "./$icons"
 
@@ -390,7 +390,7 @@ export const $TraderDisplay =  (config: ITraderDisplay) => component((
       // $profileContainer: $defaultBerry(style({ width: '50px' }))
       }),
       route: route.create({ fragment: 'baseRoute' }),
-      url: `/app/profile/${IUserType.TRADER.toLowerCase()}/${trader}`
+      url: `/app/profile/${IWalletTab.TRADER.toLowerCase()}/${trader}`
     })({ click: clickTether() }),
 
     { click }
@@ -413,7 +413,7 @@ export const $TraderRouteDisplay =  (config: ITraderRouteDisplay) => component((
       return 0n
     }
 
-    const expiry = await getPuppetSubscriptionExpiry(wallet, wallet.account.address, trader, positionParams.collateralToken, positionParams.indexToken, positionParams.isLong)
+    const expiry = await readPuppetSubscriptionExpiry(wallet, wallet.account.address, trader, positionParams.collateralToken, positionParams.indexToken, positionParams.isLong)
 
     return expiry
   }, walletClientQuery)

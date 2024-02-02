@@ -8,10 +8,10 @@ import { IntervalTime, formatFixed, parseBps, switchMap, unixTimestampNow } from
 import { ISetRouteType } from "puppet-middleware-utils"
 import * as viem from "viem"
 import { theme } from "../../assignThemeSync.js"
-import { $TextField } from "../../common/$TextField.js"
+import { $FieldLabeled } from "ui-components"
 import { $route } from "../../common/$common"
 import { IWalletPageParams } from "../../pages/type.js"
-import { getPuppetAllowance } from "../../logic/puppetLogic"
+import { readPuppetAllowance } from "../../logic/puppetRead"
 import { $ButtonSecondary } from "../form/$Button.js"
 import { $Dropdown } from "../form/$Dropdown"
 
@@ -48,7 +48,7 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor & IWal
         return ''
       }
 
-      const amount = await getPuppetAllowance(wallet, wallet.account.address, config.tradeRoute)
+      const amount = await readPuppetAllowance(wallet, wallet.account.address, config.tradeRoute)
       return amount || ''
     }, walletClientQuery),
     inputAllowance
@@ -104,7 +104,7 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor & IWal
 
       // $labeledDivider('Deposit rules'),
 
-      $TextField({
+      $FieldLabeled({
         label: 'Allow %',
         value: map(x => x ? formatFixed(x, 4) * 100 : '', allowance),
         labelWidth: 100,
@@ -115,7 +115,7 @@ export const $RouteSubscriptionEditor = (config: IRouteSubscriptionEditor & IWal
         )
       }),
 
-      $TextField({
+      $FieldLabeled({
         label: 'Expiration',
         $input: $element('input')(
           attr({ type: 'date' }),

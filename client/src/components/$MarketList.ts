@@ -11,12 +11,12 @@ import { latestPriceMap } from 'puppet-middleware-utils'
 import { $Table, $defaultTableRowContainer } from 'ui-components'
 import * as viem from 'viem'
 import { $marketSmallLabel } from '../common/$common'
-import { getMarketPoolUsage } from '../logic/tradeV2'
+import { readMarketPoolUsage } from '../logic/tradeRead'
 import * as walletLink from "wallet"
 import { readContract } from 'viem/actions'
+import { IComponentPageParams } from '../pages/type'
 
-interface IMarketList {
-  publicProviderQuery: Stream<Promise<walletLink.IPublicProvider>>
+interface IMarketList extends IComponentPageParams {
   $container?: NodeComposeFn<$Node>
   chain: viem.Chain
   $rowCallback?: Op<{ market: IMarket, price: IMarketPrice }, NodeComposeFn<$Node>>
@@ -24,7 +24,7 @@ interface IMarketList {
 
 export const $MarketInfoList = (config: IMarketList) => component((
 ) => {
-  const  { publicProviderQuery, $container = $column, chain, $rowCallback } = config
+  const  { providerQuery, $container = $column, chain, $rowCallback } = config
   const gmxContractMap = getMappedValue(GMX.CONTRACT, chain.id)
 
   const marketParamList = map(params => {
@@ -72,7 +72,7 @@ export const $MarketInfoList = (config: IMarketList) => component((
                   functionName: 'getMarketInfo',
                   args: [gmxContractMap.Datastore.address, params.price, params.market.marketToken] as any
                 }))
-                const usage: Stream<IMarketUsageInfo> = fromPromise(getMarketPoolUsage(provider, params.market))
+                const usage: Stream<IMarketUsageInfo> = fromPromise(readMarketPoolUsage(provider, params.market))
 
                 const fundingFactorPerInterval  = map(marketParams => {
                   return getFundingFactorPerInterval(marketParams.usage, marketParams.fees, IntervalTime.MIN60)
@@ -143,7 +143,7 @@ export const $MarketInfoList = (config: IMarketList) => component((
           // }
           ]
         })({})
-      }, publicProviderQuery)),
+      }, providerQuery)),
     ),
 
     {  }

@@ -1,6 +1,6 @@
-import { factor, getMappedValue } from "common-utils"
+import { getMappedValue } from "common-utils"
 import * as GMX from "gmx-middleware-const"
-import { hashData, IMarket, IMarketConfig, IMarketFees, IMarketInfo, IMarketPool, IMarketPrice, IMarketUsageInfo } from "gmx-middleware-utils"
+import { IMarket, IMarketConfig, IMarketFees, IMarketInfo, IMarketPool, IMarketPrice, IMarketUsageInfo, hashData } from "gmx-middleware-utils"
 import { readContract } from "viem/actions"
 import * as walletLink from "wallet"
 
@@ -29,11 +29,12 @@ const ESTIMATED_GAS_FEE_MULTIPLIER_FACTOR = "ESTIMATED_GAS_FEE_MULTIPLIER_FACTOR
 
 
 
-export async function getMarketPoolUsage(
-  provider: walletLink.IPublicProvider,
-  market: IMarket
+export async function readMarketPoolUsage(
+  provider: walletLink.IClient,
+  market: IMarket,
+  contractDefs = getMappedValue(GMX.CONTRACT, provider.chain.id),
 ): Promise<IMarketUsageInfo> {
-  const datastoreContract = getMappedValue(GMX.CONTRACT, provider.chain.id).Datastore
+  const datastoreContract = contractDefs.Datastore
   // const v2Reader = contractReader(readerV2)
 
 
@@ -352,7 +353,7 @@ export async function getMarketPoolUsage(
   return newLocal
 }
 
-export async function getMarketConfig(
+export async function readMarketConfig(
   provider: walletLink.IPublicProvider,
   market: IMarket,
 ): Promise<IMarketConfig> {
@@ -476,11 +477,11 @@ export async function getMarketConfig(
   }
 }
 
-export async function getFullMarketInfo(provider: walletLink.IPublicProvider, market: IMarket, price: IMarketPrice): Promise<IMarketInfo> {
+export async function readFullMarketInfo(provider: walletLink.IPublicProvider, market: IMarket, price: IMarketPrice): Promise<IMarketInfo> {
   const gmxContractMap = getMappedValue(GMX.CONTRACT, provider.chain.id)
   const datastoreContract = gmxContractMap.Datastore
-  const usageQuery: Promise<IMarketUsageInfo> = getMarketPoolUsage(provider, market)
-  const configQuery: Promise<IMarketConfig> = getMarketConfig(provider, market)
+  const usageQuery: Promise<IMarketUsageInfo> = readMarketPoolUsage(provider, market)
+  const configQuery: Promise<IMarketConfig> = readMarketConfig(provider, market)
   const poolQuery: Promise<IMarketPool> = readContract(provider, {
     ...gmxContractMap.ReaderV2,
     functionName: 'getMarketTokenPrice',
@@ -511,7 +512,7 @@ export async function getFullMarketInfo(provider: walletLink.IPublicProvider, ma
   return { market, price, usage, config, pool, fees }
 }
 
-export async function getPositionOrderGasLimit(provider: walletLink.IPublicProvider) {
+export async function readPositionOrderGasLimit(provider: walletLink.IPublicProvider) {
   const datastoreContract = getMappedValue(GMX.CONTRACT, provider.chain.id).Datastore
   const increaseGasLimit =  readContract(provider, {
     ...datastoreContract,
@@ -527,7 +528,7 @@ export async function getPositionOrderGasLimit(provider: walletLink.IPublicProvi
   return { increaseGasLimit, decreaseGasLimit }
 }
 
-export async function getExecuteGasFee(provider: walletLink.IPublicProvider) {
+export async function readExecuteGasFee(provider: walletLink.IPublicProvider) {
   const datastoreContract = getMappedValue(GMX.CONTRACT, provider.chain.id).Datastore
 
   const estimatedFeeBaseGasLimit = readContract(provider, {
@@ -562,33 +563,3 @@ export async function getExecuteGasFee(provider: walletLink.IPublicProvider) {
 }
 
 
-export function getExecutionFee(
-  estimatedFeeBaseGasLimit: bigint,
-  estimatedFeeMultiplierFactor: bigint,
-  estimatedGasLimit: bigint,
-  gasPrice: bigint
-): bigint {
-
-  const adjustedGasLimit = estimatedFeeBaseGasLimit + factor(estimatedGasLimit, estimatedFeeMultiplierFactor)
-  const feeTokenAmount = adjustedGasLimit * gasPrice
-
-  return feeTokenAmount
-}
-
-// export function estimateExecuteIncreaseOrderGasLimit(
-//   gasLimits: GasLimitsConfig,
-//   order: { swapPath?: string[]; callbackGasLimit?: BigNumber }
-// ) {
-//   const swapsCount = order.swapPath?.length || 0
-
-//   return gasLimits.increaseOrder.add(gasLimits.singleSwap.mul(swapsCount)).add(order.callbackGasLimit || 0)
-// }
-
-// export function estimateExecuteDecreaseOrderGasLimit(
-//   gasLimits: GasLimitsConfig,
-//   order: { swapPath?: string[]; callbackGasLimit?: BigNumber }
-// ) {
-//   const swapsCount = order.swapPath?.length || 0
-
-//   return gasLimits.decreaseOrder.add(gasLimits.singleSwap.mul(swapsCount)).add(order.callbackGasLimit || 0)
-// }

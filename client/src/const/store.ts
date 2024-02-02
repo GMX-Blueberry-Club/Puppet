@@ -1,6 +1,6 @@
 
 import * as GMX from 'gmx-middleware-const'
-import { IUserType, ITradeFocusMode } from '../pages/type.js'
+import { IWalletTab, ITradeFocusMode, VestingLockMode } from '../pages/type.js'
 import { ISortBy } from 'ui-components'
 import { IMarketCreatedEvent, TEMP_MARKET_LIST } from 'gmx-middleware-utils'
 import * as viem from 'viem'
@@ -44,7 +44,11 @@ export const store = uiStorage.createStoreDefinition('root', 4, {
   },
   wallet: {
     initialState: {
-      selectedTab: IUserType.PUPPET
+      selectedTab: IWalletTab.PUPPET,
+      lockingMode: VestingLockMode.CONTINUOUS,
+      claimRevenue: true,
+      lockTokens: true,
+      claimTokens: true,
     }
   }
 })

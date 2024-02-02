@@ -1,6 +1,6 @@
 import { arbitrum } from "viem/chains"
 
-import scoreGague from './abi/scoreGague.js'
+import scoreGaugeV1 from './abi/scoreGaugeV1.js'
 import auth from './abi/auth.js'
 import route from './abi/route.js'
 import puppet from './abi/puppet.js'
@@ -15,6 +15,7 @@ import gaugeController from "./abi/gaugeController.js"
 import flashLoanHandler from "./abi/flashLoanHandler.js"
 import decreaseSizeResolver from "./abi/decreaseSizeResolver.js"
 import dictator from "./abi/dictator.js"
+import minter from "./abi/minter.js"
 
 export const CONTRACT = {
   [arbitrum.id]: {
@@ -38,13 +39,14 @@ export const CONTRACT = {
       address: "0x6287778122A449c825D66d2d28ADAb7ce8595e16",
       abi: gaugeController,
     },
-
-
+    Minter: {
+      address: "0xa70A55470c16529f6ED8B7b7fAe701cB039B593f",
+      abi: minter,
+    },
     ScoreGaugeV1: {
       address: "0x00e930320A64273Ff0a544c57b58ebA8C8b3E35E",
-      abi: scoreGague,
+      abi: scoreGaugeV1,
     },
-
     Datastore: {
       address: "0x75236b405F460245999F70bc06978AB2B4116920",
       abi: datastore,
@@ -72,10 +74,6 @@ export const CONTRACT = {
     Auth: {
       address: '0xA12a6281c1773F267C274c3BE1B71DB2BACE06Cb',
       abi: auth,
-    },
-    ScoreGague: {
-      address: '0x920C10F42c3F5Dba70Cd2c7567918D3A400FA876',
-      abi: scoreGague,
     },
     Route: {
       abi: route,

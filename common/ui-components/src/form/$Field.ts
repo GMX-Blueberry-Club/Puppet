@@ -1,18 +1,15 @@
-import { $element, component, nodeEvent, IBranch, style, styleBehavior, StyleCSS, NodeComposeFn, $Node, attrBehavior } from '@aelea/dom'
-import { O, Op, combineObject, Behavior } from '@aelea/core'
+import { Behavior, O, combineObject } from '@aelea/core'
+import { $element, IBranch, NodeComposeFn, component, nodeEvent, styleBehavior } from '@aelea/dom'
+import { Input, designSheet, layoutSheet } from '@aelea/ui-components'
 import { pallete } from '@aelea/ui-components-theme'
-import { mergeArray, multicast, never, now, startWith, tap } from '@most/core'
-import { filter } from '@most/core'
-import { merge } from '@most/core'
-import { empty, map, switchLatest } from "@most/core"
-import { Input, InputType, designSheet } from '@aelea/ui-components'
-import { dismissOp, interactionOp } from './form.js'
+import { empty, filter, map, merge, mergeArray, multicast, never, now, startWith, switchLatest, tap } from '@most/core'
+import { dismissOp, interactionOp } from './common.js'
 
 export interface Field extends Input<string | number> {
   $input?: NodeComposeFn<any, HTMLInputElement>
 }
 
-export const $Field = ({ value = empty(), validation = never, $input = $element('input') }: Field) => component((
+export const $Field = ({ value = empty(), disabled, validation = never, $input = $element('input') }: Field) => component((
   [focusStyle, interactionTether]: Behavior<IBranch, true>,
   [dismissstyle, dismissTether]: Behavior<IBranch, false>,
   [blur, blurTether]: Behavior<IBranch, FocusEvent>,
@@ -58,6 +55,13 @@ export const $Field = ({ value = empty(), validation = never, $input = $element(
 
       blurTether(nodeEvent('blur')),
 
+      disabled
+        ? styleBehavior(
+          map(isDisabled => {
+            return isDisabled ? { opacity: .4, pointerEvents: 'none' } : null
+          }, startWith(true, disabled))
+        ) : O(),
+
       O(
         map(node =>
           merge(
@@ -68,7 +72,7 @@ export const $Field = ({ value = empty(), validation = never, $input = $element(
             }, value))
           )
         ),
-        switchLatest
+        switchLatest,
       )
 
     )(),
@@ -79,3 +83,8 @@ export const $Field = ({ value = empty(), validation = never, $input = $element(
     }
   ]
 })
+
+
+export const $form = $element('form')(layoutSheet.column)
+
+
