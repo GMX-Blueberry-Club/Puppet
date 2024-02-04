@@ -42,7 +42,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
   [changeWallet, changeWalletTether]: Behavior<EIP6963ProviderDetail>,
 ) => {
 
-  const { modifySubscriber, modifySubscriptionList, providerQuery, routeTypeListQuery, walletClientQuery } = config
+  const { modifySubscriber, modifySubscriptionList, providerClientQuery, routeTypeListQuery, walletClientQuery } = config
 
   const openIfEmpty = skipRepeats(map(l => l.length > 0, modifySubscriptionList))
 
@@ -164,7 +164,7 @@ export const $RouteSubscriptionDrawer = (config: IRouteSubscribeDrawer) => compo
             $Popover({
               open: constant(
                 $AssetDepositEditor({
-                  providerQuery,
+                  providerClientQuery,
                   walletClientQuery,
                   token: depositToken
                 })({

@@ -45,7 +45,6 @@ export const store = uiStorage.createStoreDefinition('root', 4, {
   wallet: {
     initialState: {
       selectedTab: IWalletTab.PUPPET,
-      lockingMode: VestingLockMode.CONTINUOUS,
       claimRevenue: true,
       lockTokens: true,
       claimTokens: true,

@@ -12,3 +12,5 @@ export const USD_DECIMALS = 30
 export const WEI_PRECISION = 10n ** BigInt(18)
 
 export const PRECISION = 10n ** BigInt(FACTOR_PERCISION)
+
+export const MAX_UINT256 = 2n ** 256n - 1n

@@ -141,9 +141,9 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
   const chainIdQuery = indexDb.get(store.global, 'chain')
   const chainQuery: Stream<Promise<viem.Chain>> = now(chainIdQuery.then(id => chains.find(c => c.id === id) || arbitrum))
 
-  const { providerQuery, publicProviderQuery, walletClientQuery } = walletLink.initWalletLink({ publicTransportMap, chainQuery, walletProvider })
+  const { providerClientQuery, publicProviderClientQuery, walletClientQuery } = walletLink.initWalletLink({ publicTransportMap, chainQuery, walletProvider })
 
-  const block = switchMap(async query => (await query).getBlockNumber(), providerQuery)
+  const block = switchMap(async query => (await query).getBlockNumber(), providerClientQuery)
   const latestBlock: Stream<bigint> = switchLatest(switchMap(async query => {
     const provider = await query
     const blockChange = fromCallback(cb => provider.watchBlockNumber({
@@ -152,7 +152,7 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
       }
     }))
     return mergeArray([blockChange, block])
-  }, providerQuery))
+  }, providerClientQuery))
 
 
   return [
@@ -185,18 +185,18 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
             )(
               switchMap(isDesktop => {
                 if (isDesktop) {
-                  return $MainMenu({ route: appRoute, walletClientQuery, providerQuery })({
+                  return $MainMenu({ route: appRoute, walletClientQuery, providerClientQuery })({
                     routeChange: changeRouteTether()
                   })
                 }
 
-                return $MainMenuMobile({ route: rootRoute, walletClientQuery, providerQuery })({
+                return $MainMenuMobile({ route: rootRoute, walletClientQuery, providerClientQuery })({
                   routeChange: changeRouteTether(),
                 })
               }, isDesktopScreen),
               router.contains(walletRoute)(
                 $midContainer(
-                  $WalletPage({ route: walletRoute, routeTypeListQuery, providerQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery, walletClientQuery })({
+                  $WalletPage({ route: walletRoute, routeTypeListQuery, providerClientQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery, walletClientQuery })({
                     changeWallet: changeWalletTether(),
                     modifySubscriber: modifySubscriberTether(),
                     changeRoute: changeRouteTether(),
@@ -207,7 +207,7 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
               ),
               router.match(leaderboardRoute)(
                 $midContainer(
-                  fadeIn($Leaderboard({ route: leaderboardRoute, providerQuery, activityTimeframe, walletClientQuery, selectedTradeRouteList, priceTickMapQuery, routeTypeListQuery })({
+                  fadeIn($Leaderboard({ route: leaderboardRoute, providerClientQuery, activityTimeframe, walletClientQuery, selectedTradeRouteList, priceTickMapQuery, routeTypeListQuery })({
                     changeActivityTimeframe: changeActivityTimeframeTether(),
                     selectTradeRouteList: selectTradeRouteListTether(),
                     routeChange: changeRouteTether(),
@@ -217,7 +217,7 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
               ),
               router.contains(profileRoute)(
                 $midContainer(
-                  fadeIn($PublicUserPage({ route: profileRoute,  walletClientQuery, routeTypeListQuery, priceTickMapQuery, activityTimeframe, selectedTradeRouteList, providerQuery })({
+                  fadeIn($PublicUserPage({ route: profileRoute,  walletClientQuery, routeTypeListQuery, priceTickMapQuery, activityTimeframe, selectedTradeRouteList, providerClientQuery })({
                     modifySubscriber: modifySubscriberTether(),
                     changeActivityTimeframe: changeActivityTimeframeTether(),
                     selectTradeRouteList: selectTradeRouteListTether(),
@@ -226,7 +226,7 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
                 )
               ),
               router.contains(adminRoute)(
-                $Admin({ walletClientQuery, providerQuery })({
+                $Admin({ walletClientQuery, providerClientQuery })({
                   changeWallet: changeWalletTether(),
                 })
               ),
@@ -258,7 +258,7 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
               router.match(tradeRoute)(
                 switchMap(chain => {
                   return $Trade({
-                    providerQuery,
+                    providerClientQuery,
                     walletClientQuery,
                     routeTypeListQuery,
                     chain: chain, referralCode: BLUEBERRY_REFFERAL_CODE, parentRoute: tradeRoute
@@ -312,7 +312,7 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
 
           $column(style({ maxWidth: '1000px', margin: '0 auto', width: '100%', zIndex: 10 }))(
             $RouteSubscriptionDrawer({
-              providerQuery,
+              providerClientQuery,
               walletClientQuery,
               routeTypeListQuery,
               modifySubscriptionList: replayLatest(modifySubscriptionList, []),

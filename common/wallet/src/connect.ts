@@ -2,10 +2,10 @@ import { combineObject, fromCallback, replayLatest } from "@aelea/core"
 import { constant, map, mergeArray, multicast, now, startWith } from "@most/core"
 import { disposeWith } from "@most/disposable"
 import { Stream } from "@most/types"
-import type { EIP1193Provider } from "mipd"
-import { switchMap } from "common-utils"
-import { Account, Chain, Client, CustomTransport, EIP1193EventMap, PublicClient, Transport, WalletClient, createPublicClient, createWalletClient, custom, fallback, getAddress } from "viem"
 import { EthereumProvider } from "@walletconnect/ethereum-provider"
+import { switchMap } from "common-utils"
+import type { EIP1193Provider } from "mipd"
+import { Account, Chain, CustomTransport, EIP1193EventMap, PublicClient, Transport, WalletClient, createPublicClient, createWalletClient, custom, fallback, getAddress } from "viem"
 
 
 
@@ -14,8 +14,8 @@ export type IWalletClient = WalletClient<Transport, Chain, Account>
 export type IClient = IPublicProvider | IWalletClient
 
 export interface IWalletLink {
-  publicProviderQuery: Stream<Promise<IPublicProvider>>
-  providerQuery: Stream<Promise<IPublicProvider>>
+  publicProviderClientQuery: Stream<Promise<IPublicProvider>>
+  providerClientQuery: Stream<Promise<IPublicProvider>>
   walletClientQuery: Stream<Promise<IWalletClient | null>>
 }
 
@@ -35,7 +35,6 @@ export function initWalletLink(config: IWalletLinkConfig): IWalletLink {
     if (provider === null) {
       return now(null)
     }
-
 
     const reEmitProvider = constant(provider, eip1193ProviderEventFn(provider, 'accountsChanged'))
     const disconnect = constant(null, eip1193ProviderEventFn(provider, 'disconnect'))
@@ -60,7 +59,7 @@ export function initWalletLink(config: IWalletLinkConfig): IWalletLink {
     return { transport, chain }
   }, combineObject({ chainQuery }))))
 
-  const providerQuery = replayLatest(multicast(map(async params => {
+  const providerClientQuery = replayLatest(multicast(map(async params => {
     const { chain, transport } = await params.publicTransportParamsQuery
 
     return createPublicClient({ chain, transport })
@@ -103,14 +102,14 @@ export function initWalletLink(config: IWalletLinkConfig): IWalletLink {
   }, combineObject({ walletProvider, publicTransportParamsQuery }))))
 
 
-  const publicProviderQuery = replayLatest(multicast(map(async params => {
+  const publicProviderClientQuery = replayLatest(multicast(map(async params => {
     const { chain, transport } = await params.publicTransportParamsQuery
 
     return createPublicClient({ chain, transport })
   }, combineObject({ publicTransportParamsQuery }))))
 
 
-  return { walletClientQuery, providerQuery, publicProviderQuery }
+  return { walletClientQuery, providerClientQuery, publicProviderClientQuery }
 }
 
 

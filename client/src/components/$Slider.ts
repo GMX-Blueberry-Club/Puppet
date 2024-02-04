@@ -1,102 +1,88 @@
-import { Behavior, combineArray, combineObject, Op } from "@aelea/core"
-import { $Node, $text, component, drawLatest, eventElementTarget, IBranch, NodeComposeFn, nodeEvent, style, styleBehavior, styleInline } from "@aelea/dom"
+import { Behavior, combineObject } from "@aelea/core"
+import { $Node, $text, IBranch, component, drawLatest, eventElementTarget, nodeEvent, style, styleBehavior, styleInline } from "@aelea/dom"
 import { $column, $row, Input, observer } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { join, map, mergeArray, multicast, now, snapshot, until } from "@most/core"
+import { join, map, mergeArray, now, snapshot, until } from "@most/core"
 import { Stream } from "@most/types"
 import { invertColor } from "common-utils"
 
-export interface LeverageSlider extends Input<number> {
+export interface ISliderParams extends Input<number> {
   step?: number
 
-  $thumb?: NodeComposeFn<$Node>
-  thumbText: Op<number, string>
-
+  $thumb?: $Node
   disabled?: Stream<boolean>
   min?: Stream<number>
   max?: Stream<number>
 
-  thumbSize?: number
   color?: Stream<string>
 }
-// line - height: 0.8;
-// margin - top: 3px;
-export const $defaultThumb = $row(
+
+
+export const $defaultSliderThumb = $row(
   style({
     whiteSpace: 'pre-wrap',
     textAlign: 'center',
     position: 'absolute',
-    // fontWeight: 'bolder',
     background: pallete.background,
     borderRadius: '50px',
     cursor: 'grab',
     lineHeight: .9,
+    userSelect: 'none',
     fontSize: '.75rem',
     alignItems: 'center',
     placeContent: 'center',
     transition: 'border 250ms ease-in',
-    borderStyle: 'solid',
-    borderWidth: '2px',
+    border: '2px solid red',
+    // borderWidth: '2px',
+    width: 38 + 'px',
+    height: 38 + 'px'
   })
 )
 
 export const $Slider = ({
-  value, thumbText,
-  $thumb = $defaultThumb,
-  thumbSize = 38,
+  value,
   color = now(pallete.primary),
   step = 0,
   disabled = now(false),
   min = now(0),
   max = now(1),
-}: LeverageSlider) => component((
-  [sliderDimension, sliderDimensionTether]: Behavior<IBranch<HTMLInputElement>, ResizeObserverEntry>,
+  $thumb,
+}: ISliderParams) => component((
+  [changeSliderDimension, changeSliderDimensionTether]: Behavior<IBranch<HTMLInputElement>, ResizeObserverEntry>,
   [thumbePositionDelta, thumbePositionDeltaTether]: Behavior<IBranch<HTMLInputElement>, number>
 ) => {
 
   const $rangeWrapper = $row(style({ height: '2px', pointerEvents: 'none', background: pallete.background, position: 'relative' }))
 
 
-  const state = multicast(combineObject({ value, min, max }))
-
-  const sliderStyle = styleInline(combineArray(({ min, max, value }, color) => {
-    const gutterColor = colorAlpha(pallete.background, .35)
-    const minArea = `${colorAlpha(color, .35)} ${min * 100}%,`
-    const valArea = `${color} ${min * 100}% ${value * 100}%,`
-    const freeArea = `${invertColor(pallete.message) } ${value * 100}% ${max * 100}%,`
-    const maxArea = `${gutterColor} ${max * 100}%`
-
-    const background = `linear-gradient(90deg, ${minArea} ${valArea} ${freeArea} ${maxArea}`
-    return { background }
-  }, state, color))
-
-
   return [
     $column(style({ minHeight: '26px', zIndex: 0, touchAction: 'none', placeContent: 'center', cursor: 'pointer' }))(
-      sliderDimensionTether(observer.resize({}), map(res => res[0])),
+      changeSliderDimensionTether(observer.resize({}), map(res => res[0])),
       thumbePositionDeltaTether(
         nodeEvent('pointerdown'),
         downSrc => {
-
-          return snapshot(({ sliderDimension, state: { value, max, min } }, downEvent) => {
+          return snapshot((params, downEvent) => {
             const dragEnd = eventElementTarget('pointerup', window.document)
             const dragStart = eventElementTarget('pointermove', window.document)
             const drag = until(dragEnd, dragStart)
-            const rectWidth = sliderDimension.contentRect.width
+            const rectWidth = params.changeSliderDimension.contentRect.width
 
-            const hasTouchedBar = downEvent.target === sliderDimension.target
+            const startFromBar = downEvent.target === params.changeSliderDimension.target
 
 
-            if (hasTouchedBar) {
-              const initialOffset = now(Math.min(Math.max(downEvent.offsetX / rectWidth, min), max))
+            if (startFromBar) {
+              // @ts-ignore
+              const initOffsetX = downEvent.layerX || downEvent.offsetX // Firefox uses layerX
+
+              const initialOffset = now(Math.min(Math.max(downEvent.offsetX / rectWidth, params.min), params.max))
               const moveDelta = drawLatest(map(moveEvent => {
-                const deltaX = (moveEvent.clientX - downEvent.clientX) + downEvent.offsetX
+                const deltaX = (moveEvent.clientX - downEvent.clientX) + initOffsetX
 
                 moveEvent.preventDefault()
 
                 const val = deltaX / rectWidth
 
-                const cVal = Math.min(Math.max(val, min), max)
+                const cVal = Math.min(Math.max(val, params.min), params.max)
                 const steppedVal = step > 0 ? cVal / step * step : cVal
 
                 return steppedVal
@@ -106,34 +92,50 @@ export const $Slider = ({
             }
 
             return drawLatest(map(moveEvent => {
-              const normalisedValue = Math.min(Math.max(value, min), max)
+              const normalisedValue = Math.min(Math.max(params.value, params.min), params.max)
               const deltaX = (moveEvent.clientX - downEvent.clientX) + (rectWidth * normalisedValue)
 
               moveEvent.preventDefault()
 
               const val = deltaX / rectWidth
 
-              const cVal = Math.min(Math.max(val, min), max)
+              const cVal = Math.min(Math.max(val, params.min), params.max)
               const steppedVal = step > 0 ? cVal / step * step : cVal
 
               return steppedVal
             }, drag))
-          }, combineObject({ state, sliderDimension }), downSrc)
+          }, combineObject({ value, min, max, color, changeSliderDimension }), downSrc)
         },
         join
       )
     )(
-      $rangeWrapper(sliderStyle)(
+      $rangeWrapper(
+        styleInline(map(params => {
+          const gutterColor = colorAlpha(pallete.background, .35)
+          const minArea = `${colorAlpha(params.color, .35)} ${params.min * 100}%,`
+          const valArea = `${params.color} ${params.min * 100}% ${params.value * 100}%,`
+          const freeArea = `${invertColor(pallete.message) } ${params.value * 100}% ${params.max * 100}%,`
+          const maxArea = `${gutterColor} ${params.max * 100}%`
+
+          const background = `linear-gradient(90deg, ${minArea} ${valArea} ${freeArea} ${maxArea}`
+          return { background }
+        }, combineObject({ value, min, max, color })))
+      )(
         $row(
-          styleInline(map(({ value }) => ({ left: `${Math.min(Math.max(value, 0), 1) * 100}%` }), state)),
+          styleInline(map(val => ({ left: `${Math.min(Math.max(val, 0), 1) * 100}%` }), value)),
           style({ width: '0px', top: '50%', position: 'absolute', transition: 'left 175ms cubic-bezier(0.25, 0.8, 0.25, 1) 0s', alignItems: 'center', placeContent: 'center' }),
         )(
-          $thumb(
-            styleBehavior(map(({ color, disabled }) => disabled ? { borderColor: 'transparent', pointerEvents: disabled ? 'none' : 'all' } : { borderColor: color, pointerEvents: 'all' }, combineObject({ disabled, color }))),
-            style({ width: thumbSize + 'px', height: thumbSize + 'px' }),
+          $thumb ? $thumb : $defaultSliderThumb(
+            styleBehavior(map(params => {
+              return params.disabled
+                ? { borderColor: 'transparent', pointerEvents: params.disabled ? 'none' : 'all' }
+                : { borderColor: params.color, pointerEvents: 'all' }
+            }, combineObject({ disabled, color }))),
           )(
-            $text(style({ paddingTop: '2px' }))(thumbText(value))
-          )
+            $text(style({ paddingTop: '2px' }))(
+              map(n => Math.floor(n * 100) + '%', value)
+            )
+          ) 
         )
       )
     ),

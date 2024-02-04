@@ -1,5 +1,5 @@
 import { Behavior, combineObject, O } from "@aelea/core"
-import { $element, $node, $Node, $text, attr, component, INode, NodeComposeFn, nodeEvent, style, styleInline } from "@aelea/dom"
+import { $element, $node, $Node, $text, attr, component, INode, NodeComposeFn, nodeEvent, style, styleBehavior, styleInline } from "@aelea/dom"
 import { Route } from "@aelea/router"
 import { $column, $icon, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
@@ -29,7 +29,7 @@ import {
 import * as viem from "viem"
 import { $MarketInfoList } from "../$MarketList"
 import { $Popover } from "../$Popover"
-import { $Slider } from "../$Slider.js"
+import { $defaultSliderThumb, $Slider } from "../$Slider.js"
 import { $gmxLogo } from "../../common/$icons"
 import { $heading2 } from "../../common/$text.js"
 import { $FieldLabeled } from "ui-components"
@@ -129,14 +129,14 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
   [clickChooseMarketPopover, clickChooseMarketPopoverTether]: Behavior<any>,
   // [changeIsUsdCollateralToken, changeIsUsdCollateralTokenTether]: Behavior<boolean>,
 
-  [changeLeverage, changeLeverageTether]: Behavior<number, bigint>,
+  [slideLeverage, slideLeverageTether]: Behavior<number>,
   [changeSlippage, changeSlippageTether]: Behavior<string, bigint>,
   [changeExecutionFeeBuffer, changeExecutionFeeBufferTether]: Behavior<string, bigint>,
 
   [clickPrimary, clickPrimaryTether]: Behavior<any>,
 ) => {
 
-  const { walletClientQuery, providerQuery } = config
+  const { walletClientQuery, providerClientQuery } = config
 
 
   const {
@@ -258,6 +258,15 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
 
 
+  const slideLeverageFormat = map(leverage => {
+    if (leverage === null) {
+      return 0
+    }
+
+    const multiplier = formatDiv(leverage, GMX.MAX_LEVERAGE_FACTOR)
+
+    return multiplier
+  }, config.tradeConfig.leverage)
   return [
     config.$container(style({
       boxShadow: boxShadow
@@ -559,15 +568,22 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
         $column(style({ height: `2px`, placeContent: 'center' }))(
           $Slider({
-            value: map(leverage => {
-              if (leverage === null) {
-                return 0
-              }
+            $thumb: $defaultSliderThumb( 
+              styleBehavior(
+                map(isInc => {
+                  return { borderColor: isInc ? pallete.foreground : pallete.indeterminate, pointerEvents: 'all' }
+                }, config.tradeConfig.isIncrease)
+              ),
+            )(
+              $text(style({ paddingTop: '2px' }))(map(leverage => {
+                if (leverage === null) {
+                  return '0'
+                }
 
-              const multiplier = formatDiv(leverage, GMX.MAX_LEVERAGE_FACTOR)
-
-              return multiplier
-            }, config.tradeConfig.leverage),
+                return formatLeverageNumber.format(leverage * LIMIT_LEVERAGE_NORMAL)
+              }, slideLeverageFormat))
+            ),
+            value: slideLeverageFormat,
             // disabled: map(state => {
 
             //   if (state.trade === null) {
@@ -576,9 +592,6 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
             //   return false
             // }, tradeState),
-            color: map(isIncrease => {
-              return isIncrease ? pallete.foreground : pallete.indeterminate
-            }, config.tradeConfig.isIncrease),
             min: map(params => {
               if (params.mirrorPosition === null) {
                 return MIN_LEVERAGE_NORMAL
@@ -643,17 +656,9 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
               return 1
             }, combineObject({ sizeDeltaUsd, walletBalance, collateralDeltaAmount, netPositionValueUsd, adjustmentFeeUsd, mirrorPosition, primaryPrice, focusMode, isIncrease })),
-            thumbText: map(n => (n === 1 ? LIMIT_LEVERAGE_NORMAL : formatLeverageNumber.format(n * LIMIT_LEVERAGE_NORMAL)))
+            // thumbText: map(n => (n === 1 ? LIMIT_LEVERAGE_NORMAL : formatLeverageNumber.format(n * LIMIT_LEVERAGE_NORMAL)))
           })({
-            change: changeLeverageTether(
-              map(leverage => {
-                const leverageRatio = BigInt(Math.round(Math.abs(leverage) * Number(GMX.MAX_LEVERAGE_FACTOR)))
-
-                return leverageRatio
-              }),
-              multicast,
-              skipRepeats
-            )
+            change: slideLeverageTether()
           }),
         ),
 
@@ -676,7 +681,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
             $Popover({
               open: constant(
                 $MarketInfoList({
-                  providerQuery,
+                  providerClientQuery,
                   walletClientQuery,
                   chain: config.chain,
                   $rowCallback: map(params => {
@@ -851,7 +856,10 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
       changePrimaryToken,
       changeMarketToken,
       switchFocusMode,
-      changeLeverage,
+      slideLeverage: map(value => {
+        const leverageRatio = BigInt(Math.round(Math.abs(value) * Number(GMX.MAX_LEVERAGE_FACTOR)))
+        return leverageRatio
+      }, slideLeverage),
       // isUsdCollateralToken: changeIsUsdCollateralToken,
       changeCollateralDeltaAmount: mergeArray([
         inputPrimaryAmount,

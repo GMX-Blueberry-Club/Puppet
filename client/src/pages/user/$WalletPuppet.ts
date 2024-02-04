@@ -41,7 +41,7 @@ export const $WalletPuppet = (config: IWalletPuppet) => component((
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 ) => {
   
-  const { activityTimeframe, walletClientQuery, priceTickMapQuery, providerQuery, puppetTradeRouteListQuery, openPositionListQuery, settledPositionListQuery, selectedTradeRouteList, routeTypeListQuery, route } = config
+  const { activityTimeframe, walletClientQuery, priceTickMapQuery, providerClientQuery, puppetTradeRouteListQuery, openPositionListQuery, settledPositionListQuery, selectedTradeRouteList, routeTypeListQuery, route } = config
 
   const initialDepositAmountQuery = map(async walletQuery => {
     const wallet = await walletQuery
@@ -88,7 +88,7 @@ export const $WalletPuppet = (config: IWalletPuppet) => component((
                 constant(
                   $AssetDepositEditor({
                     token: depositToken,
-                    providerQuery,
+                    providerClientQuery,
                     walletClientQuery,
                   })({
                     requestDepositAsset: requestDepositAssetTether(),
@@ -98,7 +98,7 @@ export const $WalletPuppet = (config: IWalletPuppet) => component((
                 constant(
                   $AssetWithdrawEditor({
                     walletClientQuery,
-                    providerQuery,
+                    providerClientQuery,
                     token: depositToken,
                     balanceQuery: depositAmountQuery
                   })({
@@ -173,7 +173,7 @@ export const $WalletPuppet = (config: IWalletPuppet) => component((
 
                     $column(layoutSheet.spacing, style({ flex: 1 }))( 
                       ...traderPuppetTradeRouteList.map(puppetTradeRoute => {
-                        return $PuppetTraderTradeRoute({ route, walletClientQuery, puppetTradeRoute, providerQuery, routeTypeList, activityTimeframe: params.activityTimeframe, priceTickMap })({
+                        return $PuppetTraderTradeRoute({ route, walletClientQuery, puppetTradeRoute, providerClientQuery, routeTypeList, activityTimeframe: params.activityTimeframe, priceTickMap })({
                           modifySubscriber: modifySubscriberTether(),
                           changeRoute: changeRouteTether(),
                         })

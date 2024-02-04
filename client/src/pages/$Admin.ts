@@ -20,7 +20,7 @@ export const $Admin = (config: IAdminPageParams) => component((
   [requestAdvanceEpoch, requestAdvanceEpochTether]: Behavior<walletLink.IWalletClient, IWriteAdvanceEpochReturn>,
 ) => {
 
-  const { walletClientQuery, providerQuery } = config
+  const { walletClientQuery, providerClientQuery } = config
 
   return [
     $column(layoutSheet.spacing, style({ alignSelf: 'center', minWidth: '680px' }))(
@@ -37,7 +37,7 @@ export const $Admin = (config: IAdminPageParams) => component((
               const provider = await providerQuery
               const newLocal = await readEpochInfo(provider)
               return JSON.stringify(newLocal)
-            }, providerQuery)
+            }, providerClientQuery)
           )
         ),
         $SubmitBar({

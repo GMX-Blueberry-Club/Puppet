@@ -9,7 +9,7 @@ export function safeDiv(a: bigint, b: bigint): bigint {
 }
 
 export function factor(a: bigint, b: bigint): bigint {
-  return a * PRECISION / b
+  return a ? a * PRECISION / b : 0n
 }
 
 export function applyFactor(value: bigint, factorn: bigint): bigint {

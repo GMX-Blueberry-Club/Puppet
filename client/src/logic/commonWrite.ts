@@ -1,5 +1,5 @@
 import { Address } from "abitype"
-import { getMappedValue } from "common-utils"
+import { MAX_UINT256, getMappedValue } from "common-utils"
 import * as PUPPET from "puppet-middleware-const"
 import { erc20Abi } from "viem"
 import * as walletLink from "wallet"
@@ -40,7 +40,7 @@ export async function writeAdvanceEpoch(
 export async function writeApproveSpend(
   walletClient: walletLink.IWalletClient,
   token: Address,
-  amount = 2n ** 256n - 1n,
+  amount = MAX_UINT256,
   contractDefs = getMappedValue(PUPPET.CONTRACT, walletClient.chain.id),
   spender = contractDefs.Orchestrator.address
 ): walletLink.IWriteContractReturn<typeof erc20Abi, 'Approval'> {

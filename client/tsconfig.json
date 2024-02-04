@@ -58,7 +58,5 @@
       "path": "../@gambitdao-gbc-middleware"
     },
   ],
-  "include": [
-    "src"
-, "src/sw.ts", "../utils/router", "../utils/indexer/scope", "../utils/indexer/process", "../common/wallet/src", "../common/ui-components/src/form/$TextField.ts"  ]
+  "include": [ "src", "src/sw.ts" ]
 }

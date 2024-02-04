@@ -13,7 +13,7 @@ export interface IWalletPageParams {
 }
 
 export interface IComponentPageParams extends IWalletPageParams {
-  providerQuery: Stream<Promise<walletLink.IPublicProvider>>
+  providerClientQuery: Stream<Promise<walletLink.IPublicProvider>>
 }
 
 export interface IPageParams extends IComponentPageParams {
@@ -54,6 +54,7 @@ export enum IWalletTab {
 }
 
 export enum VestingLockMode {
+  NONE = 'None',
   CONTINUOUS = 'Continuous',
-  SHORT_TERM = 'Short Term'
+  SHORT_TERM = 'Short Term',
 }

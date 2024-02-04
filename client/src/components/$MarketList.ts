@@ -24,7 +24,7 @@ interface IMarketList extends IComponentPageParams {
 
 export const $MarketInfoList = (config: IMarketList) => component((
 ) => {
-  const  { providerQuery, $container = $column, chain, $rowCallback } = config
+  const  { providerClientQuery, $container = $column, chain, $rowCallback } = config
   const gmxContractMap = getMappedValue(GMX.CONTRACT, chain.id)
 
   const marketParamList = map(params => {
@@ -143,7 +143,7 @@ export const $MarketInfoList = (config: IMarketList) => component((
           // }
           ]
         })({})
-      }, providerQuery)),
+      }, providerClientQuery)),
     ),
 
     {  }

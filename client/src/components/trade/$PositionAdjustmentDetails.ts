@@ -385,7 +385,7 @@ export const $PositionAdjustmentDetails = (config: IPositionAdjustmentDetails) =
 
         return $Popover({
           open: constant(
-            $column(layoutSheet.spacing, style({ maxWidth: '400px' }))(
+            $column(layoutSheet.spacing, style({ maxWidth: '380px' }))(
               $heading3(`Dsclaimer & Risk Warning`),
               $text(`Puppet is an experimental protocol and is provided “as is” without any warranty of any kind. The protocol is in beta and may contain bugs that may result in unexpected loss of funds.`),
               $alert(

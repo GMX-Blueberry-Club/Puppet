@@ -97,7 +97,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
 ) => {
 
-  const { routeTypeListQuery, walletClientQuery, chain, providerQuery, parentRoute, referralCode } = config
+  const { routeTypeListQuery, walletClientQuery, chain, providerClientQuery, parentRoute, referralCode } = config
   
 
   const focusMode = replayLatest(switchFocusMode, ITradeFocusMode.collateral)
@@ -188,9 +188,9 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ collateralToken, indexToken, isLong, routeTypeListQuery })))))
 
   const marketInfoQuery = map(async params => {
-    const provider = await params.providerQuery
+    const provider = await params.providerClientQuery
     return readFullMarketInfo(provider, params.market, params.marketPrice)
-  }, combineObject({ market, marketPrice, providerQuery }))
+  }, combineObject({ market, marketPrice, providerClientQuery }))
 
   const marketInfo: Stream<IMarketInfo> = replayLatest(multicast(awaitPromises(marketInfoQuery)))
 
@@ -429,9 +429,9 @@ export const $Trade = (config: ITradeComponent) => component((
   }, combineObject({ chartInterval, indexToken })))))
 
 
-  const gasPrice = walletLink.getGasPrice(providerQuery)
-  const estimatedGasPrice = walletLink.getEstimatedGasPrice(providerQuery)
-  const executeGasLimit = switchMap(async provider => readExecuteGasFee(await provider), providerQuery)
+  const gasPrice = walletLink.getGasPrice(providerClientQuery)
+  const estimatedGasPrice = walletLink.getEstimatedGasPrice(providerClientQuery)
+  const executeGasLimit = switchMap(async provider => readExecuteGasFee(await provider), providerClientQuery)
 
   const executionFee = replayLatest(multicast(map(params => {
     const keerperGasLimit = params.isIncrease ? params.executeGasLimit.increaseGasLimit : params.executeGasLimit.decreaseGasLimit
@@ -491,7 +491,7 @@ export const $Trade = (config: ITradeComponent) => component((
   }
 
   const $tradebox = $PositionEditor({
-    providerQuery,
+    providerClientQuery,
     walletClientQuery,
     tradeConfig,
     routeTypeListQuery: config.routeTypeListQuery,
@@ -502,7 +502,7 @@ export const $Trade = (config: ITradeComponent) => component((
     resetAdjustments: clickResetPositionQuery, 
     $container: $column
   })({
-    changeLeverage: changeLeverageTether(),
+    slideLeverage: changeLeverageTether(),
     changeCollateralDeltaAmount: changeCollateralDeltaAmountTether(),
     changeSizeDeltaUsd: changeSizeDeltaUsdTether(),
     changePrimaryToken: changePrimaryTokenTether(),

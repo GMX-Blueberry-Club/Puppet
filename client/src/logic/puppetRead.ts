@@ -1,5 +1,5 @@
 
-import { getMappedValue } from "common-utils"
+import { IntervalTime, factor, getMappedValue, unixTimestampNow } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import * as PUPPET from "puppet-middleware-const"
 import {
@@ -19,7 +19,7 @@ export async function readPuppetSubscriptionExpiry(
   indexToken: viem.Address,
   isLong: boolean,
   contractDefs = getMappedValue(PUPPET.CONTRACT, provider.chain.id),
-): Promise<bigint> {
+) {
   const routeKey = getTradeRouteKey(trader, collateralToken, indexToken, isLong)
   const puppetSubscriptionExpiryKey = getPuppetSubscriptionExpiryKey(puppet, routeKey)
 
@@ -38,7 +38,7 @@ export async function readPuppetDepositAmount(
   address: viem.Address,
   tokenAddress = GMX.ARBITRUM_ADDRESS.USDC,
   contractDefs = getMappedValue(PUPPET.CONTRACT, provider.chain.id),
-): Promise<bigint> {
+) {
   return walletLink.readContract({
     ...contractDefs.Datastore,
     provider,
@@ -54,7 +54,7 @@ export async function readPuppetAllowance(
   puppet: viem.Address,
   tradeRoute: viem.Address,
   contractDefs = getMappedValue(PUPPET.CONTRACT, provider.chain.id),
-): Promise<bigint> {
+) {
   
   const [exists, factor] = await readContract(provider, {
     ...contractDefs.Datastore,
@@ -64,3 +64,47 @@ export async function readPuppetAllowance(
 
   return exists ? factor : 0n
 }
+
+export async function readUserLockDetails(
+  provider: walletLink.IClient,
+  address: viem.Address,
+  contractDefs = getMappedValue(PUPPET.CONTRACT, provider.chain.id),
+) {
+  
+  const [amount, end] = await readContract(provider, {
+    ...contractDefs.VotingEscrow,
+    functionName: 'locked',
+    args: [address]
+  })
+
+  return { amount, end }
+}
+
+export async function readLockSupply(
+  provider: walletLink.IClient,
+  contractDefs = getMappedValue(PUPPET.CONTRACT, provider.chain.id),
+) {
+  
+  const supply = await readContract(provider, {
+    ...contractDefs.VotingEscrow,
+    functionName: 'supply',
+    args: []
+  })
+
+  return supply
+}
+
+export async function readPuppetSupply(
+  provider: walletLink.IClient,
+  contractDefs = getMappedValue(PUPPET.CONTRACT, provider.chain.id),
+) {
+  
+  const puppetSupply = await readContract(provider, {
+    ...contractDefs.Puppet,
+    functionName: 'balanceOf',
+    args: [contractDefs.VotingEscrow.address]
+  })
+
+  return puppetSupply
+}
+

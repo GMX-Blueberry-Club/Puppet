@@ -31,8 +31,7 @@ const secondaryButtonStyle = style({
 
 export const $defaultButtonSecondary = $defaultButtonCore(
   secondaryButtonStyle,
-  stylePseudo(':hover', { borderColor: pallete.foreground, borderWidth: '1px' }),
-  style({ fontSize: '.85em' })
+  stylePseudo(':hover', { borderColor: pallete.foreground, borderWidth: '1px' })
 )
 
 export const defaultMiniButtonStyle = style({ alignSelf: 'center', borderWidth: '1px', padding: '6px 10px', fontSize: '.85rem' })
