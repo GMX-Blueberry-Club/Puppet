@@ -7,11 +7,11 @@
     "dev": "bun run index.ts"
   },
   "dependencies": {
-    "playwright-core": "^1.41.0",
-    "viem": "^2.5.0"
+    "playwright-core": "^1.41.2",
+    "viem": "^2.7.9"
   },
   "peerDependencies": {
-    "@types/bun": "^1.0.2",
-    "typescript": "^5.0.0"
+    "@types/bun": "^1.0.5",
+    "typescript": "^5.3.3"
   }
 }
