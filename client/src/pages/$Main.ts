@@ -1,4 +1,4 @@
-import { Behavior, fromCallback, replayLatest } from "@aelea/core"
+import { Behavior, combineObject, fromCallback, replayLatest } from "@aelea/core"
 import { $element, $node, $text, component, eventElementTarget, style, styleBehavior } from "@aelea/dom"
 import * as router from '@aelea/router'
 import { $column, $row, designSheet, layoutSheet } from '@aelea/ui-components'
@@ -14,7 +14,7 @@ import { indexDb, uiStorage } from "ui-storage"
 import * as viem from "viem"
 import { arbitrum } from "viem/chains"
 import { $midContainer } from "../common/$common.js"
-import { mipdStore } from "../components/$ConnectWallet"
+import { announcedProviderList } from "../components/$ConnectWallet"
 import { $MainMenu, $MainMenuMobile } from '../components/$MainMenu.js'
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "../components/form/$Button"
 import { $RouteSubscriptionDrawer } from "../components/portfolio/$RouteSubscriptionDrawer.js"
@@ -45,11 +45,10 @@ interface IApp {
 }
 
 
-const chains = [ arbitrum ] as const
+export const chains = [ arbitrum ] as const
 
 
 // const storage = createStorage({ storage: window.localStorage, key: 'walletLink' })
-const projectId = import.meta.env.VITE_WC_PROJECT_ID || 'fdc797f2e6a68e01b9e17843c939673e'
 // const llamaRpc = import.meta.env.VITE_LLAMANODES_PROJECT_ID || '01HCB0CBBH06TE3XSM6ZE4YYAD'
 
 export const publicTransportMap = {
@@ -61,12 +60,8 @@ export const publicTransportMap = {
 }
 
 
-const metadata = {
-  name: '__APP_NAME__',
-  description: '__APP_DESC_SHORT__',
-  url: '__WEBSITE__',
-  icons: ['https://imagedelivery.net/_aTEfDRm7z3tKgu9JhfeKA/5a7df101-00dc-4856-60a9-921b2879e200/lg']
-}
+
+
 
 
 export const $Main = ({ baseRoute = '' }: IApp) => component((
@@ -131,7 +126,10 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
 
 
   const walletRdnsStore = uiStorage.replayWrite(storeDb.store.global, changeWalletProviderRdns, 'wallet')
-  const initWalletProvider: Stream<EIP6963ProviderDetail | null> = map(rdns => rdns ? mipdStore.findProvider({ rdns }) || null : null, walletRdnsStore)
+  const initWalletProvider: Stream<EIP6963ProviderDetail | null> = map(params => {
+
+    return params.walletRdnsStore ? params.announcedProviderList.find(p => p.info.rdns === params.walletRdnsStore) || null : null
+  }, combineObject({ announcedProviderList, walletRdnsStore }) )
 
 
   // hanlde disconnect and account change
@@ -141,7 +139,11 @@ export const $Main = ({ baseRoute = '' }: IApp) => component((
   const chainIdQuery = indexDb.get(store.global, 'chain')
   const chainQuery: Stream<Promise<viem.Chain>> = now(chainIdQuery.then(id => chains.find(c => c.id === id) || arbitrum))
 
-  const { providerClientQuery, publicProviderClientQuery, walletClientQuery } = walletLink.initWalletLink({ publicTransportMap, chainQuery, walletProvider })
+  const { 
+    providerClientQuery,
+    publicProviderClientQuery,
+    walletClientQuery
+  } = walletLink.initWalletLink({ publicTransportMap, chainQuery, walletProvider })
 
   const block = switchMap(async query => (await query).getBlockNumber(), providerClientQuery)
   const latestBlock: Stream<bigint> = switchLatest(switchMap(async query => {

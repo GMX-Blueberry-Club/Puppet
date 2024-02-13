@@ -16,16 +16,16 @@ import { $ButtonCore, $defaultButtonCore, IButtonCore } from "./$ButtonCore.js"
 
 export const $defaultButtonPrimary = $defaultButtonCore(
   style({
-    color: pallete.message, whiteSpace: 'nowrap', fill: 'white', borderRadius: '30px', alignSelf: 'flex-end',
-    padding: '15px 24px', fontWeight: 'bold', border: 'none', backgroundColor: pallete.primary,
+    color: pallete.message, whiteSpace: 'nowrap', fill: 'white', borderRadius: '30px', alignSelf: 'flex-end', fontSize: '1rem',
+    height: '48px', padding: '0 24px', fontWeight: 'bold', border: 'none', backgroundColor: pallete.primary,
   }),
   // stylePseudo(':hover', { backgroundColor: colorAlpha(pallete.primary, .5) })
 )
 
 const secondaryButtonStyle = style({
-  color: pallete.message, whiteSpace: 'nowrap', fill: 'white', borderRadius: '30px', borderStyle: 'solid', backgroundColor: pallete.background,
-  alignSelf: 'flex-start',
-  padding: '15px 24px', fontWeight: 'bold', border: '1px solid', borderColor: pallete.message
+  color: pallete.message, whiteSpace: 'nowrap', fill: 'white', borderRadius: '30px', borderStyle: 'solid',
+  alignSelf: 'flex-start', height: '48px',  backgroundColor: pallete.background, fontSize: '1rem',
+  padding: '0 24px', fontWeight: 'bold', border: '1px solid', borderColor: pallete.message
 })
 
 
@@ -34,8 +34,7 @@ export const $defaultButtonSecondary = $defaultButtonCore(
   stylePseudo(':hover', { borderColor: pallete.foreground, borderWidth: '1px' })
 )
 
-export const defaultMiniButtonStyle = style({ alignSelf: 'center', borderWidth: '1px', padding: '6px 10px', fontSize: '.85rem' })
-export const $defaultMiniButtonSecondary = $defaultButtonSecondary(defaultMiniButtonStyle)
+export const $defaultMiniButtonSecondary = $defaultButtonSecondary(style({ alignSelf: 'center', borderWidth: '1px', height: '32px', padding: '0 10px', fontSize: '.85rem' }))
 
 
 export const $buttonAnchor = $element('a')(

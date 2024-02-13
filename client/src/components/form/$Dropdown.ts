@@ -11,26 +11,9 @@ import { $caretDown } from "../../common/elements/$icons.js"
 import { $Select, ISelect } from "./$Select.js"
 
 
-export const buttonPrimaryStyle = style({
-  color: 'white', whiteSpace: 'nowrap', fill: 'white', borderRadius: '30px',
-  padding: '12px 24px', fontWeight: 'bold', borderWidth: '1px', borderColor: pallete.message
-})
-
-export const secondaryButtonStyle = style({
-  backgroundImage: 'linear-gradient(45deg,  #8A5FCF 21%, #D298ED 100%)',
-  boxShadow: `2px 1000px 1px ${pallete.background} inset`,
-  backgroundOrigin: 'border-box',
-  backgroundClip: 'content-box, border-box',
-  border: '1px solid transparent',
-  borderRadius: '50px'
-})
-
-
 export interface IMultiselect<T> extends ISelect<T> {
 
 }
-
-
 
 
 

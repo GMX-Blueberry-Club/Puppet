@@ -2,7 +2,7 @@ import { Behavior, combineObject } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
-import { empty, map } from "@most/core"
+import { constant, empty, map } from "@most/core"
 import { ADDRESS_ZERO, IntervalTime, factor, readableFactorPercentage, readableTokenAmount, readableUnitAmount, switchMap } from "common-utils"
 import { EIP6963ProviderDetail } from "mipd"
 import * as PUPPET from "puppet-middleware-const"
@@ -20,6 +20,7 @@ import { $seperator2 } from "../common"
 import { IPageParams, IUserActivityParams, IWalletTab } from "../type.js"
 import { $TraderPage } from "./$Trader.js"
 import { $WalletPuppet } from "./$WalletPuppet.js"
+import { $ButtonSecondary } from "../../components/form/$Button"
 
 const optionDisplay = {
   [IWalletTab.EARN]: {
@@ -45,7 +46,7 @@ export const $WalletPage = (config: IPageParams & IUserActivityParams) => compon
   [changeActivityTimeframe, changeActivityTimeframeTether]: Behavior<any, IntervalTime>,
   [selectTradeRouteList, selectTradeRouteListTether]: Behavior<ISetRouteType[]>,
 
-  [changeWallet, changeWalletTether]: Behavior<any, EIP6963ProviderDetail>,
+  [changeWallet, changeWalletTether]: Behavior<any, EIP6963ProviderDetail | null>,
 ) => {
 
   const { route, walletClientQuery, routeTypeListQuery, providerClientQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery } = config
@@ -59,21 +60,21 @@ export const $WalletPage = (config: IPageParams & IUserActivityParams) => compon
     $column(layoutSheet.spacingBig)(
       $node(),
 
-      $row(style({ flex: 1, placeContent: 'center' }))(
-        $IntermediateConnectButton({
-          walletClientQuery,
-          $$display: map(wallet => {
-            return empty()
-            // return $ButtonSecondary({
-            //   $content: $text('Disconnect')
-            // })({
-            //   click: changeWalletTether(constant(null))
-            // })
-          })
-        })({
-          changeWallet: changeWalletTether()
-        }),
-      ),
+      // $row(style({ flex: 1, placeContent: 'center' }))(
+      //   $IntermediateConnectButton({
+      //     walletClientQuery,
+      //     $$display: map(wallet => {
+      //       // return empty()
+      //       return $ButtonSecondary({
+      //         $content: $text('Disconnect')
+      //       })({
+      //         click: changeWalletTether(constant(null))
+      //       })
+      //     })
+      //   })({
+      //     changeWallet: changeWalletTether()
+      //   }),
+      // ),
 
       $row(
         $node(style({ flex: 1 }))(),

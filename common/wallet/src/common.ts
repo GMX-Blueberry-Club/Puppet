@@ -13,7 +13,7 @@ export type IWriteContractReturn<
   TAbi extends abitype.Abi = Abi,
   TEventName extends | ContractEventName<TAbi> | ContractEventName<TAbi>[] | undefined = undefined,
 > = Promise<{
-  transactionReceipt: TransactionReceipt<typeof arbitrum>
+  transactionReceipt: TransactionReceipt
   events: ParseEventLogsReturnType<TAbi, TEventName, true>
 }>
 
@@ -35,9 +35,9 @@ export async function writeContract <
 
   try {
     const walletClient = writeParams.walletClient
-    const request = await simulateContract(writeParams.walletClient, { ...writeParams, account: walletClient.account } as any)
-    const hash = await viemWriteContract(writeParams.walletClient, request as any)
-    const transactionReceipt: TransactionReceipt<typeof arbitrum> = await waitForTransactionReceipt(walletClient, { hash })
+    const sim = await simulateContract(writeParams.walletClient, { ...writeParams, account: walletClient.account } as any)
+    const hash = await viemWriteContract(writeParams.walletClient, sim.request)
+    const transactionReceipt = await waitForTransactionReceipt(walletClient, { hash })
     const events = parseEventLogs({
       eventName: writeParams.eventName,
       abi: writeParams.abi,
