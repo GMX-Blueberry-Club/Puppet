@@ -3,7 +3,7 @@ import { $node, $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { constant, empty, map } from "@most/core"
-import { ADDRESS_ZERO, IntervalTime, factor, readableFactorPercentage, readableTokenAmount, readableUnitAmount, switchMap } from "common-utils"
+import { ADDRESS_ZERO, IntervalTime, applyFactor, countdownFn, factor, getDenominator, getMappedValue, getTimeSince, readableFactorPercentage, readableTokenAmount, readableUnitAmount, readableUsd, switchMap } from "common-utils"
 import { EIP6963ProviderDetail } from "mipd"
 import * as PUPPET from "puppet-middleware-const"
 import { ISetRouteType, queryPuppetTradeRoute, queryTraderPositionOpen, queryTraderPositionSettled } from "puppet-middleware-utils"
@@ -15,12 +15,15 @@ import { $IntermediateConnectButton } from "../../components/$ConnectWallet.js"
 import { $VestingDetails } from "../../components/$VestingDetails"
 import { IChangeSubscription } from "../../components/portfolio/$RouteSubscriptionEditor.js"
 import * as storeDb from "../../const/store.js"
-import { readLockSupply, readPuppetSupply } from "../../logic/puppetRead"
+import { readLockSupply, readPuppetPriceInUsd, readPuppetSupply, readTotalEmitted } from "../../logic/puppetRead"
 import { $seperator2 } from "../common"
 import { IPageParams, IUserActivityParams, IWalletTab } from "../type.js"
 import { $TraderPage } from "./$Trader.js"
 import { $WalletPuppet } from "./$WalletPuppet.js"
 import { $ButtonSecondary } from "../../components/form/$Button"
+import { getTokenDescription } from "gmx-middleware-utils"
+import { ARBITRUM_ADDRESS } from "gmx-middleware-const"
+import { readBalanceOf } from "../../logic/commonRead"
 
 const optionDisplay = {
   [IWalletTab.EARN]: {
@@ -49,9 +52,19 @@ export const $WalletPage = (config: IPageParams & IUserActivityParams) => compon
   [changeWallet, changeWalletTether]: Behavior<any, EIP6963ProviderDetail | null>,
 ) => {
 
-  const { route, walletClientQuery, routeTypeListQuery, providerClientQuery, activityTimeframe, selectedTradeRouteList, priceTickMapQuery } = config
+  const {
+    route, walletClientQuery, routeTypeListQuery, providerClientQuery,
+    activityTimeframe, selectedTradeRouteList, priceTickMapQuery 
+  } = config
 
   const profileMode = uiStorage.replayWrite(storeDb.store.wallet, selectProfileMode, 'selectedTab')
+
+
+  const puppetTokenPriceInUsd = switchMap(async providerQuery => {
+    const provider = await providerQuery
+
+    return await readPuppetPriceInUsd(provider)
+  }, providerClientQuery)
 
 
 
@@ -129,17 +142,23 @@ export const $WalletPage = (config: IPageParams & IUserActivityParams) => compon
           
           $responsiveFlex(layoutSheet.spacingBig)(
 
-            $column(layoutSheet.spacing, style({ flex: 1 }))(
-              $heading3('Vesting Details'),
-              $VestingDetails({ ...config })({})
-            ),
+            $VestingDetails({ ...config, puppetTokenPriceInUsd })({
+              changeWallet: changeWalletTether()
+            }),
+            
             $seperator2,
             $column(layoutSheet.spacing, style({ flex: 1 }))(
               $heading3('Protocol Flywheel'),
               style({ placeContent: 'space-between' })(
                 $infoLabeledValue(
                   'Price',
-                  $text(`$1`)
+                  $intermediateMessage(
+                    map(async puppetPrice => {
+                      const price = puppetPrice * getDenominator(24)
+
+                      return readableUsd(price)
+                    }, puppetTokenPriceInUsd)
+                  )
                 )
               ),
               style({ placeContent: 'space-between' })(
@@ -162,11 +181,11 @@ export const $WalletPage = (config: IPageParams & IUserActivityParams) => compon
               ),
               style({ placeContent: 'space-between' })(
                 $infoLabeledValue(
-                  $infoTooltipLabel('Total amount of PUPPET that has been emitted over the lifetime of the protocol. Each subsequent year, the number of new tokens minted will decrease by about 16%,', 'Total Emissions'),
+                  $infoTooltipLabel('Total amount of PUPPET that has been emitted over the lifetime of the protocol. Each subsequent year, the number of new tokens minted will decrease by about 16%,', 'Total Emitted'),
                   $intermediateMessage(
                     map(async providerQuery => {
                       const provider = await providerQuery
-                      const puppetSupply = readPuppetSupply(provider)
+                      const puppetSupply = readTotalEmitted(provider)
 
                       return readableTokenAmount(PUPPET.PUPPET_TOKEN_DESCRIPTION, await puppetSupply)
                     }, providerClientQuery)
@@ -186,10 +205,13 @@ export const $WalletPage = (config: IPageParams & IUserActivityParams) => compon
                   $intermediateMessage(
                     map(async providerQuery => {
                       const provider = await providerQuery
-                      const puppetSupply = readPuppetSupply(provider)
+                      const contractMap = getMappedValue(PUPPET.CONTRACT, provider.chain.id)
+                      const puppetBalanceInVeContract = readBalanceOf(provider, contractMap.PuppetToken.address, contractMap.VotingEscrow.address)
                       const lockedSupply = readLockSupply(provider)
+                      const globalLockFactor = factor(await lockedSupply, await puppetBalanceInVeContract)
+                      const globalLockTimespan = applyFactor(globalLockFactor, BigInt(PUPPET.MAX_LOCKUP_SCHEDULE))
 
-                      return readableFactorPercentage(factor(await lockedSupply, await puppetSupply))
+                      return countdownFn(PUPPET.MAX_LOCKUP_SCHEDULE, PUPPET.MAX_LOCKUP_SCHEDULE - Number(globalLockTimespan))
                     }, providerClientQuery)
                   ),
                 )

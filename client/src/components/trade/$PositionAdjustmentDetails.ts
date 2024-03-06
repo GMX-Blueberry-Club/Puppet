@@ -4,7 +4,7 @@ import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, constant, empty, map, mergeArray, multicast, sample, skipRepeats, snapshot, startWith, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
-import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, StateStreamStrict, abs, filterNull, getBasisPoints, getDenominator, getMappedValue, getTokenUsd, readableFactorPercentage, readablePercentage, readablePnl, readableTokenAmountLabel, readableUnitAmount, readableUsd, switchMap, zipState } from "common-utils"
+import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, StateStream, abs, filterNull, getBasisPoints, getDenominator, getMappedValue, getTokenUsd, readableFactorPercentage, readablePercentage, readablePnl, readableTokenAmountLabel, readableUnitAmount, readableUsd, switchMap, zipState } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import { IPriceCandle, OrderType, getNativeTokenAddress, getNativeTokenDescription, getTokenDescription, resolveAddress } from "gmx-middleware-utils"
 import { EIP6963ProviderDetail } from "mipd"
@@ -40,8 +40,8 @@ export type IRequestTrade = ITradeConfig & {
 interface IPositionAdjustmentDetails extends IWalletPageParams {
   chain: viem.Chain
   pricefeed: Stream<IPriceCandle[]>
-  tradeConfig: StateStreamStrict<ITradeConfig> // ITradeParams
-  tradeState: StateStreamStrict<ITradeParams>
+  tradeConfig: StateStream<ITradeConfig> // ITradeParams
+  tradeState: StateStream<ITradeParams>
   $container: NodeComposeFn<$Node>
 }
 

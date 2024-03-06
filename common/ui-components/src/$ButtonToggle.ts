@@ -17,12 +17,12 @@ export interface IButtonToggle<T> {
 
 export const $defaulButtonToggleBtn = $row(style({
   placeContent: 'center', fontWeight: 'bold',
-  borderRadius: '442px', padding: '10px 16px', alignItems: 'center', border: '1px solid transparent',
+  borderRadius: '20px', padding: '10px 16px', alignItems: 'center', border: '1px solid transparent',
   cursor: 'pointer', margin: '-2px'
 }))
 
 export const $defaulButtonToggleContainer = $row(style({
-  borderRadius: '442px',
+  borderRadius: '20px',
   border: `1px solid ${pallete.horizon}`, backgroundColor: pallete.background
 }))
 

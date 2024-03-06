@@ -7,36 +7,6 @@ import * as walletLink from "wallet"
 
 
 export type IApproveSpendReturn = ReturnType<typeof writeApproveSpend>
-export type IMinterMintReturn = ReturnType<typeof writeMinterMint>
-export async function writeMinterMint(
-  walletClient: walletLink.IWalletClient,
-  contractDefs = getMappedValue(PUPPET.CONTRACT, walletClient.chain.id),
-  gauge = contractDefs.ScoreGaugeV1.address,
-): walletLink.IWriteContractReturn<typeof contractDefs['Minter']['abi'], 'Minted'> {
-  return walletLink.writeContract({
-    ...contractDefs.Minter,
-    walletClient,
-    eventName: 'Minted',
-    functionName: 'mint',
-    args: [gauge]
-  })
-}
-
-export type IWriteAdvanceEpochReturn = ReturnType<typeof writeAdvanceEpoch>
-export async function writeAdvanceEpoch(
-  walletClient: walletLink.IWalletClient,
-  contractDefs = getMappedValue(PUPPET.CONTRACT, walletClient.chain.id),
-): walletLink.IWriteContractReturn<typeof contractDefs['GaugeController']['abi'], 'AdvanceEpoch'> {
-
-  return walletLink.writeContract({
-    ...contractDefs.GaugeController,
-    walletClient,
-    eventName: 'AdvanceEpoch',
-    functionName: 'advanceEpoch',
-    args: []
-  })
-}
-
 export async function writeApproveSpend(
   walletClient: walletLink.IWalletClient,
   token: Address,

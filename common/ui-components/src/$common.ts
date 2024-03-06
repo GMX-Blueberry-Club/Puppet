@@ -2,7 +2,7 @@ import { combineObject, isStream, O, Op } from "@aelea/core"
 import { $element, $node, $Node, $svg, $text, attr, IBranch, style, styleBehavior, stylePseudo } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { empty, fromPromise, map, skipRepeats, startWith } from "@most/core"
+import { empty, fromPromise, map, now, skipRepeats, startWith } from "@most/core"
 import { Stream } from "@most/types"
 import { getExplorerUrl, getMappedValue, ITokenDescription, promiseState, PromiseStatus, shortenTxAddress, switchMap } from "common-utils"
 import { arbitrum, Chain } from "viem/chains"
@@ -181,17 +181,17 @@ export function $txHashRef(txHash: string, chain: Chain = arbitrum) {
 }
 
 
-interface IHintNumberDisplay {
+interface IHintAdjustment {
   label?: string
-  isIncrease: Stream<boolean>
+  color?: Stream<string>
   tooltip?: string | $Node
   val: Stream<string>
   change: Stream<string>
 }
 
-export const $hintNumChange = ({ change, isIncrease, val, label, tooltip }: IHintNumberDisplay) => {
-  const arrowColor = map(ic => ic ? pallete.positive : pallete.indeterminate, isIncrease)
-  const displayChange = skipRepeats(map(str => !!str, change))
+export const $hintAdjustment = ({ change, color, val, label, tooltip }: IHintAdjustment) => {
+  const displayChange = skipRepeats(map(str => !!str, startWith('', change)))
+  const arrowColor = color ?? now(pallete.foreground)
 
   return $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
     tooltip
@@ -199,26 +199,20 @@ export const $hintNumChange = ({ change, isIncrease, val, label, tooltip }: IHin
       : label
         ? $text(style({ color: pallete.foreground }))(label) : empty(),
 
-    switchMap(display => {
-      if (!display) {
-        return $text(val)
-      }
+    $row(layoutSheet.spacingTiny, style({ lineHeight: 1, alignItems: 'center' }))(
+      $text(style({ color: pallete.foreground }))(val),
 
-      return $row(layoutSheet.spacingTiny, style({ lineHeight: 1, alignItems: 'center' }))(
-        $text(style({ color: pallete.foreground }))(val),
-
-        $icon({
-          $content: $arrowRight,
-          width: '10px',
-          svgOps: styleBehavior(map(params => {
-            return params.change ? { fill: params.arrowColor } : { display: 'none' }
-          }, combineObject({ change, arrowColor }))),
-          viewBox: '0 0 32 32'  
-        }),
+      $icon({
+        $content: $arrowRight,
+        width: '10px',
+        svgOps: styleBehavior(map(params => {
+          return params.displayChange ? { fill: params.arrowColor } : { display: 'none' }
+        }, combineObject({ displayChange, arrowColor }))),
+        viewBox: '0 0 32 32'  
+      }),
       
-        $text(map(str => str ?? '', change)),
-      )
-    }, displayChange),
+      $text(map(str => str ?? '', change)),
+    ),
     
   )
 }

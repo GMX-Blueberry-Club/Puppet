@@ -12,7 +12,7 @@ import {
   switchLatest
 } from "@most/core"
 import { Stream } from "@most/types"
-import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, delta, div, filterNull, formatDiv, formatFixed, getBasisPoints, getTokenAmount, getTokenUsd, ITokenDescription, parseBps, parseFixed, parseReadableNumber, readableNumber, readableTokenAmountFromUsdAmount, readableTokenAmountLabel, readableTokenUsd, readableUnitAmount, readableUsd, StateStreamStrict, switchMap } from "common-utils"
+import { ADDRESS_ZERO, BASIS_POINTS_DIVISOR, delta, div, filterNull, formatDiv, formatFixed, getBasisPoints, getTokenAmount, getTokenUsd, ITokenDescription, parseBps, parseFixed, parseReadableNumber, readableNumber, readableTokenAmountFromUsdAmount, readableTokenAmountLabel, readableTokenUsd, readableUnitAmount, readableUsd, StateStream, switchMap } from "common-utils"
 import * as GMX from "gmx-middleware-const"
 import { getNativeTokenAddress, getNativeTokenDescription, getTokenDescription, IMarket, IMarketInfo, IMarketPrice, resolveAddress, TEMP_MARKET_LIST } from "gmx-middleware-utils"
 import { IMirrorPositionOpen, ISetRouteType, latestPriceMap } from "puppet-middleware-utils"
@@ -20,7 +20,7 @@ import {
   $bear, $bull,
   $ButtonToggle,
   $defaultTableRowContainer,
-  $hintNumChange, $infoLabel,
+  $hintAdjustment, $infoLabel,
   $infoTooltipLabel,
   $intermediateMessage,
   $moreDots,
@@ -103,8 +103,8 @@ export interface IPositionEditorAbstractParams extends IComponentPageParams {
 
 
 interface IPositionEditorConfig extends IPositionEditorAbstractParams {
-  tradeConfig: StateStreamStrict<ITradeConfig> // ITradeParams
-  tradeState: StateStreamStrict<ITradeParams>
+  tradeConfig: StateStream<ITradeConfig> // ITradeParams
+  tradeState: StateStream<ITradeParams>
   resetAdjustments: Stream<any>
   $container: NodeComposeFn<$Node>
 }
@@ -407,7 +407,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
                 }, combineObject({ walletBalance, primaryDescription }))
               ),
             ),
-            $hintNumChange({
+            $hintAdjustment({
               label: screenUtils.isDesktopScreen ? `Collateral` : undefined,
               change: map(params => {
                 if (params.mirrorPosition === null) return null
@@ -415,7 +415,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
                 return readableUsd(params.netPositionValueUsd + collateralDeltaUsd)
               }, combineObject({ mirrorPosition, primaryPrice, collateralDeltaAmount, netPositionValueUsd })),
-              isIncrease: config.tradeConfig.isIncrease,
+              color: map(isInc => isInc ? pallete.positive : pallete.indeterminate, config.tradeConfig.isIncrease),
               tooltip: 'The amount deposited after fees to maintain a leverage position',
               val: map(params => {
                 const collateralDeltaUsd = params.collateralDeltaAmount * params.primaryPrice
@@ -826,7 +826,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
               
             ),
             
-            $hintNumChange({
+            $hintAdjustment({
               label: screenUtils.isDesktopScreen ? `Size` : undefined,
               change: map((params) => {
                 if (params.mirrorPosition === null) return null
@@ -834,7 +834,7 @@ export const $PositionEditor = (config: IPositionEditorConfig) => component((
 
                 return readableUsd(totalSize)
               }, combineObject({ sizeDeltaUsd, mirrorPosition })),
-              isIncrease: config.tradeConfig.isIncrease,
+              color: map(isInc => isInc ? pallete.positive : pallete.indeterminate, config.tradeConfig.isIncrease),
               tooltip: $column(layoutSheet.spacingSmall)(
                 $text('Size amplified by deposited Collateral and Leverage chosen'),
                 $text('Higher Leverage increases Liquidation Risk'),

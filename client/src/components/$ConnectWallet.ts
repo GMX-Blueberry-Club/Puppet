@@ -1,7 +1,7 @@
 import { Behavior, Op, combineObject } from "@aelea/core"
 import { $Node, $element, $text, attr, component, style } from "@aelea/dom"
 import { $row, layoutSheet } from "@aelea/ui-components"
-import { awaitPromises, empty, fromPromise, join, map, never, now } from "@most/core"
+import { awaitPromises, empty, fromPromise, join, map, multicast, never, now } from "@most/core"
 import { Stream } from "@most/types"
 import { EthereumProvider } from "@walletconnect/ethereum-provider"
 import { ignoreAll, switchMap } from "common-utils"
@@ -144,12 +144,12 @@ export const $ConnectChoiceList = () => component((
               return providerDetail
             }),
             awaitPromises,
+            multicast
           )
         }),
         
       )
-    }, combineObject({ announcedProviderList }) )
-    ,
+    }, combineObject({ announcedProviderList }) ),
 
     {
       changeWallet

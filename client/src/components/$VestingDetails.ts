@@ -2,73 +2,80 @@ import { Behavior, replayLatest } from "@aelea/core"
 import { $node, $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet } from "@aelea/ui-components"
 import { colorAlpha, pallete } from "@aelea/ui-components-theme"
-import { constant, map, mergeArray, multicast, now, sample } from "@most/core"
-import { MAX_UINT256, combineState, readableDate, readableUnitAmount, switchMap, unixTimestampNow } from "common-utils"
+import { combine, constant, map, mergeArray, multicast, now, sample, snapshot, take } from "@most/core"
+import { Stream } from "@most/types"
+import { IntervalTime, combineState, filterNull, getMappedValue, readableDate, readableTokenAmountLabel, readableUnitAmount, switchMap, unixTimestampNow } from "common-utils"
+import { ARBITRUM_ADDRESS } from "gmx-middleware-const"
+import { getTokenDescription } from "gmx-middleware-utils"
+import { EIP6963ProviderDetail } from "mipd"
 import * as PUPPET from "puppet-middleware-const"
-import { $ButtonToggle, $Checkbox, $defaulButtonToggleContainer, $infoLabeledValue, $infoTooltipLabel, $intermediateMessage } from "ui-components"
+import { $ButtonToggle, $Checkbox, $defaulButtonToggleContainer, $hintAdjustment, $infoLabeledValue, $infoTooltipLabel, $intermediateMessage } from "ui-components"
 import { uiStorage } from "ui-storage"
 import * as walletLink from "wallet"
-import { $pnlDisplay } from "../common/$common"
+import { $heading3 } from "../common/$text"
 import { store } from "../const/store"
 import { readUserLockDetails } from "../logic/puppetRead"
 import { $seperator2 } from "../pages/common"
-import { IComponentPageParams, VestingLockMode } from "../pages/type"
+import { IComponentPageParams, SelectedOption } from "../pages/type"
 import { $Popover } from "./$Popover"
 import { $Slider } from "./$Slider"
 import { $ButtonSecondary, $defaultMiniButtonSecondary } from "./form/$Button"
 import { $SubmitBar } from "./form/$Form"
+import * as viem from "viem"
 
 
-function getVestingLockMode(time: bigint) {
-  return time === 0n
-    ? VestingLockMode.CONTINUOUS
-    : time === MAX_UINT256 ? VestingLockMode.CONTINUOUS
-      : VestingLockMode.SHORT_TERM
+
+
+interface IVestingDetails extends IComponentPageParams {
+  puppetTokenPriceInUsd: Stream<bigint>
 }
 
+// type PopoverState = {
+//   maintainSchedule: boolean
+//   lockSchedule: number
+// }
 
-export const $VestingDetails = (config: IComponentPageParams) => component((
+
+export const $VestingDetails = (config: IVestingDetails) => component((
+  [changeWallet, changeWalletTether]: Behavior<EIP6963ProviderDetail>,
+
   [overlayClick, overlayClickTether]: Behavior<any>,
   [requestTx, requestTxTether]: Behavior<walletLink.IWalletClient, any>,
 
-  [changePopoverLockMode, changePopoverLockModeTether]: Behavior<any, VestingLockMode>,
-  [changePopoverLockSchedule, changePopoverLockScheduleTether]: Behavior<number>,
-  [changeVestingLockSchedule, changeVestingLockScheduleTether]: Behavior<any, bigint>,
+  [changePopoverScheduleFactor, changePopoverScheduleFactorTether]: Behavior<any, number>,
+  [changePopoverMaintainSchedule, changePopoverMaintainScheduleTether]: Behavior<boolean>,
+  [savePopoverLockSchedule, savePopoverLockScheduleTether]: Behavior<any>,
 
-  [toggleClaimTokenReward, toggleClaimTokenRewardTether]: Behavior<boolean>,
-  [toggleLockTokenReward, toggleLockTokenRewardTether]: Behavior<boolean>,
+    
+  [checkMaintainSchedule, checkMaintainScheduleTether]: Behavior<any, boolean | null>,
+  [changeScheduleFactor, changeScheduleFactorTether]: Behavior<number>,
+  [changeOptionMode, changeOptionModeTether]: Behavior<SelectedOption>,
   [toggleClaimRevenueReward, toggleClaimRevenueRewardTether]: Behavior<boolean>,
 ) => {
 
-  const { providerClientQuery, walletClientQuery } = config
+  const { providerClientQuery, walletClientQuery, puppetTokenPriceInUsd } = config
 
-  const lockDetails = map(async walletQuery => {
+  const lockDetails = replayLatest(multicast(map(async walletQuery => {
     const wallet = await walletQuery
 
     if (!wallet) return { amount: 0n, end: 0n }
 
     return readUserLockDetails(wallet, wallet?.account.address)
-  }, walletClientQuery)
+  }, walletClientQuery)))
 
   const readVestingLockSchedule = switchMap(async lock => (await lock).end, lockDetails)
+  const lockSchedule = replayLatest(multicast(mergeArray([changeScheduleFactor, readVestingLockSchedule])))
 
-
-  const vestingLockSchedule = replayLatest(multicast(mergeArray([changeVestingLockSchedule, readVestingLockSchedule])))
-  // const vestingLockScheduleMode = map(time =>  getVestingLockMode(time), vestingLockSchedule)
-
-  const claimTokensReward = uiStorage.replayWrite(store.wallet, toggleClaimTokenReward, 'claimTokens')
-  const lockTokensReward = uiStorage.replayWrite(store.wallet, toggleLockTokenReward, 'lockTokens')
+  const maintainSchedule = uiStorage.replayWrite(store.wallet, checkMaintainSchedule, 'maintainSchedule')
   const claimRevenueReward = uiStorage.replayWrite(store.wallet, toggleClaimRevenueReward, 'claimRevenue')
+  const option = uiStorage.replayWrite(store.wallet, changeOptionMode, 'option')
 
-  const form = combineState({ lockTokensReward, vestingLockSchedule, claimTokensReward, claimRevenueReward })
+  const form = combineState({ maintainSchedule, lockSchedule, claimRevenueReward, option, puppetTokenPriceInUsd })
 
-  // const popoverLockSchedule = multicast(mergeArray([vestingLockSchedule]))
-
-
-  const MAX_CONTINUOUS_LOCKUP = unixTimestampNow() + PUPPET.MAX_LOCKUP_SCHEDULE
 
   return [
     $column(layoutSheet.spacing, style({ flex: 1 }))(
+      $heading3('Vesting Schedule'),
       style({ placeContent: 'space-between' })(
         $infoLabeledValue(
           $text('Locked'),
@@ -81,208 +88,258 @@ export const $VestingDetails = (config: IComponentPageParams) => component((
       ),
       style({ placeContent: 'space-between' })(
         $infoLabeledValue(
-          $text('Locking Schedule'),
+          $text('Schedule'),
           $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+            $hintAdjustment({
+              change: mergeArray([
+                filterNull(map(isMax => isMax ? readableDate(unixTimestampNow() + PUPPET.MAX_LOCKUP_SCHEDULE) : null, maintainSchedule)),
+                map(val => readableDate(Number(val)), changeScheduleFactor)
+              ]),
+              val: map(val => {
+                if (val === 0n) {
+                  return 'None'
+                }
+
+                return readableDate(Number(val))
+              }, readVestingLockSchedule),
+            }),
+            
             $Popover({
               open: map(params => {
-
-
-                const formatSliderSchedule = mergeArray([
-                  changePopoverLockSchedule,
-                  map(period => {
-
-                    if (period === MAX_UINT256)  {
-                      return 1
-                    }
-
-                    if (period === 0n) {
-                      return 0.5
-                    }
-
-                    const newLocal = Number(Number(period) - unixTimestampNow()) / Number(PUPPET.MAX_LOCKUP_SCHEDULE)
-                    return newLocal
-                  }, vestingLockSchedule)
-                ])
-
-                const slideLockupSchedule = mergeArray([
-                  map(value => {
-                    const period = Math.floor(value * Number(PUPPET.MAX_LOCKUP_SCHEDULE))
-                    const newLocal = BigInt(unixTimestampNow() + period)
-                    return newLocal
-                  }, formatSliderSchedule),
-                  vestingLockSchedule
-                ])
-
-                const selectedMode = mergeArray([
-                  map(getVestingLockMode, vestingLockSchedule),
-                  changePopoverLockMode
-                ])
+                const initMaintainState = take(1, map(maintain => maintain || maintain === null, maintainSchedule))
+                const popoverMaintainSchedule = mergeArray([initMaintainState, changePopoverMaintainSchedule])
 
                 return $column(layoutSheet.spacing, style({ width: '350px' }))(
-                  $text(`Lock your tokens to earn a share of the protocol's revenue, govern its future, and build your reputation within the protocol and our community fueled by users alike.`),
-
                   $ButtonToggle({
                     $container: $defaulButtonToggleContainer(style({ placeSelf: 'center' })),
-                    options: [VestingLockMode.CONTINUOUS, VestingLockMode.SHORT_TERM],
-                    selected: selectedMode,
-                    $$option: map(value => $text(String(value))),
+                    options: [true, false],
+                    selected: popoverMaintainSchedule,
+                    $$option: map(value => $text(value ? 'Maximize' : 'Short Term')),
                   })({
-                    select: changePopoverLockModeTether()
+                    select: changePopoverMaintainScheduleTether()
                   }),
+ 
+                  switchMap(maintain => {
+                    if (maintain) {
+                      return $column(layoutSheet.spacing)(
+                        $text('Maximize your rewards and voting power, this will re-lock your tokens for 2 years every time you claim your rewards.'),
+                        $text('You can switch to short term any time.'),
 
-                  switchMap(align => {
-
-                    if (align === VestingLockMode.CONTINUOUS) {
-                      return $column(layoutSheet.spacingSmall)(
-                        $text('Maintain your tokens continuously locked the maximum 2 years. receiving the maximum rewards and voting power.'),
-                        $text('You can stop renewing at any time.'),
-
-                        $row(
+                        $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
                           $node(style({ flex: 1 }))(),
                           $ButtonSecondary({
                             $content: $text('Save')
                           })({ 
-                            click: changeVestingLockScheduleTether(constant(MAX_UINT256))
+                            click: savePopoverLockScheduleTether(
+                              checkMaintainScheduleTether(constant(true))
+                            )
                           }),
                         )
                       )
                     }
 
+                    const sliderFactor = mergeArray([
+                      map(val => {
+                        if (val === 0n) {
+                          return 0.5
+                        }
 
-                    return $column(layoutSheet.spacingSmall)(
+                        const durationElapsed = unixTimestampNow() - Number(val)
+
+                        return Number(PUPPET.MAX_LOCKUP_SCHEDULE) / durationElapsed
+                      }, readVestingLockSchedule),
+                      changePopoverScheduleFactor
+                    ])
+
+                    const slideDate = map(factor => {
+                      const duration = factor * Number(PUPPET.MAX_LOCKUP_SCHEDULE)
+                      const time = Math.floor((unixTimestampNow() + duration) / IntervalTime.DAY7) * IntervalTime.DAY7
+                      return time
+                    }, sliderFactor)
+
+                    return $column(layoutSheet.spacing)(
                       $text('Lock your tokens for up to maxium of 2 years. longer duration yields higher rewards and voting power'),
-
                       $Slider({
-                        color: map(val => colorAlpha(pallete.positive, val), formatSliderSchedule),
-                        value: formatSliderSchedule,
+                        color: map(val => colorAlpha(pallete.positive, val), sliderFactor),
+                        disabled: map(val => val === true, maintainSchedule),
+                        value: sliderFactor,
                       })({
-                        change: changePopoverLockScheduleTether(multicast),
+                        change: changePopoverScheduleFactorTether(),
                       }),
 
-                      $row(style({ alignItems: 'center' }))(
-                        $node(style({ flex: 1 }))(
-                          $infoLabeledValue(
-                            'End Date:',
-                            $text(map(period => {
-                              if (period === MAX_UINT256)  {
-                                return readableDate(unixTimestampNow() + (PUPPET.MAX_LOCKUP_SCHEDULE))
-                              }
-                              if (period === 0n) {
-                                return readableDate(unixTimestampNow() + (PUPPET.MAX_LOCKUP_SCHEDULE / 2))
-                              }
-
-                              return readableDate(Number(period))
-                            }, slideLockupSchedule))
+                      $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
+                        $row(style({ alignItems: 'center' }))(
+                          $node(style({ flex: 1 }))(
+                            $infoLabeledValue(
+                              'End Date:',
+                              $text(map(time => readableDate(time), slideDate))
+                            )
                           )
                         ),
+                        $node(style({ flex: 1 }))(),
+                      
                         $ButtonSecondary({
                           $content: $text('Save')
                         })({ 
-                          click: changeVestingLockScheduleTether(
-                            sample(slideLockupSchedule)
+                          click: savePopoverLockScheduleTether(
+                            changeScheduleFactorTether(sample(slideDate)),
+                            checkMaintainScheduleTether(constant(false))
                           )
-                        })
+                        }),
                       )
                     )
-                  }, selectedMode),
-              
+                  }, popoverMaintainSchedule),
+
                 )
               }, overlayClick),
-              dismiss: changeVestingLockSchedule,
+              dismiss: savePopoverLockSchedule,
               $target: $ButtonSecondary({
                 $container: $defaultMiniButtonSecondary,
-                $content: $text('Change')
+                $content: switchMap(maintain => {
+                  if (maintain === null) {
+                    return $text(style({ color: pallete.indeterminate }))('None')
+                  }
+
+                  return $text(maintain ? 'Maximize' : 'Short Term')
+                }, maintainSchedule)
               })({
                 click: overlayClickTether()
               })
             })({
               // overlayClick: overlayClickTether()
             }),
-            switchMap(time => {
-              if (time === 0n) {
-                return $text(style({ color: pallete.indeterminate }))(VestingLockMode.NONE)
-              }
-
-              const mode = getVestingLockMode(time)
-
-              if (mode === VestingLockMode.CONTINUOUS) {
-                return $text(VestingLockMode.CONTINUOUS)
-              }
-
-              return $text(readableDate(Number(time)))
-            }, vestingLockSchedule),
+            
           ),
         )
       ),
 
-      $SubmitBar({
-        disabled: now(true),
-        txQuery: requestTx,
-        walletClientQuery,
-        $content: $text(map(params => {
-
-          const lockLabel = params.claimTokensReward && params.lockTokensReward ? ' & Lock' : ''
-
-          return `Claim${lockLabel}`
-        }, form))
-      })({
-        click: requestTxTether()
-      }),
+      style({ placeContent: 'space-between' })(
+        $infoLabeledValue(
+          $text('Lock Revenue'),
+          $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+            $Checkbox({ label: 'Claim', value: claimRevenueReward })({
+              check: toggleClaimRevenueRewardTether()
+            }),
+            $text(style({ color: pallete.positive }))('+' + readableTokenAmountLabel(getTokenDescription(ARBITRUM_ADDRESS.USDC), 23000000n)),
+          )
+        )
+      ),
+      
       
       $seperator2,
-
+      $heading3('Generated Rewards'),
 
       style({ placeContent: 'space-between' })(
         $infoLabeledValue(
           $infoTooltipLabel(
             $text('Reinvest your rewards to compound your earnings and increase your voting power.'),
-            $text('PUPPET Reward')
+            $text('Contributed Revenue')
           ),
-          $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-            $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
-              $Checkbox({ value: claimTokensReward, label: 'Claim' })({
-                check: toggleClaimTokenRewardTether()
-              }),
-              $Checkbox({
-                label: 'Lock',
-                value: lockTokensReward,
-                disabled: map(isClaim => !isClaim, claimTokensReward)
-              })({
-                check: toggleLockTokenRewardTether()
-              }),
-              
-              $pnlDisplay(12300000000000000000000000000003n),
-            ),
+          $text('0'),
+        ),
+      ),
+      style({ placeContent: 'space-between' })( 
+        $infoLabeledValue(
+          $infoTooltipLabel(
+            $text('Reinvest your rewards to compound your earnings and increase your voting power.'),
+            $text('Reward')
           ),
+          $ButtonToggle({
+            $container: $defaulButtonToggleContainer(style({ flexDirection: 'column', placeSelf: 'center' })),
+            options: [SelectedOption.LOCK, SelectedOption.EXIT],
+            selected: option,
+            $$option: combine((selected, value) => {
+
+              const rewardAmount = readableTokenAmountLabel(PUPPET.PUPPET_TOKEN_DESCRIPTION, 134270000000000000000n)
+
+              return $row(layoutSheet.spacingSmall)(
+                $text(String(value)),
+                $text(style({ color: pallete.positive, opacity: selected === value ? '' : '.5' }))(
+                  rewardAmount
+                )
+                // $pnlDisplay(10n ** 30n * 15n) : style({ opacity: .25 })($pnlDisplay(10n ** 30n * 15n))
+              )
+            }, option),
+          })({
+            select: changeOptionModeTether()
+          }),
         ),
       ),
 
-      style({ placeContent: 'space-between' })(
-        $infoLabeledValue(
-          $text('Revenue Reward'),
-          $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
-            $Checkbox({ label: 'Claim', value: claimRevenueReward })({
-              check: toggleClaimRevenueRewardTether()
-            }),
-            $pnlDisplay(2300000000000000000000000000003n),
-          )
-        )
-      ),
 
-      $node(),
+      // $row(layoutSheet.spacingSmall, style({ alignItems: 'center' }))(
+      //   $row(layoutSheet.spacing, style({ alignItems: 'center' }))(
+      //     $Checkbox({ value: claimTokensReward, label: 'Claim' })({
+      //       check: toggleClaimTokenRewardTether()
+      //     }),
+      //     $Checkbox({
+      //       label: 'Lock',
+      //       value: lockTokensReward,
+      //       disabled: map(isClaim => !isClaim, claimTokensReward)
+      //     })({
+      //       check: toggleLockTokenRewardTether()
+      //     }),
+              
+          
+      //   ),
+      // ),
+
+      
+
+      
+
+      // $node(),
 
       $SubmitBar({
         disabled: now(true),
         txQuery: requestTx,
         walletClientQuery,
         $content: $text(map(params => {
-
-          const lockLabel = params.claimTokensReward && params.lockTokensReward ? ' & Lock' : ''
+          const lockLabel = params.lockSchedule && params.claimRevenueReward ? ' & Lock' : ''
 
           return `Claim${lockLabel}`
         }, form))
       })({
-        click: requestTxTether()
+        changeWallet: changeWalletTether(),
+        click: requestTxTether(
+          snapshot((form, wallet) => {
+
+            const contractDefs = getMappedValue(PUPPET.CONTRACT, wallet.chain.id)
+
+            if (form.option === SelectedOption.EXIT) {
+              const writeQuery = walletLink.writeContract({
+                ...contractDefs.RewardRouter,
+                functionName: 'exit',
+                args: [form.puppetTokenPriceInUsd],
+                walletClient: wallet
+              })
+              
+              return writeQuery
+            }
+
+
+
+            const lock = form.option === SelectedOption.LOCK
+              ? viem.encodeFunctionData({
+                ...contractDefs.RewardRouter,
+                functionName: 'lock',
+                args: []
+              })
+              : viem.encodeFunctionData({
+                ...contractDefs.RewardRouter,
+                functionName: 'lock',
+                args: [amount, token, receiver, isEth]
+              })
+
+            const writeQuery = walletLink.writeContract({
+              ...contractDefs.RewardRouter,
+              functionName: 'multicall',
+              args: [lock] as const,
+            })
+
+            return writeQuery
+          }, form)
+        )
       })
 
 
@@ -290,7 +347,7 @@ export const $VestingDetails = (config: IComponentPageParams) => component((
     ),
 
     {
-      
+      changeWallet,
     }
   ]
 })

@@ -55,6 +55,11 @@ export enum IWalletTab {
 
 export enum VestingLockMode {
   NONE = 'None',
-  CONTINUOUS = 'Continuous',
+  CONTINUOUS = 'Auto Lock',
   SHORT_TERM = 'Short Term',
+}
+
+export enum SelectedOption {
+  LOCK = 'Lock',
+  EXIT = 'Exit',
 }

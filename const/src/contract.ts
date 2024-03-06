@@ -1,7 +1,5 @@
 import { arbitrum } from "viem/chains"
 
-import scoreGaugeV1 from './abi/scoreGaugeV1.js'
-import auth from './abi/auth.js'
 import route from './abi/route.js'
 import puppet from './abi/puppet.js'
 import orchestrator from './abi/orchestrator.js'
@@ -9,44 +7,65 @@ import orchestratorReader from './abi/orchestratorReader.js'
 import routeFactory from './abi/routeFactory.js'
 import datastore from './abi/datastore.js'
 import commonHelper from './abi/commonHelper.js'
-import oPuppet from "./abi/oPuppet.js"
 import votingEscrow from "./abi/votingEscrow.js"
-import gaugeController from "./abi/gaugeController.js"
-import flashLoanHandler from "./abi/flashLoanHandler.js"
 import decreaseSizeResolver from "./abi/decreaseSizeResolver.js"
 import dictator from "./abi/dictator.js"
-import minter from "./abi/minter.js"
+import basePool from "./abi/basePool.js"
+import tokenRouter from "./abi/tokenRouter.js"
+import oracleLogic from "./abi/oracleLogic.js"
+import priceStore from "./abi/priceStore.js"
+import rewardLogic from "./abi/rewardLogic.js"
+import rewardRouter from "./abi/rewardRouter.js"
+import veRevenueDistributor from "./abi/veRevenueDistributor.js"
+
+
 
 export const CONTRACT = {
   [arbitrum.id]: {
-    Puppet: {
-      address: "0xAde170A4C11574Aa3732e9EBA994D891F99Ab33E",
+
+    // tokenomics
+    Dictator: {
+      address: "0xA12a6281c1773F267C274c3BE1B71DB2BACE06Cb",
+      abi: dictator,
+    },
+    PuppetToken: {
+      address: "0x5C7E34292ac14008D8B15C0402CA9657501B949C",
       abi: puppet,
     },
-    oPuppet: {
-      address: "0xD4062F781c0A5255886a4666576584b2d1D5aE69",
-      abi: oPuppet,
+    BasePool: {
+      address: "0xc6295e969be65560d1cb8ce06b1b20e62337625c",
+      abi: basePool,
     },
-    FlashLoanHandler: {
-      address: "0xD4062F781c0A5255886a4666576584b2d1D5aE69",
-      abi: flashLoanHandler,
+    TokenRouter: {
+      address: "0xc6295e969be65560d1cb8ce06b1b20e62337625c",
+      abi: tokenRouter,
+    },
+    OracleLogic: {
+      address: "0x412979f3210d8cf121971B0176cA3704b8bE0945",
+      abi: oracleLogic,
+    },
+    PriceStore: {
+      address: "0xe9e9ce24275Ec23257551Cbb62D79A4e9cfE2428",
+      abi: priceStore,
+    },
+    RewardLogic: {
+      address: "0x356Df7BE8a48d514c3A24A4b4cC0CB4AAd45B617",
+      abi: rewardLogic,
     },
     VotingEscrow: {
-      address: "0xFcdc2af1b2cA1581CD0f4995F459DD774257f5C8",
+      address: "0xd6D057D0b2f16a9bcdca4b8A7EF3532386cB3058",
       abi: votingEscrow,
     },
-    GaugeController: {
-      address: "0x6287778122A449c825D66d2d28ADAb7ce8595e16",
-      abi: gaugeController,
+    VeRevenueDistributor: {
+      address: "0xeA1e7206dD22cD452E8bb4A393C003ABF9C5826e",
+      abi: veRevenueDistributor,
     },
-    Minter: {
-      address: "0xa70A55470c16529f6ED8B7b7fAe701cB039B593f",
-      abi: minter,
+    RewardRouter: {
+      address: "0xeBE43819468Bc0B167Baa5224Fe46A9EaDCA67Ce",
+      abi: rewardRouter,
     },
-    ScoreGaugeV1: {
-      address: "0x00e930320A64273Ff0a544c57b58ebA8C8b3E35E",
-      abi: scoreGaugeV1,
-    },
+
+    // trading
     Datastore: {
       address: "0x75236b405F460245999F70bc06978AB2B4116920",
       abi: datastore,
@@ -63,17 +82,9 @@ export const CONTRACT = {
       address: "0x4ae74D2Cb2F10D90e6E37Cf256A15a783C4f655B",
       abi: decreaseSizeResolver,
     },
-    Dictator: {
-      address: "0xA12a6281c1773F267C274c3BE1B71DB2BACE06Cb",
-      abi: dictator,
-    },
     OrchestratorReader: {
       address: "0xa6faf588ce2bb5564db5724e4928512bc95be200",
       abi: orchestratorReader,
-    },
-    Auth: {
-      address: '0xA12a6281c1773F267C274c3BE1B71DB2BACE06Cb',
-      abi: auth,
     },
     Route: {
       abi: route,

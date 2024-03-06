@@ -5,7 +5,7 @@ import { colorAlpha, pallete } from "@aelea/ui-components-theme"
 import { awaitPromises, constant, debounce, empty, map, mergeArray, multicast, now, scan, skipRepeats, snapshot, switchLatest } from "@most/core"
 import { Stream } from "@most/types"
 import {
-  ADDRESS_ZERO, IntervalTime, StateStreamStrict, USD_DECIMALS, applyFactor, div, filterNull, formatFixed, getMappedValue,
+  ADDRESS_ZERO, IntervalTime, StateStream, USD_DECIMALS, applyFactor, div, filterNull, formatFixed, getMappedValue,
   getTokenAmount, getTokenDenominator, getTokenUsd,
   readableAccountingAmount, readableFactorPercentage, readableTokenAmountLabel, readableTokenPrice, readableUsd, switchMap, unixTimestampNow, zipState
 } from "common-utils"
@@ -329,7 +329,7 @@ export const $Trade = (config: ITradeComponent) => component((
   ])))
 
   // [config]
-  const tradeConfig: StateStreamStrict<ITradeConfig> = {
+  const tradeConfig: StateStream<ITradeConfig> = {
     focusPrice: switchMap(focus => focus ? focusPrice : now(null), isFocused),
     market,
     indexToken,
@@ -456,7 +456,7 @@ export const $Trade = (config: ITradeComponent) => component((
 
 
 
-  const tradeState: StateStreamStrict<ITradeParams> = {
+  const tradeState: StateStream<ITradeParams> = {
     tradeRoute,
     routeTypeKey,
 

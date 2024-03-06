@@ -1,23 +1,23 @@
-import { O, Op, combineArray, combineObject, isStream, replayLatest } from "@aelea/core"
-import { at, awaitPromises, constant, continueWith, empty, filter, fromPromise, map, merge, multicast, now, periodic, recoverWith, switchLatest, takeWhile, zipArray } from "@most/core"
+import { O, Op, combineArray, isStream } from "@aelea/core"
+import { at, awaitPromises, constant, continueWith, empty, filter, fromPromise, map, merge, now, periodic, recoverWith, switchLatest, takeWhile, zipArray } from "@most/core"
 import { disposeNone } from "@most/disposable"
 import { curry2 } from "@most/prelude"
+import { currentTime } from "@most/scheduler"
 import { Scheduler, Sink, Stream, Time } from "@most/types"
 import { countdownFn, unixTimestampNow } from "./utils.js"
-import { currentTime } from "@most/scheduler"
 
 
-export type StateStream<T> = {
+export type StateParams<T> = {
   [P in keyof T]: Stream<T[P]> | T[P]
 }
-export type StateStreamStrict<T> = {
+export type StateStream<T> = {
   [P in keyof T]: Stream<T[P]>
 }
 
 
 type IStreamOrPromise<T> = Stream<T> | Promise<T>
 
-export function combineState<A, K extends keyof A = keyof A>(state: StateStream<A>): Stream<A> {
+export function combineState<A, K extends keyof A = keyof A>(state: StateParams<A>): Stream<A> {
   const entries = Object.entries(state) as [keyof A, Stream<A[K]>| A[K]][]
 
   if (entries.length === 0) {
@@ -52,11 +52,8 @@ export function streamOf<T>(maybeStream: T | Stream<T>): Stream<T> {
   return isStream(maybeStream) ? maybeStream : now(maybeStream)
 }
 
-export function replayState<A>(state: StateStreamStrict<A>): Stream<A> {
-  return replayLatest(multicast(combineObject(state)))
-}
 
-export function zipState<A, K extends keyof A = keyof A>(state: StateStreamStrict<A>): Stream<A> {
+export function zipState<A, K extends keyof A = keyof A>(state: StateStream<A>): Stream<A> {
   const entries = Object.entries(state) as [keyof A, Stream<A[K]>][]
   const streams = entries.map(([_, stream]) => stream)
 

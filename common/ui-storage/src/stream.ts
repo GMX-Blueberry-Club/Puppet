@@ -34,7 +34,7 @@ export const createStoreDefinition = <T, TDefinition extends { [P in keyof T]: i
 
 
 export function write<TSchema, TKey extends indexDB.GetKey<TSchema>, TData extends TSchema[TKey]>(
-  params: indexDB.IStoreDefinition<TSchema>, key: TKey, writeEvent: Stream<TData>
+  params: indexDB.IStoreDefinition<TSchema>, writeEvent: Stream<TData>, key: TKey
 ): Stream<TData> {
   const debouncedWrite = debounce(100, writeEvent)
   return map(data => {
@@ -47,7 +47,7 @@ export function replayWrite<TSchema, TKey extends indexDB.GetKey<TSchema>, TRetu
   params: indexDB.IStoreDefinition<TSchema>, writeEvent: Stream<TReturn>, key: TKey
 ): Stream<TReturn> {
   const storedValue = awaitPromises(map(() => indexDB.get(params, key), now(null)))
-  const writeSrc = write(params, key, writeEvent)
+  const writeSrc = write(params, writeEvent, key)
   
   return continueWith(() => writeSrc, storedValue)
 }

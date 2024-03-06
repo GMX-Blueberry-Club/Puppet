@@ -3,7 +3,7 @@ import { $node, $text, component, style } from "@aelea/dom"
 import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { map, now } from "@most/core"
 import { Stream } from "@most/types"
-import { StateStreamStrict, getMappedValue, getTimeSince, getTokenUsd, readableDate, readableTokenPrice, readableUsd, switchMap, unixTimestampNow } from "common-utils"
+import { StateStream, getMappedValue, getTimeSince, getTokenUsd, readableDate, readableTokenPrice, readableUsd, switchMap, unixTimestampNow } from "common-utils"
 import { IPositionDecrease, IPositionIncrease, IPriceCandle, TEMP_MARKET_TOKEN_MARKET_MAP, getTokenDescription } from "gmx-middleware-utils"
 import { IMirrorPositionOpen } from "puppet-middleware-utils"
 import { $Table, $infoLabel, $txHashRef } from "ui-components"
@@ -18,8 +18,8 @@ import { IRequestTrade } from "./$PositionAdjustmentDetails"
 interface IPositionAdjustmentHistory extends IWalletPageParams {
   chain: viem.Chain
   pricefeed: Stream<IPriceCandle[]>
-  tradeConfig: StateStreamStrict<ITradeConfig> // ITradeParams
-  tradeState: StateStreamStrict<ITradeParams>
+  tradeConfig: StateStream<ITradeConfig> // ITradeParams
+  tradeState: StateStream<ITradeParams>
   mirrorPosition: Stream<IMirrorPositionOpen | null>
 }
 

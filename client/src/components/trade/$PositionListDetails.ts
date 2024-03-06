@@ -4,7 +4,7 @@ import { $column, $row, layoutSheet, screenUtils } from "@aelea/ui-components"
 import { pallete } from "@aelea/ui-components-theme"
 import { constant, map, mergeArray } from "@most/core"
 import { Stream } from "@most/types"
-import { StateStreamStrict, filterNull } from "common-utils"
+import { StateStream, filterNull } from "common-utils"
 import { IMarket } from "gmx-middleware-utils"
 import { IMirrorPositionOpen, latestPriceMap } from "puppet-middleware-utils"
 import { $IntermediatePromise } from "ui-components"
@@ -21,7 +21,7 @@ import { ITradeParams } from "./$PositionEditor.js"
 interface IPositionListDetails {
   chain: viem.Chain
   openPositionListQuery: Stream<Promise<IMirrorPositionOpen[]>>
-  tradeState: StateStreamStrict<ITradeParams>
+  tradeState: StateStream<ITradeParams>
   $container: NodeComposeFn<$Node>
   requestTrade: Stream<IRequestTrade>
   mirrorPosition: Stream<IMirrorPositionOpen | null>
